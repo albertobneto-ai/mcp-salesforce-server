@@ -8,14 +8,14 @@ import { ManifestManager } from "./manifest-manager.js";
 const app = express();
 app.use(express.json({ limit: "10mb" }));
 
-// --- Salesforce Connection (from env vars) ---
 const sfClient = new SalesforceClient({
   loginUrl: process.env.SF_LOGIN_URL || "https://login.salesforce.com",
   username: process.env.SF_USERNAME,
   password: process.env.SF_PASSWORD,
   securityToken: process.env.SF_SECURITY_TOKEN || "",
+  clientId: process.env.SF_CLIENT_ID,
+  clientSecret: process.env.SF_CLIENT_SECRET,
 });
-
 const manifestManager = new ManifestManager();
 
 // --- MCP Server Setup ---
