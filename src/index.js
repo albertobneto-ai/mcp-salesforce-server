@@ -326,7 +326,21 @@ app.get("/", (req, res) => {
     ],
   });
 });
-
+// --- Test Salesforce connection ---
+app.get("/test-connection", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const identity = await sfClient.conn.identity();
+    res.json({
+      status: "connected",
+      orgId: sfClient.getOrgId(),
+      username: identity.username,
+      displayName: identity.display_name,
+    });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
 // --- Start ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
