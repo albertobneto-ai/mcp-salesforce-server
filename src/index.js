@@ -459,6 +459,17 @@ app.get("/deploy-leads", async (req, res) => {
     res.status(500).json({ status: "error", message: err.message, stack: err.stack });
   }
 });
+// --- Generic deploy via URL (base64 manifest) ---
+app.get("/api/deploy-b64/:data", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const manifest = JSON.parse(Buffer.from(req.params.data, "base64").toString("utf-8"));
+    const result = await sfClient.deployManifest(manifest);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
 // --- Start ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
