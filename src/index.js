@@ -7,6 +7,39 @@ import { ManifestManager } from "./manifest-manager.js";
 
 const app = express();
 app.use(express.json({ limit: "10mb" }));
+// CORS - permite chamadas do Claude
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Content-Type");
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  if (req.method === "OPTIONS") return res.sendStatus(200);
+  next();
+});
+
+// POST endpoint para deploy de manifests via Claude
+app.post("/api/deploy", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const result = await sfClient.deployManifest(req.body);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+app.get("/api/describe/:objectName", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const desc = await sfClient.describeObject(req.params.objectName);
+    res.json({
+      name: desc.name, label: desc.label,
+      fields: desc.fields.map(f => ({ name: f.name, label: f.label, type: f.type, custom: f.custom })),
+      recordTypes: desc.recordTypeInfos?.map(rt => ({ name: rt.name, active: rt.active }))
+    });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
 
 const sfClient = new SalesforceClient({
   loginUrl: process.env.SF_LOGIN_URL || "https://login.salesforce.com",
