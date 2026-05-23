@@ -341,6 +341,33 @@ app.get("/test-connection", async (req, res) => {
     res.status(500).json({ status: "error", message: err.message });
   }
 });
+// --- Test Deploy ---
+app.get("/test-deploy", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const manifest = {
+      specName: "Quick_Test",
+      metadata: {
+        customObjects: [{
+          fullName: "MCP_Test__c",
+          label: "MCP Test",
+          pluralLabel: "MCP Tests",
+          deploymentStatus: "Deployed",
+          sharingModel: "ReadWrite",
+          nameField: { fullName: "Name", label: "Nome", type: "Text" },
+          fields: [
+            { fullName: "Descricao__c", label: "Descrição", type: "TextArea" },
+            { fullName: "Status__c", label: "Status", type: "Picklist", picklist: ["Novo", "Em Progresso", "Concluído"] }
+          ]
+        }]
+      }
+    };
+    const result = await sfClient.deployManifest(manifest);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
 // --- Start ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
