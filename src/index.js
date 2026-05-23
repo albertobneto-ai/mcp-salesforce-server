@@ -368,6 +368,64 @@ app.get("/test-deploy", async (req, res) => {
     res.status(500).json({ status: "error", message: err.message });
   }
 });
+// --- Deploy Leads & Sales Engagement ---
+app.get("/deploy-leads", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const manifest = {
+      specName: "Leads_SalesEngagement",
+      metadata: {
+        customObjects: [
+          {
+            fullName: "Neoway_Prospect__c",
+            label: "Prospect Neoway",
+            pluralLabel: "Prospects Neoway",
+            deploymentStatus: "Deployed",
+            sharingModel: "ReadWrite",
+            nameField: { fullName: "Name", label: "Nome do Prospect", type: "Text" },
+            fields: [
+              { fullName: "CNPJ__c", label: "CNPJ", type: "Text", length: 18, required: true, externalId: true },
+              { fullName: "Razao_Social__c", label: "Razão Social", type: "Text", length: 255, required: true },
+              { fullName: "Nome_Fantasia__c", label: "Nome Fantasia", type: "Text", length: 255 },
+              { fullName: "Segmento__c", label: "Segmento", type: "Picklist", picklist: ["Enterprise", "Mid-Market", "SMB", "Micro"] },
+              { fullName: "Score_Neoway__c", label: "Score Neoway", type: "Number", precision: 5, scale: 2 },
+              { fullName: "Faixa_Faturamento__c", label: "Faixa de Faturamento", type: "Picklist", picklist: ["Até 1M", "1M-10M", "10M-50M", "50M-100M", "Acima de 100M"] },
+              { fullName: "CNAE_Principal__c", label: "CNAE Principal", type: "Text", length: 10 },
+              { fullName: "Descricao_CNAE__c", label: "Descrição CNAE", type: "Text", length: 255 },
+              { fullName: "UF__c", label: "UF", type: "Text", length: 2 },
+              { fullName: "Cidade__c", label: "Cidade", type: "Text", length: 100 },
+              { fullName: "Endereco__c", label: "Endereço", type: "TextArea" },
+              { fullName: "Telefone__c", label: "Telefone", type: "Phone" },
+              { fullName: "Email_Contato__c", label: "Email de Contato", type: "Email" },
+              { fullName: "Data_Ultima_Atualizacao__c", label: "Data Última Atualização Neoway", type: "DateTime" },
+              { fullName: "Status_Prospeccao__c", label: "Status Prospecção", type: "Picklist", picklist: ["Novo", "Em Análise", "Qualificado", "Descartado", "Convertido em Lead"] },
+              { fullName: "Origem_Dados__c", label: "Origem dos Dados", type: "Text", length: 50 },
+              { fullName: "Quantidade_Funcionarios__c", label: "Quantidade de Funcionários", type: "Number", precision: 8, scale: 0 },
+              { fullName: "Capital_Social__c", label: "Capital Social", type: "Currency", precision: 16, scale: 2 }
+            ]
+          }
+        ],
+        customFields: [
+          { fullName: "Lead.CNPJ__c", label: "CNPJ", type: "Text", length: 18, externalId: true, description: "CNPJ do lead B2B" },
+          { fullName: "Lead.Canal_Origem__c", label: "Canal de Origem", type: "Picklist", picklist: ["Neoway", "WhatsApp", "Website", "Indicação", "Evento", "Outbound", "Parceiro"] },
+          { fullName: "Lead.Segmento_B2B__c", label: "Segmento B2B", type: "Picklist", picklist: ["Enterprise", "Mid-Market", "SMB", "Micro"] },
+          { fullName: "Lead.Score_Engajamento__c", label: "Score de Engajamento", type: "Number", precision: 5, scale: 0, description: "Score calculado pelo Sales Engagement" },
+          { fullName: "Lead.Score_Neoway__c", label: "Score Neoway", type: "Number", precision: 5, scale: 2, description: "Score de propensão vindo do Neoway" },
+          { fullName: "Lead.Faixa_Faturamento__c", label: "Faixa de Faturamento", type: "Picklist", picklist: ["Até 1M", "1M-10M", "10M-50M", "50M-100M", "Acima de 100M"] },
+          { fullName: "Lead.Produto_Interesse__c", label: "Produto de Interesse", type: "MultiselectPicklist", picklist: ["Internet Dedicada", "MPLS", "SD-WAN", "Cloud", "Voz", "Colaboração", "Segurança", "Data Center", "IoT"] },
+          { fullName: "Lead.Regiao_Comercial__c", label: "Região Comercial", type: "Picklist", picklist: ["Triângulo Mineiro", "Alto Paranaíba", "Goiás", "Mato Grosso do Sul", "São Paulo Interior", "Distrito Federal"] },
+          { fullName: "Lead.Prospect_Neoway__c", label: "Prospect Neoway", type: "Lookup", referenceTo: "Neoway_Prospect__c", relationshipName: "Leads" },
+          { fullName: "Lead.Data_Qualificacao__c", label: "Data de Qualificação", type: "DateTime", description: "Data em que o lead foi qualificado para conversão" },
+          { fullName: "Lead.Motivo_Desqualificacao__c", label: "Motivo da Desqualificação", type: "Picklist", picklist: ["Sem budget", "Fora da área de cobertura", "Já é cliente", "Sem interesse", "Dados inválidos", "Duplicado", "Outro"] }
+        ]
+      }
+    };
+    const result = await sfClient.deployManifest(manifest);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message, stack: err.stack });
+  }
+});
 // --- Start ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
