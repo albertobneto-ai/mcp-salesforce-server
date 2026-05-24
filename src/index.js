@@ -1055,73 +1055,6 @@ app.get("/api/scratch-orgs", async (req, res) => {
   }
 });
 
-// --- Get scratch org status ---
-app.get("/api/scratch-orgs/:id", async (req, res) => {
-  try {
-    await sfClient.ensureConnected();
-    const info = await sfClient.getScratchOrgInfo(req.params.id);
-    res.json(info || { status: "not_found" });
-  } catch (err) {
-    res.status(500).json({ status: "error", message: err.message });
-  }
-});
-
-// --- Delete scratch org (DELETE method) ---
-app.delete("/api/scratch-orgs/:id", async (req, res) => {
-  try {
-    await sfClient.ensureConnected();
-    await sfClient.deleteScratchOrg(req.params.id);
-    res.json({ status: "deleted", id: req.params.id });
-  } catch (err) {
-    res.status(500).json({ status: "error", message: err.message });
-  }
-});
-
-// --- Delete scratch org via GET (browser-friendly) ---
-app.get("/api/scratch-orgs/delete/:orgId", async (req, res) => {
-  try {
-    await sfClient.ensureConnected();
-    const orgs = await sfClient.conn.query(
-      "SELECT Id FROM ActiveScratchOrg WHERE ScratchOrg = '" + req.params.orgId + "'"
-    );
-    if (orgs.records.length > 0) {
-      await sfClient.conn.sobject('ActiveScratchOrg').delete(orgs.records[0].Id);
-      res.json({ status: "deleted", orgId: req.params.orgId });
-    } else {
-      res.json({ status: "not_found" });
-    }
-  } catch (err) {
-    res.status(500).json({ status: "error", message: err.message });
-  }
-});
-
-// --- Login to Scratch Org (stores tokens + persists to GitHub) ---
-app.get("/api/scratch-orgs/login/:id", async (req, res) => {
-  try {
-    const result = await sfClient.loginToScratchOrg(req.params.id);
-    if (result.success) {
-      if (req.query.redirect === "false") {
-        res.json({
-          status: "authenticated", scratchOrgId: result.scratchOrgId,
-          orgName: result.orgName, username: result.username,
-          instanceUrl: result.instanceUrl, tokensStored: true,
-          message: "Tokens armazenados e persistidos. Deploy multi-org habilitado.",
-        });
-      } else {
-        res.redirect(result.frontDoorUrl);
-      }
-    } else {
-      res.json({
-        status: "error", message: result.error,
-        loginUrl: result.loginUrl, username: result.username,
-        hint: "AuthCode expirado. Recrie a scratch org.",
-      });
-    }
-  } catch (err) {
-    res.status(500).json({ status: "error", message: err.message });
-  }
-});
-
 // =============================================
 // SMART SCRATCH ORG MANAGEMENT
 // =============================================
@@ -1303,6 +1236,73 @@ app.get("/api/scratch-orgs/smart-create", async (req, res) => {
       checkStatusUrl: `/api/scratch-orgs/${result.id}`,
       message: `Scratch org ${scratchDef.orgName} sendo criada. Aguarde 3-5 min e verifique o status.`,
     });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Get scratch org status ---
+app.get("/api/scratch-orgs/:id", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const info = await sfClient.getScratchOrgInfo(req.params.id);
+    res.json(info || { status: "not_found" });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Delete scratch org (DELETE method) ---
+app.delete("/api/scratch-orgs/:id", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    await sfClient.deleteScratchOrg(req.params.id);
+    res.json({ status: "deleted", id: req.params.id });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Delete scratch org via GET (browser-friendly) ---
+app.get("/api/scratch-orgs/delete/:orgId", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const orgs = await sfClient.conn.query(
+      "SELECT Id FROM ActiveScratchOrg WHERE ScratchOrg = '" + req.params.orgId + "'"
+    );
+    if (orgs.records.length > 0) {
+      await sfClient.conn.sobject('ActiveScratchOrg').delete(orgs.records[0].Id);
+      res.json({ status: "deleted", orgId: req.params.orgId });
+    } else {
+      res.json({ status: "not_found" });
+    }
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Login to Scratch Org (stores tokens + persists to GitHub) ---
+app.get("/api/scratch-orgs/login/:id", async (req, res) => {
+  try {
+    const result = await sfClient.loginToScratchOrg(req.params.id);
+    if (result.success) {
+      if (req.query.redirect === "false") {
+        res.json({
+          status: "authenticated", scratchOrgId: result.scratchOrgId,
+          orgName: result.orgName, username: result.username,
+          instanceUrl: result.instanceUrl, tokensStored: true,
+          message: "Tokens armazenados e persistidos. Deploy multi-org habilitado.",
+        });
+      } else {
+        res.redirect(result.frontDoorUrl);
+      }
+    } else {
+      res.json({
+        status: "error", message: result.error,
+        loginUrl: result.loginUrl, username: result.username,
+        hint: "AuthCode expirado. Recrie a scratch org.",
+      });
+    }
   } catch (err) {
     res.status(500).json({ status: "error", message: err.message });
   }
