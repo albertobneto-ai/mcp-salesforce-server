@@ -241,6 +241,32 @@ app.get("/api/mock-data-b64/:data", async (req, res) => {
 });
 
 // =============================================
+// DELETE RECORDS ENDPOINT
+// =============================================
+
+app.get("/api/delete-records/:objectName/:ids", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const conn = sfClient.getConnection();
+    const ids = req.params.ids.split(",");
+    const results = [];
+    for (const id of ids) {
+      try {
+        await conn.sobject(req.params.objectName).delete(id.trim());
+        results.push({ id: id.trim(), status: "deleted" });
+      } catch (err) {
+        results.push({ id: id.trim(), status: "error", error: err.message });
+      }
+    }
+    sfClient.clearTargetOrg();
+    res.json({ deleted: results.filter(r => r.status === "deleted").length, total: ids.length, results });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// =============================================
 // DESTRUCTIVE DEPLOY / RESET ORG ENDPOINTS
 // =============================================
 
