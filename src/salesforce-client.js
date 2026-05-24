@@ -229,8 +229,11 @@ export class SalesforceClient {
     return { success: summary.failed === 0, summary, details };
   }
 
-  // --- Scratch Org Management ---
-const result = await this.conn.sobject('ScratchOrgInfo').create({
+// --- Scratch Org Management ---
+  async createScratchOrg(definition) {
+    await this.ensureConnected();
+    try {
+      const result = await this.conn.sobject('ScratchOrgInfo').create({
         ConnectedAppConsumerKey: this.config.clientId,
         ConnectedAppCallbackUrl: "https://login.salesforce.com/services/oauth2/callback",
         OrgName: definition.orgName || "MCP Scratch Org",
@@ -243,7 +246,7 @@ const result = await this.conn.sobject('ScratchOrgInfo').create({
       });
       return result;
     } catch (err) {
-      throw new Error(JSON.stringify(err.message || err));
+      throw new Error(JSON.stringify(err.data || err.message || err));
     }
   }
 
