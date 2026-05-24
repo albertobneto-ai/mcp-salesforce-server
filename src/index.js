@@ -66,11 +66,12 @@ app.get("/", (req, res) => {
   res.json({
     status: "running",
     server: "mcp-salesforce-provisioning",
-    version: "3.3.0",
+    version: "3.4.0",
     tools: [
       "describe_org", "deploy_manifest", "deploy_component",
       "validate_manifest", "retrieve_metadata", "run_soql", "list_manifests",
       "scan_org", "destructive_deploy", "reset_org",
+      "deploy_code", "deploy_zip",
     ],
     features: {
       scratchOrgs: true,
@@ -195,6 +196,56 @@ app.post("/api/soql", async (req, res) => {
     const result = await sfClient.query(req.body.query);
     sfClient.clearTargetOrg();
     res.json({ totalSize: result.totalSize, records: result.records });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// =============================================
+// CODE DEPLOY ENDPOINTS (Apex, Flows, LWC)
+// =============================================
+
+// --- POST: deploy code from manifest JSON body ---
+app.post("/api/deploy-code", async (req, res) => {
+  try {
+    const targetOrg = await connectToTargetOrg(req);
+    const checkOnly = req.query.checkOnly === "true";
+    const testLevel = req.query.testLevel || "NoTestRun";
+    const result = await sfClient.deployCodeManifest(req.body, { checkOnly, testLevel });
+    sfClient.clearTargetOrg();
+    res.json({ ...result, targetOrg: targetOrg || "devhub" });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- GET: deploy code from base64-encoded manifest ---
+app.get("/api/deploy-code-b64/:data", async (req, res) => {
+  try {
+    const targetOrg = await connectToTargetOrg(req);
+    const manifest = JSON.parse(Buffer.from(req.params.data, "base64").toString("utf-8"));
+    const checkOnly = req.query.checkOnly === "true";
+    const testLevel = req.query.testLevel || "NoTestRun";
+    const result = await sfClient.deployCodeManifest(manifest, { checkOnly, testLevel });
+    sfClient.clearTargetOrg();
+    res.json({ ...result, targetOrg: targetOrg || "devhub" });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- POST: deploy raw ZIP file ---
+app.post("/api/deploy-zip", express.raw({ type: "application/zip", limit: "10mb" }), async (req, res) => {
+  try {
+    const targetOrg = await connectToTargetOrg(req);
+    const checkOnly = req.query.checkOnly === "true";
+    const testLevel = req.query.testLevel || "NoTestRun";
+    const result = await sfClient.deployZip(req.body, { checkOnly, testLevel });
+    sfClient.clearTargetOrg();
+    res.json({ ...result, targetOrg: targetOrg || "devhub" });
   } catch (err) {
     sfClient.clearTargetOrg();
     res.status(500).json({ status: "error", message: err.message });
@@ -674,7 +725,7 @@ app.get("/api/github/commit", async (req, res) => {
 // MCP SERVER (SSE Transport)
 // =============================================
 
-const mcpServer = new McpServer({ name: "salesforce-provisioning", version: "3.3.0" });
+const mcpServer = new McpServer({ name: "salesforce-provisioning", version: "3.4.0" });
 
 mcpServer.tool("describe_org", "Retorna informações da org conectada",
   { objectName: z.string().optional().describe("Nome do objeto para detalhar. Se omitido, lista objetos custom.") },
@@ -709,6 +760,17 @@ mcpServer.tool("deploy_component", "Deploy de um componente individual",
     try {
       await sfClient.ensureConnected();
       const result = await sfClient.deployComponent(componentType, JSON.parse(metadata));
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    } catch (err) { return { content: [{ type: "text", text: `Erro: ${err.message}` }] }; }
+  }
+);
+
+mcpServer.tool("deploy_code", "Deploy de código Apex, Triggers, Flows ou LWC via ZIP",
+  { manifest: z.string().describe("JSON com apexClasses, apexTriggers, flows, lwc"), checkOnly: z.boolean().default(false), testLevel: z.string().default("NoTestRun") },
+  async ({ manifest, checkOnly, testLevel }) => {
+    try {
+      await sfClient.ensureConnected();
+      const result = await sfClient.deployCodeManifest(JSON.parse(manifest), { checkOnly, testLevel });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     } catch (err) { return { content: [{ type: "text", text: `Erro: ${err.message}` }] }; }
   }
@@ -904,6 +966,6 @@ app.get("/api/assign-record-types/:objectName", async (req, res) => {
 // --- Start ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`MCP Salesforce Server v3.3.0 running on port ${PORT}`);
+  console.log(`MCP Salesforce Server v3.4.0 running on port ${PORT}`);
   console.log(`Features: ScratchOrgs=true, MultiOrg=true, MockData=true, GitHub=${!!ghClient}, DeployViaUrl=true`);
 });
