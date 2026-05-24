@@ -206,46 +206,74 @@ app.post("/api/soql", async (req, res) => {
 // CODE DEPLOY ENDPOINTS (Apex, Flows, LWC)
 // =============================================
 
-// --- POST: deploy code from manifest JSON body ---
+// --- POST: deploy code from manifest JSON body (async) ---
 app.post("/api/deploy-code", async (req, res) => {
   try {
     const targetOrg = await connectToTargetOrg(req);
     const checkOnly = req.query.checkOnly === "true";
     const testLevel = req.query.testLevel || "NoTestRun";
-    const result = await sfClient.deployCodeManifest(req.body, { checkOnly, testLevel });
+    const zipBuffer = await sfClient.buildDeployPackage(req.body);
+    const { deployId } = await sfClient.startDeploy(zipBuffer, { checkOnly, testLevel });
     sfClient.clearTargetOrg();
-    res.json({ ...result, targetOrg: targetOrg || "devhub" });
+    res.json({
+      status: "deploying",
+      deployId,
+      checkStatusUrl: `/api/deploy-status/${deployId}`,
+      targetOrg: targetOrg || "devhub",
+    });
   } catch (err) {
     sfClient.clearTargetOrg();
     res.status(500).json({ status: "error", message: err.message });
   }
 });
 
-// --- GET: deploy code from base64-encoded manifest ---
+// --- GET: deploy code from base64-encoded manifest (async) ---
 app.get("/api/deploy-code-b64/:data", async (req, res) => {
   try {
     const targetOrg = await connectToTargetOrg(req);
     const manifest = JSON.parse(Buffer.from(req.params.data, "base64").toString("utf-8"));
     const checkOnly = req.query.checkOnly === "true";
     const testLevel = req.query.testLevel || "NoTestRun";
-    const result = await sfClient.deployCodeManifest(manifest, { checkOnly, testLevel });
+    const zipBuffer = await sfClient.buildDeployPackage(manifest);
+    const { deployId } = await sfClient.startDeploy(zipBuffer, { checkOnly, testLevel });
     sfClient.clearTargetOrg();
-    res.json({ ...result, targetOrg: targetOrg || "devhub" });
+    res.json({
+      status: "deploying",
+      deployId,
+      checkStatusUrl: `/api/deploy-status/${deployId}`,
+      targetOrg: targetOrg || "devhub",
+    });
   } catch (err) {
     sfClient.clearTargetOrg();
     res.status(500).json({ status: "error", message: err.message });
   }
 });
 
-// --- POST: deploy raw ZIP file ---
+// --- GET: check deploy status ---
+app.get("/api/deploy-status/:deployId", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const result = await sfClient.checkDeployStatus(req.params.deployId);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- POST: deploy raw ZIP file (async) ---
 app.post("/api/deploy-zip", express.raw({ type: "application/zip", limit: "10mb" }), async (req, res) => {
   try {
     const targetOrg = await connectToTargetOrg(req);
     const checkOnly = req.query.checkOnly === "true";
     const testLevel = req.query.testLevel || "NoTestRun";
-    const result = await sfClient.deployZip(req.body, { checkOnly, testLevel });
+    const { deployId } = await sfClient.startDeploy(req.body, { checkOnly, testLevel });
     sfClient.clearTargetOrg();
-    res.json({ ...result, targetOrg: targetOrg || "devhub" });
+    res.json({
+      status: "deploying",
+      deployId,
+      checkStatusUrl: `/api/deploy-status/${deployId}`,
+      targetOrg: targetOrg || "devhub",
+    });
   } catch (err) {
     sfClient.clearTargetOrg();
     res.status(500).json({ status: "error", message: err.message });
