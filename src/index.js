@@ -674,6 +674,25 @@ app.get("/api/tooling-query", async (req, res) => {
   }
 });
 
+// --- Tooling API PATCH (update metadata via Tooling API) ---
+app.post("/api/tooling-update/:sobjectType/:id", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const conn = sfClient.getConnection();
+    const result = await conn.request({
+      method: "PATCH",
+      url: `/services/data/v62.0/tooling/sobjects/${req.params.sobjectType}/${req.params.id}`,
+      body: JSON.stringify(req.body),
+      headers: { "Content-Type": "application/json" },
+    });
+    sfClient.clearTargetOrg();
+    res.json({ status: "updated", result: result || "success" });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
 // --- Tooling API DELETE (erase deleted fields, objects, etc.) ---
 app.get("/api/tooling-delete/:sobjectType/:id", async (req, res) => {
   try {
