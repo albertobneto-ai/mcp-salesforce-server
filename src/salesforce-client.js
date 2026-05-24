@@ -505,10 +505,11 @@ export class SalesforceClient {
       }
     }
 
-    // --- Queues & Email Templates (via ZIP deploy - async) ---
+    // --- Queues, Email Templates & Roles (via ZIP deploy - async) ---
     const zipTypes = {
       queues: manifest.metadata?.queues,
       emailTemplates: manifest.metadata?.emailTemplates,
+      roles: manifest.metadata?.roles,
     };
     const hasZipTypes = Object.values(zipTypes).some(v => v?.length);
     if (hasZipTypes) {
@@ -516,10 +517,11 @@ export class SalesforceClient {
         const zipManifest = {};
         if (zipTypes.queues?.length) zipManifest.queues = zipTypes.queues;
         if (zipTypes.emailTemplates?.length) zipManifest.emailTemplates = zipTypes.emailTemplates;
+        if (zipTypes.roles?.length) zipManifest.roles = zipTypes.roles;
         const zipBuffer = await this.buildDeployPackage(zipManifest);
         const { deployId } = await this.startDeploy(zipBuffer);
         const typeNames = Object.keys(zipManifest).join(", ");
-        const count = (zipManifest.queues?.length || 0) + (zipManifest.emailTemplates?.length || 0);
+        const count = (zipManifest.queues?.length || 0) + (zipManifest.emailTemplates?.length || 0) + (zipManifest.roles?.length || 0);
         summary.total += count;
         details.push({
           type: "ZipDeploy",
@@ -639,28 +641,6 @@ export class SalesforceClient {
         } catch (err) {
           summary.failed++;
           details.push({ type: "AssignmentRule", fullName: ar.fullName, success: false, errors: [err.message] });
-        }
-      }
-    }
-
-    // --- Roles (hierarquia) ---
-    if (manifest.metadata?.roles?.length) {
-      for (const role of manifest.metadata.roles) {
-        summary.total++;
-        try {
-          const result = await conn.metadata.upsert("Role", {
-            fullName: role.fullName,
-            ...(role.parentRole && { parentRole: role.parentRole }),
-            caseAccessForAccountOwner: role.caseAccessForAccountOwner || "Edit",
-            contactAccessForAccountOwner: role.contactAccessForAccountOwner || "Edit",
-            opportunityAccessForAccountOwner: role.opportunityAccessForAccountOwner || "Edit",
-          });
-          const success = Array.isArray(result) ? result[0].success : result.success;
-          if (success) summary.success++; else summary.failed++;
-          details.push({ type: "Role", fullName: role.fullName, success });
-        } catch (err) {
-          summary.failed++;
-          details.push({ type: "Role", fullName: role.fullName, success: false, errors: [err.message] });
         }
       }
     }
@@ -974,6 +954,22 @@ export class SalesforceClient {
         }
         xml += `</Queue>`;
         zip.file(`queues/${name}.queue`, xml);
+        packageTypes[packageTypes.length - 1].members.push(name);
+      }
+    }
+
+    // --- Roles (via ZIP) ---
+    if (manifest.roles?.length) {
+      packageTypes.push({ name: "Role", members: [] });
+      for (const role of manifest.roles) {
+        const name = role.fullName || role.name;
+        const label = role.label || name.replace(/_/g, " ");
+        let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+        xml += `<Role xmlns="http://soap.sforce.com/2006/04/metadata">\n`;
+        xml += `    <name>${label}</name>\n`;
+        if (role.parentRole) xml += `    <parentRole>${role.parentRole}</parentRole>\n`;
+        xml += `</Role>`;
+        zip.file(`roles/${name}.role`, xml);
         packageTypes[packageTypes.length - 1].members.push(name);
       }
     }
