@@ -74,8 +74,9 @@ export class SalesforceClient {
     try {
       const file = await this.ghClient.getFile("data/tokens.json");
       if (file && file.content) {
-        const decoded = Buffer.from(file.content, "base64").toString("utf-8");
-        const data = JSON.parse(decoded);
+        // getFile returns content as plain text (already decoded)
+        const raw = typeof file.content === "string" ? file.content : Buffer.from(file.content, "base64").toString("utf-8");
+        const data = JSON.parse(raw);
         for (const [orgId, tokens] of Object.entries(data)) {
           this.orgTokens.set(orgId, tokens);
         }
