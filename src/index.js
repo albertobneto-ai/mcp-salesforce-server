@@ -131,11 +131,19 @@ app.get("/api/describe/:objectName", async (req, res) => {
     await connectToTargetOrg(req);
     const desc = await sfClient.describeObject(req.params.objectName);
     sfClient.clearTargetOrg();
-    res.json({
+    const response = {
       name: desc.name, label: desc.label,
       fields: desc.fields.map(f => ({ name: f.name, label: f.label, type: f.type, custom: f.custom })),
       recordTypes: desc.recordTypeInfos?.map(rt => ({ name: rt.name, active: rt.active })),
-    });
+    };
+    if (req.query.childRelationships === "true") {
+      response.childRelationships = desc.childRelationships?.map(cr => ({
+        childSObject: cr.childSObject,
+        field: cr.field,
+        relationshipName: cr.relationshipName,
+      }));
+    }
+    res.json(response);
   } catch (err) {
     sfClient.clearTargetOrg();
     res.status(500).json({ status: "error", message: err.message });
