@@ -650,12 +650,10 @@ export class SalesforceClient {
         try {
           const result = await conn.metadata.upsert("Role", {
             fullName: role.fullName,
-            label: role.label || role.fullName,
             ...(role.parentRole && { parentRole: role.parentRole }),
             caseAccessForAccountOwner: role.caseAccessForAccountOwner || "Edit",
             contactAccessForAccountOwner: role.contactAccessForAccountOwner || "Edit",
             opportunityAccessForAccountOwner: role.opportunityAccessForAccountOwner || "Edit",
-            ...(role.description && { description: role.description }),
           });
           const success = Array.isArray(result) ? result[0].success : result.success;
           if (success) summary.success++; else summary.failed++;
