@@ -572,27 +572,61 @@ app.get("/api/erase-deleted-fields", async (req, res) => {
   try {
     await connectToTargetOrg(req);
     const conn = sfClient.getConnection();
+
+    // Step 1: Find deleted custom fields
     const result = await conn.request({
       method: "GET",
       url: "/services/data/v62.0/tooling/query/?q=" +
         encodeURIComponent("SELECT Id, DeveloperName, TableEnumOrId FROM CustomField WHERE DeveloperName LIKE '%_del'"),
     });
-    const deleted = [];
-    if (result.records?.length) {
-      for (const field of result.records) {
-        try {
-          await conn.request({
-            method: "DELETE",
-            url: `/services/data/v62.0/tooling/sobjects/CustomField/${field.Id}`,
-          });
-          deleted.push({ id: field.Id, name: field.DeveloperName, object: field.TableEnumOrId, status: "erased" });
-        } catch (err) {
-          deleted.push({ id: field.Id, name: field.DeveloperName, object: field.TableEnumOrId, status: "error", error: err.message });
+
+    if (!result.records?.length) {
+      sfClient.clearTargetOrg();
+      return res.json({ status: "done", message: "No deleted fields found", erasedCount: 0, details: [] });
+    }
+
+    // Step 2: Remove FieldPermissions referencing deleted fields
+    const deletedFieldNames = result.records.map(r => `${r.TableEnumOrId}.${r.DeveloperName}__c`);
+    try {
+      const fpQuery = `SELECT Id, Field FROM FieldPermissions WHERE ${deletedFieldNames.map(f => `Field = '${f}'`).join(" OR ")}`;
+      const fpResult = await conn.query(fpQuery);
+      if (fpResult.records?.length) {
+        for (const fp of fpResult.records) {
+          try { await conn.sobject("FieldPermissions").delete(fp.Id); } catch { /* skip */ }
         }
+      }
+    } catch { /* FieldPermissions query may fail, continue */ }
+
+    // Step 2b: Also try with original names (without _del suffix)
+    try {
+      const originalNames = result.records.map(r => {
+        const origName = r.DeveloperName.replace(/_del$/, "");
+        return `${r.TableEnumOrId}.${origName}__c`;
+      });
+      const fpQuery2 = `SELECT Id, Field FROM FieldPermissions WHERE ${originalNames.map(f => `Field = '${f}'`).join(" OR ")}`;
+      const fpResult2 = await conn.query(fpQuery2);
+      if (fpResult2.records?.length) {
+        for (const fp of fpResult2.records) {
+          try { await conn.sobject("FieldPermissions").delete(fp.Id); } catch { /* skip */ }
+        }
+      }
+    } catch { /* skip */ }
+
+    // Step 3: Now erase the deleted fields
+    const deleted = [];
+    for (const field of result.records) {
+      try {
+        await conn.request({
+          method: "DELETE",
+          url: `/services/data/v62.0/tooling/sobjects/CustomField/${field.Id}`,
+        });
+        deleted.push({ id: field.Id, name: field.DeveloperName, object: field.TableEnumOrId, status: "erased" });
+      } catch (err) {
+        deleted.push({ id: field.Id, name: field.DeveloperName, object: field.TableEnumOrId, status: "error", error: err.message });
       }
     }
     sfClient.clearTargetOrg();
-    res.json({ status: "done", erasedCount: deleted.filter(d => d.status === "erased").length, details: deleted });
+    res.json({ status: "done", erasedCount: deleted.filter(d => d.status === "erased").length, total: deleted.length, details: deleted });
   } catch (err) {
     sfClient.clearTargetOrg();
     res.status(500).json({ status: "error", message: err.message });
