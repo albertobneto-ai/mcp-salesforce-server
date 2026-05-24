@@ -3,44 +3,22 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import express from "express";
 import { z } from "zod";
 import { SalesforceClient } from "./salesforce-client.js";
+import { GitHubClient } from "./github-client.js";
 import { ManifestManager } from "./manifest-manager.js";
 
 const app = express();
 app.use(express.json({ limit: "10mb" }));
+
 // CORS - permite chamadas do Claude
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Content-Type");
-  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   if (req.method === "OPTIONS") return res.sendStatus(200);
   next();
 });
 
-// POST endpoint para deploy de manifests via Claude
-app.post("/api/deploy", async (req, res) => {
-  try {
-    await sfClient.ensureConnected();
-    const result = await sfClient.deployManifest(req.body);
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ status: "error", message: err.message });
-  }
-});
-
-app.get("/api/describe/:objectName", async (req, res) => {
-  try {
-    await sfClient.ensureConnected();
-    const desc = await sfClient.describeObject(req.params.objectName);
-    res.json({
-      name: desc.name, label: desc.label,
-      fields: desc.fields.map(f => ({ name: f.name, label: f.label, type: f.type, custom: f.custom })),
-      recordTypes: desc.recordTypeInfos?.map(rt => ({ name: rt.name, active: rt.active }))
-    });
-  } catch (err) {
-    res.status(500).json({ status: "error", message: err.message });
-  }
-});
-
+// --- Clients ---
 const sfClient = new SalesforceClient({
   loginUrl: process.env.SF_LOGIN_URL || "https://login.salesforce.com",
   username: process.env.SF_USERNAME,
@@ -49,316 +27,37 @@ const sfClient = new SalesforceClient({
   clientId: process.env.SF_CLIENT_ID,
   clientSecret: process.env.SF_CLIENT_SECRET,
 });
+
+const ghClient = process.env.GH_TOKEN ? new GitHubClient({
+  token: process.env.GH_TOKEN,
+  owner: process.env.GH_OWNER || "albertobneto-ai",
+  repo: process.env.GH_REPO || "mcp-salesforce-server",
+}) : null;
+
 const manifestManager = new ManifestManager();
 
-// --- MCP Server Setup ---
-const mcpServer = new McpServer({
-  name: "salesforce-provisioning",
-  version: "1.0.0",
-});
-
-// ========== TOOL: describe_org ==========
-mcpServer.tool(
-  "describe_org",
-  "Retorna informações da org conectada: objetos, campos existentes, limites",
-  {
-    objectName: z
-      .string()
-      .optional()
-      .describe("Nome do objeto para detalhar (ex: Lead, Account). Se omitido, lista todos os objetos custom."),
-  },
-  async ({ objectName }) => {
-    try {
-      await sfClient.ensureConnected();
-
-      if (objectName) {
-        const desc = await sfClient.describeObject(objectName);
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(
-                {
-                  name: desc.name,
-                  label: desc.label,
-                  fieldCount: desc.fields.length,
-                  fields: desc.fields.map((f) => ({
-                    name: f.name,
-                    label: f.label,
-                    type: f.type,
-                    custom: f.custom,
-                  })),
-                  recordTypeCount: desc.recordTypeInfos?.length || 0,
-                  recordTypes: desc.recordTypeInfos?.map((rt) => ({
-                    name: rt.name,
-                    active: rt.active,
-                  })),
-                },
-                null,
-                2
-              ),
-            },
-          ],
-        };
-      }
-
-      // List all custom objects
-      const globalDesc = await sfClient.describeGlobal();
-      const customObjects = globalDesc.sobjects
-        .filter((s) => s.custom)
-        .map((s) => ({ name: s.name, label: s.label }));
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                orgId: sfClient.getOrgId(),
-                totalObjects: globalDesc.sobjects.length,
-                customObjects,
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    } catch (err) {
-      return { content: [{ type: "text", text: `Erro: ${err.message}` }] };
-    }
-  }
-);
-
-// ========== TOOL: deploy_manifest ==========
-mcpServer.tool(
-  "deploy_manifest",
-  "Recebe um manifest JSON e faz deploy de metadados na org Salesforce (objetos, campos, validation rules, etc.)",
-  {
-    manifest: z
-      .string()
-      .describe("Manifest JSON completo com metadados a provisionar (customObjects, customFields, validationRules, etc.)"),
-    checkOnly: z
-      .boolean()
-      .default(false)
-      .describe("Se true, apenas valida sem fazer deploy efetivo"),
-  },
-  async ({ manifest, checkOnly }) => {
-    try {
-      await sfClient.ensureConnected();
-      const manifestData = JSON.parse(manifest);
-      const results = await sfClient.deployManifest(manifestData, checkOnly);
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                status: results.success ? "SUCCESS" : "FAILED",
-                checkOnly,
-                specName: manifestData.specName || "unknown",
-                summary: results.summary,
-                details: results.details,
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    } catch (err) {
-      return { content: [{ type: "text", text: `Erro no deploy: ${err.message}` }] };
-    }
-  }
-);
-
-// ========== TOOL: deploy_component ==========
-mcpServer.tool(
-  "deploy_component",
-  "Deploy de um componente individual na org (um campo, um objeto, uma validation rule)",
-  {
-    componentType: z
-      .enum([
-        "CustomObject",
-        "CustomField",
-        "ValidationRule",
-        "RecordType",
-        "Layout",
-        "PermissionSet",
-        "Flow",
-      ])
-      .describe("Tipo do componente de metadado"),
-    metadata: z
-      .string()
-      .describe("JSON do componente a ser criado/atualizado"),
-  },
-  async ({ componentType, metadata }) => {
-    try {
-      await sfClient.ensureConnected();
-      const metadataObj = JSON.parse(metadata);
-      const result = await sfClient.deployComponent(componentType, metadataObj);
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(result, null, 2),
-          },
-        ],
-      };
-    } catch (err) {
-      return { content: [{ type: "text", text: `Erro: ${err.message}` }] };
-    }
-  }
-);
-
-// ========== TOOL: validate_manifest ==========
-mcpServer.tool(
-  "validate_manifest",
-  "Valida um manifest sem fazer deploy (checkOnly). Retorna erros de validação se houver.",
-  {
-    manifest: z.string().describe("Manifest JSON a validar"),
-  },
-  async ({ manifest }) => {
-    try {
-      await sfClient.ensureConnected();
-      const manifestData = JSON.parse(manifest);
-      const results = await sfClient.deployManifest(manifestData, true);
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                valid: results.success,
-                errors: results.details?.filter((d) => !d.success) || [],
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    } catch (err) {
-      return { content: [{ type: "text", text: `Erro na validação: ${err.message}` }] };
-    }
-  }
-);
-
-// ========== TOOL: retrieve_metadata ==========
-mcpServer.tool(
-  "retrieve_metadata",
-  "Puxa metadados existentes da org para comparar com a spec",
-  {
-    metadataTypes: z
-      .array(z.string())
-      .describe("Lista de tipos de metadado a recuperar (ex: ['CustomObject', 'CustomField'])"),
-    objectName: z
-      .string()
-      .optional()
-      .describe("Filtrar por objeto específico (ex: 'Lead')"),
-  },
-  async ({ metadataTypes, objectName }) => {
-    try {
-      await sfClient.ensureConnected();
-      const result = await sfClient.retrieveMetadata(metadataTypes, objectName);
-
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-      };
-    } catch (err) {
-      return { content: [{ type: "text", text: `Erro: ${err.message}` }] };
-    }
-  }
-);
-
-// ========== TOOL: run_soql ==========
-mcpServer.tool(
-  "run_soql",
-  "Executa uma query SOQL na org e retorna os resultados",
-  {
-    query: z.string().describe("Query SOQL (ex: SELECT Id, Name FROM Account LIMIT 10)"),
-  },
-  async ({ query }) => {
-    try {
-      await sfClient.ensureConnected();
-      const result = await sfClient.query(query);
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              { totalSize: result.totalSize, records: result.records },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    } catch (err) {
-      return { content: [{ type: "text", text: `Erro SOQL: ${err.message}` }] };
-    }
-  }
-);
-
-// ========== TOOL: list_manifests ==========
-mcpServer.tool(
-  "list_manifests",
-  "Lista manifests disponíveis por workstream",
-  {},
-  async () => {
-    const manifests = manifestManager.listManifests();
-    return {
-      content: [{ type: "text", text: JSON.stringify(manifests, null, 2) }],
-    };
-  }
-);
-
-// --- SSE Transport for MCP over HTTP ---
-const transports = {};
-
-app.get("/sse", async (req, res) => {
-  const transport = new SSEServerTransport("/messages", res);
-  transports[transport.sessionId] = transport;
-  
-  res.on("close", () => {
-    delete transports[transport.sessionId];
-  });
-  
-  await mcpServer.connect(transport);
-});
-
-app.post("/messages", async (req, res) => {
-  const sessionId = req.query.sessionId;
-  const transport = transports[sessionId];
-  
-  if (!transport) {
-    return res.status(400).json({ error: "No active session found" });
-  }
-  
-  await transport.handlePostMessage(req, res);
-});
+// =============================================
+// REST API ENDPOINTS
+// =============================================
 
 // --- Health check ---
 app.get("/", (req, res) => {
   res.json({
     status: "running",
     server: "mcp-salesforce-provisioning",
-    version: "1.0.0",
+    version: "2.0.0",
     tools: [
-      "describe_org",
-      "deploy_manifest",
-      "deploy_component",
-      "validate_manifest",
-      "retrieve_metadata",
-      "run_soql",
-      "list_manifests",
+      "describe_org", "deploy_manifest", "deploy_component",
+      "validate_manifest", "retrieve_metadata", "run_soql", "list_manifests",
     ],
+    features: {
+      scratchOrgs: true,
+      githubIntegration: !!ghClient,
+      deployViaUrl: true,
+    },
   });
 });
+
 // --- Test Salesforce connection ---
 app.get("/test-connection", async (req, res) => {
   try {
@@ -374,92 +73,19 @@ app.get("/test-connection", async (req, res) => {
     res.status(500).json({ status: "error", message: err.message });
   }
 });
-// --- Test Deploy ---
-app.get("/test-deploy", async (req, res) => {
+
+// --- POST deploy (manifest in body) ---
+app.post("/api/deploy", async (req, res) => {
   try {
     await sfClient.ensureConnected();
-    const manifest = {
-      specName: "Quick_Test",
-      metadata: {
-        customObjects: [{
-          fullName: "MCP_Test__c",
-          label: "MCP Test",
-          pluralLabel: "MCP Tests",
-          deploymentStatus: "Deployed",
-          sharingModel: "ReadWrite",
-          nameField: { fullName: "Name", label: "Nome", type: "Text" },
-          fields: [
-            { fullName: "Descricao__c", label: "Descrição", type: "TextArea" },
-            { fullName: "Status__c", label: "Status", type: "Picklist", picklist: ["Novo", "Em Progresso", "Concluído"] }
-          ]
-        }]
-      }
-    };
-    const result = await sfClient.deployManifest(manifest);
+    const result = await sfClient.deployManifest(req.body);
     res.json(result);
   } catch (err) {
     res.status(500).json({ status: "error", message: err.message });
   }
 });
-// --- Deploy Leads & Sales Engagement ---
-app.get("/deploy-leads", async (req, res) => {
-  try {
-    await sfClient.ensureConnected();
-    const manifest = {
-      specName: "Leads_SalesEngagement",
-      metadata: {
-        customObjects: [
-          {
-            fullName: "Neoway_Prospect__c",
-            label: "Prospect Neoway",
-            pluralLabel: "Prospects Neoway",
-            deploymentStatus: "Deployed",
-            sharingModel: "ReadWrite",
-            nameField: { fullName: "Name", label: "Nome do Prospect", type: "Text" },
-            fields: [
-              { fullName: "CNPJ__c", label: "CNPJ", type: "Text", length: 18, required: true, externalId: true },
-              { fullName: "Razao_Social__c", label: "Razão Social", type: "Text", length: 255, required: true },
-              { fullName: "Nome_Fantasia__c", label: "Nome Fantasia", type: "Text", length: 255 },
-              { fullName: "Segmento__c", label: "Segmento", type: "Picklist", picklist: ["Enterprise", "Mid-Market", "SMB", "Micro"] },
-              { fullName: "Score_Neoway__c", label: "Score Neoway", type: "Number", precision: 5, scale: 2 },
-              { fullName: "Faixa_Faturamento__c", label: "Faixa de Faturamento", type: "Picklist", picklist: ["Até 1M", "1M-10M", "10M-50M", "50M-100M", "Acima de 100M"] },
-              { fullName: "CNAE_Principal__c", label: "CNAE Principal", type: "Text", length: 10 },
-              { fullName: "Descricao_CNAE__c", label: "Descrição CNAE", type: "Text", length: 255 },
-              { fullName: "UF__c", label: "UF", type: "Text", length: 2 },
-              { fullName: "Cidade__c", label: "Cidade", type: "Text", length: 100 },
-              { fullName: "Endereco__c", label: "Endereço", type: "TextArea" },
-              { fullName: "Telefone__c", label: "Telefone", type: "Phone" },
-              { fullName: "Email_Contato__c", label: "Email de Contato", type: "Email" },
-              { fullName: "Data_Ultima_Atualizacao__c", label: "Data Última Atualização Neoway", type: "DateTime" },
-              { fullName: "Status_Prospeccao__c", label: "Status Prospecção", type: "Picklist", picklist: ["Novo", "Em Análise", "Qualificado", "Descartado", "Convertido em Lead"] },
-              { fullName: "Origem_Dados__c", label: "Origem dos Dados", type: "Text", length: 50 },
-              { fullName: "Quantidade_Funcionarios__c", label: "Quantidade de Funcionários", type: "Number", precision: 8, scale: 0 },
-              { fullName: "Capital_Social__c", label: "Capital Social", type: "Currency", precision: 16, scale: 2 }
-            ]
-          }
-        ],
-        customFields: [
-          { fullName: "Lead.CNPJ__c", label: "CNPJ", type: "Text", length: 18, externalId: true, description: "CNPJ do lead B2B" },
-          { fullName: "Lead.Canal_Origem__c", label: "Canal de Origem", type: "Picklist", picklist: ["Neoway", "WhatsApp", "Website", "Indicação", "Evento", "Outbound", "Parceiro"] },
-          { fullName: "Lead.Segmento_B2B__c", label: "Segmento B2B", type: "Picklist", picklist: ["Enterprise", "Mid-Market", "SMB", "Micro"] },
-          { fullName: "Lead.Score_Engajamento__c", label: "Score de Engajamento", type: "Number", precision: 5, scale: 0, description: "Score calculado pelo Sales Engagement" },
-          { fullName: "Lead.Score_Neoway__c", label: "Score Neoway", type: "Number", precision: 5, scale: 2, description: "Score de propensão vindo do Neoway" },
-          { fullName: "Lead.Faixa_Faturamento__c", label: "Faixa de Faturamento", type: "Picklist", picklist: ["Até 1M", "1M-10M", "10M-50M", "50M-100M", "Acima de 100M"] },
-          { fullName: "Lead.Produto_Interesse__c", label: "Produto de Interesse", type: "MultiselectPicklist", picklist: ["Internet Dedicada", "MPLS", "SD-WAN", "Cloud", "Voz", "Colaboração", "Segurança", "Data Center", "IoT"] },
-          { fullName: "Lead.Regiao_Comercial__c", label: "Região Comercial", type: "Picklist", picklist: ["Triângulo Mineiro", "Alto Paranaíba", "Goiás", "Mato Grosso do Sul", "São Paulo Interior", "Distrito Federal"] },
-          { fullName: "Lead.Prospect_Neoway__c", label: "Prospect Neoway", type: "Lookup", referenceTo: "Neoway_Prospect__c", relationshipName: "Leads" },
-          { fullName: "Lead.Data_Qualificacao__c", label: "Data de Qualificação", type: "DateTime", description: "Data em que o lead foi qualificado para conversão" },
-          { fullName: "Lead.Motivo_Desqualificacao__c", label: "Motivo da Desqualificação", type: "Picklist", picklist: ["Sem budget", "Fora da área de cobertura", "Já é cliente", "Sem interesse", "Dados inválidos", "Duplicado", "Outro"] }
-        ]
-      }
-    };
-    const result = await sfClient.deployManifest(manifest);
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ status: "error", message: err.message, stack: err.stack });
-  }
-});
-// --- Generic deploy via URL (base64 manifest) ---
+
+// --- GET deploy via base64 URL ---
 app.get("/api/deploy-b64/:data", async (req, res) => {
   try {
     await sfClient.ensureConnected();
@@ -470,10 +96,238 @@ app.get("/api/deploy-b64/:data", async (req, res) => {
     res.status(500).json({ status: "error", message: err.message });
   }
 });
+
+// --- Describe object ---
+app.get("/api/describe/:objectName", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const desc = await sfClient.describeObject(req.params.objectName);
+    res.json({
+      name: desc.name, label: desc.label,
+      fields: desc.fields.map(f => ({ name: f.name, label: f.label, type: f.type, custom: f.custom })),
+      recordTypes: desc.recordTypeInfos?.map(rt => ({ name: rt.name, active: rt.active })),
+    });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Run SOQL ---
+app.post("/api/soql", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const result = await sfClient.query(req.body.query);
+    res.json({ totalSize: result.totalSize, records: result.records });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// =============================================
+// SCRATCH ORG ENDPOINTS
+// =============================================
+
+// --- Create scratch org ---
+app.post("/api/scratch-orgs", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const result = await sfClient.createScratchOrg(req.body);
+    res.json({ status: "creating", scratchOrgInfoId: result.id, message: "Scratch org sendo criada. Use GET /api/scratch-orgs/:id para verificar status." });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+app.get("/api/scratch-orgs/create/:template", async (req, res) => {
+  const templates = {
+    leads: { orgName: "CRM-B2B-Leads", edition: "Developer", features: ["SalesCloud"], durationDays: 7 },
+    maps: { orgName: "CRM-B2B-Maps", edition: "Developer", features: ["SalesCloud"], durationDays: 7 },
+    oportunidades: { orgName: "CRM-B2B-Opps", edition: "Developer", features: ["SalesCloud"], durationDays: 7 },
+    orders: { orgName: "CRM-B2B-Orders", edition: "Developer", features: ["SalesCloud"], durationDays: 7 },
+    datacloud: { orgName: "CRM-B2B-DataCloud", edition: "Developer", features: ["SalesCloud"], durationDays: 7 },
+    agentforce: { orgName: "CRM-B2B-Agentforce", edition: "Developer", features: ["SalesCloud"], durationDays: 7 },
+    whatsapp: { orgName: "CRM-B2B-WhatsApp", edition: "Developer", features: ["SalesCloud", "ServiceCloud"], durationDays: 7 },
+  };
+
+  const template = templates[req.params.template];
+  if (!template) {
+    return res.status(400).json({ status: "error", message: `Template não encontrado. Disponíveis: ${Object.keys(templates).join(", ")}` });
+  }
+
+  try {
+    await sfClient.ensureConnected();
+    const result = await sfClient.createScratchOrg(template);
+    res.json({ status: "creating", template: req.params.template, scratchOrgInfoId: result.id, orgName: template.orgName });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- List scratch orgs ---
+app.get("/api/scratch-orgs", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const orgs = await sfClient.listScratchOrgs();
+    res.json({ count: orgs.length, orgs });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Get scratch org status ---
+app.get("/api/scratch-orgs/:id", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const info = await sfClient.getScratchOrgInfo(req.params.id);
+    res.json(info || { status: "not_found" });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Delete scratch org ---
+app.delete("/api/scratch-orgs/:id", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    await sfClient.deleteScratchOrg(req.params.id);
+    res.json({ status: "deleted", id: req.params.id });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// =============================================
+// GITHUB ENDPOINTS
+// =============================================
+
+app.get("/api/github/status", (req, res) => {
+  res.json({ connected: !!ghClient, owner: process.env.GH_OWNER, repo: process.env.GH_REPO });
+});
+
+app.get("/api/github/files", async (req, res) => {
+  if (!ghClient) return res.status(400).json({ error: "GitHub not configured. Set GH_TOKEN, GH_OWNER, GH_REPO." });
+  try {
+    const path = req.query.path || "";
+    const files = await ghClient.listFiles(path);
+    res.json(files);
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+app.get("/api/github/file", async (req, res) => {
+  if (!ghClient) return res.status(400).json({ error: "GitHub not configured." });
+  try {
+    const file = await ghClient.getFile(req.query.path);
+    res.json(file);
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+app.post("/api/github/file", async (req, res) => {
+  if (!ghClient) return res.status(400).json({ error: "GitHub not configured." });
+  try {
+    const { path, content, message } = req.body;
+    const result = await ghClient.updateFile(path, content, message);
+    res.json({ status: "updated", path, commit: result.commit?.sha });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+app.get("/api/github/commit", async (req, res) => {
+  if (!ghClient) return res.status(400).json({ error: "GitHub not configured." });
+  try {
+    const commit = await ghClient.getLatestCommit();
+    res.json(commit);
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// =============================================
+// MCP SERVER (SSE Transport)
+// =============================================
+
+const mcpServer = new McpServer({ name: "salesforce-provisioning", version: "2.0.0" });
+
+mcpServer.tool("describe_org", "Retorna informações da org conectada",
+  { objectName: z.string().optional().describe("Nome do objeto para detalhar. Se omitido, lista objetos custom.") },
+  async ({ objectName }) => {
+    try {
+      await sfClient.ensureConnected();
+      if (objectName) {
+        const desc = await sfClient.describeObject(objectName);
+        return { content: [{ type: "text", text: JSON.stringify({ name: desc.name, label: desc.label, fieldCount: desc.fields.length, fields: desc.fields.map(f => ({ name: f.name, label: f.label, type: f.type, custom: f.custom })) }, null, 2) }] };
+      }
+      const globalDesc = await sfClient.describeGlobal();
+      const customObjects = globalDesc.sobjects.filter(s => s.custom).map(s => ({ name: s.name, label: s.label }));
+      return { content: [{ type: "text", text: JSON.stringify({ orgId: sfClient.getOrgId(), customObjects }, null, 2) }] };
+    } catch (err) { return { content: [{ type: "text", text: `Erro: ${err.message}` }] }; }
+  }
+);
+
+mcpServer.tool("deploy_manifest", "Faz deploy de metadados na org via manifest JSON",
+  { manifest: z.string().describe("Manifest JSON"), checkOnly: z.boolean().default(false) },
+  async ({ manifest, checkOnly }) => {
+    try {
+      await sfClient.ensureConnected();
+      const result = await sfClient.deployManifest(JSON.parse(manifest), checkOnly);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    } catch (err) { return { content: [{ type: "text", text: `Erro: ${err.message}` }] }; }
+  }
+);
+
+mcpServer.tool("deploy_component", "Deploy de um componente individual",
+  { componentType: z.enum(["CustomObject", "CustomField", "ValidationRule", "RecordType", "Layout", "PermissionSet", "Flow"]), metadata: z.string() },
+  async ({ componentType, metadata }) => {
+    try {
+      await sfClient.ensureConnected();
+      const result = await sfClient.deployComponent(componentType, JSON.parse(metadata));
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    } catch (err) { return { content: [{ type: "text", text: `Erro: ${err.message}` }] }; }
+  }
+);
+
+mcpServer.tool("run_soql", "Executa query SOQL",
+  { query: z.string() },
+  async ({ query }) => {
+    try {
+      await sfClient.ensureConnected();
+      const result = await sfClient.query(query);
+      return { content: [{ type: "text", text: JSON.stringify({ totalSize: result.totalSize, records: result.records }, null, 2) }] };
+    } catch (err) { return { content: [{ type: "text", text: `Erro: ${err.message}` }] }; }
+  }
+);
+
+mcpServer.tool("list_manifests", "Lista manifests disponíveis", {},
+  async () => {
+    const manifests = manifestManager.listManifests();
+    return { content: [{ type: "text", text: JSON.stringify(manifests, null, 2) }] };
+  }
+);
+
+// --- SSE Transport ---
+const transports = {};
+
+app.get("/sse", async (req, res) => {
+  const transport = new SSEServerTransport("/messages", res);
+  transports[transport.sessionId] = transport;
+  res.on("close", () => { delete transports[transport.sessionId]; });
+  await mcpServer.connect(transport);
+});
+
+app.post("/messages", async (req, res) => {
+  const sessionId = req.query.sessionId;
+  const transport = transports[sessionId];
+  if (!transport) return res.status(400).json({ error: "No active session" });
+  await transport.handlePostMessage(req, res);
+});
+
 // --- Start ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`MCP Salesforce Server running on port ${PORT}`);
-  console.log(`SSE endpoint: /sse`);
-  console.log(`Health check: /`);
+  console.log(`MCP Salesforce Server v2.0.0 running on port ${PORT}`);
+  console.log(`Features: ScratchOrgs=true, GitHub=${!!ghClient}, DeployViaUrl=true`);
 });
