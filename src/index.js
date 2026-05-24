@@ -843,7 +843,6 @@ app.get("/api/mocks/whatsapp-messages", async (req, res) => {
           Description: `[WhatsApp] ${lead.Phone || "N/A"}\n\nMensagem:\n${messages[i]}\n\n---\nSimulado via MCP Mock (Digital Engagement)`,
           Status: "Open",
           Priority: "Normal",
-          Type: "Call",
           ActivityDate: new Date().toISOString().split("T")[0],
         });
         results.push({ success: true, taskId: task.id, leadName: lead.Name, message: messages[i].substring(0, 50) + "..." });
