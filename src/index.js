@@ -446,6 +446,60 @@ app.post("/messages", async (req, res) => {
   await transport.handlePostMessage(req, res);
 });
 
+
+// --- DEBUG: raw metadata test ---
+app.get("/api/debug/create-field", async (req, res) => {
+  try {
+    const orgId = req.query.org;
+    if (orgId) {
+      await sfClient.connectToScratchOrg(orgId);
+    } else {
+      await sfClient.ensureConnected();
+    }
+    const conn = sfClient.getConnection();
+    
+    const upsertResult = await conn.metadata.upsert("CustomField", {
+      fullName: "Lead.DebugTest__c",
+      label: "Debug Test",
+      type: "Text",
+      length: 50,
+    });
+    
+    let createResult = null;
+    let createError = null;
+    try {
+      createResult = await conn.metadata.create("CustomField", {
+        fullName: "Lead.DebugCreate__c",
+        label: "Debug Create",
+        type: "Text",
+        length: 50,
+      });
+    } catch (e) {
+      createError = e.message;
+    }
+
+    const identity = await conn.identity();
+    
+    sfClient.clearTargetOrg();
+    res.json({
+      upsertResult,
+      createResult,
+      createError,
+      connectionInfo: {
+        instanceUrl: conn.instanceUrl,
+        accessToken: conn.accessToken ? conn.accessToken.substring(0, 20) + "..." : null,
+        version: conn.version,
+        userId: identity.user_id,
+        username: identity.username,
+        orgId: identity.organization_id,
+      },
+    });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ error: err.message, stack: err.stack });
+  }
+});
+
 // --- Start ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
