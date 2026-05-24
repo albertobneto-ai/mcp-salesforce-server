@@ -6,12 +6,12 @@ export class SalesforceClient {
     this.conn = null;
     this.orgId = null;
     this.targetConn = null;
-    this.orgTokens = new Map(); // orgId -> { instanceUrl, accessToken, refreshToken }
+    this.orgTokens = new Map();
+    this.adminPermSetCache = new Map(); // orgKey -> permissionSetId
   }
 
   async ensureConnected() {
     if (this.conn && this.orgId) return;
-
     const params = new URLSearchParams({
       grant_type: "password",
       client_id: this.config.clientId,
@@ -19,23 +19,16 @@ export class SalesforceClient {
       username: this.config.username,
       password: this.config.password + (this.config.securityToken || ""),
     });
-
     const tokenResponse = await fetch(this.config.loginUrl + "/services/oauth2/token", {
-      method: "POST",
-      body: params,
+      method: "POST", body: params,
     });
-
     const tokenData = await tokenResponse.json();
-    if (tokenData.error) {
-      throw new Error(tokenData.error + ": " + (tokenData.error_description || ""));
-    }
-
+    if (tokenData.error) throw new Error(tokenData.error + ": " + (tokenData.error_description || ""));
     this.conn = new jsforce.Connection({
       instanceUrl: tokenData.instance_url,
       accessToken: tokenData.access_token,
       version: "62.0",
     });
-
     this.orgId = tokenData.id.split("/")[4];
     console.log("Connected to DevHub org:", this.orgId);
   }
@@ -43,7 +36,7 @@ export class SalesforceClient {
   getOrgId() { return this.orgId; }
   getConnection() { return this.targetConn || this.conn; }
 
-  // --- Store tokens for a scratch org ---
+  // --- Token management for multi-org ---
   storeOrgTokens(scratchOrgId, tokenData) {
     this.orgTokens.set(scratchOrgId, {
       instanceUrl: tokenData.instance_url,
@@ -54,170 +47,139 @@ export class SalesforceClient {
     console.log(`Tokens stored for scratch org: ${scratchOrgId}`);
   }
 
-  // --- Connect to a specific scratch org by ScratchOrg ID (00D...) ---
   async connectToScratchOrg(scratchOrgId) {
-    // 1. Check stored tokens first
     const stored = this.orgTokens.get(scratchOrgId);
     if (stored) {
       try {
         const testConn = new jsforce.Connection({
-          instanceUrl: stored.instanceUrl,
-          accessToken: stored.accessToken,
-          version: "62.0",
+          instanceUrl: stored.instanceUrl, accessToken: stored.accessToken, version: "62.0",
         });
         await testConn.identity();
         this.targetConn = testConn;
-        console.log(`Connected to scratch org via stored tokens: ${scratchOrgId}`);
         return this.targetConn;
-      } catch (err) {
-        console.log(`Stored tokens expired for ${scratchOrgId}, trying refresh...`);
-        // Try refresh token if available
+      } catch {
         if (stored.refreshToken) {
           try {
-            const refreshResult = await this.refreshOrgToken(scratchOrgId, stored);
-            if (refreshResult) return refreshResult;
+            const r = await this.refreshOrgToken(scratchOrgId, stored);
+            if (r) return r;
           } catch { /* fall through */ }
         }
         this.orgTokens.delete(scratchOrgId);
       }
     }
-
-    // 2. Try AuthCode from ScratchOrgInfo
     await this.ensureConnected();
     const result = await this.conn.query(
       `SELECT Id, ScratchOrg, OrgName, Status, LoginUrl, AuthCode, SignupUsername ` +
       `FROM ScratchOrgInfo WHERE ScratchOrg = '${scratchOrgId}' AND Status = 'Active' LIMIT 1`
     );
-
-    if (!result.records.length) {
-      throw new Error(`Scratch org ${scratchOrgId} não encontrada ou não está ativa`);
-    }
-
+    if (!result.records.length) throw new Error(`Scratch org ${scratchOrgId} não encontrada ou não ativa`);
     const info = result.records[0];
-
     const tokenRes = await fetch(info.LoginUrl + "/services/oauth2/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        grant_type: "authorization_code",
-        code: info.AuthCode,
-        client_id: "PlatformCLI",
-        redirect_uri: "http://localhost:1717/OauthRedirect",
+        grant_type: "authorization_code", code: info.AuthCode,
+        client_id: "PlatformCLI", redirect_uri: "http://localhost:1717/OauthRedirect",
       }),
     });
     const tokenData = await tokenRes.json();
-
     if (tokenData.access_token) {
       this.storeOrgTokens(scratchOrgId, tokenData);
       this.targetConn = new jsforce.Connection({
-        instanceUrl: tokenData.instance_url,
-        accessToken: tokenData.access_token,
-        version: "62.0",
+        instanceUrl: tokenData.instance_url, accessToken: tokenData.access_token, version: "62.0",
       });
       return this.targetConn;
     }
-
-    throw new Error(
-      `Sem tokens armazenados e AuthCode expirado para ${info.OrgName}. ` +
-      `Faça login primeiro via /api/scratch-orgs/login/${info.Id} — ` +
-      `isso armazena os tokens para deploys futuros.`
-    );
+    throw new Error(`Sem tokens e AuthCode expirado para ${info.OrgName}. Faça login via /api/scratch-orgs/login/${info.Id} primeiro.`);
   }
 
-  // --- Refresh token flow ---
   async refreshOrgToken(scratchOrgId, stored) {
-    const refreshRes = await fetch(stored.instanceUrl + "/services/oauth2/token", {
+    const r = await fetch(stored.instanceUrl + "/services/oauth2/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        grant_type: "refresh_token",
-        refresh_token: stored.refreshToken,
-        client_id: "PlatformCLI",
+        grant_type: "refresh_token", refresh_token: stored.refreshToken, client_id: "PlatformCLI",
       }),
     });
-    const refreshData = await refreshRes.json();
-    if (refreshData.access_token) {
-      this.storeOrgTokens(scratchOrgId, { ...refreshData, refresh_token: stored.refreshToken });
+    const d = await r.json();
+    if (d.access_token) {
+      this.storeOrgTokens(scratchOrgId, { ...d, refresh_token: stored.refreshToken });
       this.targetConn = new jsforce.Connection({
-        instanceUrl: refreshData.instance_url,
-        accessToken: refreshData.access_token,
-        version: "62.0",
+        instanceUrl: d.instance_url, accessToken: d.access_token, version: "62.0",
       });
-      console.log(`Refreshed tokens for scratch org: ${scratchOrgId}`);
       return this.targetConn;
     }
     return null;
   }
 
-  // --- Connect using instanceUrl + accessToken directly ---
   async connectToOrg(instanceUrl, accessToken) {
-    this.targetConn = new jsforce.Connection({
-      instanceUrl,
-      accessToken,
-      version: "62.0",
-    });
+    this.targetConn = new jsforce.Connection({ instanceUrl, accessToken, version: "62.0" });
     return this.targetConn;
   }
 
-  clearTargetOrg() {
-    this.targetConn = null;
-  }
+  clearTargetOrg() { this.targetConn = null; }
 
-  // --- Login to scratch org (exchange AuthCode, store tokens, return frontdoor) ---
   async loginToScratchOrg(scratchOrgInfoId) {
     await this.ensureConnected();
     const info = await this.getScratchOrgInfo(scratchOrgInfoId);
-    if (!info || info.Status !== "Active") {
-      throw new Error("Org não está ativa");
-    }
-
+    if (!info || info.Status !== "Active") throw new Error("Org não está ativa");
     const tokenRes = await fetch(info.LoginUrl + "/services/oauth2/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        grant_type: "authorization_code",
-        code: info.AuthCode,
-        client_id: "PlatformCLI",
-        redirect_uri: "http://localhost:1717/OauthRedirect",
+        grant_type: "authorization_code", code: info.AuthCode,
+        client_id: "PlatformCLI", redirect_uri: "http://localhost:1717/OauthRedirect",
       }),
     });
     const tokenData = await tokenRes.json();
-
     if (tokenData.access_token) {
-      // Store tokens for future multi-org operations
-      if (info.ScratchOrg) {
-        this.storeOrgTokens(info.ScratchOrg, tokenData);
-      }
+      if (info.ScratchOrg) this.storeOrgTokens(info.ScratchOrg, tokenData);
       return {
         success: true,
         frontDoorUrl: tokenData.instance_url + "/secur/frontdoor.jsp?sid=" + tokenData.access_token,
-        instanceUrl: tokenData.instance_url,
-        scratchOrgId: info.ScratchOrg,
-        orgName: info.OrgName,
-        username: info.SignupUsername,
+        instanceUrl: tokenData.instance_url, scratchOrgId: info.ScratchOrg,
+        orgName: info.OrgName, username: info.SignupUsername,
       };
     }
-
-    return {
-      success: false,
-      error: tokenData.error_description || tokenData.error,
-      loginUrl: info.LoginUrl,
-      username: info.SignupUsername,
-      scratchOrgId: info.ScratchOrg,
-    };
+    return { success: false, error: tokenData.error_description || tokenData.error,
+      loginUrl: info.LoginUrl, username: info.SignupUsername, scratchOrgId: info.ScratchOrg };
   }
 
-  // --- Check if we have stored tokens for a scratch org ---
-  hasStoredTokens(scratchOrgId) {
-    return this.orgTokens.has(scratchOrgId);
-  }
-
+  hasStoredTokens(scratchOrgId) { return this.orgTokens.has(scratchOrgId); }
   getStoredOrgs() {
-    const orgs = [];
-    for (const [orgId, tokens] of this.orgTokens) {
-      orgs.push({ orgId, instanceUrl: tokens.instanceUrl, storedAt: tokens.storedAt });
+    return [...this.orgTokens].map(([orgId, t]) => ({ orgId, instanceUrl: t.instanceUrl, storedAt: t.storedAt }));
+  }
+
+  // --- Auto-FLS: grant field permissions after creation ---
+  async getAdminPermSetId(conn) {
+    const key = conn.instanceUrl;
+    if (this.adminPermSetCache.has(key)) return this.adminPermSetCache.get(key);
+    const identity = await conn.identity();
+    const user = await conn.query(`SELECT ProfileId FROM User WHERE Id = '${identity.user_id}'`);
+    if (!user.records.length) return null;
+    const profileId = user.records[0].ProfileId;
+    const ps = await conn.query(`SELECT Id FROM PermissionSet WHERE ProfileId = '${profileId}' AND IsOwnedByProfile = true LIMIT 1`);
+    if (!ps.records.length) return null;
+    const permSetId = ps.records[0].Id;
+    this.adminPermSetCache.set(key, permSetId);
+    return permSetId;
+  }
+
+  async grantFLS(conn, sobjectType, fieldFullName) {
+    try {
+      const permSetId = await this.getAdminPermSetId(conn);
+      if (!permSetId) return;
+      await conn.sobject("FieldPermissions").create({
+        ParentId: permSetId,
+        SobjectType: sobjectType,
+        Field: fieldFullName,
+        PermissionsRead: true,
+        PermissionsEdit: true,
+      });
+    } catch (err) {
+      // Ignore duplicate or permission errors — field might already have FLS
+      console.log(`FLS grant note for ${fieldFullName}: ${err.message}`);
     }
-    return orgs;
   }
 
   // --- Describe ---
@@ -239,22 +201,18 @@ export class SalesforceClient {
       try {
         const list = await this.getConnection().metadata.list([{ type }]);
         let items = Array.isArray(list) ? list : list ? [list] : [];
-        if (objectName) {
-          items = items.filter(i => i.fullName.startsWith(objectName + ".") || i.fullName === objectName);
-        }
+        if (objectName) items = items.filter(i => i.fullName.startsWith(objectName + ".") || i.fullName === objectName);
         results[type] = items.map(i => ({ fullName: i.fullName, type: i.type, lastModified: i.lastModifiedDate }));
       } catch (err) { results[type] = { error: err.message }; }
     }
     return results;
   }
 
-  // --- Build field metadata (with scale:0 fix) ---
+  // --- Build field metadata ---
   buildFieldMeta(field, parentObject) {
     const fullName = parentObject ? `${parentObject}.${field.fullName}` : field.fullName;
     return {
-      fullName,
-      label: field.label,
-      type: field.type,
+      fullName, label: field.label, type: field.type,
       ...(field.length != null && { length: field.length }),
       ...(field.required != null && { required: field.required }),
       ...(field.externalId != null && { externalId: field.externalId }),
@@ -271,13 +229,25 @@ export class SalesforceClient {
       }),
       ...(field.type === "MultiselectPicklist" && { visibleLines: field.visibleLines || 4 }),
       ...(field.picklist && {
-        valueSet: {
-          valueSetDefinition: {
-            value: field.picklist.map(v => ({ fullName: v, label: v, default: false })),
-          },
-        },
+        valueSet: { valueSetDefinition: {
+          value: field.picklist.map(v => ({ fullName: v, label: v, default: false })),
+        }},
       }),
     };
+  }
+
+  // --- Deploy field via Metadata API + auto-FLS ---
+  async deployField(conn, fieldMeta) {
+    const result = await conn.metadata.upsert("CustomField", fieldMeta);
+    const success = Array.isArray(result) ? result[0].success : result.success;
+    
+    // Auto-FLS: grant read/edit after field creation
+    if (success && fieldMeta.fullName.includes(".")) {
+      const objectName = fieldMeta.fullName.split(".")[0];
+      await this.grantFLS(conn, objectName, fieldMeta.fullName);
+    }
+    
+    return { success, result };
   }
 
   // --- Manifest Deploy ---
@@ -307,13 +277,9 @@ export class SalesforceClient {
                 summary.total++;
                 try {
                   const fieldMeta = this.buildFieldMeta(field, obj.fullName);
-                  const fResult = await conn.metadata.upsert("CustomField", fieldMeta);
-                  const fSuccess = Array.isArray(fResult) ? fResult[0].success : fResult.success;
+                  const { success: fSuccess } = await this.deployField(conn, fieldMeta);
                   if (fSuccess) summary.success++; else summary.failed++;
-                  details.push({
-                    type: "CustomField", fullName: fieldMeta.fullName, success: fSuccess,
-                    errors: fSuccess ? [] : [fResult.errors || fResult[0]?.errors],
-                  });
+                  details.push({ type: "CustomField", fullName: fieldMeta.fullName, success: fSuccess });
                 } catch (fieldErr) {
                   summary.failed++;
                   details.push({ type: "CustomField", fullName: `${obj.fullName}.${field.fullName}`, success: false, errors: [fieldErr.message] });
@@ -337,13 +303,9 @@ export class SalesforceClient {
         summary.total++;
         try {
           const fieldMeta = this.buildFieldMeta(field);
-          const result = await conn.metadata.upsert("CustomField", fieldMeta);
-          const success = Array.isArray(result) ? result[0].success : result.success;
+          const { success } = await this.deployField(conn, fieldMeta);
           if (success) summary.success++; else summary.failed++;
-          details.push({
-            type: "CustomField", fullName: field.fullName, success,
-            errors: success ? [] : [result.errors || result[0]?.errors],
-          });
+          details.push({ type: "CustomField", fullName: field.fullName, success });
         } catch (err) {
           summary.failed++;
           details.push({ type: "CustomField", fullName: field.fullName, success: false, errors: [err.message] });
@@ -397,21 +359,16 @@ export class SalesforceClient {
   async createScratchOrg(definition) {
     await this.ensureConnected();
     try {
-      const result = await this.conn.sobject('ScratchOrgInfo').create({
+      return await this.conn.sobject('ScratchOrgInfo').create({
         ConnectedAppConsumerKey: "PlatformCLI",
         ConnectedAppCallbackUrl: "http://localhost:1717/OauthRedirect",
         OrgName: definition.orgName || "MCP Scratch Org",
         Edition: definition.edition || "Developer",
-        AdminEmail: this.config.username,
-        Country: "BR",
+        AdminEmail: this.config.username, Country: "BR",
         DurationDays: definition.durationDays || 7,
-        HasSampleData: false,
-        Description: definition.orgName || "MCP Scratch Org",
+        HasSampleData: false, Description: definition.orgName || "MCP Scratch Org",
       });
-      return result;
-    } catch (err) {
-      throw new Error(JSON.stringify(err.data || err.message || err));
-    }
+    } catch (err) { throw new Error(JSON.stringify(err.data || err.message || err)); }
   }
 
   async listScratchOrgs() {
@@ -425,11 +382,7 @@ export class SalesforceClient {
 
   async deleteScratchOrg(scratchOrgId) {
     await this.ensureConnected();
-    const result = await this.conn.request({
-      method: "DELETE",
-      url: `/services/data/v62.0/sobjects/ActiveScratchOrg/${scratchOrgId}`,
-    });
-    return result;
+    return await this.conn.request({ method: "DELETE", url: `/services/data/v62.0/sobjects/ActiveScratchOrg/${scratchOrgId}` });
   }
 
   async getScratchOrgInfo(scratchOrgInfoId) {
@@ -441,7 +394,7 @@ export class SalesforceClient {
     return result.records[0];
   }
 
-  // --- Mock Data: Insert records ---
+  // --- Mock Data ---
   async insertRecords(objectName, records) {
     const conn = this.getConnection();
     const results = [];
