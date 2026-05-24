@@ -66,10 +66,11 @@ app.get("/", (req, res) => {
   res.json({
     status: "running",
     server: "mcp-salesforce-provisioning",
-    version: "3.2.0",
+    version: "3.3.0",
     tools: [
       "describe_org", "deploy_manifest", "deploy_component",
       "validate_manifest", "retrieve_metadata", "run_soql", "list_manifests",
+      "scan_org", "destructive_deploy", "reset_org",
     ],
     features: {
       scratchOrgs: true,
@@ -195,6 +196,89 @@ app.get("/api/mock-data-b64/:data", async (req, res) => {
       sfClient.clearTargetOrg();
       res.json(result);
     }
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// =============================================
+// DESTRUCTIVE DEPLOY / RESET ORG ENDPOINTS
+// =============================================
+
+// --- Scan org: returns what custom metadata exists (dry run) ---
+app.get("/api/scan-org", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const scan = await sfClient.scanCustomMetadata();
+    sfClient.clearTargetOrg();
+    res.json({
+      status: "scanned",
+      totals: {
+        customObjects: scan.customObjects.length,
+        customFields: scan.customFields.length,
+        validationRules: scan.validationRules.length,
+        recordTypes: scan.recordTypes.length,
+      },
+      scan,
+    });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Selective destructive deploy via base64 (deletes specific components) ---
+app.get("/api/destructive-deploy-b64/:data", async (req, res) => {
+  try {
+    const targetOrg = await connectToTargetOrg(req);
+    const manifest = JSON.parse(Buffer.from(req.params.data, "base64").toString("utf-8"));
+    const dryRun = req.query.dryrun === "true";
+    const result = await sfClient.destructiveDeploy(manifest, dryRun);
+    sfClient.clearTargetOrg();
+    res.json({ ...result, targetOrg: targetOrg || "devhub" });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Full reset: scan + delete ALL custom metadata ---
+app.get("/api/reset-org", async (req, res) => {
+  try {
+    const targetOrg = await connectToTargetOrg(req);
+    const dryRun = req.query.dryrun !== "false"; // default=true for safety
+
+    // Step 1: Scan
+    const scan = await sfClient.scanCustomMetadata();
+
+    const totals = {
+      customObjects: scan.customObjects.length,
+      customFields: scan.customFields.length,
+      validationRules: scan.validationRules.length,
+      recordTypes: scan.recordTypes.length,
+    };
+
+    if (dryRun) {
+      sfClient.clearTargetOrg();
+      return res.json({
+        status: "dry_run",
+        message: "Nenhum componente foi deletado. Para executar, adicione ?dryrun=false na URL.",
+        totals,
+        wouldDelete: scan,
+        targetOrg: targetOrg || "devhub",
+      });
+    }
+
+    // Step 2: Destructive deploy
+    const result = await sfClient.destructiveDeploy(scan);
+    sfClient.clearTargetOrg();
+    res.json({
+      status: result.success ? "reset_complete" : "reset_partial",
+      totals,
+      ...result,
+      targetOrg: targetOrg || "devhub",
+    });
   } catch (err) {
     sfClient.clearTargetOrg();
     res.status(500).json({ status: "error", message: err.message });
@@ -373,7 +457,7 @@ app.get("/api/github/commit", async (req, res) => {
 // MCP SERVER (SSE Transport)
 // =============================================
 
-const mcpServer = new McpServer({ name: "salesforce-provisioning", version: "3.2.0" });
+const mcpServer = new McpServer({ name: "salesforce-provisioning", version: "3.3.0" });
 
 mcpServer.tool("describe_org", "Retorna informações da org conectada",
   { objectName: z.string().optional().describe("Nome do objeto para detalhar. Se omitido, lista objetos custom.") },
@@ -469,6 +553,6 @@ app.get("/api/tooling-query", async (req, res) => {
 // --- Start ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`MCP Salesforce Server v3.2.0 running on port ${PORT}`);
+  console.log(`MCP Salesforce Server v3.3.0 running on port ${PORT}`);
   console.log(`Features: ScratchOrgs=true, MultiOrg=true, MockData=true, GitHub=${!!ghClient}, DeployViaUrl=true`);
 });
