@@ -230,10 +230,9 @@ export class SalesforceClient {
   }
 
   // --- Scratch Org Management ---
-async createScratchOrg(definition) {
-    await this.ensureConnected();
-    try {
-      const result = await this.conn.sobject('ScratchOrgInfo').create({
+const result = await this.conn.sobject('ScratchOrgInfo').create({
+        ConnectedAppConsumerKey: this.config.clientId,
+        ConnectedAppCallbackUrl: "https://login.salesforce.com/services/oauth2/callback",
         OrgName: definition.orgName || "MCP Scratch Org",
         Edition: definition.edition || "Developer",
         AdminEmail: this.config.username,
