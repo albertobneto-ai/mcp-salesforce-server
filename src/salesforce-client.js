@@ -273,11 +273,96 @@ export class SalesforceClient {
   async deployField(conn, fieldMeta) {
     const result = await conn.metadata.upsert("CustomField", fieldMeta);
     const success = Array.isArray(result) ? result[0].success : result.success;
+    let layoutResults = null;
     if (success && fieldMeta.fullName.includes(".")) {
       const objectName = fieldMeta.fullName.split(".")[0];
       await this.grantFLS(conn, objectName, fieldMeta.fullName);
+      // Auto-add to page layouts
+      const fieldApiName = fieldMeta.fullName.split(".")[1];
+      layoutResults = await this.addFieldToLayouts(conn, objectName, fieldApiName);
     }
-    return { success, result };
+    return { success, result, layoutResults };
+  }
+
+  /**
+   * Add a field to all page layouts of an object
+   */
+  async addFieldToLayouts(conn, objectName, fieldApiName) {
+    try {
+      // 1. Find all layouts for this object
+      const listResult = await conn.metadata.list([{ type: "Layout", folder: objectName }]);
+      const layouts = Array.isArray(listResult) ? listResult : listResult ? [listResult] : [];
+      const objectLayouts = layouts.filter(l => l.fullName.startsWith(objectName + "-"));
+
+      if (!objectLayouts.length) {
+        console.log(`No layouts found for ${objectName}`);
+        return { success: false, reason: "no_layouts_found" };
+      }
+
+      const results = [];
+      for (const layoutMeta of objectLayouts) {
+        try {
+          // 2. Read current layout
+          const layout = await conn.metadata.read("Layout", layoutMeta.fullName);
+          if (!layout || !layout.layoutSections) continue;
+
+          // 3. Check if field already exists in layout
+          const sections = Array.isArray(layout.layoutSections) ? layout.layoutSections : [layout.layoutSections];
+          let fieldExists = false;
+          for (const section of sections) {
+            const columns = Array.isArray(section.layoutColumns) ? section.layoutColumns : section.layoutColumns ? [section.layoutColumns] : [];
+            for (const col of columns) {
+              const items = Array.isArray(col.layoutItems) ? col.layoutItems : col.layoutItems ? [col.layoutItems] : [];
+              if (items.some(item => item.field === fieldApiName)) {
+                fieldExists = true;
+                break;
+              }
+            }
+            if (fieldExists) break;
+          }
+
+          if (fieldExists) {
+            results.push({ layout: layoutMeta.fullName, status: "already_present" });
+            continue;
+          }
+
+          // 4. Find the first suitable section to add the field
+          // Prefer a section labeled "Information" or the first 2-column section
+          let targetSection = null;
+          for (const section of sections) {
+            const columns = Array.isArray(section.layoutColumns) ? section.layoutColumns : section.layoutColumns ? [section.layoutColumns] : [];
+            if (columns.length > 0 && section.style !== "CustomLinks") {
+              targetSection = section;
+              // Prefer "Information" sections
+              if (section.label && (section.label.includes("Information") || section.label.includes("Informação"))) break;
+            }
+          }
+
+          if (!targetSection) {
+            results.push({ layout: layoutMeta.fullName, status: "no_suitable_section" });
+            continue;
+          }
+
+          // 5. Add field to the first column of the target section
+          const columns = Array.isArray(targetSection.layoutColumns) ? targetSection.layoutColumns : [targetSection.layoutColumns];
+          const targetColumn = columns[columns.length > 1 ? 1 : 0]; // prefer right column if 2-column
+          const items = Array.isArray(targetColumn.layoutItems) ? targetColumn.layoutItems : targetColumn.layoutItems ? [targetColumn.layoutItems] : [];
+          items.push({ behavior: "Edit", field: fieldApiName });
+          targetColumn.layoutItems = items;
+
+          // 6. Update the layout
+          const updateResult = await conn.metadata.update("Layout", layout);
+          const updateSuccess = Array.isArray(updateResult) ? updateResult[0]?.success : updateResult?.success;
+          results.push({ layout: layoutMeta.fullName, status: updateSuccess ? "field_added" : "update_failed" });
+        } catch (layoutErr) {
+          results.push({ layout: layoutMeta.fullName, status: "error", error: layoutErr.message });
+        }
+      }
+      return { success: true, results };
+    } catch (err) {
+      console.log(`Layout update note for ${objectName}.${fieldApiName}: ${err.message}`);
+      return { success: false, error: err.message };
+    }
   }
 
   // --- Manifest Deploy ---
@@ -331,9 +416,9 @@ export class SalesforceClient {
         summary.total++;
         try {
           const fieldMeta = this.buildFieldMeta(field);
-          const { success } = await this.deployField(conn, fieldMeta);
+          const { success, layoutResults } = await this.deployField(conn, fieldMeta);
           if (success) summary.success++; else summary.failed++;
-          details.push({ type: "CustomField", fullName: field.fullName, success });
+          details.push({ type: "CustomField", fullName: field.fullName, success, layoutResults: layoutResults?.results || null });
         } catch (err) {
           summary.failed++;
           details.push({ type: "CustomField", fullName: field.fullName, success: false, errors: [err.message] });
