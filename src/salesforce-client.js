@@ -512,7 +512,6 @@ export class SalesforceClient {
         try {
           const queueMeta = {
             fullName: queue.fullName,
-            label: queue.label || queue.fullName,
             doesSendEmailToMembers: queue.doesSendEmailToMembers !== false,
             ...(queue.queueSobject && {
               queueSobject: (Array.isArray(queue.queueSobject) ? queue.queueSobject : [queue.queueSobject])
