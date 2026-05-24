@@ -289,6 +289,35 @@ app.post("/api/update-records", async (req, res) => {
   }
 });
 
+// --- Add Related List to Layout ---
+app.get("/api/add-related-list/:layoutName/:relatedListName", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const conn = sfClient.getConnection();
+    const layoutName = decodeURIComponent(req.params.layoutName);
+    const rlName = req.params.relatedListName;
+    const layout = await conn.metadata.read("Layout", layoutName);
+    if (!layout || !layout.fullName) {
+      sfClient.clearTargetOrg();
+      return res.json({ status: "error", message: "Layout not found" });
+    }
+    const rls = Array.isArray(layout.relatedLists) ? layout.relatedLists : layout.relatedLists ? [layout.relatedLists] : [];
+    if (rls.some(rl => rl.relatedList === rlName)) {
+      sfClient.clearTargetOrg();
+      return res.json({ status: "already_present", layout: layoutName, relatedList: rlName });
+    }
+    rls.push({ relatedList: rlName });
+    layout.relatedLists = rls;
+    const result = await conn.metadata.update("Layout", layout);
+    const success = Array.isArray(result) ? result[0]?.success : result?.success;
+    sfClient.clearTargetOrg();
+    res.json({ status: success ? "added" : "failed", layout: layoutName, relatedList: rlName });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
 // =============================================
 // DESTRUCTIVE DEPLOY / RESET ORG ENDPOINTS
 // =============================================
