@@ -582,6 +582,327 @@ app.get("/api/reset-org", async (req, res) => {
 });
 
 // =============================================
+// MOCK DATA - INTEGRATION SCENARIOS
+// =============================================
+
+// --- Mock: Leads Inbound B2B (simula canais WhatsApp, Website, Outbound, Parceiro) ---
+app.get("/api/mocks/leads-inbound", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const conn = sfClient.getConnection();
+    const count = parseInt(req.query.count) || 6;
+    const leads = [
+      { FirstName: "Carlos", LastName: "Mendes", Company: "TechSol Telecomunicações", Title: "Diretor de TI", Email: "carlos.mendes@techsol.com.br", Phone: "(34) 99812-3456", LeadSource: "Web", Industry: "Telecommunications", NumberOfEmployees: 320, AnnualRevenue: 45000000, Status: "Open - Not Contacted", Street: "Av. Rondon Pacheco, 4600", City: "Uberlândia", StateCode: "MG", CountryCode: "BR", Description: "Interesse em solucoes de conectividade corporativa via formulario do site." },
+      { FirstName: "Ana", LastName: "Ferreira", Company: "DataPrime Digital", Title: "CTO", Email: "ana.ferreira@dataprime.com.br", Phone: "(11) 98765-4321", LeadSource: "Partner Referral", Industry: "Technology", NumberOfEmployees: 185, AnnualRevenue: 28000000, Status: "Open - Not Contacted", Street: "Rua Fidencio Ramos, 302", City: "São Paulo", StateCode: "SP", CountryCode: "BR", Description: "Indicacao do parceiro MuleSoft. Interesse em Data Cloud + APIs." },
+      { FirstName: "Roberto", LastName: "Almeida", Company: "Logistica Express Ltda", Title: "Gerente de Operações", Email: "roberto@logexpress.com.br", Phone: "(62) 99654-7890", LeadSource: "Phone Inquiry", Industry: "Transportation", NumberOfEmployees: 450, AnnualRevenue: 72000000, Status: "Working - Contacted", Street: "Rod. BR-153, Km 12", City: "Goiânia", StateCode: "GO", CountryCode: "BR", Description: "Contato via WhatsApp. Precisa de links dedicados para 15 filiais." },
+      { FirstName: "Patricia", LastName: "Santos", Company: "AgroTech Solutions", Title: "VP Comercial", Email: "patricia.santos@agrotech.agr.br", Phone: "(64) 99123-4567", LeadSource: "Other", Industry: "Agriculture", NumberOfEmployees: 90, AnnualRevenue: 15000000, Status: "Open - Not Contacted", Street: "Av. Goias, 1500", City: "Rio Verde", StateCode: "GO", CountryCode: "BR", Description: "Prospeccao outbound. Empresa em expansao, sem provedor telecom definido." },
+      { FirstName: "Marcos", LastName: "Oliveira", Company: "Hospital Sao Lucas", Title: "Superintendente", Email: "marcos.oliveira@hsl.org.br", Phone: "(34) 3234-5678", LeadSource: "Web", Industry: "Healthcare", NumberOfEmployees: 800, AnnualRevenue: 120000000, Status: "Open - Not Contacted", Street: "Rua Santos Dumont, 800", City: "Uberlândia", StateCode: "MG", CountryCode: "BR", Description: "Preencheu formulario de interesse em cloud e seguranca de dados." },
+      { FirstName: "Juliana", LastName: "Costa", Company: "EduTech Brasil S.A.", Title: "Diretora de Inovação", Email: "juliana.costa@edutech.com.br", Phone: "(31) 98888-7777", LeadSource: "Partner Referral", Industry: "Education", NumberOfEmployees: 250, AnnualRevenue: 35000000, Status: "Working - Contacted", Street: "Av. Amazonas, 1200", City: "Belo Horizonte", StateCode: "MG", CountryCode: "BR", Description: "Parceiro indicou. Interesse em plataforma de comunicacao unificada." },
+      { FirstName: "Fernando", LastName: "Nascimento", Company: "Construtora Triângulo", Title: "Diretor Administrativo", Email: "fernando@triangulo.eng.br", Phone: "(34) 99876-5432", LeadSource: "Phone Inquiry", Industry: "Construction", NumberOfEmployees: 600, AnnualRevenue: 95000000, Status: "Open - Not Contacted", Street: "Rua Araguari, 300", City: "Uberlândia", StateCode: "MG", CountryCode: "BR", Description: "WhatsApp inbound. Quer cotar links e PABX virtual para obras." },
+      { FirstName: "Camila", LastName: "Ribeiro", Company: "Farma Distribuição", Title: "Gerente de Compras", Email: "camila@farmadist.com.br", Phone: "(16) 99234-5678", LeadSource: "Web", Industry: "Retail", NumberOfEmployees: 350, AnnualRevenue: 55000000, Status: "Open - Not Contacted", Street: "Rod. Anhanguera, Km 310", City: "Ribeirão Preto", StateCode: "SP", CountryCode: "BR", Description: "Formulario site. Distribuicao farmaceutica com 20 CDs precisa de WAN." },
+    ].slice(0, count);
+
+    const results = [];
+    for (const lead of leads) {
+      try {
+        const result = await conn.sobject("Lead").create(lead);
+        results.push({ success: result.success, id: result.id, name: `${lead.FirstName} ${lead.LastName}`, company: lead.Company, source: lead.LeadSource });
+      } catch (err) {
+        results.push({ success: false, name: `${lead.FirstName} ${lead.LastName}`, error: err.message });
+      }
+    }
+    sfClient.clearTargetOrg();
+    res.json({ scenario: "leads_inbound_b2b", created: results.filter(r => r.success).length, total: leads.length, results });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Mock: Convert Lead → Account + Contact + Opportunity ---
+app.get("/api/mocks/lead-convert/:leadId", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const conn = sfClient.getConnection();
+    const leadId = req.params.leadId;
+    const oppName = req.query.oppName || null;
+    const rtId = req.query.accountRecordTypeId || null;
+
+    const lead = await conn.sobject("Lead").retrieve(leadId);
+    if (!lead) {
+      sfClient.clearTargetOrg();
+      return res.json({ status: "error", message: "Lead not found" });
+    }
+
+    const convertRequest = {
+      leadId: leadId,
+      convertedStatus: "Closed - Converted",
+      doNotCreateOpportunity: !oppName && req.query.createOpp !== "true",
+      ...(oppName && { opportunityName: oppName }),
+    };
+
+    const result = await conn.request({
+      method: "POST",
+      url: "/services/data/v62.0/sobjects/Lead/convert",
+      body: JSON.stringify(convertRequest),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    sfClient.clearTargetOrg();
+    res.json({
+      scenario: "lead_conversion",
+      success: true,
+      lead: { id: leadId, name: `${lead.FirstName} ${lead.LastName}`, company: lead.Company },
+      accountId: result.accountId,
+      contactId: result.contactId,
+      opportunityId: result.opportunityId || null,
+    });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Mock: Account Hierarchy (Customer → Billing + Service + Contacts + Opportunities) ---
+app.get("/api/mocks/account-hierarchy", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const conn = sfClient.getConnection();
+    const companyName = req.query.company || "Empresa Demo";
+
+    // Get Record Type IDs
+    const rtResult = await conn.query("SELECT Id, DeveloperName FROM RecordType WHERE SobjectType = 'Account' AND IsActive = true");
+    const rtMap = {};
+    for (const rt of rtResult.records) rtMap[rt.DeveloperName] = rt.Id;
+
+    const results = { accounts: [], contacts: [], opportunities: [] };
+
+    // 1. Customer Account (parent)
+    const customer = await conn.sobject("Account").create({
+      Name: companyName, RecordTypeId: rtMap.Customer || null,
+      Industry: "Technology", Phone: "(11) 3000-1000", Website: `www.${companyName.toLowerCase().replace(/\s/g, "")}.com.br`,
+      BillingCity: "São Paulo", BillingStateCode: "SP", BillingCountryCode: "BR",
+      NumberOfEmployees: 200, AnnualRevenue: 30000000,
+      CustomerPriority__c: "High", Active__c: "Yes", SLA__c: "Gold",
+      Description: `Conta principal - ${companyName}`,
+    });
+    results.accounts.push({ type: "Customer", id: customer.id, name: companyName });
+
+    // 2. Billing Account (child)
+    const billing = await conn.sobject("Account").create({
+      Name: `${companyName} - Faturamento`, RecordTypeId: rtMap.Billing || null,
+      Parent_Account__c: customer.id, Industry: "Technology",
+      BillingCity: "São Paulo", BillingStateCode: "SP", BillingCountryCode: "BR",
+      Active__c: "Yes", Description: "Conta de faturamento",
+    });
+    results.accounts.push({ type: "Billing", id: billing.id, name: `${companyName} - Faturamento` });
+
+    // 3. Service Account (child)
+    const service = await conn.sobject("Account").create({
+      Name: `${companyName} - Serviços`, RecordTypeId: rtMap.Service || null,
+      Parent_Account__c: customer.id, Industry: "Technology",
+      BillingCity: "São Paulo", BillingStateCode: "SP", BillingCountryCode: "BR",
+      Active__c: "Yes", Description: "Conta de serviço",
+    });
+    results.accounts.push({ type: "Service", id: service.id, name: `${companyName} - Serviços` });
+
+    // 4. Contacts
+    const contacts = [
+      { FirstName: "João", LastName: "Silva", Title: "Diretor de TI", Email: "joao.silva@demo.com.br", Phone: "(11) 99000-1111", AccountId: customer.id },
+      { FirstName: "Maria", LastName: "Souza", Title: "Gerente Financeiro", Email: "maria.souza@demo.com.br", Phone: "(11) 99000-2222", AccountId: billing.id },
+      { FirstName: "Pedro", LastName: "Lima", Title: "Coordenador de Suporte", Email: "pedro.lima@demo.com.br", Phone: "(11) 99000-3333", AccountId: service.id },
+    ];
+    for (const c of contacts) {
+      const result = await conn.sobject("Contact").create(c);
+      results.contacts.push({ id: result.id, name: `${c.FirstName} ${c.LastName}`, account: c.AccountId === customer.id ? "Customer" : c.AccountId === billing.id ? "Billing" : "Service" });
+    }
+
+    // 5. Opportunities
+    const today = new Date();
+    const opportunities = [
+      { Name: `${companyName} - Link Dedicado 100Mbps`, AccountId: customer.id, StageName: "Prospecting", CloseDate: new Date(today.getTime() + 30*86400000).toISOString().split("T")[0], Amount: 180000, Description: "Link dedicado 100Mbps para matriz" },
+      { Name: `${companyName} - PABX Virtual`, AccountId: customer.id, StageName: "Qualification", CloseDate: new Date(today.getTime() + 45*86400000).toISOString().split("T")[0], Amount: 96000, Description: "PABX Virtual 50 ramais" },
+      { Name: `${companyName} - WAN MPLS 5 filiais`, AccountId: customer.id, StageName: "Proposal/Price Quote", CloseDate: new Date(today.getTime() + 60*86400000).toISOString().split("T")[0], Amount: 450000, Description: "WAN MPLS interligando 5 filiais" },
+    ];
+    for (const o of opportunities) {
+      const result = await conn.sobject("Opportunity").create(o);
+      results.opportunities.push({ id: result.id, name: o.Name, stage: o.StageName, amount: o.Amount });
+    }
+
+    sfClient.clearTargetOrg();
+    res.json({
+      scenario: "account_hierarchy_full",
+      company: companyName,
+      summary: { accounts: results.accounts.length, contacts: results.contacts.length, opportunities: results.opportunities.length },
+      results,
+    });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Mock: TM Forum Order Simulation (simula payload TMF622/TMF641) ---
+app.get("/api/mocks/tmforum-order", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const conn = sfClient.getConnection();
+    const accountId = req.query.accountId;
+
+    if (!accountId) {
+      sfClient.clearTargetOrg();
+      return res.json({ status: "error", message: "Informe ?accountId=001xxx" });
+    }
+
+    const account = await conn.sobject("Account").retrieve(accountId);
+    const today = new Date();
+
+    // Simula Order + OrderItems (como viriam do TM Forum via MuleSoft)
+    const order = await conn.sobject("Order").create({
+      AccountId: accountId,
+      EffectiveDate: today.toISOString().split("T")[0],
+      Status: "Draft",
+      Description: `[TMF622] ProductOrder simulado via MCP Mock | ExternalId: PO-${Date.now()}`,
+      BillingCity: account.BillingCity || "São Paulo",
+      BillingStateCode: account.BillingState || "SP",
+      BillingCountryCode: "BR",
+      BillingStreet: account.BillingStreet || "",
+    });
+
+    // Get standard pricebook
+    const pb = await conn.query("SELECT Id FROM Pricebook2 WHERE IsStandard = true LIMIT 1");
+    const pricebookId = pb.records[0]?.Id;
+
+    // Activate order to add items
+    await conn.sobject("Order").update({ Id: order.id, Pricebook2Id: pricebookId });
+
+    const tmfPayload = {
+      tmfOrderId: `PO-${Date.now()}`,
+      tmfSpec: "TMF622 - ProductOrder",
+      orderItems: [
+        { product: "Link Dedicado 100Mbps", action: "add", quantity: 1, monthlyPrice: 2500 },
+        { product: "IP Fixo /29", action: "add", quantity: 1, monthlyPrice: 150 },
+        { product: "SLA Gold 99.9%", action: "add", quantity: 1, monthlyPrice: 500 },
+      ],
+    };
+
+    sfClient.clearTargetOrg();
+    res.json({
+      scenario: "tmforum_order",
+      orderId: order.id,
+      accountId,
+      accountName: account.Name,
+      tmfPayload,
+      message: "Order criada. OrderItems simulados no payload TM Forum (deploy de Products necessario para items reais).",
+    });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Mock: WhatsApp Inbound Messages (simula mensagens recebidas como Tasks) ---
+app.get("/api/mocks/whatsapp-messages", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const conn = sfClient.getConnection();
+
+    // Buscar leads existentes para associar mensagens
+    const leads = await conn.query("SELECT Id, Name, Phone FROM Lead WHERE Status != 'Closed - Converted' LIMIT 5");
+    if (!leads.records.length) {
+      sfClient.clearTargetOrg();
+      return res.json({ status: "error", message: "Nenhum Lead ativo encontrado. Execute /api/mocks/leads-inbound primeiro." });
+    }
+
+    const messages = [
+      "Ola, vi no site de voces e gostaria de saber mais sobre planos de internet corporativa.",
+      "Bom dia! Preciso de um orcamento para link dedicado. Temos 3 unidades.",
+      "Boa tarde, meu contrato atual vence mes que vem. Quero avaliar opcoes.",
+      "Oi, recebi indicacao de um parceiro. Podem me ligar para discutir solucoes de telecom?",
+      "Preciso urgente de um link backup. O provedor atual caiu 3x esta semana.",
+    ];
+
+    const results = [];
+    for (let i = 0; i < Math.min(leads.records.length, messages.length); i++) {
+      const lead = leads.records[i];
+      try {
+        const task = await conn.sobject("Task").create({
+          WhoId: lead.Id,
+          Subject: `WhatsApp Inbound - ${lead.Name}`,
+          Description: `[WhatsApp] ${lead.Phone || "N/A"}\n\nMensagem:\n${messages[i]}\n\n---\nSimulado via MCP Mock (Digital Engagement)`,
+          Status: "Open",
+          Priority: "Normal",
+          Type: "Call",
+          ActivityDate: new Date().toISOString().split("T")[0],
+        });
+        results.push({ success: true, taskId: task.id, leadName: lead.Name, message: messages[i].substring(0, 50) + "..." });
+      } catch (err) {
+        results.push({ success: false, leadName: lead.Name, error: err.message });
+      }
+    }
+
+    sfClient.clearTargetOrg();
+    res.json({
+      scenario: "whatsapp_inbound_messages",
+      created: results.filter(r => r.success).length,
+      total: results.length,
+      note: "Mensagens simuladas como Tasks. Em producao, Digital Engagement cria MessagingSession + MessagingEndUser.",
+      results,
+    });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Mock: Full B2B Cycle (leads → convert → hierarchy → opportunities) ---
+app.get("/api/mocks/full-cycle", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const conn = sfClient.getConnection();
+    const companyName = req.query.company || "NovaTech Solutions";
+
+    const results = { leads: [], conversion: null, hierarchy: null, whatsapp: [] };
+
+    // Step 1: Create 3 leads for this company
+    const leadData = [
+      { FirstName: "Ricardo", LastName: "Martins", Company: companyName, Title: "CEO", Email: "ricardo@novatech.com.br", Phone: "(11) 99100-0001", LeadSource: "Web", Industry: "Technology", Status: "Open - Not Contacted", City: "São Paulo", StateCode: "SP", CountryCode: "BR" },
+      { FirstName: "Beatriz", LastName: "Torres", Company: companyName, Title: "CFO", Email: "beatriz@novatech.com.br", Phone: "(11) 99100-0002", LeadSource: "Partner Referral", Industry: "Technology", Status: "Open - Not Contacted", City: "São Paulo", StateCode: "SP", CountryCode: "BR" },
+      { FirstName: "Diego", LastName: "Ramos", Company: companyName, Title: "CTO", Email: "diego@novatech.com.br", Phone: "(11) 99100-0003", LeadSource: "Phone Inquiry", Industry: "Technology", Status: "Open - Not Contacted", City: "São Paulo", StateCode: "SP", CountryCode: "BR" },
+    ];
+    for (const l of leadData) {
+      const r = await conn.sobject("Lead").create(l);
+      results.leads.push({ id: r.id, name: `${l.FirstName} ${l.LastName}`, source: l.LeadSource });
+    }
+
+    // Step 2: WhatsApp messages for first 2 leads
+    for (let i = 0; i < 2; i++) {
+      const msg = i === 0 ? "Gostaria de agendar uma reuniao para discutir solucoes de telecom." : "Recebi indicacao. Podem enviar proposta de link dedicado?";
+      const task = await conn.sobject("Task").create({
+        WhoId: results.leads[i].id, Subject: `WhatsApp - ${results.leads[i].name}`,
+        Description: `[WhatsApp]\n${msg}`, Status: "Completed", Priority: "Normal", Type: "Call",
+      });
+      results.whatsapp.push({ taskId: task.id, leadName: results.leads[i].name });
+    }
+
+    sfClient.clearTargetOrg();
+    res.json({
+      scenario: "full_b2b_cycle",
+      company: companyName,
+      summary: { leads: results.leads.length, whatsappMessages: results.whatsapp.length },
+      results,
+      nextSteps: [
+        `Convert lead via: /api/mocks/lead-convert/${results.leads[0].id}?createOpp=true`,
+        `Create hierarchy via: /api/mocks/account-hierarchy?company=${encodeURIComponent(companyName)}`,
+      ],
+    });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// =============================================
 // SCRATCH ORG ENDPOINTS
 // =============================================
 
