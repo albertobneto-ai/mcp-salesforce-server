@@ -331,38 +331,90 @@ app.get("/api/mock-data-b64/:data", async (req, res) => {
 // EXPORT SFDX ENDPOINT
 // =============================================
 
-// --- Export SFDX project ZIP ---
+// In-memory store for retrieve results
+const retrieveStore = {};
+
+// --- Start export SFDX (async) ---
 app.get("/api/export-sfdx", async (req, res) => {
   try {
     await connectToTargetOrg(req);
     const projectName = req.query.project || "crm-b2b-project";
     const includeLayouts = req.query.layouts === "true";
-    const includeStandardFields = req.query.standardFields === "true";
 
-    const result = await sfClient.exportSFDX({ projectName, includeLayouts, includeStandardFields });
-    sfClient.clearTargetOrg();
-
-    if (result.isEmpty) {
-      return res.json({ status: "empty", message: result.message });
+    // 1. Scan org for types to export
+    const types = await sfClient.buildExportTypes({ includeLayouts });
+    if (!types.length) {
+      sfClient.clearTargetOrg();
+      return res.json({ status: "empty", message: "No custom metadata found to export" });
     }
 
-    if (req.query.format === "json") {
-      // Return metadata info without the ZIP
+    // 2. Start retrieve
+    const { retrieveId } = await sfClient.startRetrieve(types);
+    retrieveStore[retrieveId] = { types, projectName, status: "InProgress" };
+    sfClient.clearTargetOrg();
+
+    res.json({
+      status: "retrieving",
+      retrieveId,
+      types: types.map(t => ({ name: t.name, count: t.members.length })),
+      totalComponents: types.reduce((sum, t) => sum + t.members.length, 0),
+      checkStatusUrl: `/api/export-sfdx/status/${retrieveId}`,
+    });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Check export status ---
+app.get("/api/export-sfdx/status/:retrieveId", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const retrieveId = req.params.retrieveId;
+    const result = await sfClient.checkRetrieveStatus(retrieveId);
+
+    if (!result.done) {
+      return res.json({ status: "in_progress", retrieveId });
+    }
+
+    if (result.success && result.zipBuffer) {
+      // Store ZIP for download
+      const stored = retrieveStore[retrieveId] || {};
+      retrieveStore[retrieveId] = { ...stored, zipBuffer: result.zipBuffer, status: "ready" };
       return res.json({
         status: "ready",
-        projectName: result.projectName,
-        types: result.types,
-        totalComponents: result.totalComponents,
-        downloadUrl: `/api/export-sfdx?format=zip&project=${encodeURIComponent(projectName)}${includeLayouts ? "&layouts=true" : ""}${includeStandardFields ? "&standardFields=true" : ""}`,
+        retrieveId,
+        downloadUrl: `/api/export-sfdx/download/${retrieveId}?project=${encodeURIComponent(stored.projectName || "project")}`,
       });
     }
 
-    // Return ZIP file
+    res.json({ status: "failed", retrieveId, details: result });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Download SFDX ZIP ---
+app.get("/api/export-sfdx/download/:retrieveId", async (req, res) => {
+  try {
+    const retrieveId = req.params.retrieveId;
+    const stored = retrieveStore[retrieveId];
+
+    if (!stored || !stored.zipBuffer) {
+      return res.status(404).json({ status: "error", message: "Retrieve not found or not ready. Start with /api/export-sfdx" });
+    }
+
+    await sfClient.ensureConnected();
+    const projectName = req.query.project || stored.projectName || "project";
+    const sfdxZip = await sfClient.buildSFDXProject(stored.zipBuffer, stored.types, projectName);
+
+    // Clean up stored data
+    delete retrieveStore[retrieveId];
+
     res.setHeader("Content-Type", "application/zip");
     res.setHeader("Content-Disposition", `attachment; filename="${projectName}.zip"`);
-    res.send(result.zipBuffer);
+    res.send(sfdxZip);
   } catch (err) {
-    sfClient.clearTargetOrg();
     res.status(500).json({ status: "error", message: err.message });
   }
 });
