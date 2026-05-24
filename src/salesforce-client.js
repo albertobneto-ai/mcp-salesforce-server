@@ -894,6 +894,7 @@ export class SalesforceClient {
         xml += `    <name>${name}</name>\n`;
         xml += `    <subject>${et.subject || ''}</subject>\n`;
         xml += `    <type>${et.type || 'text'}</type>\n`;
+        xml += `    <style>${et.style || (et.type === 'html' ? 'freeForm' : 'none')}</style>\n`;
         if (et.description) xml += `    <description>${et.description}</description>\n`;
         xml += `</EmailTemplate>`;
         zip.file(`email/${folder}/${name}.email`, et.body || "");
