@@ -309,9 +309,9 @@ app.get("/api/add-related-list/:layoutName/:relatedListName", async (req, res) =
     rls.push({ relatedList: rlName });
     layout.relatedLists = rls;
     const result = await conn.metadata.update("Layout", layout);
-    const success = Array.isArray(result) ? result[0]?.success : result?.success;
+    const item = Array.isArray(result) ? result[0] : result;
     sfClient.clearTargetOrg();
-    res.json({ status: success ? "added" : "failed", layout: layoutName, relatedList: rlName });
+    res.json({ status: item?.success ? "added" : "failed", layout: layoutName, relatedList: rlName, errors: item?.errors || null });
   } catch (err) {
     sfClient.clearTargetOrg();
     res.status(500).json({ status: "error", message: err.message });
