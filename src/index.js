@@ -142,6 +142,44 @@ app.get("/api/describe/:objectName", async (req, res) => {
   }
 });
 
+// --- Describe Layouts: list layouts and sections for an object ---
+app.get("/api/describe-layouts/:objectName", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const conn = sfClient.getConnection();
+    const objectName = req.params.objectName;
+
+    const listResult = await conn.metadata.list([{ type: "Layout", folder: objectName }]);
+    const layouts = Array.isArray(listResult) ? listResult : listResult ? [listResult] : [];
+    const objectLayouts = layouts.filter(l => l.fullName.startsWith(objectName + "-"));
+
+    const result = [];
+    for (const layoutMeta of objectLayouts) {
+      try {
+        const layout = await conn.metadata.read("Layout", layoutMeta.fullName);
+        const sections = Array.isArray(layout.layoutSections) ? layout.layoutSections : layout.layoutSections ? [layout.layoutSections] : [];
+        const sectionDetails = sections.map((s, idx) => {
+          const columns = Array.isArray(s.layoutColumns) ? s.layoutColumns : s.layoutColumns ? [s.layoutColumns] : [];
+          const fields = [];
+          for (const col of columns) {
+            const items = Array.isArray(col.layoutItems) ? col.layoutItems : col.layoutItems ? [col.layoutItems] : [];
+            fields.push(...items.filter(i => i.field).map(i => i.field));
+          }
+          return { index: idx, label: s.label || "(sem label)", style: s.style, columns: columns.length, fields };
+        });
+        result.push({ fullName: layoutMeta.fullName, sections: sectionDetails });
+      } catch (err) {
+        result.push({ fullName: layoutMeta.fullName, error: err.message });
+      }
+    }
+    sfClient.clearTargetOrg();
+    res.json({ objectName, layoutCount: result.length, layouts: result });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
 // --- Run SOQL (optional ?org=) ---
 app.post("/api/soql", async (req, res) => {
   try {
