@@ -297,6 +297,60 @@ app.post("/api/update-records", async (req, res) => {
   }
 });
 
+// --- Move field between sections in layout ---
+app.get("/api/move-field-in-layout/:layoutName/:fieldName/:toSection", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const conn = sfClient.getConnection();
+    const layoutName = decodeURIComponent(req.params.layoutName);
+    const fieldName = req.params.fieldName;
+    const toSectionLabel = decodeURIComponent(req.params.toSection);
+    const layout = await conn.metadata.read("Layout", layoutName);
+    if (!layout || !layout.fullName) {
+      sfClient.clearTargetOrg();
+      return res.json({ status: "error", message: "Layout not found" });
+    }
+    const sections = Array.isArray(layout.layoutSections) ? layout.layoutSections : [layout.layoutSections];
+    let fieldItem = null;
+    let fromSection = null;
+    for (const section of sections) {
+      const columns = Array.isArray(section.layoutColumns) ? section.layoutColumns : section.layoutColumns ? [section.layoutColumns] : [];
+      for (const col of columns) {
+        const items = Array.isArray(col.layoutItems) ? col.layoutItems : col.layoutItems ? [col.layoutItems] : [];
+        const idx = items.findIndex(item => item.field === fieldName);
+        if (idx >= 0) {
+          fieldItem = items[idx];
+          fromSection = section.label;
+          items.splice(idx, 1);
+          col.layoutItems = items;
+          break;
+        }
+      }
+      if (fieldItem) break;
+    }
+    if (!fieldItem) {
+      sfClient.clearTargetOrg();
+      return res.json({ status: "not_found", field: fieldName });
+    }
+    const targetSection = sections.find(s => s.label === toSectionLabel);
+    if (!targetSection) {
+      sfClient.clearTargetOrg();
+      return res.json({ status: "error", message: "Target section not found: " + toSectionLabel });
+    }
+    const tgtColumns = Array.isArray(targetSection.layoutColumns) ? targetSection.layoutColumns : [targetSection.layoutColumns];
+    const tgtItems = Array.isArray(tgtColumns[0].layoutItems) ? tgtColumns[0].layoutItems : tgtColumns[0].layoutItems ? [tgtColumns[0].layoutItems] : [];
+    tgtItems.push(fieldItem);
+    tgtColumns[0].layoutItems = tgtItems;
+    const result = await conn.metadata.update("Layout", layout);
+    const item = Array.isArray(result) ? result[0] : result;
+    sfClient.clearTargetOrg();
+    res.json({ status: item?.success ? "moved" : "failed", field: fieldName, from: fromSection, to: toSectionLabel, errors: item?.errors || null });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
 // --- Remove field from layout ---
 app.get("/api/remove-field-from-layout/:layoutName/:fieldName", async (req, res) => {
   try {
