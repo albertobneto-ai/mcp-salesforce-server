@@ -355,6 +355,23 @@ app.get("/api/scratch-orgs/login/:id", async (req, res) => {
     res.status(500).json({ status: "error", message: err.message });
   }
 });
+// --- Delete scratch org via GET ---
+app.get("/api/scratch-orgs/delete/:orgId", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const orgs = await sfClient.conn.query(
+      "SELECT Id FROM ActiveScratchOrg WHERE ScratchOrg = '" + req.params.orgId + "'"
+    );
+    if (orgs.records.length > 0) {
+      await sfClient.conn.sobject('ActiveScratchOrg').delete(orgs.records[0].Id);
+      res.json({ status: "deleted", orgId: req.params.orgId });
+    } else {
+      res.json({ status: "not_found" });
+    }
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
 // --- Start ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
