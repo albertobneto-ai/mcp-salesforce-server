@@ -447,8 +447,8 @@ app.post("/messages", async (req, res) => {
 });
 
 
-// --- DEBUG: Direct REST describe + Tooling lookup ---
-app.get("/api/debug/direct-describe/:obj", async (req, res) => {
+// --- Tooling SOQL ---
+app.get("/api/tooling-query", async (req, res) => {
   try {
     const orgId = req.query.org;
     if (orgId) {
@@ -457,36 +457,13 @@ app.get("/api/debug/direct-describe/:obj", async (req, res) => {
       await sfClient.ensureConnected();
     }
     const conn = sfClient.getConnection();
-    
-    // Direct REST call bypassing jsforce cache
-    const descResult = await conn.request({
+    const q = req.query.q;
+    const result = await conn.request({
       method: "GET",
-      url: `/services/data/v62.0/sobjects/${req.params.obj}/describe`,
+      url: "/services/data/v62.0/tooling/query/?q=" + encodeURIComponent(q),
     });
-    
-    const customFields = descResult.fields
-      .filter(f => f.custom)
-      .map(f => ({ name: f.name, label: f.label, type: f.type }));
-    
-    // Also try Tooling API query for CustomField
-    let toolingFields = [];
-    try {
-      const toolResult = await conn.request({
-        method: "GET",
-        url: `/services/data/v62.0/tooling/query/?q=${encodeURIComponent("SELECT Id, DeveloperName, FullName, TableEnumOrId FROM CustomField WHERE TableEnumOrId = '" + req.params.obj + "'")}`,
-      });
-      toolingFields = toolResult.records || [];
-    } catch(e) {
-      toolingFields = [{ error: e.message }];
-    }
-    
     sfClient.clearTargetOrg();
-    res.json({
-      objectName: req.params.obj,
-      totalFields: descResult.fields.length,
-      customFieldsViaDescribe: customFields,
-      customFieldsViaTooling: toolingFields,
-    });
+    res.json(result);
   } catch (err) {
     sfClient.clearTargetOrg();
     res.status(500).json({ error: err.message });
