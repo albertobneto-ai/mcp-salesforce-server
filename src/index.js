@@ -78,6 +78,7 @@ app.get("/", (req, res) => {
       githubIntegration: !!ghClient,
       deployViaUrl: true,
     },
+    storedOrgTokens: sfClient.getStoredOrgs(),
   });
 });
 
@@ -463,19 +464,6 @@ app.get("/api/tooling-query", async (req, res) => {
   } catch (err) {
     sfClient.clearTargetOrg();
     res.status(500).json({ error: err.message });
-  }
-});
-
-
-// --- DEBUG: manual token load ---
-app.get("/api/debug/load-tokens", async (req, res) => {
-  try {
-    const before = sfClient.getStoredOrgs();
-    await sfClient.loadPersistedTokens();
-    const after = sfClient.getStoredOrgs();
-    res.json({ before: before.length, after: after.length, tokens: after });
-  } catch (err) {
-    res.json({ error: err.message, stack: err.stack });
   }
 });
 
