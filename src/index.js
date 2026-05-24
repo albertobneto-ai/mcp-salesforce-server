@@ -324,7 +324,37 @@ app.post("/messages", async (req, res) => {
   if (!transport) return res.status(400).json({ error: "No active session" });
   await transport.handlePostMessage(req, res);
 });
-
+// --- Login to Scratch Org ---
+app.get("/api/scratch-orgs/login/:id", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const info = await sfClient.getScratchOrgInfo(req.params.id);
+    if (!info || info.Status !== "Active") {
+      return res.status(400).json({ status: "error", message: "Org não está ativa" });
+    }
+    
+    const tokenRes = await fetch(info.LoginUrl + "/services/oauth2/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code: info.AuthCode,
+        client_id: "PlatformCLI",
+        redirect_uri: "http://localhost:1717/OauthRedirect",
+      }),
+    });
+    const tokenData = await tokenRes.json();
+    
+    if (tokenData.access_token) {
+      const frontDoor = tokenData.instance_url + "/secur/frontdoor.jsp?sid=" + tokenData.access_token;
+      res.redirect(frontDoor);
+    } else {
+      res.json({ status: "error", message: tokenData.error_description || tokenData.error, loginUrl: info.LoginUrl, username: info.SignupUsername });
+    }
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
 // --- Start ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
