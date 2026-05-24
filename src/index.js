@@ -266,6 +266,29 @@ app.get("/api/delete-records/:objectName/:ids", async (req, res) => {
   }
 });
 
+// --- Update records ---
+app.post("/api/update-records", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const conn = sfClient.getConnection();
+    const { objectName, records } = req.body;
+    const results = [];
+    for (const record of records) {
+      try {
+        const result = await conn.sobject(objectName).update(record);
+        results.push({ id: record.Id, success: result.success || true });
+      } catch (err) {
+        results.push({ id: record.Id, success: false, error: err.message });
+      }
+    }
+    sfClient.clearTargetOrg();
+    res.json({ objectName, total: records.length, success: results.filter(r => r.success).length, results });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
 // =============================================
 // DESTRUCTIVE DEPLOY / RESET ORG ENDPOINTS
 // =============================================
