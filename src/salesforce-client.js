@@ -230,26 +230,22 @@ export class SalesforceClient {
   }
 
   // --- Scratch Org Management ---
-  async createScratchOrg(definition) {
+async createScratchOrg(definition) {
     await this.ensureConnected();
-    const result = await this.conn.request({
-      method: "POST",
-      url: "/services/data/v62.0/sobjects/ScratchOrgInfo",
-      body: JSON.stringify({
-        ConnectedAppConsumerKey: this.config.clientId,
+    try {
+      const result = await this.conn.sobject('ScratchOrgInfo').create({
+        OrgName: definition.orgName || "MCP Scratch Org",
+        Edition: definition.edition || "Developer",
         AdminEmail: this.config.username,
         Country: "BR",
-        Edition: definition.edition || "Developer",
-        Description: definition.orgName || "MCP Scratch Org",
         DurationDays: definition.durationDays || 7,
-        Features: definition.features?.join(";") || "",
         HasSampleData: false,
-        OrgName: definition.orgName || "MCP Scratch Org",
-        Namespace: definition.namespace || "",
-      }),
-      headers: { "Content-Type": "application/json" },
-    });
-    return result;
+        Description: definition.orgName || "MCP Scratch Org",
+      });
+      return result;
+    } catch (err) {
+      throw new Error(JSON.stringify(err.message || err));
+    }
   }
 
   async listScratchOrgs() {
