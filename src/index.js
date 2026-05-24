@@ -295,29 +295,24 @@ app.get("/api/scratch-orgs/delete/:orgId", async (req, res) => {
 // --- Login to Scratch Org ---
 app.get("/api/scratch-orgs/login/:id", async (req, res) => {
   try {
-    await sfClient.ensureConnected();
-    const info = await sfClient.getScratchOrgInfo(req.params.id);
-    if (!info || info.Status !== "Active") {
-      return res.status(400).json({ status: "error", message: "Org não está ativa" });
-    }
-    
-    const tokenRes = await fetch(info.LoginUrl + "/services/oauth2/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        code: info.AuthCode,
-        client_id: "PlatformCLI",
-        redirect_uri: "http://localhost:1717/OauthRedirect",
-      }),
-    });
-    const tokenData = await tokenRes.json();
-    
-    if (tokenData.access_token) {
-      const frontDoor = tokenData.instance_url + "/secur/frontdoor.jsp?sid=" + tokenData.access_token;
-      res.redirect(frontDoor);
+    const result = await sfClient.loginToScratchOrg(req.params.id);
+    if (result.success) {
+      if (req.query.redirect === "false") {
+        res.json({
+          status: "authenticated", scratchOrgId: result.scratchOrgId,
+          orgName: result.orgName, username: result.username,
+          instanceUrl: result.instanceUrl, tokensStored: true,
+          message: "Tokens armazenados e persistidos. Deploy multi-org habilitado.",
+        });
+      } else {
+        res.redirect(result.frontDoorUrl);
+      }
     } else {
-      res.json({ status: "error", message: tokenData.error_description || tokenData.error, loginUrl: info.LoginUrl, username: info.SignupUsername });
+      res.json({
+        status: "error", message: result.error,
+        loginUrl: result.loginUrl, username: result.username,
+        hint: "AuthCode expirado. Recrie a scratch org.",
+      });
     }
   } catch (err) {
     res.status(500).json({ status: "error", message: err.message });
