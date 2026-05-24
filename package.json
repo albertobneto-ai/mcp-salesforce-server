@@ -1,7 +1,7 @@
 {
   "name": "mcp-salesforce-provisioning",
-  "version": "3.0.0",
-  "description": "MCP Server for Salesforce metadata provisioning + Scratch Orgs + Multi-Org Deploy + Mock Data",
+  "version": "3.4.0",
+  "description": "MCP Server for Salesforce metadata provisioning + Scratch Orgs + Multi-Org Deploy + Mock Data + Apex/Flow Deploy",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
@@ -15,6 +15,7 @@
     "@modelcontextprotocol/sdk": "^1.12.1",
     "jsforce": "^3.8.0",
     "express": "^4.21.0",
-    "zod": "^3.23.0"
+    "zod": "^3.23.0",
+    "jszip": "^3.10.1"
   }
 }
