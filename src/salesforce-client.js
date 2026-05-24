@@ -1170,18 +1170,39 @@ export class SalesforceClient {
   }
 
   // --- Mock Data ---
-  async insertRecords(objectName, records) {
+  async insertRecords(objectName, records, bypassDuplicates = false) {
     const conn = this.getConnection();
     const results = [];
     for (const record of records) {
       try {
-        const result = await conn.sobject(objectName).create(record);
-        results.push({ success: result.success, id: result.id, errors: result.errors || [] });
+        if (bypassDuplicates) {
+          const result = await this.createRecordBypassDupes(conn, objectName, record);
+          results.push(result);
+        } else {
+          const result = await conn.sobject(objectName).create(record);
+          results.push({ success: result.success, id: result.id, errors: result.errors || [] });
+        }
       } catch (err) {
         results.push({ success: false, id: null, errors: [err.message] });
       }
     }
     const successCount = results.filter(r => r.success).length;
     return { objectName, total: records.length, success: successCount, failed: records.length - successCount, records: results };
+  }
+
+  /**
+   * Create a single record bypassing duplicate rules
+   */
+  async createRecordBypassDupes(conn, objectName, record) {
+    const result = await conn.request({
+      method: "POST",
+      url: `/services/data/v62.0/sobjects/${objectName}`,
+      body: JSON.stringify(record),
+      headers: {
+        "Content-Type": "application/json",
+        "Sforce-Duplicate-Rule-Header": "allowSave=true",
+      },
+    });
+    return { success: result.success !== false, id: result.id, errors: result.errors || [] };
   }
 }
