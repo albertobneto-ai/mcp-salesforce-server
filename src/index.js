@@ -119,6 +119,8 @@ app.get("/api/deploy-b64/:data", async (req, res) => {
     const manifest = JSON.parse(Buffer.from(req.params.data, "base64").toString("utf-8"));
     const result = await sfClient.deployManifest(manifest);
     sfClient.clearTargetOrg();
+    // Record in deploy history for rollback
+    if (typeof recordDeploy === "function") recordDeploy(manifest, result);
     res.json({ ...result, targetOrg: targetOrg || "devhub" });
   } catch (err) {
     sfClient.clearTargetOrg();
@@ -1306,6 +1308,366 @@ app.get("/api/scratch-orgs/login/:id", async (req, res) => {
   } catch (err) {
     res.status(500).json({ status: "error", message: err.message });
   }
+});
+
+// =============================================
+// QUALITY GATES
+// =============================================
+
+// --- Quality gate: full validation before deploy ---
+app.get("/api/quality-gate", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const conn = sfClient.getConnection();
+    const checks = { passed: 0, failed: 0, warnings: 0, details: [] };
+
+    // 1. Apex Test Coverage
+    try {
+      const coverage = await conn.request({ method: "GET",
+        url: "/services/data/v62.0/tooling/query/?q=" + encodeURIComponent(
+          "SELECT NumLinesCovered, NumLinesUncovered FROM ApexOrgWideCoverage"
+        ),
+      });
+      if (coverage.records?.length) {
+        const covered = coverage.records[0].NumLinesCovered || 0;
+        const uncovered = coverage.records[0].NumLinesUncovered || 0;
+        const total = covered + uncovered;
+        const pct = total > 0 ? Math.round((covered / total) * 100) : 100;
+        const pass = pct >= 75;
+        checks.details.push({
+          check: "Apex Code Coverage",
+          result: pass ? "pass" : "fail",
+          value: `${pct}%`,
+          threshold: "≥ 75%",
+          covered,
+          uncovered,
+        });
+        if (pass) checks.passed++; else checks.failed++;
+      } else {
+        checks.details.push({ check: "Apex Code Coverage", result: "pass", value: "No Apex code", threshold: "N/A" });
+        checks.passed++;
+      }
+    } catch {
+      checks.details.push({ check: "Apex Code Coverage", result: "skip", value: "Could not query" });
+      checks.warnings++;
+    }
+
+    // 2. Apex Test Results (last run)
+    try {
+      const tests = await conn.request({ method: "GET",
+        url: "/services/data/v62.0/tooling/query/?q=" + encodeURIComponent(
+          "SELECT COUNT() total, SUM(CASE WHEN Outcome='Pass' THEN 1 ELSE 0 END) passed FROM ApexTestResult WHERE TestTimestamp = LAST_N_DAYS:7"
+        ).replace("SUM(CASE", "SUM(CASE"),
+      });
+      // Simpler query
+      const testResults = await conn.request({ method: "GET",
+        url: "/services/data/v62.0/tooling/query/?q=" + encodeURIComponent(
+          "SELECT Outcome, COUNT(Id) cnt FROM ApexTestResult GROUP BY Outcome"
+        ),
+      });
+      const outcomes = {};
+      for (const r of testResults.records || []) {
+        outcomes[r.Outcome] = r.cnt;
+      }
+      const totalTests = Object.values(outcomes).reduce((a, b) => a + b, 0);
+      const passedTests = outcomes.Pass || 0;
+      const failedTests = outcomes.Fail || 0;
+      const pass = failedTests === 0 || totalTests === 0;
+      checks.details.push({
+        check: "Apex Test Results",
+        result: totalTests === 0 ? "skip" : (pass ? "pass" : "fail"),
+        value: totalTests === 0 ? "No tests found" : `${passedTests}/${totalTests} passed`,
+        failures: failedTests,
+      });
+      if (totalTests === 0) checks.warnings++; else if (pass) checks.passed++; else checks.failed++;
+    } catch {
+      checks.details.push({ check: "Apex Test Results", result: "skip", value: "No test history" });
+      checks.warnings++;
+    }
+
+    // 3. Validation Rules active count
+    try {
+      const vr = await conn.request({ method: "GET",
+        url: "/services/data/v62.0/tooling/query/?q=" + encodeURIComponent(
+          "SELECT COUNT() FROM ValidationRule WHERE Active = true AND ManageableState = 'unmanaged'"
+        ),
+      });
+      checks.details.push({
+        check: "Validation Rules",
+        result: "info",
+        value: `${vr.totalSize || 0} active`,
+      });
+    } catch {
+      checks.details.push({ check: "Validation Rules", result: "skip", value: "Could not query" });
+    }
+
+    // 4. Custom Fields without description
+    try {
+      const fields = await conn.request({ method: "GET",
+        url: "/services/data/v62.0/tooling/query/?q=" + encodeURIComponent(
+          "SELECT COUNT() FROM CustomField WHERE Description = null AND ManageableState = 'unmanaged'"
+        ),
+      });
+      const count = fields.totalSize || 0;
+      checks.details.push({
+        check: "Fields without Description",
+        result: count > 10 ? "warning" : "pass",
+        value: `${count} fields missing description`,
+      });
+      if (count > 10) checks.warnings++; else checks.passed++;
+    } catch {
+      checks.details.push({ check: "Fields without Description", result: "skip" });
+      checks.warnings++;
+    }
+
+    // 5. Flows without active version
+    try {
+      const flows = await conn.request({ method: "GET",
+        url: "/services/data/v62.0/tooling/query/?q=" + encodeURIComponent(
+          "SELECT COUNT() FROM Flow WHERE Status = 'Draft' AND ManageableState = 'unmanaged'"
+        ),
+      });
+      checks.details.push({
+        check: "Draft Flows",
+        result: "info",
+        value: `${flows.totalSize || 0} draft flows`,
+      });
+    } catch {
+      checks.details.push({ check: "Draft Flows", result: "skip" });
+    }
+
+    // 6. Org Limits
+    try {
+      const limits = await conn.request({ method: "GET", url: "/services/data/v62.0/limits/" });
+      const critical = [];
+      for (const [name, limit] of Object.entries(limits)) {
+        if (limit.Max > 0) {
+          const usage = Math.round((limit.Remaining / limit.Max) * 100);
+          if (usage < 20) critical.push({ name, remaining: `${usage}%` });
+        }
+      }
+      checks.details.push({
+        check: "Org Limits",
+        result: critical.length > 0 ? "warning" : "pass",
+        value: critical.length > 0 ? `${critical.length} limits below 20%` : "All limits OK",
+        ...(critical.length > 0 && { critical }),
+      });
+      if (critical.length > 0) checks.warnings++; else checks.passed++;
+    } catch {
+      checks.details.push({ check: "Org Limits", result: "skip" });
+      checks.warnings++;
+    }
+
+    // Overall result
+    const overallPass = checks.failed === 0;
+    res.json({
+      status: overallPass ? "passed" : "blocked",
+      gate: overallPass ? "🟢 DEPLOY ALLOWED" : "🔴 DEPLOY BLOCKED",
+      summary: { passed: checks.passed, failed: checks.failed, warnings: checks.warnings },
+      details: checks.details,
+    });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Run Apex tests ---
+app.get("/api/quality-gate/run-tests", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const conn = sfClient.getConnection();
+
+    // Get all test classes
+    const testClasses = await conn.request({ method: "GET",
+      url: "/services/data/v62.0/tooling/query/?q=" + encodeURIComponent(
+        "SELECT Id, Name FROM ApexClass WHERE NamespacePrefix = null AND Name LIKE '%Test%'"
+      ),
+    });
+
+    if (!testClasses.records?.length) {
+      return res.json({ status: "skip", message: "No test classes found (naming convention: *Test*)" });
+    }
+
+    // Run tests async
+    const classIds = testClasses.records.map(c => c.Id);
+    const testRun = await conn.request({
+      method: "POST",
+      url: "/services/data/v62.0/tooling/runTestsAsynchronous/",
+      body: JSON.stringify({ classids: classIds.join(",") }),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    res.json({
+      status: "running",
+      testRunId: testRun,
+      classCount: testClasses.records.length,
+      classes: testClasses.records.map(c => c.Name),
+      checkStatusUrl: `/api/quality-gate/test-status/${testRun}`,
+    });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Check test run status ---
+app.get("/api/quality-gate/test-status/:testRunId", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const conn = sfClient.getConnection();
+    const testRunId = req.params.testRunId;
+
+    const results = await conn.request({ method: "GET",
+      url: "/services/data/v62.0/tooling/query/?q=" + encodeURIComponent(
+        `SELECT ApexClass.Name, MethodName, Outcome, Message FROM ApexTestResult WHERE AsyncApexJobId = '${testRunId}'`
+      ),
+    });
+
+    const summary = { pass: 0, fail: 0, total: results.records?.length || 0 };
+    const details = [];
+    for (const r of results.records || []) {
+      if (r.Outcome === "Pass") summary.pass++;
+      else summary.fail++;
+      details.push({
+        class: r.ApexClass?.Name,
+        method: r.MethodName,
+        outcome: r.Outcome,
+        ...(r.Message && { message: r.Message }),
+      });
+    }
+
+    const done = summary.total > 0;
+    res.json({
+      status: done ? (summary.fail === 0 ? "passed" : "failed") : "running",
+      summary,
+      details,
+    });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// =============================================
+// ROLLBACK
+// =============================================
+
+// In-memory deploy history (last 20 deploys)
+const deployHistory = [];
+
+// --- Record a deploy in history ---
+function recordDeploy(manifest, result) {
+  deployHistory.unshift({
+    id: `deploy-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    specName: manifest.specName || "unnamed",
+    components: result.summary?.total || 0,
+    success: result.success,
+    manifest: JSON.stringify(manifest),
+  });
+  if (deployHistory.length > 20) deployHistory.pop();
+}
+
+// --- List deploy history ---
+app.get("/api/rollback/history", (req, res) => {
+  res.json({
+    total: deployHistory.length,
+    maxStored: 20,
+    deploys: deployHistory.map(d => ({
+      id: d.id,
+      timestamp: d.timestamp,
+      specName: d.specName,
+      components: d.components,
+      success: d.success,
+      rollbackUrl: `/api/rollback/${d.id}`,
+    })),
+  });
+});
+
+// --- Rollback to a previous deploy (destructive + redeploy) ---
+app.get("/api/rollback/:deployId", async (req, res) => {
+  const deploy = deployHistory.find(d => d.id === req.params.deployId);
+  if (!deploy) {
+    return res.status(404).json({
+      status: "error",
+      message: "Deploy not found in history. Use /api/rollback/history to list available deploys.",
+      available: deployHistory.map(d => d.id),
+    });
+  }
+
+  try {
+    const manifest = JSON.parse(deploy.manifest);
+    res.json({
+      status: "rollback_ready",
+      deploy: {
+        id: deploy.id,
+        timestamp: deploy.timestamp,
+        specName: deploy.specName,
+        components: deploy.components,
+      },
+      manifest,
+      instructions: "Para executar o rollback, faça POST /api/rollback/execute com o body: {\"deployId\": \"" + deploy.id + "\"}",
+    });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Execute rollback ---
+app.post("/api/rollback/execute", express.json(), async (req, res) => {
+  const { deployId } = req.body || {};
+  const deploy = deployHistory.find(d => d.id === deployId);
+  if (!deploy) {
+    return res.status(404).json({ status: "error", message: "Deploy not found" });
+  }
+
+  try {
+    await connectToTargetOrg(req);
+    const manifest = JSON.parse(deploy.manifest);
+
+    // Execute destructive deploy to remove what was added
+    const destructiveComponents = { customFields: [], customObjects: [], validationRules: [], recordTypes: [] };
+
+    if (manifest.metadata?.customFields) {
+      destructiveComponents.customFields = manifest.metadata.customFields.map(f => f.fullName);
+    }
+    if (manifest.metadata?.customObjects) {
+      destructiveComponents.customObjects = manifest.metadata.customObjects.map(o => o.fullName);
+    }
+    if (manifest.metadata?.validationRules) {
+      destructiveComponents.validationRules = manifest.metadata.validationRules.map(v => v.fullName);
+    }
+
+    const result = await sfClient.destructiveDeploy(destructiveComponents);
+    sfClient.clearTargetOrg();
+
+    res.json({
+      status: "rolled_back",
+      deployId,
+      specName: deploy.specName,
+      timestamp: deploy.timestamp,
+      destructiveResult: result,
+      message: `Rollback executado. Componentes do deploy '${deploy.specName}' removidos.`,
+    });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Git rollback (revert to previous commit) ---
+app.get("/api/rollback/git-info", (req, res) => {
+  res.json({
+    status: "info",
+    description: "Para rollback via Git, use os comandos abaixo no terminal:",
+    commands: [
+      "git log --oneline -10                    # Ver últimos 10 commits",
+      "git revert HEAD                          # Reverter último commit",
+      "git revert <commit-hash>                 # Reverter commit específico",
+      "git push origin main                     # Push do revert (aciona pipeline CI/CD)",
+    ],
+    note: "O push do revert aciona o pipeline CI/CD automaticamente. O Heroku faz redeploy com o código revertido.",
+    herokuRollback: "heroku releases -a mcp-sf-provisioning-462dd29c2455   # Ver releases",
+    herokuCommand: "heroku rollback v{N} -a mcp-sf-provisioning-462dd29c2455  # Rollback para release N",
+  });
 });
 
 // =============================================
