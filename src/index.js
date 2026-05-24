@@ -78,7 +78,6 @@ app.get("/", (req, res) => {
       githubIntegration: !!ghClient,
       deployViaUrl: true,
     },
-    storedOrgTokens: sfClient.getStoredOrgs(),
   });
 });
 
