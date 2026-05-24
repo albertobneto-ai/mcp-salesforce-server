@@ -891,7 +891,7 @@ app.get("/api/mocks/full-cycle", async (req, res) => {
       const msg = i === 0 ? "Gostaria de agendar uma reuniao para discutir solucoes de telecom." : "Recebi indicacao. Podem enviar proposta de link dedicado?";
       const task = await createBypass(conn, "Task", {
         WhoId: results.leads[i].id, Subject: `WhatsApp - ${results.leads[i].name}`,
-        Description: `[WhatsApp]\n${msg}`, Status: "Completed", Priority: "Normal", Type: "Call",
+        Description: `[WhatsApp]\n${msg}`, Status: "Completed", Priority: "Normal",
       });
       results.whatsapp.push({ taskId: task.id, leadName: results.leads[i].name });
     }
