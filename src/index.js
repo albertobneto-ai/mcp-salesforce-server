@@ -466,6 +466,19 @@ app.get("/api/tooling-query", async (req, res) => {
   }
 });
 
+
+// --- DEBUG: manual token load ---
+app.get("/api/debug/load-tokens", async (req, res) => {
+  try {
+    const before = sfClient.getStoredOrgs();
+    await sfClient.loadPersistedTokens();
+    const after = sfClient.getStoredOrgs();
+    res.json({ before: before.length, after: after.length, tokens: after });
+  } catch (err) {
+    res.json({ error: err.message, stack: err.stack });
+  }
+});
+
 // --- Start ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
