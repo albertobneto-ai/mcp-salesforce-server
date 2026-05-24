@@ -292,7 +292,7 @@ app.get("/api/scratch-orgs/delete/:orgId", async (req, res) => {
   }
 });
 
-// --- Login to Scratch Org ---
+// --- Login to Scratch Org (stores tokens + persists to GitHub) ---
 app.get("/api/scratch-orgs/login/:id", async (req, res) => {
   try {
     const result = await sfClient.loginToScratchOrg(req.params.id);
