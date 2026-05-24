@@ -234,8 +234,8 @@ export class SalesforceClient {
     await this.ensureConnected();
     try {
       const result = await this.conn.sobject('ScratchOrgInfo').create({
-        ConnectedAppConsumerKey: this.config.clientId,
-        ConnectedAppCallbackUrl: "https://login.salesforce.com/services/oauth2/callback",
+        ConnectedAppConsumerKey: "PlatformCLI",
+        ConnectedAppCallbackUrl: "http://localhost:1717/OauthRedirect",
         OrgName: definition.orgName || "MCP Scratch Org",
         Edition: definition.edition || "Developer",
         AdminEmail: this.config.username,
