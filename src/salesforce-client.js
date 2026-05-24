@@ -936,49 +936,47 @@ export class SalesforceClient {
   // --- Export SFDX ---
 
   /**
-   * Retrieve metadata from org as a ZIP (Metadata API format)
-   * @param {Array} types - [{name: 'ApexClass', members: ['*']}, ...]
-   * @returns {Buffer} ZIP buffer
+   * Start a metadata retrieve (async - returns retrieveId)
    */
-  async retrievePackage(types, apiVersion = "62.0") {
+  async startRetrieve(types, apiVersion = "62.0") {
     const conn = this.getConnection();
-    return new Promise((resolve, reject) => {
-      conn.metadata.retrieve({
-        unpackaged: { types, version: apiVersion },
-      }).complete(true, (err, result) => {
-        if (err) return reject(err);
-        if (!result.zipFile) return reject(new Error("No ZIP file returned"));
-        resolve({
-          zipBuffer: Buffer.from(result.zipFile, "base64"),
-          status: result.status,
-          fileProperties: result.fileProperties || [],
-        });
-      });
+    const result = await conn.metadata.retrieve({
+      unpackaged: { types, version: apiVersion },
     });
+    return { retrieveId: result.id };
   }
 
   /**
-   * Export org metadata as SFDX project ZIP
-   * Scans the org for custom metadata and packages it
+   * Check retrieve status and get ZIP when done
    */
-  async exportSFDX(options = {}) {
+  async checkRetrieveStatus(retrieveId) {
     const conn = this.getConnection();
-    const zip = new JSZip();
-    const apiVersion = options.apiVersion || "62.0";
-    const projectName = options.projectName || "crm-b2b-project";
+    const result = await conn.metadata.checkRetrieveStatus(retrieveId);
+    if (!result.done) {
+      return { done: false, status: result.status };
+    }
+    return {
+      done: true,
+      status: result.status,
+      success: result.success,
+      zipBuffer: result.zipFile ? Buffer.from(result.zipFile, "base64") : null,
+      fileProperties: result.fileProperties || [],
+    };
+  }
 
-    // 1. Determine what to retrieve
+  /**
+   * Scan org and determine what types to export
+   */
+  async buildExportTypes(options = {}) {
+    const conn = this.getConnection();
     const types = [];
 
-    // Scan custom objects
+    // Custom Objects
     const globalDesc = await conn.describeGlobal();
     const customObjs = globalDesc.sobjects
       .filter(s => s.custom && s.name.endsWith("__c") && !s.name.includes("__mdt") && !s.name.includes("__e") && !s.name.includes("__b"))
       .map(s => s.name);
-
-    if (customObjs.length || options.includeStandardFields) {
-      types.push({ name: "CustomObject", members: customObjs.length ? customObjs : ["Account", "Lead", "Contact", "Opportunity"] });
-    }
+    if (customObjs.length) types.push({ name: "CustomObject", members: customObjs });
 
     // Custom fields on standard objects
     const stdObjects = ["Lead", "Account", "Contact", "Opportunity", "Case", "Order"];
@@ -986,110 +984,72 @@ export class SalesforceClient {
     for (const objName of stdObjects) {
       try {
         const desc = await conn.sobject(objName).describe();
-        const fields = desc.fields.filter(f => f.custom && f.name.endsWith("__c"));
-        customFields.push(...fields.map(f => `${objName}.${f.name}`));
+        customFields.push(...desc.fields.filter(f => f.custom && f.name.endsWith("__c")).map(f => `${objName}.${f.name}`));
       } catch { /* skip */ }
     }
-    if (customFields.length) {
-      types.push({ name: "CustomField", members: customFields });
-    }
+    if (customFields.length) types.push({ name: "CustomField", members: customFields });
 
-    // Apex Classes
+    // Apex
     try {
-      const apexResult = await conn.query("SELECT Name FROM ApexClass WHERE NamespacePrefix = null");
-      if (apexResult.records.length) {
-        types.push({ name: "ApexClass", members: apexResult.records.map(r => r.Name) });
-      }
-    } catch { /* skip */ }
-
-    // Apex Triggers
+      const apex = await conn.query("SELECT Name FROM ApexClass WHERE NamespacePrefix = null");
+      if (apex.records.length) types.push({ name: "ApexClass", members: apex.records.map(r => r.Name) });
+    } catch {}
     try {
-      const triggerResult = await conn.query("SELECT Name FROM ApexTrigger WHERE NamespacePrefix = null");
-      if (triggerResult.records.length) {
-        types.push({ name: "ApexTrigger", members: triggerResult.records.map(r => r.Name) });
-      }
-    } catch { /* skip */ }
-
-    // Validation Rules
-    try {
-      const vrResult = await conn.request({
-        method: "GET",
-        url: "/services/data/v62.0/tooling/query/?q=" +
-          encodeURIComponent("SELECT ValidationName, EntityDefinition.QualifiedApiName FROM ValidationRule WHERE ManageableState = 'unmanaged'"),
-      });
-      if (vrResult.records?.length) {
-        types.push({ name: "ValidationRule", members: vrResult.records.map(r => `${r.EntityDefinition.QualifiedApiName}.${r.ValidationName}`) });
-      }
-    } catch { /* skip */ }
+      const trg = await conn.query("SELECT Name FROM ApexTrigger WHERE NamespacePrefix = null");
+      if (trg.records.length) types.push({ name: "ApexTrigger", members: trg.records.map(r => r.Name) });
+    } catch {}
 
     // Record Types
     try {
-      const rtResult = await conn.query("SELECT DeveloperName, SobjectType FROM RecordType WHERE NamespacePrefix = null AND IsActive = true");
-      if (rtResult.records.length) {
-        types.push({ name: "RecordType", members: rtResult.records.map(r => `${r.SobjectType}.${r.DeveloperName}`) });
-      }
-    } catch { /* skip */ }
+      const rt = await conn.query("SELECT DeveloperName, SobjectType FROM RecordType WHERE NamespacePrefix = null AND IsActive = true");
+      if (rt.records.length) types.push({ name: "RecordType", members: rt.records.map(r => `${r.SobjectType}.${r.DeveloperName}`) });
+    } catch {}
 
-    // Flows
+    // Validation Rules
     try {
-      const flowResult = await conn.query("SELECT DeveloperName FROM FlowDefinition WHERE NamespacePrefix = null");
-      if (flowResult.records?.length) {
-        types.push({ name: "Flow", members: flowResult.records.map(r => r.DeveloperName) });
-      }
-    } catch { /* skip */ }
+      const vr = await conn.request({ method: "GET",
+        url: "/services/data/v62.0/tooling/query/?q=" + encodeURIComponent("SELECT ValidationName, EntityDefinition.QualifiedApiName FROM ValidationRule WHERE ManageableState = 'unmanaged'") });
+      if (vr.records?.length) types.push({ name: "ValidationRule", members: vr.records.map(r => `${r.EntityDefinition.QualifiedApiName}.${r.ValidationName}`) });
+    } catch {}
 
-    // Permission Sets (custom only)
+    // Permission Sets, Queues, Flows
     try {
-      const psResult = await conn.query("SELECT Name FROM PermissionSet WHERE IsCustom = true AND NamespacePrefix = null");
-      if (psResult.records.length) {
-        types.push({ name: "PermissionSet", members: psResult.records.map(r => r.Name) });
-      }
-    } catch { /* skip */ }
-
-    // Queues
+      const ps = await conn.query("SELECT Name FROM PermissionSet WHERE IsCustom = true AND NamespacePrefix = null");
+      if (ps.records.length) types.push({ name: "PermissionSet", members: ps.records.map(r => r.Name) });
+    } catch {}
     try {
-      const qResult = await conn.query("SELECT DeveloperName FROM Group WHERE Type = 'Queue'");
-      if (qResult.records.length) {
-        types.push({ name: "Queue", members: qResult.records.map(r => r.DeveloperName) });
-      }
-    } catch { /* skip */ }
+      const q = await conn.query("SELECT DeveloperName FROM Group WHERE Type = 'Queue'");
+      if (q.records.length) types.push({ name: "Queue", members: q.records.map(r => r.DeveloperName) });
+    } catch {}
 
-    // Layouts (custom or modified)
-    if (options.includeLayouts) {
-      types.push({ name: "Layout", members: ["*"] });
-    }
+    if (options.includeLayouts) types.push({ name: "Layout", members: ["*"] });
 
-    if (!types.length) {
-      return { isEmpty: true, message: "No custom metadata found to export" };
-    }
+    return types;
+  }
 
-    // 2. Retrieve metadata
-    const retrieved = await this.retrievePackage(types, apiVersion);
+  /**
+   * Build SFDX project ZIP from a retrieved metadata ZIP
+   */
+  async buildSFDXProject(retrievedZipBuffer, types, projectName, apiVersion = "62.0") {
+    const zip = new JSZip();
 
-    // 3. Build SFDX project structure
-    // Unzip the retrieved package and restructure
-    const retrievedZip = await JSZip.loadAsync(retrieved.zipBuffer);
-
-    // Create SFDX project
+    // sfdx-project.json
     zip.file("sfdx-project.json", JSON.stringify({
       packageDirectories: [{ path: "force-app", default: true }],
-      namespace: "",
-      sfdcLoginUrl: "https://login.salesforce.com",
-      sourceApiVersion: apiVersion,
+      namespace: "", sfdcLoginUrl: "https://login.salesforce.com", sourceApiVersion: apiVersion,
     }, null, 2));
 
     zip.file(".gitignore", ".sf/\n.sfdx/\nnode_modules/\n");
-
     zip.file("README.md",
-      `# ${projectName}\n\nSFDX project exported from org via MCP Server.\n\n` +
+      `# ${projectName}\n\nSFDX project exported via MCP Server.\n\n` +
       `## Deploy\n\`\`\`bash\nsf project deploy start --source-dir force-app\n\`\`\`\n\n` +
-      `## Components\n${types.map(t => `- ${t.name}: ${t.members.length === 1 && t.members[0] === '*' ? 'all' : t.members.join(', ')}`).join('\n')}\n`
+      `## Components\n${types.map(t => `- ${t.name}: ${Array.isArray(t.members) ? t.members.join(', ') : t.members}`).join('\n')}\n`
     );
 
-    // Copy retrieved files into force-app/main/default/
-    for (const [path, file] of Object.entries(retrievedZip.files)) {
+    // Unzip retrieved and restructure
+    const retrieved = await JSZip.loadAsync(retrievedZipBuffer);
+    for (const [path, file] of Object.entries(retrieved.files)) {
       if (file.dir) continue;
-      // Remove the top-level "unpackaged/" prefix from retrieved ZIP
       const cleanPath = path.replace(/^unpackaged\//, "");
       if (cleanPath === "package.xml") {
         zip.file("manifest/package.xml", await file.async("uint8array"));
@@ -1098,15 +1058,7 @@ export class SalesforceClient {
       }
     }
 
-    const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
-
-    return {
-      isEmpty: false,
-      projectName,
-      types: types.map(t => ({ name: t.name, count: t.members.length })),
-      totalComponents: types.reduce((sum, t) => sum + t.members.length, 0),
-      zipBuffer,
-    };
+    return await zip.generateAsync({ type: "nodebuffer" });
   }
 
   // --- Destructive Deploy / Reset Org ---
