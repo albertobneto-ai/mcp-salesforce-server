@@ -328,6 +328,46 @@ app.get("/api/mock-data-b64/:data", async (req, res) => {
 });
 
 // =============================================
+// EXPORT SFDX ENDPOINT
+// =============================================
+
+// --- Export SFDX project ZIP ---
+app.get("/api/export-sfdx", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const projectName = req.query.project || "crm-b2b-project";
+    const includeLayouts = req.query.layouts === "true";
+    const includeStandardFields = req.query.standardFields === "true";
+
+    const result = await sfClient.exportSFDX({ projectName, includeLayouts, includeStandardFields });
+    sfClient.clearTargetOrg();
+
+    if (result.isEmpty) {
+      return res.json({ status: "empty", message: result.message });
+    }
+
+    if (req.query.format === "json") {
+      // Return metadata info without the ZIP
+      return res.json({
+        status: "ready",
+        projectName: result.projectName,
+        types: result.types,
+        totalComponents: result.totalComponents,
+        downloadUrl: `/api/export-sfdx?format=zip&project=${encodeURIComponent(projectName)}${includeLayouts ? "&layouts=true" : ""}${includeStandardFields ? "&standardFields=true" : ""}`,
+      });
+    }
+
+    // Return ZIP file
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename="${projectName}.zip"`);
+    res.send(result.zipBuffer);
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// =============================================
 // DELETE RECORDS ENDPOINT
 // =============================================
 
