@@ -1366,14 +1366,25 @@ app.get("/api/environments/:env", async (req, res) => {
 
   // Test connection to this environment
   try {
-    const jsforce = (await import("jsforce")).default;
-    const conn = new jsforce.Connection({ loginUrl: cfg.loginUrl });
-    await conn.login(cfg.username, cfg.password + (cfg.token || ""));
-    const identity = await conn.identity();
-    res.json({
-      key: envKey, ...envDef, configured: true, connected: true,
-      orgId: identity.organization_id, username: identity.username, orgType: identity.org_type || "N/A",
-    });
+    if (envKey === "dev") {
+      // Dev uses the main SalesforceClient connection
+      await sfClient.ensureConnected();
+      const conn = sfClient.getConnection();
+      const identity = await conn.identity();
+      res.json({
+        key: envKey, ...envDef, configured: true, connected: true,
+        orgId: identity.organization_id, username: identity.username,
+      });
+    } else {
+      const jsforce = (await import("jsforce")).default;
+      const conn = new jsforce.Connection({ loginUrl: cfg.loginUrl });
+      await conn.login(cfg.username, cfg.password + (cfg.token || ""));
+      const identity = await conn.identity();
+      res.json({
+        key: envKey, ...envDef, configured: true, connected: true,
+        orgId: identity.organization_id, username: identity.username,
+      });
+    }
   } catch (err) {
     res.json({ key: envKey, ...envDef, configured: true, connected: false, error: err.message });
   }
