@@ -550,6 +550,55 @@ app.get("/api/tooling-query", async (req, res) => {
   }
 });
 
+// --- Tooling API DELETE (erase deleted fields, objects, etc.) ---
+app.get("/api/tooling-delete/:sobjectType/:id", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const conn = sfClient.getConnection();
+    await conn.request({
+      method: "DELETE",
+      url: `/services/data/v62.0/tooling/sobjects/${req.params.sobjectType}/${req.params.id}`,
+    });
+    sfClient.clearTargetOrg();
+    res.json({ status: "deleted", sobjectType: req.params.sobjectType, id: req.params.id });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Erase all deleted custom fields (purge recycle bin) ---
+app.get("/api/erase-deleted-fields", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const conn = sfClient.getConnection();
+    const result = await conn.request({
+      method: "GET",
+      url: "/services/data/v62.0/tooling/query/?q=" +
+        encodeURIComponent("SELECT Id, DeveloperName, TableEnumOrId FROM CustomField WHERE DeveloperName LIKE '%_del'"),
+    });
+    const deleted = [];
+    if (result.records?.length) {
+      for (const field of result.records) {
+        try {
+          await conn.request({
+            method: "DELETE",
+            url: `/services/data/v62.0/tooling/sobjects/CustomField/${field.Id}`,
+          });
+          deleted.push({ id: field.Id, name: field.DeveloperName, object: field.TableEnumOrId, status: "erased" });
+        } catch (err) {
+          deleted.push({ id: field.Id, name: field.DeveloperName, object: field.TableEnumOrId, status: "error", error: err.message });
+        }
+      }
+    }
+    sfClient.clearTargetOrg();
+    res.json({ status: "done", erasedCount: deleted.filter(d => d.status === "erased").length, details: deleted });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
 // --- Start ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
