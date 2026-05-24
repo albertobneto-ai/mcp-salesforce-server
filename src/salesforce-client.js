@@ -7,8 +7,11 @@ export class SalesforceClient {
     this.orgId = null;
     this.targetConn = null;
     this.orgTokens = new Map();
-    this.adminPermSetCache = new Map(); // orgKey -> permissionSetId
+    this.adminPermSetCache = new Map();
+    this.ghClient = null; // set externally for token persistence
   }
+
+  setGitHubClient(ghClient) { this.ghClient = ghClient; }
 
   async ensureConnected() {
     if (this.conn && this.orgId) return;
@@ -36,7 +39,7 @@ export class SalesforceClient {
   getOrgId() { return this.orgId; }
   getConnection() { return this.targetConn || this.conn; }
 
-  // --- Token management for multi-org ---
+  // --- Token persistence via GitHub ---
   storeOrgTokens(scratchOrgId, tokenData) {
     this.orgTokens.set(scratchOrgId, {
       instanceUrl: tokenData.instance_url,
@@ -45,9 +48,47 @@ export class SalesforceClient {
       storedAt: new Date().toISOString(),
     });
     console.log(`Tokens stored for scratch org: ${scratchOrgId}`);
+    this.persistTokens(); // fire-and-forget
   }
 
+  async persistTokens() {
+    if (!this.ghClient) return;
+    try {
+      const data = {};
+      for (const [orgId, tokens] of this.orgTokens) {
+        data[orgId] = tokens;
+      }
+      await this.ghClient.updateFile(
+        "data/tokens.json",
+        JSON.stringify(data, null, 2),
+        "auto: persist scratch org tokens"
+      );
+      console.log("Tokens persisted to GitHub");
+    } catch (err) {
+      console.error("Failed to persist tokens:", err.message);
+    }
+  }
+
+  async loadPersistedTokens() {
+    if (!this.ghClient) return;
+    try {
+      const file = await this.ghClient.getFile("data/tokens.json");
+      if (file && file.content) {
+        const decoded = Buffer.from(file.content, "base64").toString("utf-8");
+        const data = JSON.parse(decoded);
+        for (const [orgId, tokens] of Object.entries(data)) {
+          this.orgTokens.set(orgId, tokens);
+        }
+        console.log(`Loaded ${Object.keys(data).length} persisted token(s) from GitHub`);
+      }
+    } catch (err) {
+      console.log("No persisted tokens found or error:", err.message);
+    }
+  }
+
+  // --- Multi-org connection ---
   async connectToScratchOrg(scratchOrgId) {
+    // 1. Check stored tokens
     const stored = this.orgTokens.get(scratchOrgId);
     if (stored) {
       try {
@@ -65,8 +106,11 @@ export class SalesforceClient {
           } catch { /* fall through */ }
         }
         this.orgTokens.delete(scratchOrgId);
+        this.persistTokens();
       }
     }
+
+    // 2. Try AuthCode
     await this.ensureConnected();
     const result = await this.conn.query(
       `SELECT Id, ScratchOrg, OrgName, Status, LoginUrl, AuthCode, SignupUsername ` +
@@ -90,7 +134,7 @@ export class SalesforceClient {
       });
       return this.targetConn;
     }
-    throw new Error(`Sem tokens e AuthCode expirado para ${info.OrgName}. Faça login via /api/scratch-orgs/login/${info.Id} primeiro.`);
+    throw new Error(`Sem tokens e AuthCode expirado para ${info.OrgName}. Login via /api/scratch-orgs/login/${info.Id} primeiro.`);
   }
 
   async refreshOrgToken(scratchOrgId, stored) {
@@ -112,13 +156,9 @@ export class SalesforceClient {
     return null;
   }
 
-  async connectToOrg(instanceUrl, accessToken) {
-    this.targetConn = new jsforce.Connection({ instanceUrl, accessToken, version: "62.0" });
-    return this.targetConn;
-  }
-
   clearTargetOrg() { this.targetConn = null; }
 
+  // --- Login + store tokens ---
   async loginToScratchOrg(scratchOrgInfoId) {
     await this.ensureConnected();
     const info = await this.getScratchOrgInfo(scratchOrgInfoId);
@@ -150,19 +190,17 @@ export class SalesforceClient {
     return [...this.orgTokens].map(([orgId, t]) => ({ orgId, instanceUrl: t.instanceUrl, storedAt: t.storedAt }));
   }
 
-  // --- Auto-FLS: grant field permissions after creation ---
+  // --- Auto-FLS ---
   async getAdminPermSetId(conn) {
     const key = conn.instanceUrl;
     if (this.adminPermSetCache.has(key)) return this.adminPermSetCache.get(key);
     const identity = await conn.identity();
     const user = await conn.query(`SELECT ProfileId FROM User WHERE Id = '${identity.user_id}'`);
     if (!user.records.length) return null;
-    const profileId = user.records[0].ProfileId;
-    const ps = await conn.query(`SELECT Id FROM PermissionSet WHERE ProfileId = '${profileId}' AND IsOwnedByProfile = true LIMIT 1`);
+    const ps = await conn.query(`SELECT Id FROM PermissionSet WHERE ProfileId = '${user.records[0].ProfileId}' AND IsOwnedByProfile = true LIMIT 1`);
     if (!ps.records.length) return null;
-    const permSetId = ps.records[0].Id;
-    this.adminPermSetCache.set(key, permSetId);
-    return permSetId;
+    this.adminPermSetCache.set(key, ps.records[0].Id);
+    return ps.records[0].Id;
   }
 
   async grantFLS(conn, sobjectType, fieldFullName) {
@@ -170,15 +208,11 @@ export class SalesforceClient {
       const permSetId = await this.getAdminPermSetId(conn);
       if (!permSetId) return;
       await conn.sobject("FieldPermissions").create({
-        ParentId: permSetId,
-        SobjectType: sobjectType,
-        Field: fieldFullName,
-        PermissionsRead: true,
-        PermissionsEdit: true,
+        ParentId: permSetId, SobjectType: sobjectType,
+        Field: fieldFullName, PermissionsRead: true, PermissionsEdit: true,
       });
     } catch (err) {
-      // Ignore duplicate or permission errors — field might already have FLS
-      console.log(`FLS grant note for ${fieldFullName}: ${err.message}`);
+      console.log(`FLS note for ${fieldFullName}: ${err.message}`);
     }
   }
 
@@ -187,7 +221,7 @@ export class SalesforceClient {
   async describeObject(objectName) { return await this.getConnection().sobject(objectName).describe(); }
   async query(soql) { return await this.getConnection().query(soql); }
 
-  // --- Metadata CRUD ---
+  // --- Metadata ---
   async deployComponent(componentType, metadata) {
     const result = await this.getConnection().metadata.upsert(componentType, metadata);
     return { success: result.success, fullName: result.fullName, errors: result.errors || [] };
@@ -208,7 +242,6 @@ export class SalesforceClient {
     return results;
   }
 
-  // --- Build field metadata ---
   buildFieldMeta(field, parentObject) {
     const fullName = parentObject ? `${parentObject}.${field.fullName}` : field.fullName;
     return {
@@ -236,17 +269,13 @@ export class SalesforceClient {
     };
   }
 
-  // --- Deploy field via Metadata API + auto-FLS ---
   async deployField(conn, fieldMeta) {
     const result = await conn.metadata.upsert("CustomField", fieldMeta);
     const success = Array.isArray(result) ? result[0].success : result.success;
-    
-    // Auto-FLS: grant read/edit after field creation
     if (success && fieldMeta.fullName.includes(".")) {
       const objectName = fieldMeta.fullName.split(".")[0];
       await this.grantFLS(conn, objectName, fieldMeta.fullName);
     }
-    
     return { success, result };
   }
 
@@ -256,7 +285,6 @@ export class SalesforceClient {
     const summary = { total: 0, success: 0, failed: 0 };
     const details = [];
 
-    // 1. Custom Objects
     if (manifest.metadata?.customObjects?.length) {
       for (const obj of manifest.metadata.customObjects) {
         summary.total++;
@@ -297,7 +325,6 @@ export class SalesforceClient {
       }
     }
 
-    // 2. Custom Fields on existing objects
     if (manifest.metadata?.customFields?.length) {
       for (const field of manifest.metadata.customFields) {
         summary.total++;
@@ -313,7 +340,6 @@ export class SalesforceClient {
       }
     }
 
-    // 3. Validation Rules
     if (manifest.metadata?.validationRules?.length) {
       for (const rule of manifest.metadata.validationRules) {
         summary.total++;
@@ -333,7 +359,6 @@ export class SalesforceClient {
       }
     }
 
-    // 4. Record Types
     if (manifest.metadata?.recordTypes?.length) {
       for (const rt of manifest.metadata.recordTypes) {
         summary.total++;
