@@ -933,6 +933,182 @@ export class SalesforceClient {
     return await this.deployZip(zipBuffer, options);
   }
 
+  // --- Export SFDX ---
+
+  /**
+   * Retrieve metadata from org as a ZIP (Metadata API format)
+   * @param {Array} types - [{name: 'ApexClass', members: ['*']}, ...]
+   * @returns {Buffer} ZIP buffer
+   */
+  async retrievePackage(types, apiVersion = "62.0") {
+    const conn = this.getConnection();
+    return new Promise((resolve, reject) => {
+      conn.metadata.retrieve({
+        unpackaged: { types, version: apiVersion },
+      }).complete(true, (err, result) => {
+        if (err) return reject(err);
+        if (!result.zipFile) return reject(new Error("No ZIP file returned"));
+        resolve({
+          zipBuffer: Buffer.from(result.zipFile, "base64"),
+          status: result.status,
+          fileProperties: result.fileProperties || [],
+        });
+      });
+    });
+  }
+
+  /**
+   * Export org metadata as SFDX project ZIP
+   * Scans the org for custom metadata and packages it
+   */
+  async exportSFDX(options = {}) {
+    const conn = this.getConnection();
+    const zip = new JSZip();
+    const apiVersion = options.apiVersion || "62.0";
+    const projectName = options.projectName || "crm-b2b-project";
+
+    // 1. Determine what to retrieve
+    const types = [];
+
+    // Scan custom objects
+    const globalDesc = await conn.describeGlobal();
+    const customObjs = globalDesc.sobjects
+      .filter(s => s.custom && s.name.endsWith("__c") && !s.name.includes("__mdt") && !s.name.includes("__e") && !s.name.includes("__b"))
+      .map(s => s.name);
+
+    if (customObjs.length || options.includeStandardFields) {
+      types.push({ name: "CustomObject", members: customObjs.length ? customObjs : ["Account", "Lead", "Contact", "Opportunity"] });
+    }
+
+    // Custom fields on standard objects
+    const stdObjects = ["Lead", "Account", "Contact", "Opportunity", "Case", "Order"];
+    const customFields = [];
+    for (const objName of stdObjects) {
+      try {
+        const desc = await conn.sobject(objName).describe();
+        const fields = desc.fields.filter(f => f.custom && f.name.endsWith("__c"));
+        customFields.push(...fields.map(f => `${objName}.${f.name}`));
+      } catch { /* skip */ }
+    }
+    if (customFields.length) {
+      types.push({ name: "CustomField", members: customFields });
+    }
+
+    // Apex Classes
+    try {
+      const apexResult = await conn.query("SELECT Name FROM ApexClass WHERE NamespacePrefix = null");
+      if (apexResult.records.length) {
+        types.push({ name: "ApexClass", members: apexResult.records.map(r => r.Name) });
+      }
+    } catch { /* skip */ }
+
+    // Apex Triggers
+    try {
+      const triggerResult = await conn.query("SELECT Name FROM ApexTrigger WHERE NamespacePrefix = null");
+      if (triggerResult.records.length) {
+        types.push({ name: "ApexTrigger", members: triggerResult.records.map(r => r.Name) });
+      }
+    } catch { /* skip */ }
+
+    // Validation Rules
+    try {
+      const vrResult = await conn.request({
+        method: "GET",
+        url: "/services/data/v62.0/tooling/query/?q=" +
+          encodeURIComponent("SELECT ValidationName, EntityDefinition.QualifiedApiName FROM ValidationRule WHERE ManageableState = 'unmanaged'"),
+      });
+      if (vrResult.records?.length) {
+        types.push({ name: "ValidationRule", members: vrResult.records.map(r => `${r.EntityDefinition.QualifiedApiName}.${r.ValidationName}`) });
+      }
+    } catch { /* skip */ }
+
+    // Record Types
+    try {
+      const rtResult = await conn.query("SELECT DeveloperName, SobjectType FROM RecordType WHERE NamespacePrefix = null AND IsActive = true");
+      if (rtResult.records.length) {
+        types.push({ name: "RecordType", members: rtResult.records.map(r => `${r.SobjectType}.${r.DeveloperName}`) });
+      }
+    } catch { /* skip */ }
+
+    // Flows
+    try {
+      const flowResult = await conn.query("SELECT DeveloperName FROM FlowDefinition WHERE NamespacePrefix = null");
+      if (flowResult.records?.length) {
+        types.push({ name: "Flow", members: flowResult.records.map(r => r.DeveloperName) });
+      }
+    } catch { /* skip */ }
+
+    // Permission Sets (custom only)
+    try {
+      const psResult = await conn.query("SELECT Name FROM PermissionSet WHERE IsCustom = true AND NamespacePrefix = null");
+      if (psResult.records.length) {
+        types.push({ name: "PermissionSet", members: psResult.records.map(r => r.Name) });
+      }
+    } catch { /* skip */ }
+
+    // Queues
+    try {
+      const qResult = await conn.query("SELECT DeveloperName FROM Group WHERE Type = 'Queue'");
+      if (qResult.records.length) {
+        types.push({ name: "Queue", members: qResult.records.map(r => r.DeveloperName) });
+      }
+    } catch { /* skip */ }
+
+    // Layouts (custom or modified)
+    if (options.includeLayouts) {
+      types.push({ name: "Layout", members: ["*"] });
+    }
+
+    if (!types.length) {
+      return { isEmpty: true, message: "No custom metadata found to export" };
+    }
+
+    // 2. Retrieve metadata
+    const retrieved = await this.retrievePackage(types, apiVersion);
+
+    // 3. Build SFDX project structure
+    // Unzip the retrieved package and restructure
+    const retrievedZip = await JSZip.loadAsync(retrieved.zipBuffer);
+
+    // Create SFDX project
+    zip.file("sfdx-project.json", JSON.stringify({
+      packageDirectories: [{ path: "force-app", default: true }],
+      namespace: "",
+      sfdcLoginUrl: "https://login.salesforce.com",
+      sourceApiVersion: apiVersion,
+    }, null, 2));
+
+    zip.file(".gitignore", ".sf/\n.sfdx/\nnode_modules/\n");
+
+    zip.file("README.md",
+      `# ${projectName}\n\nSFDX project exported from org via MCP Server.\n\n` +
+      `## Deploy\n\`\`\`bash\nsf project deploy start --source-dir force-app\n\`\`\`\n\n` +
+      `## Components\n${types.map(t => `- ${t.name}: ${t.members.length === 1 && t.members[0] === '*' ? 'all' : t.members.join(', ')}`).join('\n')}\n`
+    );
+
+    // Copy retrieved files into force-app/main/default/
+    for (const [path, file] of Object.entries(retrievedZip.files)) {
+      if (file.dir) continue;
+      // Remove the top-level "unpackaged/" prefix from retrieved ZIP
+      const cleanPath = path.replace(/^unpackaged\//, "");
+      if (cleanPath === "package.xml") {
+        zip.file("manifest/package.xml", await file.async("uint8array"));
+      } else {
+        zip.file(`force-app/main/default/${cleanPath}`, await file.async("uint8array"));
+      }
+    }
+
+    const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+
+    return {
+      isEmpty: false,
+      projectName,
+      types: types.map(t => ({ name: t.name, count: t.members.length })),
+      totalComponents: types.reduce((sum, t) => sum + t.members.length, 0),
+      zipBuffer,
+    };
+  }
+
   // --- Destructive Deploy / Reset Org ---
 
   // Standard objects to scan for custom fields
