@@ -505,27 +505,35 @@ export class SalesforceClient {
       }
     }
 
-    // --- Queues ---
-    if (manifest.metadata?.queues?.length) {
-      for (const queue of manifest.metadata.queues) {
-        summary.total++;
-        try {
-          const queueMeta = {
-            fullName: queue.fullName,
-            doesSendEmailToMembers: queue.doesSendEmailToMembers !== false,
-            ...(queue.queueSobject && {
-              queueSobject: (Array.isArray(queue.queueSobject) ? queue.queueSobject : [queue.queueSobject])
-                .map(s => ({ sobjectType: s })),
-            }),
-          };
-          const result = await conn.metadata.upsert("Queue", queueMeta);
-          const success = Array.isArray(result) ? result[0].success : result.success;
-          if (success) summary.success++; else summary.failed++;
-          details.push({ type: "Queue", fullName: queue.fullName, success });
-        } catch (err) {
-          summary.failed++;
-          details.push({ type: "Queue", fullName: queue.fullName, success: false, errors: [err.message] });
-        }
+    // --- Queues & Email Templates (via ZIP deploy - async) ---
+    const zipTypes = {
+      queues: manifest.metadata?.queues,
+      emailTemplates: manifest.metadata?.emailTemplates,
+    };
+    const hasZipTypes = Object.values(zipTypes).some(v => v?.length);
+    if (hasZipTypes) {
+      try {
+        const zipManifest = {};
+        if (zipTypes.queues?.length) zipManifest.queues = zipTypes.queues;
+        if (zipTypes.emailTemplates?.length) zipManifest.emailTemplates = zipTypes.emailTemplates;
+        const zipBuffer = await this.buildDeployPackage(zipManifest);
+        const { deployId } = await this.startDeploy(zipBuffer);
+        const typeNames = Object.keys(zipManifest).join(", ");
+        const count = (zipManifest.queues?.length || 0) + (zipManifest.emailTemplates?.length || 0);
+        summary.total += count;
+        details.push({
+          type: "ZipDeploy",
+          components: typeNames,
+          count,
+          deployId,
+          status: "deploying",
+          checkStatusUrl: `/api/deploy-status/${deployId}`,
+        });
+      } catch (err) {
+        const count = (zipTypes.queues?.length || 0) + (zipTypes.emailTemplates?.length || 0);
+        summary.total += count;
+        summary.failed += count;
+        details.push({ type: "ZipDeploy", status: "error", errors: [err.message] });
       }
     }
 
@@ -570,29 +578,6 @@ export class SalesforceClient {
         } catch (err) {
           summary.failed++;
           details.push({ type: "CustomMetadata", fullName: cmd.fullName, success: false, errors: [err.message] });
-        }
-      }
-    }
-
-    // --- Email Templates ---
-    if (manifest.metadata?.emailTemplates?.length) {
-      for (const et of manifest.metadata.emailTemplates) {
-        summary.total++;
-        try {
-          const etMeta = {
-            fullName: et.fullName, name: et.name || et.fullName.split("/").pop(),
-            subject: et.subject, available: et.available !== false,
-            type: et.type || "text", encodingKey: et.encodingKey || "UTF-8",
-            ...(et.type === "html" || et.type === "custom" ? { htmlValue: et.body } : { content: et.body }),
-            ...(et.description && { description: et.description }),
-          };
-          const result = await conn.metadata.upsert("EmailTemplate", etMeta);
-          const success = Array.isArray(result) ? result[0].success : result.success;
-          if (success) summary.success++; else summary.failed++;
-          details.push({ type: "EmailTemplate", fullName: et.fullName, success });
-        } catch (err) {
-          summary.failed++;
-          details.push({ type: "EmailTemplate", fullName: et.fullName, success: false, errors: [err.message] });
         }
       }
     }
@@ -872,6 +857,51 @@ export class SalesforceClient {
           `</StaticResource>`
         );
         packageTypes[packageTypes.length - 1].members.push(name);
+      }
+    }
+
+    // --- Queues (via ZIP) ---
+    if (manifest.queues?.length) {
+      packageTypes.push({ name: "Queue", members: [] });
+      for (const queue of manifest.queues) {
+        const name = queue.fullName || queue.name;
+        let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+        xml += `<Queue xmlns="http://soap.sforce.com/2006/04/metadata">\n`;
+        xml += `    <doesSendEmailToMembers>${queue.doesSendEmailToMembers !== false}</doesSendEmailToMembers>\n`;
+        const sobjects = Array.isArray(queue.queueSobject) ? queue.queueSobject : queue.queueSobject ? [queue.queueSobject] : [];
+        for (const sobj of sobjects) {
+          xml += `    <queueSobject>\n        <sobjectType>${sobj}</sobjectType>\n    </queueSobject>\n`;
+        }
+        xml += `</Queue>`;
+        zip.file(`queues/${name}.queue`, xml);
+        packageTypes[packageTypes.length - 1].members.push(name);
+      }
+    }
+
+    // --- Email Templates (via ZIP) ---
+    if (manifest.emailTemplates?.length) {
+      packageTypes.push({ name: "EmailTemplate", members: [] });
+      for (const et of manifest.emailTemplates) {
+        const folder = et.folder || "unfiled$public";
+        const name = et.name || et.fullName;
+        const fullName = et.fullName || `${folder}/${name}`;
+        let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+        xml += `<EmailTemplate xmlns="http://soap.sforce.com/2006/04/metadata">\n`;
+        xml += `    <available>${et.available !== false}</available>\n`;
+        xml += `    <encodingKey>${et.encodingKey || 'UTF-8'}</encodingKey>\n`;
+        xml += `    <name>${name}</name>\n`;
+        xml += `    <subject>${et.subject || ''}</subject>\n`;
+        xml += `    <type>${et.type || 'text'}</type>\n`;
+        if (et.description) xml += `    <description>${et.description}</description>\n`;
+        if (et.type === "html" || et.type === "custom") {
+          xml += `    <htmlValue><![CDATA[${et.body || ''}]]></htmlValue>\n`;
+        } else {
+          xml += `    <content><![CDATA[${et.body || ''}]]></content>\n`;
+        }
+        xml += `</EmailTemplate>`;
+        zip.file(`email/${folder}/${name}.email`, et.body || "");
+        zip.file(`email/${folder}/${name}.email-meta.xml`, xml);
+        packageTypes[packageTypes.length - 1].members.push(fullName);
       }
     }
 
