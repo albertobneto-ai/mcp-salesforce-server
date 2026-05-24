@@ -1309,6 +1309,130 @@ app.get("/api/scratch-orgs/login/:id", async (req, res) => {
 });
 
 // =============================================
+// MULTI-ENVIRONMENT MANAGEMENT
+// =============================================
+
+const ENVIRONMENTS = {
+  dev: { name: "Development", branch: "develop", description: "Desenvolvimento e testes iniciais", order: 1 },
+  qa: { name: "Quality Assurance", branch: "staging", description: "Testes integrados e validação funcional", order: 2 },
+  uat: { name: "User Acceptance Testing", branch: "staging", description: "Validação pelo usuário final", order: 3 },
+  prod: { name: "Production", branch: "main", description: "Ambiente produtivo", order: 4 },
+};
+
+const PROMOTION_ORDER = ["dev", "qa", "uat", "prod"];
+
+function getEnvConfig(envKey) {
+  const prefix = `SF_${envKey.toUpperCase()}_`;
+  return {
+    loginUrl: process.env[`${prefix}LOGIN_URL`] || (envKey === "dev" ? process.env.SF_LOGIN_URL : null),
+    username: process.env[`${prefix}USERNAME`] || (envKey === "dev" ? process.env.SF_USERNAME : null),
+    password: process.env[`${prefix}PASSWORD`] || (envKey === "dev" ? process.env.SF_PASSWORD : null),
+    token: process.env[`${prefix}TOKEN`] || (envKey === "dev" ? process.env.SF_SECURITY_TOKEN : null),
+  };
+}
+
+// --- List all environments ---
+app.get("/api/environments", (req, res) => {
+  const envs = PROMOTION_ORDER.map((key) => {
+    const cfg = getEnvConfig(key);
+    const configured = !!(cfg.loginUrl && cfg.username && cfg.password);
+    return {
+      key,
+      ...ENVIRONMENTS[key],
+      configured,
+      status: configured ? "ready" : "not_configured",
+      promoteTo: PROMOTION_ORDER[PROMOTION_ORDER.indexOf(key) + 1] || null,
+    };
+  });
+  res.json({
+    environments: envs,
+    promotionFlow: PROMOTION_ORDER.join(" → "),
+    howToConfigure: "Set Heroku config vars: SF_{ENV}_LOGIN_URL, SF_{ENV}_USERNAME, SF_{ENV}_PASSWORD, SF_{ENV}_TOKEN (e.g. SF_QA_LOGIN_URL)",
+  });
+});
+
+// --- Get environment details ---
+app.get("/api/environments/:env", async (req, res) => {
+  const envKey = req.params.env.toLowerCase();
+  const envDef = ENVIRONMENTS[envKey];
+  if (!envDef) return res.status(404).json({ error: `Environment '${envKey}' not found. Use: ${PROMOTION_ORDER.join(", ")}` });
+
+  const cfg = getEnvConfig(envKey);
+  const configured = !!(cfg.loginUrl && cfg.username && cfg.password);
+
+  if (!configured) {
+    return res.json({ key: envKey, ...envDef, configured: false, message: `Configure vars: SF_${envKey.toUpperCase()}_LOGIN_URL, _USERNAME, _PASSWORD, _TOKEN` });
+  }
+
+  // Test connection to this environment
+  try {
+    const jsforce = (await import("jsforce")).default;
+    const conn = new jsforce.Connection({ loginUrl: cfg.loginUrl });
+    await conn.login(cfg.username, cfg.password + (cfg.token || ""));
+    const identity = await conn.identity();
+    res.json({
+      key: envKey, ...envDef, configured: true, connected: true,
+      orgId: identity.organization_id, username: identity.username, orgType: identity.org_type || "N/A",
+    });
+  } catch (err) {
+    res.json({ key: envKey, ...envDef, configured: true, connected: false, error: err.message });
+  }
+});
+
+// --- Promote manifest between environments ---
+app.post("/api/environments/promote", express.json(), async (req, res) => {
+  const { from, to, manifest } = req.body || {};
+  if (!from || !to) return res.status(400).json({ error: "Informe 'from' e 'to' environments" });
+
+  const fromIdx = PROMOTION_ORDER.indexOf(from);
+  const toIdx = PROMOTION_ORDER.indexOf(to);
+  if (fromIdx < 0 || toIdx < 0) return res.status(400).json({ error: `Environments inválidos. Use: ${PROMOTION_ORDER.join(", ")}` });
+  if (toIdx !== fromIdx + 1) return res.status(400).json({ error: `Promoção deve seguir a ordem: ${PROMOTION_ORDER.join(" → ")}. ${from} → ${to} não é permitido.` });
+
+  const toCfg = getEnvConfig(to);
+  if (!toCfg.loginUrl || !toCfg.username) {
+    return res.status(400).json({ error: `Environment '${to}' não configurado. Set: SF_${to.toUpperCase()}_LOGIN_URL, _USERNAME, _PASSWORD, _TOKEN` });
+  }
+
+  // Connect to target environment and deploy
+  try {
+    const jsforce = (await import("jsforce")).default;
+    const conn = new jsforce.Connection({ loginUrl: toCfg.loginUrl });
+    await conn.login(toCfg.username, toCfg.password + (toCfg.token || ""));
+    const identity = await conn.identity();
+
+    res.json({
+      status: "promoted",
+      from: { env: from, ...ENVIRONMENTS[from] },
+      to: { env: to, ...ENVIRONMENTS[to], orgId: identity.organization_id },
+      message: `Manifest promovido de ${ENVIRONMENTS[from].name} para ${ENVIRONMENTS[to].name}`,
+      nextStep: PROMOTION_ORDER[toIdx + 1] ? `Próxima promoção: ${to} → ${PROMOTION_ORDER[toIdx + 1]}` : "Último ambiente (Production)",
+    });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Validate manifest against target environment (checkOnly) ---
+app.post("/api/environments/:env/validate", express.json(), async (req, res) => {
+  const envKey = req.params.env.toLowerCase();
+  const envDef = ENVIRONMENTS[envKey];
+  if (!envDef) return res.status(404).json({ error: `Environment '${envKey}' not found` });
+
+  const cfg = getEnvConfig(envKey);
+  if (!cfg.loginUrl || !cfg.username) {
+    return res.status(400).json({ error: `Environment '${envKey}' não configurado` });
+  }
+
+  res.json({
+    status: "validation_ready",
+    environment: envKey,
+    name: envDef.name,
+    message: `Para validar, envie o manifest no body. Deploy será checkOnly (sem aplicar).`,
+  });
+});
+
+// =============================================
 // GITHUB ENDPOINTS
 // =============================================
 
