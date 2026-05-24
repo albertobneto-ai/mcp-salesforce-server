@@ -379,7 +379,7 @@ export class SalesforceClient {
 
           // Add field to target column
           const columns = Array.isArray(targetSection.layoutColumns) ? targetSection.layoutColumns : [targetSection.layoutColumns];
-          const colChoice = layoutConfig?.column === "left" ? 0 : (columns.length > 1 ? 1 : 0);
+          const colChoice = layoutConfig?.column === "right" ? (columns.length > 1 ? 1 : 0) : 0;
           const targetColumn = columns[colChoice];
           const items = Array.isArray(targetColumn.layoutItems) ? targetColumn.layoutItems : targetColumn.layoutItems ? [targetColumn.layoutItems] : [];
           items.push({ behavior: "Edit", field: fieldApiName });
