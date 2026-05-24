@@ -447,8 +447,8 @@ app.post("/messages", async (req, res) => {
 });
 
 
-// --- DEBUG: raw metadata test ---
-app.get("/api/debug/create-field", async (req, res) => {
+// --- DEBUG: Direct REST describe + Tooling lookup ---
+app.get("/api/debug/direct-describe/:obj", async (req, res) => {
   try {
     const orgId = req.query.org;
     if (orgId) {
@@ -457,47 +457,39 @@ app.get("/api/debug/create-field", async (req, res) => {
       await sfClient.ensureConnected();
     }
     const conn = sfClient.getConnection();
-    const upsertResult = await conn.metadata.upsert("CustomField", {
-      fullName: "Lead.DebugTest__c", label: "Debug Test", type: "Text", length: 50,
+    
+    // Direct REST call bypassing jsforce cache
+    const descResult = await conn.request({
+      method: "GET",
+      url: `/services/data/v62.0/sobjects/${req.params.obj}/describe`,
     });
-    let createResult = null, createError = null;
+    
+    const customFields = descResult.fields
+      .filter(f => f.custom)
+      .map(f => ({ name: f.name, label: f.label, type: f.type }));
+    
+    // Also try Tooling API query for CustomField
+    let toolingFields = [];
     try {
-      createResult = await conn.metadata.create("CustomField", {
-        fullName: "Lead.DebugCreate__c", label: "Debug Create", type: "Text", length: 50,
+      const toolResult = await conn.request({
+        method: "GET",
+        url: `/services/data/v62.0/tooling/query/?q=${encodeURIComponent("SELECT Id, DeveloperName, FullName, TableEnumOrId FROM CustomField WHERE TableEnumOrId = '" + req.params.obj + "'")}`,
       });
-    } catch (e) { createError = e.message; }
-    const identity = await conn.identity();
-    sfClient.clearTargetOrg();
-    res.json({ upsertResult, createResult, createError,
-      connectionInfo: { instanceUrl: conn.instanceUrl, version: conn.version, username: identity.username, orgId: identity.organization_id }
-    });
-  } catch (err) { sfClient.clearTargetOrg(); res.status(500).json({ error: err.message }); }
-});
-
-// --- DEBUG: Tooling API field creation ---
-app.get("/api/debug/tooling-field", async (req, res) => {
-  try {
-    const orgId = req.query.org;
-    if (orgId) {
-      await sfClient.connectToScratchOrg(orgId);
-    } else {
-      await sfClient.ensureConnected();
+      toolingFields = toolResult.records || [];
+    } catch(e) {
+      toolingFields = [{ error: e.message }];
     }
-    const conn = sfClient.getConnection();
-    const toolingResult = await conn.request({
-      method: "POST",
-      url: "/services/data/v62.0/tooling/sobjects/CustomField/",
-      body: JSON.stringify({
-        FullName: "Lead.ToolingTest__c",
-        Metadata: { label: "Tooling Test", type: "Text", length: 50 },
-      }),
-      headers: { "Content-Type": "application/json" },
-    });
+    
     sfClient.clearTargetOrg();
-    res.json({ toolingResult });
+    res.json({
+      objectName: req.params.obj,
+      totalFields: descResult.fields.length,
+      customFieldsViaDescribe: customFields,
+      customFieldsViaTooling: toolingFields,
+    });
   } catch (err) {
     sfClient.clearTargetOrg();
-    res.status(500).json({ error: err.message, errorCode: err.errorCode });
+    res.status(500).json({ error: err.message });
   }
 });
 
