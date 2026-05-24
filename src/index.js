@@ -37,6 +37,20 @@ const ghClient = process.env.GH_TOKEN ? new GitHubClient({
 const manifestManager = new ManifestManager();
 
 // =============================================
+// HELPER: Connect to target org if ?org= provided
+// =============================================
+async function connectToTargetOrg(req) {
+  await sfClient.ensureConnected();
+  const orgId = req.query.org;
+  if (orgId) {
+    await sfClient.connectToScratchOrg(orgId);
+    return orgId;
+  }
+  sfClient.clearTargetOrg();
+  return null;
+}
+
+// =============================================
 // REST API ENDPOINTS
 // =============================================
 
@@ -45,13 +59,15 @@ app.get("/", (req, res) => {
   res.json({
     status: "running",
     server: "mcp-salesforce-provisioning",
-    version: "2.0.0",
+    version: "3.0.0",
     tools: [
       "describe_org", "deploy_manifest", "deploy_component",
       "validate_manifest", "retrieve_metadata", "run_soql", "list_manifests",
     ],
     features: {
       scratchOrgs: true,
+      multiOrg: true,
+      mockData: true,
       githubIntegration: !!ghClient,
       deployViaUrl: true,
     },
@@ -74,51 +90,106 @@ app.get("/test-connection", async (req, res) => {
   }
 });
 
-// --- POST deploy (manifest in body) ---
+// --- POST deploy (manifest in body, optional ?org=00DAs...) ---
 app.post("/api/deploy", async (req, res) => {
   try {
-    await sfClient.ensureConnected();
+    const targetOrg = await connectToTargetOrg(req);
     const result = await sfClient.deployManifest(req.body);
-    res.json(result);
+    sfClient.clearTargetOrg();
+    res.json({ ...result, targetOrg: targetOrg || "devhub" });
   } catch (err) {
+    sfClient.clearTargetOrg();
     res.status(500).json({ status: "error", message: err.message });
   }
 });
 
-// --- GET deploy via base64 URL ---
+// --- GET deploy via base64 URL (optional ?org=00DAs...) ---
 app.get("/api/deploy-b64/:data", async (req, res) => {
   try {
-    await sfClient.ensureConnected();
+    const targetOrg = await connectToTargetOrg(req);
     const manifest = JSON.parse(Buffer.from(req.params.data, "base64").toString("utf-8"));
     const result = await sfClient.deployManifest(manifest);
-    res.json(result);
+    sfClient.clearTargetOrg();
+    res.json({ ...result, targetOrg: targetOrg || "devhub" });
   } catch (err) {
+    sfClient.clearTargetOrg();
     res.status(500).json({ status: "error", message: err.message });
   }
 });
 
-// --- Describe object ---
+// --- Describe object (optional ?org=) ---
 app.get("/api/describe/:objectName", async (req, res) => {
   try {
-    await sfClient.ensureConnected();
+    await connectToTargetOrg(req);
     const desc = await sfClient.describeObject(req.params.objectName);
+    sfClient.clearTargetOrg();
     res.json({
       name: desc.name, label: desc.label,
       fields: desc.fields.map(f => ({ name: f.name, label: f.label, type: f.type, custom: f.custom })),
       recordTypes: desc.recordTypeInfos?.map(rt => ({ name: rt.name, active: rt.active })),
     });
   } catch (err) {
+    sfClient.clearTargetOrg();
     res.status(500).json({ status: "error", message: err.message });
   }
 });
 
-// --- Run SOQL ---
+// --- Run SOQL (optional ?org=) ---
 app.post("/api/soql", async (req, res) => {
   try {
-    await sfClient.ensureConnected();
+    await connectToTargetOrg(req);
     const result = await sfClient.query(req.body.query);
+    sfClient.clearTargetOrg();
     res.json({ totalSize: result.totalSize, records: result.records });
   } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// =============================================
+// MOCK DATA ENDPOINTS
+// =============================================
+
+// --- POST: insert records (body: { objectName, records: [...] }, optional ?org=) ---
+app.post("/api/mock-data", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const { objectName, records } = req.body;
+    if (!objectName || !records?.length) {
+      return res.status(400).json({ error: "Informe objectName e records[]" });
+    }
+    const result = await sfClient.insertRecords(objectName, records);
+    sfClient.clearTargetOrg();
+    res.json(result);
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- GET: insert mock data via base64 URL (optional ?org=) ---
+app.get("/api/mock-data-b64/:data", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const payload = JSON.parse(Buffer.from(req.params.data, "base64").toString("utf-8"));
+
+    // payload pode ser: { objectName, records } ou { batches: [{ objectName, records }, ...] }
+    if (payload.batches) {
+      const results = [];
+      for (const batch of payload.batches) {
+        const result = await sfClient.insertRecords(batch.objectName, batch.records);
+        results.push(result);
+      }
+      sfClient.clearTargetOrg();
+      res.json({ batchCount: results.length, results });
+    } else {
+      const result = await sfClient.insertRecords(payload.objectName, payload.records);
+      sfClient.clearTargetOrg();
+      res.json(result);
+    }
+  } catch (err) {
+    sfClient.clearTargetOrg();
     res.status(500).json({ status: "error", message: err.message });
   }
 });
@@ -185,12 +256,62 @@ app.get("/api/scratch-orgs/:id", async (req, res) => {
   }
 });
 
-// --- Delete scratch org ---
+// --- Delete scratch org (DELETE method) ---
 app.delete("/api/scratch-orgs/:id", async (req, res) => {
   try {
     await sfClient.ensureConnected();
     await sfClient.deleteScratchOrg(req.params.id);
     res.json({ status: "deleted", id: req.params.id });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Delete scratch org via GET (browser-friendly) ---
+app.get("/api/scratch-orgs/delete/:orgId", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const orgs = await sfClient.conn.query(
+      "SELECT Id FROM ActiveScratchOrg WHERE ScratchOrg = '" + req.params.orgId + "'"
+    );
+    if (orgs.records.length > 0) {
+      await sfClient.conn.sobject('ActiveScratchOrg').delete(orgs.records[0].Id);
+      res.json({ status: "deleted", orgId: req.params.orgId });
+    } else {
+      res.json({ status: "not_found" });
+    }
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Login to Scratch Org ---
+app.get("/api/scratch-orgs/login/:id", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const info = await sfClient.getScratchOrgInfo(req.params.id);
+    if (!info || info.Status !== "Active") {
+      return res.status(400).json({ status: "error", message: "Org não está ativa" });
+    }
+    
+    const tokenRes = await fetch(info.LoginUrl + "/services/oauth2/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code: info.AuthCode,
+        client_id: "PlatformCLI",
+        redirect_uri: "http://localhost:1717/OauthRedirect",
+      }),
+    });
+    const tokenData = await tokenRes.json();
+    
+    if (tokenData.access_token) {
+      const frontDoor = tokenData.instance_url + "/secur/frontdoor.jsp?sid=" + tokenData.access_token;
+      res.redirect(frontDoor);
+    } else {
+      res.json({ status: "error", message: tokenData.error_description || tokenData.error, loginUrl: info.LoginUrl, username: info.SignupUsername });
+    }
   } catch (err) {
     res.status(500).json({ status: "error", message: err.message });
   }
@@ -250,7 +371,7 @@ app.get("/api/github/commit", async (req, res) => {
 // MCP SERVER (SSE Transport)
 // =============================================
 
-const mcpServer = new McpServer({ name: "salesforce-provisioning", version: "2.0.0" });
+const mcpServer = new McpServer({ name: "salesforce-provisioning", version: "3.0.0" });
 
 mcpServer.tool("describe_org", "Retorna informações da org conectada",
   { objectName: z.string().optional().describe("Nome do objeto para detalhar. Se omitido, lista objetos custom.") },
@@ -324,57 +445,10 @@ app.post("/messages", async (req, res) => {
   if (!transport) return res.status(400).json({ error: "No active session" });
   await transport.handlePostMessage(req, res);
 });
-// --- Login to Scratch Org ---
-app.get("/api/scratch-orgs/login/:id", async (req, res) => {
-  try {
-    await sfClient.ensureConnected();
-    const info = await sfClient.getScratchOrgInfo(req.params.id);
-    if (!info || info.Status !== "Active") {
-      return res.status(400).json({ status: "error", message: "Org não está ativa" });
-    }
-    
-    const tokenRes = await fetch(info.LoginUrl + "/services/oauth2/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        code: info.AuthCode,
-        client_id: "PlatformCLI",
-        redirect_uri: "http://localhost:1717/OauthRedirect",
-      }),
-    });
-    const tokenData = await tokenRes.json();
-    
-    if (tokenData.access_token) {
-      const frontDoor = tokenData.instance_url + "/secur/frontdoor.jsp?sid=" + tokenData.access_token;
-      res.redirect(frontDoor);
-    } else {
-      res.json({ status: "error", message: tokenData.error_description || tokenData.error, loginUrl: info.LoginUrl, username: info.SignupUsername });
-    }
-  } catch (err) {
-    res.status(500).json({ status: "error", message: err.message });
-  }
-});
-// --- Delete scratch org via GET ---
-app.get("/api/scratch-orgs/delete/:orgId", async (req, res) => {
-  try {
-    await sfClient.ensureConnected();
-    const orgs = await sfClient.conn.query(
-      "SELECT Id FROM ActiveScratchOrg WHERE ScratchOrg = '" + req.params.orgId + "'"
-    );
-    if (orgs.records.length > 0) {
-      await sfClient.conn.sobject('ActiveScratchOrg').delete(orgs.records[0].Id);
-      res.json({ status: "deleted", orgId: req.params.orgId });
-    } else {
-      res.json({ status: "not_found" });
-    }
-  } catch (err) {
-    res.status(500).json({ status: "error", message: err.message });
-  }
-});
+
 // --- Start ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`MCP Salesforce Server v2.0.0 running on port ${PORT}`);
-  console.log(`Features: ScratchOrgs=true, GitHub=${!!ghClient}, DeployViaUrl=true`);
+  console.log(`MCP Salesforce Server v3.0.0 running on port ${PORT}`);
+  console.log(`Features: ScratchOrgs=true, MultiOrg=true, MockData=true, GitHub=${!!ghClient}, DeployViaUrl=true`);
 });
