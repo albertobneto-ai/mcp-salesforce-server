@@ -865,8 +865,10 @@ export class SalesforceClient {
       packageTypes.push({ name: "Queue", members: [] });
       for (const queue of manifest.queues) {
         const name = queue.fullName || queue.name;
+        const label = queue.label || name.replace(/_/g, " ");
         let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
         xml += `<Queue xmlns="http://soap.sforce.com/2006/04/metadata">\n`;
+        xml += `    <name>${label}</name>\n`;
         xml += `    <doesSendEmailToMembers>${queue.doesSendEmailToMembers !== false}</doesSendEmailToMembers>\n`;
         const sobjects = Array.isArray(queue.queueSobject) ? queue.queueSobject : queue.queueSobject ? [queue.queueSobject] : [];
         for (const sobj of sobjects) {
@@ -893,11 +895,6 @@ export class SalesforceClient {
         xml += `    <subject>${et.subject || ''}</subject>\n`;
         xml += `    <type>${et.type || 'text'}</type>\n`;
         if (et.description) xml += `    <description>${et.description}</description>\n`;
-        if (et.type === "html" || et.type === "custom") {
-          xml += `    <htmlValue><![CDATA[${et.body || ''}]]></htmlValue>\n`;
-        } else {
-          xml += `    <content><![CDATA[${et.body || ''}]]></content>\n`;
-        }
         xml += `</EmailTemplate>`;
         zip.file(`email/${folder}/${name}.email`, et.body || "");
         zip.file(`email/${folder}/${name}.email-meta.xml`, xml);
