@@ -550,11 +550,12 @@ export class SalesforceClient {
   // --- ZIP-based Deploy (Apex, Triggers, Flows) ---
 
   /**
-   * Deploy a ZIP buffer via Metadata API
+   * Start a ZIP deploy via Metadata API (async - returns deployId immediately)
    * @param {Buffer} zipBuffer - ZIP file as Node.js Buffer
    * @param {Object} options - { checkOnly, testLevel, runTests }
+   * @returns {Object} { deployId }
    */
-  async deployZip(zipBuffer, options = {}) {
+  async startDeploy(zipBuffer, options = {}) {
     const conn = this.getConnection();
     const deployOptions = {
       rollbackOnError: true,
@@ -564,23 +565,51 @@ export class SalesforceClient {
       ...(options.runTests && { runTests: options.runTests }),
     };
 
-    return new Promise((resolve, reject) => {
-      conn.metadata.deploy(zipBuffer, deployOptions)
-        .complete(true, (err, result) => {
-          if (err) return reject(err);
-          resolve({
-            success: result.success,
-            status: result.status,
-            numberComponentsDeployed: result.numberComponentsDeployed,
-            numberComponentErrors: result.numberComponentErrors,
-            numberTestsCompleted: result.numberTestsCompleted,
-            numberTestErrors: result.numberTestErrors,
-            details: result.details || {},
-            componentFailures: result.details?.componentFailures || [],
-            runTestResult: result.details?.runTestResult || null,
-          });
-        });
-    });
+    const deployResult = await conn.metadata.deploy(zipBuffer, deployOptions);
+    // deployResult has an .id property with the async deploy ID
+    return { deployId: deployResult.id };
+  }
+
+  /**
+   * Check status of a deploy
+   * @param {string} deployId
+   * @returns {Object} deploy status
+   */
+  async checkDeployStatus(deployId) {
+    const conn = this.getConnection();
+    const result = await conn.metadata.checkDeployStatus(deployId, true);
+    return {
+      id: deployId,
+      done: result.done,
+      success: result.success,
+      status: result.status,
+      numberComponentsDeployed: result.numberComponentsDeployed,
+      numberComponentErrors: result.numberComponentErrors,
+      numberComponentsTotal: result.numberComponentsTotal,
+      numberTestsCompleted: result.numberTestsCompleted,
+      numberTestErrors: result.numberTestErrors,
+      stateDetail: result.stateDetail || null,
+      componentFailures: result.done ? (result.details?.componentFailures || []) : [],
+      runTestResult: result.done ? (result.details?.runTestResult || null) : null,
+    };
+  }
+
+  /**
+   * Deploy ZIP and wait for completion (sync - may timeout on Heroku)
+   * Use startDeploy + checkDeployStatus for async approach
+   */
+  async deployZip(zipBuffer, options = {}) {
+    const { deployId } = await this.startDeploy(zipBuffer, options);
+    // Poll until done (max 120s)
+    const maxWait = 120000;
+    const interval = 3000;
+    const start = Date.now();
+    while (Date.now() - start < maxWait) {
+      const status = await this.checkDeployStatus(deployId);
+      if (status.done) return status;
+      await new Promise(r => setTimeout(r, interval));
+    }
+    return await this.checkDeployStatus(deployId);
   }
 
   /**
