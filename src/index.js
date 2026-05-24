@@ -297,6 +297,45 @@ app.post("/api/update-records", async (req, res) => {
   }
 });
 
+// --- Remove field from layout ---
+app.get("/api/remove-field-from-layout/:layoutName/:fieldName", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const conn = sfClient.getConnection();
+    const layoutName = decodeURIComponent(req.params.layoutName);
+    const fieldName = req.params.fieldName;
+    const layout = await conn.metadata.read("Layout", layoutName);
+    if (!layout || !layout.fullName) {
+      sfClient.clearTargetOrg();
+      return res.json({ status: "error", message: "Layout not found" });
+    }
+    const sections = Array.isArray(layout.layoutSections) ? layout.layoutSections : [layout.layoutSections];
+    let removed = false;
+    for (const section of sections) {
+      const columns = Array.isArray(section.layoutColumns) ? section.layoutColumns : section.layoutColumns ? [section.layoutColumns] : [];
+      for (const col of columns) {
+        const items = Array.isArray(col.layoutItems) ? col.layoutItems : col.layoutItems ? [col.layoutItems] : [];
+        const filtered = items.filter(item => item.field !== fieldName);
+        if (filtered.length < items.length) {
+          col.layoutItems = filtered;
+          removed = true;
+        }
+      }
+    }
+    if (!removed) {
+      sfClient.clearTargetOrg();
+      return res.json({ status: "not_found", layout: layoutName, field: fieldName });
+    }
+    const result = await conn.metadata.update("Layout", layout);
+    const item = Array.isArray(result) ? result[0] : result;
+    sfClient.clearTargetOrg();
+    res.json({ status: item?.success ? "removed" : "failed", layout: layoutName, field: fieldName, errors: item?.errors || null });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
 // --- Add Related List to Layout ---
 app.get("/api/add-related-list/:layoutName/:relatedListName", async (req, res) => {
   try {
