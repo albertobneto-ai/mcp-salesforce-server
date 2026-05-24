@@ -1,4 +1,5 @@
 import jsforce from "jsforce";
+import JSZip from "jszip";
 
 export class SalesforceClient {
   constructor(config) {
@@ -544,6 +545,182 @@ export class SalesforceClient {
       `FROM ScratchOrgInfo WHERE Id = '${scratchOrgInfoId}'`
     );
     return result.records[0];
+  }
+
+  // --- ZIP-based Deploy (Apex, Triggers, Flows) ---
+
+  /**
+   * Deploy a ZIP buffer via Metadata API
+   * @param {Buffer} zipBuffer - ZIP file as Node.js Buffer
+   * @param {Object} options - { checkOnly, testLevel, runTests }
+   */
+  async deployZip(zipBuffer, options = {}) {
+    const conn = this.getConnection();
+    const deployOptions = {
+      rollbackOnError: true,
+      singlePackage: true,
+      checkOnly: options.checkOnly || false,
+      testLevel: options.testLevel || "NoTestRun",
+      ...(options.runTests && { runTests: options.runTests }),
+    };
+
+    return new Promise((resolve, reject) => {
+      conn.metadata.deploy(zipBuffer, deployOptions)
+        .complete(true, (err, result) => {
+          if (err) return reject(err);
+          resolve({
+            success: result.success,
+            status: result.status,
+            numberComponentsDeployed: result.numberComponentsDeployed,
+            numberComponentErrors: result.numberComponentErrors,
+            numberTestsCompleted: result.numberTestsCompleted,
+            numberTestErrors: result.numberTestErrors,
+            details: result.details || {},
+            componentFailures: result.details?.componentFailures || [],
+            runTestResult: result.details?.runTestResult || null,
+          });
+        });
+    });
+  }
+
+  /**
+   * Build a ZIP package from a manifest containing Apex classes, triggers, and Flows
+   * @param {Object} manifest - { apexClasses, apexTriggers, flows, apiVersion }
+   * @returns {Buffer} ZIP buffer ready for deploy
+   */
+  async buildDeployPackage(manifest) {
+    const zip = new JSZip();
+    const apiVersion = manifest.apiVersion || "62.0";
+    const packageTypes = [];
+
+    // --- Apex Classes ---
+    if (manifest.apexClasses?.length) {
+      packageTypes.push({ name: "ApexClass", members: [] });
+      for (const cls of manifest.apexClasses) {
+        const name = cls.fullName || cls.name;
+        // .cls file
+        zip.file(`classes/${name}.cls`, cls.body);
+        // .cls-meta.xml
+        zip.file(`classes/${name}.cls-meta.xml`,
+          `<?xml version="1.0" encoding="UTF-8"?>\n` +
+          `<ApexClass xmlns="http://soap.sforce.com/2006/04/metadata">\n` +
+          `    <apiVersion>${cls.apiVersion || apiVersion}</apiVersion>\n` +
+          `    <status>Active</status>\n` +
+          `</ApexClass>`
+        );
+        packageTypes[packageTypes.length - 1].members.push(name);
+      }
+    }
+
+    // --- Apex Triggers ---
+    if (manifest.apexTriggers?.length) {
+      packageTypes.push({ name: "ApexTrigger", members: [] });
+      for (const trg of manifest.apexTriggers) {
+        const name = trg.fullName || trg.name;
+        zip.file(`triggers/${name}.trigger`, trg.body);
+        zip.file(`triggers/${name}.trigger-meta.xml`,
+          `<?xml version="1.0" encoding="UTF-8"?>\n` +
+          `<ApexTrigger xmlns="http://soap.sforce.com/2006/04/metadata">\n` +
+          `    <apiVersion>${trg.apiVersion || apiVersion}</apiVersion>\n` +
+          `    <status>Active</status>\n` +
+          `</ApexTrigger>`
+        );
+        packageTypes[packageTypes.length - 1].members.push(name);
+      }
+    }
+
+    // --- Flows ---
+    if (manifest.flows?.length) {
+      packageTypes.push({ name: "Flow", members: [] });
+      for (const flow of manifest.flows) {
+        const name = flow.fullName || flow.name;
+        // Flow definition XML
+        zip.file(`flows/${name}.flow-meta.xml`, flow.definition);
+        packageTypes[packageTypes.length - 1].members.push(name);
+      }
+    }
+
+    // --- LWC (Lightning Web Components) ---
+    if (manifest.lwc?.length) {
+      packageTypes.push({ name: "LightningComponentBundle", members: [] });
+      for (const comp of manifest.lwc) {
+        const name = comp.fullName || comp.name;
+        // Each LWC is a folder with files
+        for (const file of comp.files) {
+          zip.file(`lwc/${name}/${file.name}`, file.content);
+        }
+        // meta.xml
+        if (!comp.files.some(f => f.name.endsWith('.js-meta.xml'))) {
+          zip.file(`lwc/${name}/${name}.js-meta.xml`,
+            `<?xml version="1.0" encoding="UTF-8"?>\n` +
+            `<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">\n` +
+            `    <apiVersion>${comp.apiVersion || apiVersion}</apiVersion>\n` +
+            `    <isExposed>${comp.isExposed !== false}</isExposed>\n` +
+            (comp.targets ? `    <targets>\n${comp.targets.map(t => `        <target>${t}</target>`).join('\n')}\n    </targets>\n` : '') +
+            `</LightningComponentBundle>`
+          );
+        }
+        packageTypes[packageTypes.length - 1].members.push(name);
+      }
+    }
+
+    // --- Aura Components ---
+    if (manifest.aura?.length) {
+      packageTypes.push({ name: "AuraDefinitionBundle", members: [] });
+      for (const comp of manifest.aura) {
+        const name = comp.fullName || comp.name;
+        for (const file of comp.files) {
+          zip.file(`aura/${name}/${file.name}`, file.content);
+        }
+        packageTypes[packageTypes.length - 1].members.push(name);
+      }
+    }
+
+    // --- Static Resources ---
+    if (manifest.staticResources?.length) {
+      packageTypes.push({ name: "StaticResource", members: [] });
+      for (const sr of manifest.staticResources) {
+        const name = sr.fullName || sr.name;
+        zip.file(`staticresources/${name}.resource`, sr.body);
+        zip.file(`staticresources/${name}.resource-meta.xml`,
+          `<?xml version="1.0" encoding="UTF-8"?>\n` +
+          `<StaticResource xmlns="http://soap.sforce.com/2006/04/metadata">\n` +
+          `    <cacheControl>${sr.cacheControl || 'Public'}</cacheControl>\n` +
+          `    <contentType>${sr.contentType || 'application/octet-stream'}</contentType>\n` +
+          `</StaticResource>`
+        );
+        packageTypes[packageTypes.length - 1].members.push(name);
+      }
+    }
+
+    // --- Build package.xml ---
+    let packageXml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    packageXml += `<Package xmlns="http://soap.sforce.com/2006/04/metadata">\n`;
+    for (const pt of packageTypes) {
+      packageXml += `    <types>\n`;
+      for (const member of pt.members) {
+        packageXml += `        <members>${member}</members>\n`;
+      }
+      packageXml += `        <name>${pt.name}</name>\n`;
+      packageXml += `    </types>\n`;
+    }
+    packageXml += `    <version>${apiVersion}</version>\n`;
+    packageXml += `</Package>`;
+
+    zip.file("package.xml", packageXml);
+
+    // Generate buffer
+    return await zip.generateAsync({ type: "nodebuffer" });
+  }
+
+  /**
+   * High-level: build ZIP from manifest and deploy
+   * @param {Object} manifest - manifest with apexClasses, apexTriggers, flows, lwc, etc.
+   * @param {Object} options - { checkOnly, testLevel, runTests }
+   */
+  async deployCodeManifest(manifest, options = {}) {
+    const zipBuffer = await this.buildDeployPackage(manifest);
+    return await this.deployZip(zipBuffer, options);
   }
 
   // --- Destructive Deploy / Reset Org ---
