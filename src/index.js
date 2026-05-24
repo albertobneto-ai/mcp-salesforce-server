@@ -36,6 +36,13 @@ const ghClient = process.env.GH_TOKEN ? new GitHubClient({
 
 const manifestManager = new ManifestManager();
 
+// --- Inject GitHub client for token persistence ---
+if (ghClient) sfClient.setGitHubClient(ghClient);
+
+// --- Load persisted tokens on startup ---
+sfClient.loadPersistedTokens().catch(err => console.log("Token load skipped:", err.message));
+
+
 // =============================================
 // HELPER: Connect to target org if ?org= provided
 // =============================================
@@ -59,7 +66,7 @@ app.get("/", (req, res) => {
   res.json({
     status: "running",
     server: "mcp-salesforce-provisioning",
-    version: "3.1.0",
+    version: "3.2.0",
     tools: [
       "describe_org", "deploy_manifest", "deploy_component",
       "validate_manifest", "retrieve_metadata", "run_soql", "list_manifests",
@@ -371,7 +378,7 @@ app.get("/api/github/commit", async (req, res) => {
 // MCP SERVER (SSE Transport)
 // =============================================
 
-const mcpServer = new McpServer({ name: "salesforce-provisioning", version: "3.1.0" });
+const mcpServer = new McpServer({ name: "salesforce-provisioning", version: "3.2.0" });
 
 mcpServer.tool("describe_org", "Retorna informações da org conectada",
   { objectName: z.string().optional().describe("Nome do objeto para detalhar. Se omitido, lista objetos custom.") },
@@ -447,15 +454,14 @@ app.post("/messages", async (req, res) => {
 });
 
 
-// --- Tooling SOQL (query via Tooling API) ---
+// --- Tooling SOQL ---
 app.get("/api/tooling-query", async (req, res) => {
   try {
     await connectToTargetOrg(req);
     const conn = sfClient.getConnection();
-    const q = req.query.q;
     const result = await conn.request({
       method: "GET",
-      url: "/services/data/v62.0/tooling/query/?q=" + encodeURIComponent(q),
+      url: "/services/data/v62.0/tooling/query/?q=" + encodeURIComponent(req.query.q),
     });
     sfClient.clearTargetOrg();
     res.json(result);
@@ -468,6 +474,6 @@ app.get("/api/tooling-query", async (req, res) => {
 // --- Start ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`MCP Salesforce Server v3.1.0 running on port ${PORT}`);
+  console.log(`MCP Salesforce Server v3.2.0 running on port ${PORT}`);
   console.log(`Features: ScratchOrgs=true, MultiOrg=true, MockData=true, GitHub=${!!ghClient}, DeployViaUrl=true`);
 });
