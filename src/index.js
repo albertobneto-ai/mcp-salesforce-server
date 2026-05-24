@@ -585,6 +585,17 @@ app.get("/api/reset-org", async (req, res) => {
 // MOCK DATA - INTEGRATION SCENARIOS
 // =============================================
 
+// Helper: create record bypassing duplicate rules
+async function createBypass(conn, objectName, record) {
+  const result = await conn.request({
+    method: "POST",
+    url: `/services/data/v62.0/sobjects/${objectName}`,
+    body: JSON.stringify(record),
+    headers: { "Content-Type": "application/json", "Sforce-Duplicate-Rule-Header": "allowSave=true" },
+  });
+  return { success: result.success !== false, id: result.id };
+}
+
 // --- Mock: Leads Inbound B2B (simula canais WhatsApp, Website, Outbound, Parceiro) ---
 app.get("/api/mocks/leads-inbound", async (req, res) => {
   try {
@@ -605,8 +616,8 @@ app.get("/api/mocks/leads-inbound", async (req, res) => {
     const results = [];
     for (const lead of leads) {
       try {
-        const result = await conn.sobject("Lead").create(lead);
-        results.push({ success: result.success, id: result.id, name: `${lead.FirstName} ${lead.LastName}`, company: lead.Company, source: lead.LeadSource });
+        const result = await createBypass(conn, "Lead", lead);
+        results.push({ ...result, name: `${lead.FirstName} ${lead.LastName}`, company: lead.Company, source: lead.LeadSource });
       } catch (err) {
         results.push({ success: false, name: `${lead.FirstName} ${lead.LastName}`, error: err.message });
       }
@@ -678,7 +689,7 @@ app.get("/api/mocks/account-hierarchy", async (req, res) => {
     const results = { accounts: [], contacts: [], opportunities: [] };
 
     // 1. Customer Account (parent)
-    const customer = await conn.sobject("Account").create({
+    const customer = await createBypass(conn, "Account", {
       Name: companyName, RecordTypeId: rtMap.Customer || null,
       Industry: "Technology", Phone: "(11) 3000-1000", Website: `www.${companyName.toLowerCase().replace(/\s/g, "")}.com.br`,
       BillingCity: "São Paulo", BillingStateCode: "SP", BillingCountryCode: "BR",
@@ -689,7 +700,7 @@ app.get("/api/mocks/account-hierarchy", async (req, res) => {
     results.accounts.push({ type: "Customer", id: customer.id, name: companyName });
 
     // 2. Billing Account (child)
-    const billing = await conn.sobject("Account").create({
+    const billing = await createBypass(conn, "Account", {
       Name: `${companyName} - Faturamento`, RecordTypeId: rtMap.Billing || null,
       Parent_Account__c: customer.id, Industry: "Technology",
       BillingCity: "São Paulo", BillingStateCode: "SP", BillingCountryCode: "BR",
@@ -698,7 +709,7 @@ app.get("/api/mocks/account-hierarchy", async (req, res) => {
     results.accounts.push({ type: "Billing", id: billing.id, name: `${companyName} - Faturamento` });
 
     // 3. Service Account (child)
-    const service = await conn.sobject("Account").create({
+    const service = await createBypass(conn, "Account", {
       Name: `${companyName} - Serviços`, RecordTypeId: rtMap.Service || null,
       Parent_Account__c: customer.id, Industry: "Technology",
       BillingCity: "São Paulo", BillingStateCode: "SP", BillingCountryCode: "BR",
@@ -713,7 +724,7 @@ app.get("/api/mocks/account-hierarchy", async (req, res) => {
       { FirstName: "Pedro", LastName: "Lima", Title: "Coordenador de Suporte", Email: "pedro.lima@demo.com.br", Phone: "(11) 99000-3333", AccountId: service.id },
     ];
     for (const c of contacts) {
-      const result = await conn.sobject("Contact").create(c);
+      const result = await createBypass(conn, "Contact", c);
       results.contacts.push({ id: result.id, name: `${c.FirstName} ${c.LastName}`, account: c.AccountId === customer.id ? "Customer" : c.AccountId === billing.id ? "Billing" : "Service" });
     }
 
@@ -725,7 +736,7 @@ app.get("/api/mocks/account-hierarchy", async (req, res) => {
       { Name: `${companyName} - WAN MPLS 5 filiais`, AccountId: customer.id, StageName: "Proposal/Price Quote", CloseDate: new Date(today.getTime() + 60*86400000).toISOString().split("T")[0], Amount: 450000, Description: "WAN MPLS interligando 5 filiais" },
     ];
     for (const o of opportunities) {
-      const result = await conn.sobject("Opportunity").create(o);
+      const result = await createBypass(conn, "Opportunity", o);
       results.opportunities.push({ id: result.id, name: o.Name, stage: o.StageName, amount: o.Amount });
     }
 
@@ -758,7 +769,7 @@ app.get("/api/mocks/tmforum-order", async (req, res) => {
     const today = new Date();
 
     // Simula Order + OrderItems (como viriam do TM Forum via MuleSoft)
-    const order = await conn.sobject("Order").create({
+    const order = await createBypass(conn, "Order", {
       AccountId: accountId,
       EffectiveDate: today.toISOString().split("T")[0],
       Status: "Draft",
@@ -826,7 +837,7 @@ app.get("/api/mocks/whatsapp-messages", async (req, res) => {
     for (let i = 0; i < Math.min(leads.records.length, messages.length); i++) {
       const lead = leads.records[i];
       try {
-        const task = await conn.sobject("Task").create({
+        const task = await createBypass(conn, "Task", {
           WhoId: lead.Id,
           Subject: `WhatsApp Inbound - ${lead.Name}`,
           Description: `[WhatsApp] ${lead.Phone || "N/A"}\n\nMensagem:\n${messages[i]}\n\n---\nSimulado via MCP Mock (Digital Engagement)`,
@@ -871,14 +882,14 @@ app.get("/api/mocks/full-cycle", async (req, res) => {
       { FirstName: "Diego", LastName: "Ramos", Company: companyName, Title: "CTO", Email: "diego@novatech.com.br", Phone: "(11) 99100-0003", LeadSource: "Phone Inquiry", Industry: "Technology", Status: "Open - Not Contacted", City: "São Paulo", StateCode: "SP", CountryCode: "BR" },
     ];
     for (const l of leadData) {
-      const r = await conn.sobject("Lead").create(l);
+      const r = await createBypass(conn, "Lead", l);
       results.leads.push({ id: r.id, name: `${l.FirstName} ${l.LastName}`, source: l.LeadSource });
     }
 
     // Step 2: WhatsApp messages for first 2 leads
     for (let i = 0; i < 2; i++) {
       const msg = i === 0 ? "Gostaria de agendar uma reuniao para discutir solucoes de telecom." : "Recebi indicacao. Podem enviar proposta de link dedicado?";
-      const task = await conn.sobject("Task").create({
+      const task = await createBypass(conn, "Task", {
         WhoId: results.leads[i].id, Subject: `WhatsApp - ${results.leads[i].name}`,
         Description: `[WhatsApp]\n${msg}`, Status: "Completed", Priority: "Normal", Type: "Call",
       });
