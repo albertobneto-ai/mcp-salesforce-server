@@ -420,6 +420,193 @@ export class SalesforceClient {
     return result.records[0];
   }
 
+  // --- Destructive Deploy / Reset Org ---
+
+  // Standard objects to scan for custom fields
+  static STANDARD_OBJECTS_TO_SCAN = [
+    "Lead", "Account", "Contact", "Opportunity", "Case", "Order",
+    "Product2", "Pricebook2", "PricebookEntry", "Quote", "QuoteLineItem",
+    "Contract", "Asset", "Campaign", "CampaignMember", "Task", "Event",
+    "OpportunityLineItem", "OrderItem", "Solution",
+  ];
+
+  /**
+   * Scan the org for all custom metadata (objects, fields, validation rules, record types)
+   * Returns a destructive manifest ready for destructiveDeploy()
+   */
+  async scanCustomMetadata() {
+    const conn = this.getConnection();
+    const scan = {
+      customObjects: [],
+      customFields: [],
+      validationRules: [],
+      recordTypes: [],
+    };
+
+    // 1. Custom Objects
+    const globalDesc = await conn.describeGlobal();
+    const customObjs = globalDesc.sobjects
+      .filter(s => s.custom && s.name.endsWith("__c") && !s.name.includes("__mdt") && !s.name.includes("__e") && !s.name.includes("__b"))
+      .map(s => s.name);
+    scan.customObjects = customObjs;
+
+    // 2. Custom Fields on standard objects
+    for (const objName of SalesforceClient.STANDARD_OBJECTS_TO_SCAN) {
+      try {
+        const desc = await conn.sobject(objName).describe();
+        const customFields = desc.fields
+          .filter(f => f.custom && f.name.endsWith("__c"))
+          .map(f => `${objName}.${f.name}`);
+        scan.customFields.push(...customFields);
+      } catch {
+        // Object may not exist in this edition, skip
+      }
+    }
+
+    // 3. Validation Rules via Tooling API
+    try {
+      const vrResult = await conn.request({
+        method: "GET",
+        url: "/services/data/v62.0/tooling/query/?q=" +
+          encodeURIComponent("SELECT Id, ValidationName, EntityDefinition.QualifiedApiName, Active FROM ValidationRule WHERE ManageableState = 'unmanaged'"),
+      });
+      if (vrResult.records) {
+        scan.validationRules = vrResult.records.map(r => ({
+          fullName: `${r.EntityDefinition.QualifiedApiName}.${r.ValidationName}`,
+          id: r.Id,
+          active: r.Active,
+        }));
+      }
+    } catch {
+      // Tooling API may not be available, skip
+    }
+
+    // 4. Custom Record Types via Tooling API
+    try {
+      const rtResult = await conn.request({
+        method: "GET",
+        url: "/services/data/v62.0/tooling/query/?q=" +
+          encodeURIComponent("SELECT Id, DeveloperName, SobjectType, IsActive FROM RecordType WHERE ManageableState = 'unmanaged' AND IsPersonType = false"),
+      });
+      if (rtResult.records) {
+        scan.recordTypes = rtResult.records.map(r => ({
+          fullName: `${r.SobjectType}.${r.DeveloperName}`,
+          id: r.Id,
+          active: r.IsActive,
+        }));
+      }
+    } catch {
+      // Skip if not available
+    }
+
+    return scan;
+  }
+
+  /**
+   * Execute destructive deploy - deletes components from the org
+   * @param {Object} destructiveManifest - { customObjects, customFields, validationRules, recordTypes }
+   * @param {boolean} dryRun - if true, only returns what would be deleted
+   */
+  async destructiveDeploy(destructiveManifest, dryRun = false) {
+    const conn = this.getConnection();
+    const summary = { total: 0, success: 0, failed: 0, skipped: 0 };
+    const details = [];
+
+    if (dryRun) {
+      return {
+        dryRun: true,
+        wouldDelete: {
+          customObjects: destructiveManifest.customObjects?.length || 0,
+          customFields: destructiveManifest.customFields?.length || 0,
+          validationRules: destructiveManifest.validationRules?.length || 0,
+          recordTypes: destructiveManifest.recordTypes?.length || 0,
+        },
+        manifest: destructiveManifest,
+      };
+    }
+
+    // ORDER MATTERS: VRs → RTs → Fields on std objects → Custom Objects
+
+    // 1. Delete Validation Rules (they may reference custom fields)
+    if (destructiveManifest.validationRules?.length) {
+      for (const vr of destructiveManifest.validationRules) {
+        summary.total++;
+        const fullName = typeof vr === "string" ? vr : vr.fullName;
+        try {
+          // First deactivate, then delete
+          try {
+            await conn.metadata.update("ValidationRule", {
+              fullName,
+              active: false,
+              errorConditionFormula: "false",
+              errorMessage: "to be deleted",
+            });
+          } catch { /* may fail if already inactive */ }
+          const result = await conn.metadata.delete("ValidationRule", fullName);
+          const success = Array.isArray(result) ? result[0]?.success : result?.success;
+          if (success) { summary.success++; } else { summary.failed++; }
+          details.push({ type: "ValidationRule", fullName, action: "deleted", success: !!success });
+        } catch (err) {
+          summary.failed++;
+          details.push({ type: "ValidationRule", fullName, action: "delete_failed", error: err.message });
+        }
+      }
+    }
+
+    // 2. Delete Record Types
+    if (destructiveManifest.recordTypes?.length) {
+      for (const rt of destructiveManifest.recordTypes) {
+        summary.total++;
+        const fullName = typeof rt === "string" ? rt : rt.fullName;
+        try {
+          const result = await conn.metadata.delete("RecordType", fullName);
+          const success = Array.isArray(result) ? result[0]?.success : result?.success;
+          if (success) { summary.success++; } else { summary.failed++; }
+          details.push({ type: "RecordType", fullName, action: "deleted", success: !!success });
+        } catch (err) {
+          summary.failed++;
+          details.push({ type: "RecordType", fullName, action: "delete_failed", error: err.message });
+        }
+      }
+    }
+
+    // 3. Delete Custom Fields on standard objects
+    if (destructiveManifest.customFields?.length) {
+      for (const field of destructiveManifest.customFields) {
+        summary.total++;
+        const fullName = typeof field === "string" ? field : field.fullName;
+        try {
+          const result = await conn.metadata.delete("CustomField", fullName);
+          const success = Array.isArray(result) ? result[0]?.success : result?.success;
+          if (success) { summary.success++; } else { summary.failed++; }
+          details.push({ type: "CustomField", fullName, action: "deleted", success: !!success });
+        } catch (err) {
+          summary.failed++;
+          details.push({ type: "CustomField", fullName, action: "delete_failed", error: err.message });
+        }
+      }
+    }
+
+    // 4. Delete Custom Objects (deletes their fields automatically)
+    if (destructiveManifest.customObjects?.length) {
+      for (const obj of destructiveManifest.customObjects) {
+        summary.total++;
+        const fullName = typeof obj === "string" ? obj : obj.fullName;
+        try {
+          const result = await conn.metadata.delete("CustomObject", fullName);
+          const success = Array.isArray(result) ? result[0]?.success : result?.success;
+          if (success) { summary.success++; } else { summary.failed++; }
+          details.push({ type: "CustomObject", fullName, action: "deleted", success: !!success });
+        } catch (err) {
+          summary.failed++;
+          details.push({ type: "CustomObject", fullName, action: "delete_failed", error: err.message });
+        }
+      }
+    }
+
+    return { success: summary.failed === 0, summary, details };
+  }
+
   // --- Mock Data ---
   async insertRecords(objectName, records) {
     const conn = this.getConnection();
