@@ -1123,6 +1123,192 @@ app.get("/api/scratch-orgs/login/:id", async (req, res) => {
 });
 
 // =============================================
+// SMART SCRATCH ORG MANAGEMENT
+// =============================================
+
+// Workstream detection rules
+const WORKSTREAM_RULES = {
+  leads: { keywords: ["lead", "cadencia", "sales engagement", "prospeccao", "qualificacao", "score", "atribuicao", "fila"], objects: ["Lead"], template: "leads" },
+  maps: { keywords: ["maps", "visita", "rota", "geolocalizacao", "check-in", "checkout", "territorio"], objects: [], template: "maps" },
+  oportunidades: { keywords: ["opportunity", "oportunidade", "cotacao", "quote", "proposta", "pipeline", "forecast", "produto", "pricebook"], objects: ["Opportunity", "Quote", "Product2"], template: "oportunidades" },
+  orders: { keywords: ["order", "pedido", "fulfillment", "tmforum", "tmf622", "tmf641", "decomposition"], objects: ["Order", "OrderItem"], template: "orders" },
+  datacloud: { keywords: ["data cloud", "datacloud", "neoway", "ingestion", "prospect", "enriquecimento", "segmentacao"], objects: ["Neoway_Prospect__c"], template: "datacloud" },
+  agentforce: { keywords: ["agentforce", "agent", "agente", "autonomo", "topico", "acao", "einstein"], objects: [], template: "agentforce" },
+  whatsapp: { keywords: ["whatsapp", "messaging", "mensagem", "digital engagement", "chat", "sms", "canal"], objects: [], template: "whatsapp" },
+};
+
+// --- Suggest: auto-detect workstream from description or manifest ---
+app.get("/api/scratch-orgs/suggest", async (req, res) => {
+  try {
+    const description = (req.query.description || req.query.q || "").toLowerCase();
+    const scores = {};
+
+    for (const [ws, rules] of Object.entries(WORKSTREAM_RULES)) {
+      let score = 0;
+      for (const kw of rules.keywords) {
+        if (description.includes(kw)) score += 2;
+      }
+      for (const obj of rules.objects) {
+        if (description.toLowerCase().includes(obj.toLowerCase())) score += 3;
+      }
+      if (score > 0) scores[ws] = score;
+    }
+
+    const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+    const suggestions = sorted.map(([ws, score]) => ({
+      workstream: ws,
+      template: WORKSTREAM_RULES[ws].template,
+      confidence: Math.min(score / 6 * 100, 100).toFixed(0) + "%",
+      createUrl: `/api/scratch-orgs/smart-create?workstream=${ws}`,
+    }));
+
+    res.json({
+      query: req.query.description || req.query.q,
+      suggestions: suggestions.length ? suggestions : [{ message: "Nenhum workstream detectado. Tente descrever o que quer implementar.", availableWorkstreams: Object.keys(WORKSTREAM_RULES) }],
+    });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Dashboard: status de todas as scratch orgs com expiração ---
+app.get("/api/scratch-orgs/dashboard", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const conn = sfClient.getConnection();
+
+    const orgs = await conn.query(
+      "SELECT Id, ScratchOrg, OrgName, Status, Edition, ExpirationDate, CreatedDate, SignupUsername, Features " +
+      "FROM ScratchOrgInfo WHERE Status IN ('Active', 'Creating') ORDER BY ExpirationDate ASC"
+    );
+
+    const now = new Date();
+    const dashboard = orgs.records.map(org => {
+      const expiry = new Date(org.ExpirationDate);
+      const daysLeft = Math.ceil((expiry - now) / 86400000);
+      return {
+        id: org.Id,
+        scratchOrgId: org.ScratchOrg,
+        name: org.OrgName,
+        status: org.Status,
+        edition: org.Edition,
+        username: org.SignupUsername,
+        features: org.Features,
+        createdDate: org.CreatedDate,
+        expirationDate: org.ExpirationDate,
+        daysLeft: daysLeft,
+        urgency: daysLeft <= 2 ? "🔴 expiring" : daysLeft <= 5 ? "🟡 soon" : "🟢 ok",
+        loginUrl: `/api/scratch-orgs/login/${org.Id}`,
+      };
+    });
+
+    const limit = 6;
+    res.json({
+      total: dashboard.length,
+      limit,
+      available: limit - dashboard.length,
+      canCreate: dashboard.length < limit,
+      nextToExpire: dashboard.length ? dashboard[0].name : null,
+      orgs: dashboard,
+    });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// --- Smart Create: auto-detect + auto-cleanup + create ---
+app.get("/api/scratch-orgs/smart-create", async (req, res) => {
+  try {
+    await sfClient.ensureConnected();
+    const conn = sfClient.getConnection();
+    const workstream = req.query.workstream || req.query.ws;
+    const description = req.query.description || req.query.q || "";
+
+    // 1. Detect workstream
+    let detectedWs = workstream;
+    if (!detectedWs && description) {
+      const desc = description.toLowerCase();
+      let bestScore = 0;
+      for (const [ws, rules] of Object.entries(WORKSTREAM_RULES)) {
+        let score = 0;
+        for (const kw of rules.keywords) { if (desc.includes(kw)) score += 2; }
+        for (const obj of rules.objects) { if (desc.includes(obj.toLowerCase())) score += 3; }
+        if (score > bestScore) { bestScore = score; detectedWs = ws; }
+      }
+    }
+
+    if (!detectedWs || !WORKSTREAM_RULES[detectedWs]) {
+      return res.json({
+        status: "needs_input",
+        message: "Não foi possível detectar o workstream. Informe ?workstream=leads (ou maps, oportunidades, orders, datacloud, agentforce, whatsapp) ou ?description=...",
+        availableWorkstreams: Object.keys(WORKSTREAM_RULES),
+      });
+    }
+
+    // 2. Check active orgs
+    const activeOrgs = await conn.query(
+      "SELECT Id, ScratchOrg, OrgName, ExpirationDate FROM ScratchOrgInfo WHERE Status = 'Active' ORDER BY ExpirationDate ASC"
+    );
+
+    // 3. Check if a scratch org for this workstream already exists
+    const template = WORKSTREAM_RULES[detectedWs];
+    const existing = activeOrgs.records.find(o => o.OrgName === `CRM-B2B-${detectedWs.charAt(0).toUpperCase() + detectedWs.slice(1)}`);
+    if (existing) {
+      return res.json({
+        status: "already_exists",
+        workstream: detectedWs,
+        orgName: existing.OrgName,
+        scratchOrgInfoId: existing.Id,
+        loginUrl: `/api/scratch-orgs/login/${existing.Id}`,
+        message: `Scratch org para ${detectedWs} já existe. Use o login URL para acessar.`,
+      });
+    }
+
+    // 4. Auto-cleanup if at limit (6)
+    const limit = 6;
+    let cleaned = null;
+    if (activeOrgs.records.length >= limit) {
+      const oldest = activeOrgs.records[0]; // sorted by expiration ASC
+      try {
+        const activeOrgQuery = await conn.query(`SELECT Id FROM ActiveScratchOrg WHERE ScratchOrg = '${oldest.ScratchOrg}'`);
+        if (activeOrgQuery.records.length) {
+          await conn.sobject("ActiveScratchOrg").delete(activeOrgQuery.records[0].Id);
+          cleaned = { deletedOrg: oldest.OrgName, reason: "Closest to expiration, limit of 6 reached" };
+        }
+      } catch { /* skip cleanup errors */ }
+    }
+
+    // 5. Create scratch org
+    const templates = {
+      leads: { orgName: "CRM-B2B-Leads", edition: "Developer", features: ["SalesCloud"], durationDays: 7 },
+      maps: { orgName: "CRM-B2B-Maps", edition: "Developer", features: ["SalesCloud"], durationDays: 7 },
+      oportunidades: { orgName: "CRM-B2B-Opps", edition: "Developer", features: ["SalesCloud"], durationDays: 7 },
+      orders: { orgName: "CRM-B2B-Orders", edition: "Developer", features: ["SalesCloud"], durationDays: 7 },
+      datacloud: { orgName: "CRM-B2B-DataCloud", edition: "Developer", features: ["SalesCloud"], durationDays: 7 },
+      agentforce: { orgName: "CRM-B2B-Agentforce", edition: "Developer", features: ["SalesCloud"], durationDays: 7 },
+      whatsapp: { orgName: "CRM-B2B-WhatsApp", edition: "Developer", features: ["SalesCloud", "ServiceCloud"], durationDays: 7 },
+    };
+
+    const scratchDef = templates[detectedWs];
+    const result = await sfClient.createScratchOrg(scratchDef);
+
+    res.json({
+      status: "creating",
+      workstream: detectedWs,
+      orgName: scratchDef.orgName,
+      scratchOrgInfoId: result.id,
+      features: scratchDef.features,
+      detectedFrom: workstream ? "explicit" : "description",
+      ...(cleaned && { autoCleanup: cleaned }),
+      checkStatusUrl: `/api/scratch-orgs/${result.id}`,
+      message: `Scratch org ${scratchDef.orgName} sendo criada. Aguarde 3-5 min e verifique o status.`,
+    });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
+// =============================================
 // GITHUB ENDPOINTS
 // =============================================
 
