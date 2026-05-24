@@ -6,7 +6,7 @@ export class SalesforceClient {
     this.conn = null;
     this.orgId = null;
     this.targetConn = null;
-    this.scratchOrgConns = {}; // cache de conexões por scratchOrgId
+    this.orgTokens = new Map(); // orgId -> { instanceUrl, accessToken, refreshToken }
   }
 
   async ensureConnected() {
@@ -43,22 +43,47 @@ export class SalesforceClient {
   getOrgId() { return this.orgId; }
   getConnection() { return this.targetConn || this.conn; }
 
+  // --- Store tokens for a scratch org ---
+  storeOrgTokens(scratchOrgId, tokenData) {
+    this.orgTokens.set(scratchOrgId, {
+      instanceUrl: tokenData.instance_url,
+      accessToken: tokenData.access_token,
+      refreshToken: tokenData.refresh_token || null,
+      storedAt: new Date().toISOString(),
+    });
+    console.log(`Tokens stored for scratch org: ${scratchOrgId}`);
+  }
+
   // --- Connect to a specific scratch org by ScratchOrg ID (00D...) ---
   async connectToScratchOrg(scratchOrgId) {
-    // Check cache first
-    if (this.scratchOrgConns[scratchOrgId]) {
+    // 1. Check stored tokens first
+    const stored = this.orgTokens.get(scratchOrgId);
+    if (stored) {
       try {
-        await this.scratchOrgConns[scratchOrgId].identity();
-        this.targetConn = this.scratchOrgConns[scratchOrgId];
+        const testConn = new jsforce.Connection({
+          instanceUrl: stored.instanceUrl,
+          accessToken: stored.accessToken,
+          version: "62.0",
+        });
+        await testConn.identity();
+        this.targetConn = testConn;
+        console.log(`Connected to scratch org via stored tokens: ${scratchOrgId}`);
         return this.targetConn;
-      } catch {
-        delete this.scratchOrgConns[scratchOrgId];
+      } catch (err) {
+        console.log(`Stored tokens expired for ${scratchOrgId}, trying refresh...`);
+        // Try refresh token if available
+        if (stored.refreshToken) {
+          try {
+            const refreshResult = await this.refreshOrgToken(scratchOrgId, stored);
+            if (refreshResult) return refreshResult;
+          } catch { /* fall through */ }
+        }
+        this.orgTokens.delete(scratchOrgId);
       }
     }
 
+    // 2. Try AuthCode from ScratchOrgInfo
     await this.ensureConnected();
-
-    // Find scratch org info via ScratchOrg field (the 00D org ID)
     const result = await this.conn.query(
       `SELECT Id, ScratchOrg, OrgName, Status, LoginUrl, AuthCode, SignupUsername ` +
       `FROM ScratchOrgInfo WHERE ScratchOrg = '${scratchOrgId}' AND Status = 'Active' LIMIT 1`
@@ -70,7 +95,6 @@ export class SalesforceClient {
 
     const info = result.records[0];
 
-    // Exchange AuthCode for access token
     const tokenRes = await fetch(info.LoginUrl + "/services/oauth2/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -83,26 +107,46 @@ export class SalesforceClient {
     });
     const tokenData = await tokenRes.json();
 
-    if (!tokenData.access_token) {
-      // AuthCode expired — try password auth if we have credentials
-      // For scratch orgs the user may have set a password
-      throw new Error(
-        `AuthCode expirado para ${info.OrgName}. ` +
-        `Login URL: ${info.LoginUrl}, Username: ${info.SignupUsername}. ` +
-        `Recrie a scratch org ou faça login via /api/scratch-orgs/login/ primeiro.`
-      );
+    if (tokenData.access_token) {
+      this.storeOrgTokens(scratchOrgId, tokenData);
+      this.targetConn = new jsforce.Connection({
+        instanceUrl: tokenData.instance_url,
+        accessToken: tokenData.access_token,
+        version: "62.0",
+      });
+      return this.targetConn;
     }
 
-    const scratchConn = new jsforce.Connection({
-      instanceUrl: tokenData.instance_url,
-      accessToken: tokenData.access_token,
-      version: "62.0",
-    });
+    throw new Error(
+      `Sem tokens armazenados e AuthCode expirado para ${info.OrgName}. ` +
+      `Faça login primeiro via /api/scratch-orgs/login/${info.Id} — ` +
+      `isso armazena os tokens para deploys futuros.`
+    );
+  }
 
-    this.scratchOrgConns[scratchOrgId] = scratchConn;
-    this.targetConn = scratchConn;
-    console.log(`Connected to scratch org: ${info.OrgName} (${scratchOrgId})`);
-    return scratchConn;
+  // --- Refresh token flow ---
+  async refreshOrgToken(scratchOrgId, stored) {
+    const refreshRes = await fetch(stored.instanceUrl + "/services/oauth2/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: stored.refreshToken,
+        client_id: "PlatformCLI",
+      }),
+    });
+    const refreshData = await refreshRes.json();
+    if (refreshData.access_token) {
+      this.storeOrgTokens(scratchOrgId, { ...refreshData, refresh_token: stored.refreshToken });
+      this.targetConn = new jsforce.Connection({
+        instanceUrl: refreshData.instance_url,
+        accessToken: refreshData.access_token,
+        version: "62.0",
+      });
+      console.log(`Refreshed tokens for scratch org: ${scratchOrgId}`);
+      return this.targetConn;
+    }
+    return null;
   }
 
   // --- Connect using instanceUrl + accessToken directly ---
@@ -117,6 +161,63 @@ export class SalesforceClient {
 
   clearTargetOrg() {
     this.targetConn = null;
+  }
+
+  // --- Login to scratch org (exchange AuthCode, store tokens, return frontdoor) ---
+  async loginToScratchOrg(scratchOrgInfoId) {
+    await this.ensureConnected();
+    const info = await this.getScratchOrgInfo(scratchOrgInfoId);
+    if (!info || info.Status !== "Active") {
+      throw new Error("Org não está ativa");
+    }
+
+    const tokenRes = await fetch(info.LoginUrl + "/services/oauth2/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code: info.AuthCode,
+        client_id: "PlatformCLI",
+        redirect_uri: "http://localhost:1717/OauthRedirect",
+      }),
+    });
+    const tokenData = await tokenRes.json();
+
+    if (tokenData.access_token) {
+      // Store tokens for future multi-org operations
+      if (info.ScratchOrg) {
+        this.storeOrgTokens(info.ScratchOrg, tokenData);
+      }
+      return {
+        success: true,
+        frontDoorUrl: tokenData.instance_url + "/secur/frontdoor.jsp?sid=" + tokenData.access_token,
+        instanceUrl: tokenData.instance_url,
+        scratchOrgId: info.ScratchOrg,
+        orgName: info.OrgName,
+        username: info.SignupUsername,
+      };
+    }
+
+    return {
+      success: false,
+      error: tokenData.error_description || tokenData.error,
+      loginUrl: info.LoginUrl,
+      username: info.SignupUsername,
+      scratchOrgId: info.ScratchOrg,
+    };
+  }
+
+  // --- Check if we have stored tokens for a scratch org ---
+  hasStoredTokens(scratchOrgId) {
+    return this.orgTokens.has(scratchOrgId);
+  }
+
+  getStoredOrgs() {
+    const orgs = [];
+    for (const [orgId, tokens] of this.orgTokens) {
+      orgs.push({ orgId, instanceUrl: tokens.instanceUrl, storedAt: tokens.storedAt });
+    }
+    return orgs;
   }
 
   // --- Describe ---
