@@ -643,6 +643,106 @@ export class SalesforceClient {
       }
     }
 
+    // --- Roles (hierarquia) ---
+    if (manifest.metadata?.roles?.length) {
+      for (const role of manifest.metadata.roles) {
+        summary.total++;
+        try {
+          const result = await conn.metadata.upsert("Role", {
+            fullName: role.fullName,
+            label: role.label || role.fullName,
+            ...(role.parentRole && { parentRole: role.parentRole }),
+            caseAccessForAccountOwner: role.caseAccessForAccountOwner || "Edit",
+            contactAccessForAccountOwner: role.contactAccessForAccountOwner || "Edit",
+            opportunityAccessForAccountOwner: role.opportunityAccessForAccountOwner || "Edit",
+            ...(role.description && { description: role.description }),
+          });
+          const success = Array.isArray(result) ? result[0].success : result.success;
+          if (success) summary.success++; else summary.failed++;
+          details.push({ type: "Role", fullName: role.fullName, success });
+        } catch (err) {
+          summary.failed++;
+          details.push({ type: "Role", fullName: role.fullName, success: false, errors: [err.message] });
+        }
+      }
+    }
+
+    // --- Permission Set Groups ---
+    if (manifest.metadata?.permissionSetGroups?.length) {
+      for (const psg of manifest.metadata.permissionSetGroups) {
+        summary.total++;
+        try {
+          const result = await conn.metadata.upsert("PermissionSetGroup", {
+            fullName: psg.fullName,
+            label: psg.label || psg.fullName,
+            ...(psg.description && { description: psg.description }),
+            ...(psg.permissionSets && {
+              permissionSets: psg.permissionSets.map(ps => typeof ps === "string" ? ps : ps.name),
+            }),
+            ...(psg.mutingPermissionSets && { mutingPermissionSets: psg.mutingPermissionSets }),
+          });
+          const success = Array.isArray(result) ? result[0].success : result.success;
+          if (success) summary.success++; else summary.failed++;
+          details.push({ type: "PermissionSetGroup", fullName: psg.fullName, success });
+        } catch (err) {
+          summary.failed++;
+          details.push({ type: "PermissionSetGroup", fullName: psg.fullName, success: false, errors: [err.message] });
+        }
+      }
+    }
+
+    // --- Profile updates (object permissions, field permissions, record type visibility) ---
+    if (manifest.metadata?.profiles?.length) {
+      for (const profile of manifest.metadata.profiles) {
+        summary.total++;
+        try {
+          const profileMeta = {
+            fullName: profile.fullName,
+            ...(profile.objectPermissions && { objectPermissions: profile.objectPermissions }),
+            ...(profile.fieldPermissions && { fieldPermissions: profile.fieldPermissions }),
+            ...(profile.recordTypeVisibilities && { recordTypeVisibilities: profile.recordTypeVisibilities }),
+            ...(profile.tabVisibilities && { tabVisibilities: profile.tabVisibilities }),
+            ...(profile.applicationVisibilities && { applicationVisibilities: profile.applicationVisibilities }),
+            ...(profile.layoutAssignments && { layoutAssignments: profile.layoutAssignments }),
+            ...(profile.userPermissions && { userPermissions: profile.userPermissions }),
+          };
+          const result = await conn.metadata.update("Profile", profileMeta);
+          const item = Array.isArray(result) ? result[0] : result;
+          if (item?.success) summary.success++; else summary.failed++;
+          details.push({ type: "Profile", fullName: profile.fullName, success: !!item?.success, errors: item?.errors || null });
+        } catch (err) {
+          summary.failed++;
+          details.push({ type: "Profile", fullName: profile.fullName, success: false, errors: [err.message] });
+        }
+      }
+    }
+
+    // --- Sharing Rules (criteria-based) ---
+    if (manifest.metadata?.sharingRules?.length) {
+      for (const sr of manifest.metadata.sharingRules) {
+        summary.total++;
+        try {
+          const srMeta = {
+            fullName: sr.fullName,
+            accessLevel: sr.accessLevel || "Read",
+            ...(sr.label && { label: sr.label }),
+            ...(sr.sharedTo && { sharedTo: sr.sharedTo }),
+            ...(sr.criteriaItems && { criteriaItems: sr.criteriaItems }),
+            ...(sr.booleanFilter && { booleanFilter: sr.booleanFilter }),
+            ...(sr.description && { description: sr.description }),
+          };
+          const metaType = sr.type === "owner" ? "SharingOwnerRule" : "SharingCriteriaRule";
+          const result = await conn.metadata.upsert(metaType, srMeta);
+          const success = Array.isArray(result) ? result[0].success : result.success;
+          if (success) summary.success++; else summary.failed++;
+          details.push({ type: metaType, fullName: sr.fullName, success });
+        } catch (err) {
+          summary.failed++;
+          details.push({ type: "SharingRule", fullName: sr.fullName, success: false, errors: [err.message] });
+        }
+      }
+    }
+
     return { success: summary.failed === 0, summary, details };
   }
 
