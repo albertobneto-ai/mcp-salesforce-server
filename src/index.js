@@ -671,6 +671,38 @@ app.get("/api/erase-deleted-fields", async (req, res) => {
   }
 });
 
+// --- Assign Record Types to Profile ---
+app.get("/api/assign-record-types/:objectName", async (req, res) => {
+  try {
+    await connectToTargetOrg(req);
+    const conn = sfClient.getConnection();
+    const objectName = req.params.objectName;
+    const profileName = req.query.profile || "Admin";
+    const rtResult = await conn.query(
+      "SELECT Id, DeveloperName FROM RecordType WHERE SobjectType = '" + objectName + "' AND IsActive = true"
+    );
+    if (!rtResult.records.length) {
+      sfClient.clearTargetOrg();
+      return res.json({ status: "no_record_types_found" });
+    }
+    const visibilities = rtResult.records.map((rt, idx) => ({
+      recordType: objectName + "." + rt.DeveloperName,
+      visible: true,
+      default: idx === 0,
+    }));
+    const result = await conn.metadata.update("Profile", {
+      fullName: profileName,
+      recordTypeVisibilities: visibilities,
+    });
+    const success = Array.isArray(result) ? result[0]?.success : result?.success;
+    sfClient.clearTargetOrg();
+    res.json({ status: success ? "assigned" : "failed", profile: profileName, recordTypes: visibilities });
+  } catch (err) {
+    sfClient.clearTargetOrg();
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
 // --- Start ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
