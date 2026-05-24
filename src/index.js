@@ -819,7 +819,7 @@ app.get("/api/mocks/whatsapp-messages", async (req, res) => {
     const conn = sfClient.getConnection();
 
     // Buscar leads existentes para associar mensagens
-    const leads = await conn.query("SELECT Id, Name, Phone FROM Lead WHERE Status != 'Closed - Converted' LIMIT 5");
+    const leads = await conn.query("SELECT Id, Name, Phone FROM Lead WHERE Status != 'Closed - Converted' ORDER BY CreatedDate DESC LIMIT 5");
     if (!leads.records.length) {
       sfClient.clearTargetOrg();
       return res.json({ status: "error", message: "Nenhum Lead ativo encontrado. Execute /api/mocks/leads-inbound primeiro." });
