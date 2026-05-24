@@ -593,13 +593,62 @@ export class SalesforceClient {
         summary.total++;
         const fullName = typeof obj === "string" ? obj : obj.fullName;
         try {
-          const result = await conn.metadata.delete("CustomObject", fullName);
-          const success = Array.isArray(result) ? result[0]?.success : result?.success;
-          if (success) { summary.success++; } else { summary.failed++; }
-          details.push({ type: "CustomObject", fullName, action: "deleted", success: !!success });
+          // Try metadata.delete first
+          const result = await conn.metadata.delete("CustomObject", [fullName]);
+          const item = Array.isArray(result) ? result[0] : result;
+          if (item?.success) {
+            summary.success++;
+            details.push({ type: "CustomObject", fullName, action: "deleted", success: true });
+          } else {
+            // Metadata API failed — try Tooling API fallback
+            const errMsg = item?.errors ? JSON.stringify(item.errors) : "metadata.delete returned false";
+            try {
+              const devName = fullName.replace("__c", "");
+              const query = await conn.request({
+                method: "GET",
+                url: "/services/data/v62.0/tooling/query/?q=" +
+                  encodeURIComponent(`SELECT Id FROM CustomObject WHERE DeveloperName='${devName}'`),
+              });
+              if (query.records?.length) {
+                await conn.request({
+                  method: "DELETE",
+                  url: `/services/data/v62.0/tooling/sobjects/CustomObject/${query.records[0].Id}`,
+                });
+                summary.success++;
+                details.push({ type: "CustomObject", fullName, action: "deleted_via_tooling", success: true });
+              } else {
+                summary.failed++;
+                details.push({ type: "CustomObject", fullName, action: "delete_failed", success: false, error: errMsg, fallback: "object_not_found_in_tooling" });
+              }
+            } catch (toolingErr) {
+              summary.failed++;
+              details.push({ type: "CustomObject", fullName, action: "delete_failed", success: false, error: errMsg, fallbackError: toolingErr.message });
+            }
+          }
         } catch (err) {
-          summary.failed++;
-          details.push({ type: "CustomObject", fullName, action: "delete_failed", error: err.message });
+          // Primary exception — try Tooling API fallback
+          try {
+            const devName = fullName.replace("__c", "");
+            const query = await conn.request({
+              method: "GET",
+              url: "/services/data/v62.0/tooling/query/?q=" +
+                encodeURIComponent(`SELECT Id FROM CustomObject WHERE DeveloperName='${devName}'`),
+            });
+            if (query.records?.length) {
+              await conn.request({
+                method: "DELETE",
+                url: `/services/data/v62.0/tooling/sobjects/CustomObject/${query.records[0].Id}`,
+              });
+              summary.success++;
+              details.push({ type: "CustomObject", fullName, action: "deleted_via_tooling", success: true });
+            } else {
+              summary.failed++;
+              details.push({ type: "CustomObject", fullName, action: "delete_failed", error: err.message });
+            }
+          } catch (toolingErr) {
+            summary.failed++;
+            details.push({ type: "CustomObject", fullName, action: "delete_failed", error: err.message, fallbackError: toolingErr.message });
+          }
         }
       }
     }
