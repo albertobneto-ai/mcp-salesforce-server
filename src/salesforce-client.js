@@ -505,6 +505,160 @@ export class SalesforceClient {
       }
     }
 
+    // --- Queues ---
+    if (manifest.metadata?.queues?.length) {
+      for (const queue of manifest.metadata.queues) {
+        summary.total++;
+        try {
+          const queueMeta = {
+            fullName: queue.fullName,
+            label: queue.label || queue.fullName,
+            doesSendEmailToMembers: queue.doesSendEmailToMembers !== false,
+            ...(queue.queueSobject && {
+              queueSobject: (Array.isArray(queue.queueSobject) ? queue.queueSobject : [queue.queueSobject])
+                .map(s => ({ sobjectType: s })),
+            }),
+          };
+          const result = await conn.metadata.upsert("Queue", queueMeta);
+          const success = Array.isArray(result) ? result[0].success : result.success;
+          if (success) summary.success++; else summary.failed++;
+          details.push({ type: "Queue", fullName: queue.fullName, success });
+        } catch (err) {
+          summary.failed++;
+          details.push({ type: "Queue", fullName: queue.fullName, success: false, errors: [err.message] });
+        }
+      }
+    }
+
+    // --- Permission Sets ---
+    if (manifest.metadata?.permissionSets?.length) {
+      for (const ps of manifest.metadata.permissionSets) {
+        summary.total++;
+        try {
+          const psMeta = {
+            fullName: ps.fullName, label: ps.label || ps.fullName,
+            description: ps.description || "",
+            ...(ps.objectPermissions && { objectPermissions: ps.objectPermissions }),
+            ...(ps.fieldPermissions && { fieldPermissions: ps.fieldPermissions }),
+            ...(ps.recordTypeVisibilities && { recordTypeVisibilities: ps.recordTypeVisibilities }),
+            ...(ps.tabSettings && { tabSettings: ps.tabSettings }),
+            ...(ps.userPermissions && { userPermissions: ps.userPermissions }),
+            ...(ps.applicationVisibilities && { applicationVisibilities: ps.applicationVisibilities }),
+          };
+          const result = await conn.metadata.upsert("PermissionSet", psMeta);
+          const success = Array.isArray(result) ? result[0].success : result.success;
+          if (success) summary.success++; else summary.failed++;
+          details.push({ type: "PermissionSet", fullName: ps.fullName, success });
+        } catch (err) {
+          summary.failed++;
+          details.push({ type: "PermissionSet", fullName: ps.fullName, success: false, errors: [err.message] });
+        }
+      }
+    }
+
+    // --- Custom Metadata Records ---
+    if (manifest.metadata?.customMetadata?.length) {
+      for (const cmd of manifest.metadata.customMetadata) {
+        summary.total++;
+        try {
+          const result = await conn.metadata.upsert("CustomMetadata", {
+            fullName: cmd.fullName, label: cmd.label,
+            ...(cmd.values && { values: cmd.values }),
+          });
+          const success = Array.isArray(result) ? result[0].success : result.success;
+          if (success) summary.success++; else summary.failed++;
+          details.push({ type: "CustomMetadata", fullName: cmd.fullName, success });
+        } catch (err) {
+          summary.failed++;
+          details.push({ type: "CustomMetadata", fullName: cmd.fullName, success: false, errors: [err.message] });
+        }
+      }
+    }
+
+    // --- Email Templates ---
+    if (manifest.metadata?.emailTemplates?.length) {
+      for (const et of manifest.metadata.emailTemplates) {
+        summary.total++;
+        try {
+          const etMeta = {
+            fullName: et.fullName, name: et.name || et.fullName.split("/").pop(),
+            subject: et.subject, available: et.available !== false,
+            type: et.type || "text", encodingKey: et.encodingKey || "UTF-8",
+            ...(et.type === "html" || et.type === "custom" ? { htmlValue: et.body } : { content: et.body }),
+            ...(et.description && { description: et.description }),
+          };
+          const result = await conn.metadata.upsert("EmailTemplate", etMeta);
+          const success = Array.isArray(result) ? result[0].success : result.success;
+          if (success) summary.success++; else summary.failed++;
+          details.push({ type: "EmailTemplate", fullName: et.fullName, success });
+        } catch (err) {
+          summary.failed++;
+          details.push({ type: "EmailTemplate", fullName: et.fullName, success: false, errors: [err.message] });
+        }
+      }
+    }
+
+    // --- Lightning Apps ---
+    if (manifest.metadata?.customApplications?.length) {
+      for (const app of manifest.metadata.customApplications) {
+        summary.total++;
+        try {
+          const result = await conn.metadata.upsert("CustomApplication", {
+            fullName: app.fullName, label: app.label,
+            ...(app.description && { description: app.description }),
+            formFactors: app.formFactors || ["Large"],
+            navType: app.navType || "Standard", uiType: app.uiType || "Lightning",
+            ...(app.tabs && { tabs: app.tabs }),
+          });
+          const success = Array.isArray(result) ? result[0].success : result.success;
+          if (success) summary.success++; else summary.failed++;
+          details.push({ type: "CustomApplication", fullName: app.fullName, success });
+        } catch (err) {
+          summary.failed++;
+          details.push({ type: "CustomApplication", fullName: app.fullName, success: false, errors: [err.message] });
+        }
+      }
+    }
+
+    // --- Custom Tabs ---
+    if (manifest.metadata?.customTabs?.length) {
+      for (const tab of manifest.metadata.customTabs) {
+        summary.total++;
+        try {
+          const result = await conn.metadata.upsert("CustomTab", {
+            fullName: tab.fullName, label: tab.label,
+            customObject: tab.customObject !== false,
+            motif: tab.motif || "Custom66: Handsaw",
+          });
+          const success = Array.isArray(result) ? result[0].success : result.success;
+          if (success) summary.success++; else summary.failed++;
+          details.push({ type: "CustomTab", fullName: tab.fullName, success });
+        } catch (err) {
+          summary.failed++;
+          details.push({ type: "CustomTab", fullName: tab.fullName, success: false, errors: [err.message] });
+        }
+      }
+    }
+
+    // --- Assignment Rules ---
+    if (manifest.metadata?.assignmentRules?.length) {
+      for (const ar of manifest.metadata.assignmentRules) {
+        summary.total++;
+        try {
+          const result = await conn.metadata.upsert("AssignmentRule", {
+            fullName: ar.fullName, active: ar.active !== false,
+            ...(ar.ruleEntry && { ruleEntry: ar.ruleEntry }),
+          });
+          const success = Array.isArray(result) ? result[0].success : result.success;
+          if (success) summary.success++; else summary.failed++;
+          details.push({ type: "AssignmentRule", fullName: ar.fullName, success });
+        } catch (err) {
+          summary.failed++;
+          details.push({ type: "AssignmentRule", fullName: ar.fullName, success: false, errors: [err.message] });
+        }
+      }
+    }
+
     return { success: summary.failed === 0, summary, details };
   }
 
