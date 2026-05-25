@@ -1,4 +1,6 @@
 
+import JSZip from 'jszip';
+
 export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
 
   // --- Execute Anonymous Apex ---
@@ -23,44 +25,69 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
     }
   });
 
-  // --- Create Formula Field via Tooling API ---
-  app.post("/api/create-formula-field", async (req, res) => {
+  // --- Deploy Formula Fields via Metadata API ZIP deploy ---
+  app.post("/api/deploy-formula-fields", async (req, res) => {
     try {
       await connectToTargetOrg(req);
       const conn = sfClient.getConnection();
       const fields = Array.isArray(req.body) ? req.body : [req.body];
-      const results = [];
+      
+      // Build ZIP package with field XML
+      const zip = new JSZip();
+      
+      // package.xml
+      const members = fields.map(f => f.fullName).join("</members>\n        <members>");
+      zip.file("package.xml", `<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>${members}</members>
+        <name>CustomField</name>
+    </types>
+    <version>59.0</version>
+</Package>`);
+      
+      // Field XMLs
       for (const f of fields) {
-        try {
-          const toolingResult = await conn.request({
-            method: "POST",
-            url: "/services/data/v62.0/tooling/sobjects/CustomField/",
-            body: JSON.stringify({
-              FullName: f.fullName,
-              Metadata: {
-                label: f.label,
-                type: f.type || "Text",
-                formula: f.formula,
-                formulaTreatBlanksAs: f.formulaTreatBlanksAs || "BlankAsBlank",
-                ...(f.description && { description: f.description }),
-              },
-            }),
-            headers: { "Content-Type": "application/json" },
-          });
-          results.push({ fullName: f.fullName, success: true, id: toolingResult.id });
-        } catch (err) {
-          results.push({ fullName: f.fullName, success: false, error: err.message });
-        }
+        const [objName, fieldName] = f.fullName.split(".");
+        const fieldXml = `<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>${fieldName}</fullName>
+    <label>${f.label}</label>
+    <type>${f.type || "Text"}</type>
+    <formula>${f.formula.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")}</formula>
+    <formulaTreatBlanksAs>${f.formulaTreatBlanksAs || "BlankAsBlank"}</formulaTreatBlanksAs>
+${f.description ? "    <description>" + f.description + "</description>" : ""}
+</CustomField>`;
+        zip.file(`fields/${objName}.${fieldName}.field-meta.xml`, fieldXml);
       }
+      
+      const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+      
+      // Deploy via Metadata API
+      const deployResult = await new Promise((resolve, reject) => {
+        conn.metadata.deploy(zipBuffer, { singlePackage: true })
+          .complete(true, (err, result) => {
+            if (err) reject(err);
+            else resolve(result);
+          });
+      });
+      
       sfClient.clearTargetOrg();
-      res.json({ results });
+      res.json({
+        status: deployResult.success ? "deployed" : "failed",
+        done: deployResult.done,
+        numberComponentsDeployed: deployResult.numberComponentsDeployed,
+        numberComponentErrors: deployResult.numberComponentErrors,
+        componentFailures: deployResult.details?.componentFailures || [],
+        componentSuccesses: deployResult.details?.componentSuccesses || [],
+      });
     } catch (err) {
       sfClient.clearTargetOrg();
       res.status(500).json({ status: "error", message: err.message });
     }
   });
 
-  // --- Update Layout: add/move fields ---
+  // --- Update Layout ---
   app.post("/api/update-layout", async (req, res) => {
     try {
       await connectToTargetOrg(req);
@@ -123,5 +150,5 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
     }
   });
 
-  console.log("Additional routes registered: /api/execute-anonymous, /api/create-formula-field, /api/update-layout");
+  console.log("Routes: /api/execute-anonymous, /api/deploy-formula-fields, /api/update-layout");
 }
