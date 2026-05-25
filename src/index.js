@@ -5,6 +5,7 @@ import { z } from "zod";
 import { SalesforceClient } from "./salesforce-client.js";
 import { GitHubClient } from "./github-client.js";
 import { ManifestManager } from "./manifest-manager.js";
+import { registerAdditionalRoutes } from "./additional-routes.js";
 
 const app = express();
 app.use(express.json({ limit: "10mb" }));
@@ -2096,6 +2097,9 @@ app.get("/api/assign-record-types/:objectName", async (req, res) => {
     res.status(500).json({ status: "error", message: err.message });
   }
 });
+
+// --- Additional Routes ---
+registerAdditionalRoutes(app, sfClient, connectToTargetOrg);
 
 // --- Start ---
 const PORT = process.env.PORT || 3000;
