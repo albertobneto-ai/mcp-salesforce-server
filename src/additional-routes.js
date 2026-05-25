@@ -13,40 +13,36 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
 
   app.post("/api/deploy-formula-fields", async (req, res) => {
     try {
-      const { default: JSZip } = await import("jszip");
       await connectToTargetOrg(req);
-      const conn = sfClient.getConnection();
       const fields = Array.isArray(req.body) ? req.body : [req.body];
-      if (!fields.length) return res.json({ status: "error", message: "No fields provided" });
+      if (!fields.length) return res.json({ status: "error", message: "No fields" });
 
+      // Build ZIP using jszip (same as sfClient uses internally)
+      const { default: JSZip } = await import("jszip");
       const zip = new JSZip();
-      const members = fields.map(f => `        <members>${f.fullName}</members>`).join("\n");
-      zip.file("package.xml", `<?xml version="1.0" encoding="UTF-8"?>\n<Package xmlns="http://soap.sforce.com/2006/04/metadata">\n    <types>\n${members}\n        <name>CustomField</name>\n    </types>\n    <version>59.0</version>\n</Package>`);
+
+      const members = fields.map(f => "<members>" + f.fullName + "</members>").join("\n        ");
+      const pkgXml = '<?xml version="1.0" encoding="UTF-8"?>\n<Package xmlns="http://soap.sforce.com/2006/04/metadata">\n    <types>\n        ' + members + '\n        <name>CustomField</name>\n    </types>\n    <version>59.0</version>\n</Package>';
+      zip.file("package.xml", pkgXml);
 
       for (const f of fields) {
         const fname = f.fullName.split(".")[1];
-        const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-        zip.file(`fields/${f.fullName}.field-meta.xml`, `<?xml version="1.0" encoding="UTF-8"?>\n<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">\n    <fullName>${fname}</fullName>\n    <label>${f.label}</label>\n    <type>${f.type || "Text"}</type>\n    <formula>${esc(f.formula)}</formula>\n    <formulaTreatBlanksAs>${f.formulaTreatBlanksAs || "BlankAsBlank"}</formulaTreatBlanksAs>\n</CustomField>`);
+        const formula = f.formula.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">\n    <fullName>' + fname + '</fullName>\n    <label>' + f.label + '</label>\n    <type>' + (f.type || "Text") + '</type>\n    <formula>' + formula + '</formula>\n    <formulaTreatBlanksAs>' + (f.formulaTreatBlanksAs || "BlankAsBlank") + '</formulaTreatBlanksAs>\n</CustomField>';
+        zip.file("fields/" + f.fullName + ".field-meta.xml", xml);
       }
 
-      const buf = await zip.generateAsync({ type: "nodebuffer" });
+      const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
 
-      // Use callback-style complete(true, callback) with a Promise wrapper
-      const result = await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error("Deploy timeout 90s")), 90000);
-        conn.metadata.deploy(buf, { singlePackage: true }).complete(true, (err, r) => {
-          clearTimeout(timeout);
-          if (err) reject(err);
-          else resolve(r);
-        });
-      });
+      // Use sfClient.startDeploy like deploy-code does (async, returns deployId)
+      const { deployId } = await sfClient.startDeploy(zipBuffer, { checkOnly: false, testLevel: "NoTestRun" });
 
       sfClient.clearTargetOrg();
       res.json({
-        status: result.success ? "deployed" : "failed",
-        deployed: result.numberComponentsDeployed,
-        errors: result.numberComponentErrors,
-        failures: result.details?.componentFailures || []
+        status: "deploying",
+        deployId,
+        checkStatusUrl: "/api/deploy-status/" + deployId,
+        fields: fields.map(f => f.fullName)
       });
     } catch (err) {
       sfClient.clearTargetOrg();
@@ -93,5 +89,5 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
     } catch (err) { sfClient.clearTargetOrg(); res.status(500).json({ status: "error", message: err.message }); }
   });
 
-  console.log("Routes: execute-anonymous, deploy-formula-fields, update-layout");
+  console.log("Routes: execute-anonymous, deploy-formula-fields (async), update-layout");
 }
