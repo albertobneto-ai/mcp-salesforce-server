@@ -256,7 +256,7 @@ export class SalesforceClient {
       ...(field.formula != null && { formula: field.formula }),
       ...(field.formulaTreatBlanksAs != null && { formulaTreatBlanksAs: field.formulaTreatBlanksAs }),
       ...(field.description != null && { description: field.description }),
-      ...(field.defaultValue != null && { defaultValue: field.defaultValue }),
+      ...(field.defaultValue != null && !field.picklist && { defaultValue: field.defaultValue }),
       ...(field.referenceTo != null && {
         referenceTo: field.referenceTo,
         relationshipName: field.relationshipName,
@@ -265,7 +265,7 @@ export class SalesforceClient {
       ...(field.type === "MultiselectPicklist" && { visibleLines: field.visibleLines || 4 }),
       ...(field.picklist && {
         valueSet: { valueSetDefinition: {
-          value: field.picklist.map(v => ({ fullName: v, label: v, default: false })),
+          value: field.picklist.map(v => ({ fullName: v, label: v, default: field.defaultValue ? field.defaultValue === v : false })),
         }},
       }),
     };
