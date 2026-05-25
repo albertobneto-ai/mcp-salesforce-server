@@ -1,6 +1,4 @@
 
-import JSZip from 'jszip';
-
 export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
 
   // --- Execute Anonymous Apex ---
@@ -25,61 +23,55 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
     }
   });
 
-  // --- Deploy Formula Fields via Metadata API ZIP deploy ---
+  // --- Deploy Formula Fields via ZIP Metadata deploy ---
   app.post("/api/deploy-formula-fields", async (req, res) => {
     try {
+      const JSZip = (await import("jszip")).default;
       await connectToTargetOrg(req);
       const conn = sfClient.getConnection();
       const fields = Array.isArray(req.body) ? req.body : [req.body];
-      
-      // Build ZIP package with field XML
+
       const zip = new JSZip();
-      
-      // package.xml
-      const members = fields.map(f => f.fullName).join("</members>\n        <members>");
-      zip.file("package.xml", `<?xml version="1.0" encoding="UTF-8"?>
+
+      const members = fields.map(f => `        <members>${f.fullName}</members>`).join("\n");
+      zip.file("package.xml",
+`<?xml version="1.0" encoding="UTF-8"?>
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <types>
-        <members>${members}</members>
+${members}
         <name>CustomField</name>
     </types>
     <version>59.0</version>
 </Package>`);
-      
-      // Field XMLs
+
       for (const f of fields) {
         const [objName, fieldName] = f.fullName.split(".");
-        const fieldXml = `<?xml version="1.0" encoding="UTF-8"?>
+        const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        const xml =
+`<?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>${fieldName}</fullName>
     <label>${f.label}</label>
     <type>${f.type || "Text"}</type>
-    <formula>${f.formula.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")}</formula>
+    <formula>${esc(f.formula)}</formula>
     <formulaTreatBlanksAs>${f.formulaTreatBlanksAs || "BlankAsBlank"}</formulaTreatBlanksAs>
-${f.description ? "    <description>" + f.description + "</description>" : ""}
 </CustomField>`;
-        zip.file(`fields/${objName}.${fieldName}.field-meta.xml`, fieldXml);
+        zip.file(`fields/${objName}.${fieldName}.field-meta.xml`, xml);
       }
-      
-      const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
-      
-      // Deploy via Metadata API
+
+      const zipBuf = await zip.generateAsync({ type: "nodebuffer" });
+
       const deployResult = await new Promise((resolve, reject) => {
-        conn.metadata.deploy(zipBuffer, { singlePackage: true })
-          .complete(true, (err, result) => {
-            if (err) reject(err);
-            else resolve(result);
-          });
+        conn.metadata.deploy(zipBuf, { singlePackage: true })
+          .complete(true, (err, result) => err ? reject(err) : resolve(result));
       });
-      
+
       sfClient.clearTargetOrg();
       res.json({
         status: deployResult.success ? "deployed" : "failed",
-        done: deployResult.done,
         numberComponentsDeployed: deployResult.numberComponentsDeployed,
         numberComponentErrors: deployResult.numberComponentErrors,
-        componentFailures: deployResult.details?.componentFailures || [],
-        componentSuccesses: deployResult.details?.componentSuccesses || [],
+        failures: deployResult.details?.componentFailures || [],
       });
     } catch (err) {
       sfClient.clearTargetOrg();
@@ -101,54 +93,52 @@ ${f.description ? "    <description>" + f.description + "</description>" : ""}
       }
       const sections = Array.isArray(layout.layoutSections) ? layout.layoutSections : [layout.layoutSections].filter(Boolean);
       const changes = [];
-      if (addFields && Array.isArray(addFields)) {
+      if (addFields) {
         for (const add of addFields) {
-          const { field, section, behavior } = add;
-          const targetSection = sections.find(s => s.label === section);
-          if (!targetSection) { changes.push({ action: "add", field, section, status: "section_not_found" }); continue; }
-          const columns = Array.isArray(targetSection.layoutColumns) ? targetSection.layoutColumns : [targetSection.layoutColumns].filter(Boolean);
-          if (!columns.length) { changes.push({ action: "add", field, section, status: "no_columns" }); continue; }
+          const tgt = sections.find(s => s.label === add.section);
+          if (!tgt) { changes.push({ field: add.field, status: "section_not_found" }); continue; }
+          const cols = Array.isArray(tgt.layoutColumns) ? tgt.layoutColumns : [tgt.layoutColumns].filter(Boolean);
+          if (!cols.length) continue;
           let exists = false;
-          for (const col of columns) {
+          for (const col of cols) {
             const items = Array.isArray(col.layoutItems) ? col.layoutItems : [col.layoutItems].filter(Boolean);
-            if (items.some(i => i.field === field)) { exists = true; break; }
+            if (items.some(i => i.field === add.field)) { exists = true; break; }
           }
-          if (exists) { changes.push({ action: "add", field, section, status: "already_present" }); continue; }
-          const items = Array.isArray(columns[0].layoutItems) ? columns[0].layoutItems : [columns[0].layoutItems].filter(Boolean);
-          items.push({ behavior: behavior || "Readonly", field });
-          columns[0].layoutItems = items;
-          changes.push({ action: "add", field, section, status: "added" });
+          if (exists) { changes.push({ field: add.field, status: "already_present" }); continue; }
+          const items = Array.isArray(cols[0].layoutItems) ? cols[0].layoutItems : [cols[0].layoutItems].filter(Boolean);
+          items.push({ behavior: add.behavior || "Readonly", field: add.field });
+          cols[0].layoutItems = items;
+          changes.push({ field: add.field, status: "added" });
         }
       }
       if (moveField) {
-        const { field, fromSection, toSection, behavior } = moveField;
-        const srcSec = sections.find(s => s.label === fromSection);
-        if (srcSec) {
-          const srcCols = Array.isArray(srcSec.layoutColumns) ? srcSec.layoutColumns : [srcSec.layoutColumns].filter(Boolean);
+        const src = sections.find(s => s.label === moveField.fromSection);
+        if (src) {
+          const srcCols = Array.isArray(src.layoutColumns) ? src.layoutColumns : [src.layoutColumns].filter(Boolean);
           for (const col of srcCols) {
             let items = Array.isArray(col.layoutItems) ? col.layoutItems : [col.layoutItems].filter(Boolean);
-            col.layoutItems = items.filter(i => i.field !== field);
+            col.layoutItems = items.filter(i => i.field !== moveField.field);
           }
         }
-        const tgtSec = sections.find(s => s.label === toSection);
-        if (tgtSec) {
-          const tgtCols = Array.isArray(tgtSec.layoutColumns) ? tgtSec.layoutColumns : [tgtSec.layoutColumns].filter(Boolean);
+        const tgt = sections.find(s => s.label === moveField.toSection);
+        if (tgt) {
+          const tgtCols = Array.isArray(tgt.layoutColumns) ? tgt.layoutColumns : [tgt.layoutColumns].filter(Boolean);
           const items = Array.isArray(tgtCols[0].layoutItems) ? tgtCols[0].layoutItems : [tgtCols[0].layoutItems].filter(Boolean);
-          items.push({ behavior: behavior || "Edit", field });
+          items.push({ behavior: moveField.behavior || "Edit", field: moveField.field });
           tgtCols[0].layoutItems = items;
-          changes.push({ action: "move", field, from: fromSection, to: toSection, status: "moved" });
+          changes.push({ field: moveField.field, status: "moved" });
         }
       }
       layout.layoutSections = sections;
-      const deployResult = await conn.metadata.update("Layout", layout);
-      const success = Array.isArray(deployResult) ? deployResult[0]?.success : deployResult?.success;
+      const r = await conn.metadata.update("Layout", layout);
+      const ok = Array.isArray(r) ? r[0]?.success : r?.success;
       sfClient.clearTargetOrg();
-      res.json({ status: success ? "updated" : "failed", layoutFullName, changes, deployResult });
+      res.json({ status: ok ? "updated" : "failed", changes });
     } catch (err) {
       sfClient.clearTargetOrg();
       res.status(500).json({ status: "error", message: err.message });
     }
   });
 
-  console.log("Routes: /api/execute-anonymous, /api/deploy-formula-fields, /api/update-layout");
+  console.log("Routes: execute-anonymous, deploy-formula-fields, update-layout");
 }
