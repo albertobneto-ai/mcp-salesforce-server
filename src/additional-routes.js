@@ -5,9 +5,7 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
     try {
       await connectToTargetOrg(req);
       const conn = sfClient.getConnection();
-      const { code } = req.body;
-      if (!code) return res.status(400).json({ status: "error", message: "Missing code" });
-      const result = await conn.tooling.executeAnonymous(code);
+      const result = await conn.tooling.executeAnonymous(req.body.code);
       sfClient.clearTargetOrg();
       res.json({ success: result.success, compiled: result.compiled, compileProblem: result.compileProblem || null, exceptionMessage: result.exceptionMessage || null, exceptionStackTrace: result.exceptionStackTrace || null, line: result.line, column: result.column });
     } catch (err) { sfClient.clearTargetOrg(); res.status(500).json({ status: "error", message: err.message }); }
@@ -15,31 +13,24 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
 
   app.post("/api/deploy-formula-fields", async (req, res) => {
     try {
+      const { default: JSZip } = await import("jszip");
       await connectToTargetOrg(req);
       const conn = sfClient.getConnection();
       const fields = Array.isArray(req.body) ? req.body : [req.body];
-      const results = [];
+      const zip = new JSZip();
+      const members = fields.map(f => `        <members>${f.fullName}</members>`).join("\n");
+      zip.file("package.xml", `<?xml version="1.0" encoding="UTF-8"?>\n<Package xmlns="http://soap.sforce.com/2006/04/metadata">\n    <types>\n${members}\n        <name>CustomField</name>\n    </types>\n    <version>59.0</version>\n</Package>`);
       for (const f of fields) {
         const [obj, fname] = f.fullName.split(".");
         const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-        const fieldXml = `<?xml version="1.0" encoding="UTF-8"?><CustomField xmlns="http://soap.sforce.com/2006/04/metadata"><fullName>${fname}</fullName><label>${f.label}</label><type>${f.type || "Text"}</type><formula>${esc(f.formula)}</formula><formulaTreatBlanksAs>${f.formulaTreatBlanksAs || "BlankAsBlank"}</formulaTreatBlanksAs></CustomField>`;
-        const pkgXml = `<?xml version="1.0" encoding="UTF-8"?><Package xmlns="http://soap.sforce.com/2006/04/metadata"><types><members>${f.fullName}</members><name>CustomField</name></types><version>59.0</version></Package>`;
-        try {
-          const { default: JSZip } = await import("jszip");
-          const zip = new JSZip();
-          zip.file("package.xml", pkgXml);
-          zip.file("fields/" + f.fullName + ".field-meta.xml", fieldXml);
-          const buf = await zip.generateAsync({ type: "nodebuffer" });
-          const dr = await new Promise((ok, fail) => {
-            conn.metadata.deploy(buf, { singlePackage: true }).complete(true, (e, r) => e ? fail(e) : ok(r));
-          });
-          results.push({ fullName: f.fullName, success: dr.success, deployed: dr.numberComponentsDeployed, errors: dr.numberComponentErrors, failures: dr.details?.componentFailures || [] });
-        } catch (err) {
-          results.push({ fullName: f.fullName, success: false, error: err.message });
-        }
+        zip.file(`fields/${f.fullName}.field-meta.xml`, `<?xml version="1.0" encoding="UTF-8"?>\n<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">\n    <fullName>${fname}</fullName>\n    <label>${f.label}</label>\n    <type>${f.type || "Text"}</type>\n    <formula>${esc(f.formula)}</formula>\n    <formulaTreatBlanksAs>${f.formulaTreatBlanksAs || "BlankAsBlank"}</formulaTreatBlanksAs>\n</CustomField>`);
       }
+      const buf = await zip.generateAsync({ type: "nodebuffer" });
+      // ASYNC deploy - return deployId immediately
+      const deployJob = conn.metadata.deploy(buf, { singlePackage: true });
+      const pollResult = await deployJob.poll(5000, 120000);
       sfClient.clearTargetOrg();
-      res.json({ results });
+      res.json({ status: pollResult.success ? "deployed" : "failed", deployed: pollResult.numberComponentsDeployed, errors: pollResult.numberComponentErrors, failures: pollResult.details?.componentFailures || [] });
     } catch (err) { sfClient.clearTargetOrg(); res.status(500).json({ status: "error", message: err.message }); }
   });
 
@@ -75,8 +66,8 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
         if (tgt) { const tgtCols = Array.isArray(tgt.layoutColumns) ? tgt.layoutColumns : [tgt.layoutColumns].filter(Boolean); const items = Array.isArray(tgtCols[0].layoutItems) ? tgtCols[0].layoutItems : [tgtCols[0].layoutItems].filter(Boolean); items.push({ behavior: moveField.behavior || "Edit", field: moveField.field }); tgtCols[0].layoutItems = items; changes.push({ field: moveField.field, status: "moved" }); }
       }
       layout.layoutSections = sections;
-      const r = await conn.metadata.update("Layout", layout);
-      const ok = Array.isArray(r) ? r[0]?.success : r?.success;
+      const deployResult = await conn.metadata.update("Layout", layout);
+      const ok = Array.isArray(deployResult) ? deployResult[0]?.success : deployResult?.success;
       sfClient.clearTargetOrg();
       res.json({ status: ok ? "updated" : "failed", changes });
     } catch (err) { sfClient.clearTargetOrg(); res.status(500).json({ status: "error", message: err.message }); }
