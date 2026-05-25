@@ -20,15 +20,27 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
       const { default: JSZip } = await import("jszip");
       const zip = new JSZip();
 
+      // Group fields by object
+      const byObj = {};
+      for (const f of fields) {
+        const [obj, fname] = f.fullName.split(".");
+        if (!byObj[obj]) byObj[obj] = [];
+        byObj[obj].push(f);
+      }
+
+      // package.xml
       const members = fields.map(f => "<members>" + f.fullName + "</members>").join("\n        ");
       zip.file("package.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<Package xmlns="http://soap.sforce.com/2006/04/metadata">\n    <types>\n        ' + members + '\n        <name>CustomField</name>\n    </types>\n    <version>59.0</version>\n</Package>');
 
-      for (const f of fields) {
-        const [objName, fieldName] = f.fullName.split(".");
-        const formula = f.formula.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-        const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">\n    <fullName>' + fieldName + '</fullName>\n    <label>' + f.label + '</label>\n    <type>' + (f.type || "Text") + '</type>\n    <formula>' + formula + '</formula>\n    <formulaTreatBlanksAs>' + (f.formulaTreatBlanksAs || "BlankAsBlank") + '</formulaTreatBlanksAs>\n</CustomField>';
-        // Correct path: objects/ObjectName/fields/FieldName.field-meta.xml
-        zip.file("objects/" + objName + "/fields/" + fieldName + ".field-meta.xml", xml);
+      // objects/ObjectName.object with embedded fields
+      for (const [obj, objFields] of Object.entries(byObj)) {
+        let fieldsXml = "";
+        for (const f of objFields) {
+          const fname = f.fullName.split(".")[1];
+          const formula = f.formula.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+          fieldsXml += "\n    <fields>\n        <fullName>" + fname + "</fullName>\n        <label>" + f.label + "</label>\n        <type>" + (f.type || "Text") + "</type>\n        <formula>" + formula + "</formula>\n        <formulaTreatBlanksAs>" + (f.formulaTreatBlanksAs || "BlankAsBlank") + "</formulaTreatBlanksAs>\n    </fields>";
+        }
+        zip.file("objects/" + obj + ".object", '<?xml version="1.0" encoding="UTF-8"?>\n<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">' + fieldsXml + '\n</CustomObject>');
       }
 
       const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
@@ -49,27 +61,8 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
       if (!layout?.fullName) { sfClient.clearTargetOrg(); return res.status(404).json({ status: "error", message: "Layout not found" }); }
       const sections = Array.isArray(layout.layoutSections) ? layout.layoutSections : [layout.layoutSections].filter(Boolean);
       const changes = [];
-      if (addFields) {
-        for (const add of addFields) {
-          const tgt = sections.find(s => s.label === add.section);
-          if (!tgt) { changes.push({ field: add.field, status: "section_not_found" }); continue; }
-          const cols = Array.isArray(tgt.layoutColumns) ? tgt.layoutColumns : [tgt.layoutColumns].filter(Boolean);
-          if (!cols.length) continue;
-          let exists = false;
-          for (const col of cols) { const items = Array.isArray(col.layoutItems) ? col.layoutItems : [col.layoutItems].filter(Boolean); if (items.some(i => i.field === add.field)) { exists = true; break; } }
-          if (exists) { changes.push({ field: add.field, status: "already_present" }); continue; }
-          const items = Array.isArray(cols[0].layoutItems) ? cols[0].layoutItems : [cols[0].layoutItems].filter(Boolean);
-          items.push({ behavior: add.behavior || "Readonly", field: add.field });
-          cols[0].layoutItems = items;
-          changes.push({ field: add.field, status: "added" });
-        }
-      }
-      if (moveField) {
-        const src = sections.find(s => s.label === moveField.fromSection);
-        if (src) { const srcCols = Array.isArray(src.layoutColumns) ? src.layoutColumns : [src.layoutColumns].filter(Boolean); for (const col of srcCols) { let items = Array.isArray(col.layoutItems) ? col.layoutItems : [col.layoutItems].filter(Boolean); col.layoutItems = items.filter(i => i.field !== moveField.field); } }
-        const tgt = sections.find(s => s.label === moveField.toSection);
-        if (tgt) { const tgtCols = Array.isArray(tgt.layoutColumns) ? tgt.layoutColumns : [tgt.layoutColumns].filter(Boolean); const items = Array.isArray(tgtCols[0].layoutItems) ? tgtCols[0].layoutItems : [tgtCols[0].layoutItems].filter(Boolean); items.push({ behavior: moveField.behavior || "Edit", field: moveField.field }); tgtCols[0].layoutItems = items; changes.push({ field: moveField.field, status: "moved" }); }
-      }
+      if (addFields) { for (const add of addFields) { const tgt = sections.find(s => s.label === add.section); if (!tgt) { changes.push({ field: add.field, status: "section_not_found" }); continue; } const cols = Array.isArray(tgt.layoutColumns) ? tgt.layoutColumns : [tgt.layoutColumns].filter(Boolean); if (!cols.length) continue; let exists = false; for (const col of cols) { const items = Array.isArray(col.layoutItems) ? col.layoutItems : [col.layoutItems].filter(Boolean); if (items.some(i => i.field === add.field)) { exists = true; break; } } if (exists) { changes.push({ field: add.field, status: "already_present" }); continue; } const items = Array.isArray(cols[0].layoutItems) ? cols[0].layoutItems : [cols[0].layoutItems].filter(Boolean); items.push({ behavior: add.behavior || "Readonly", field: add.field }); cols[0].layoutItems = items; changes.push({ field: add.field, status: "added" }); } }
+      if (moveField) { const src = sections.find(s => s.label === moveField.fromSection); if (src) { const srcCols = Array.isArray(src.layoutColumns) ? src.layoutColumns : [src.layoutColumns].filter(Boolean); for (const col of srcCols) { let items = Array.isArray(col.layoutItems) ? col.layoutItems : [col.layoutItems].filter(Boolean); col.layoutItems = items.filter(i => i.field !== moveField.field); } } const tgt = sections.find(s => s.label === moveField.toSection); if (tgt) { const tgtCols = Array.isArray(tgt.layoutColumns) ? tgt.layoutColumns : [tgt.layoutColumns].filter(Boolean); const items = Array.isArray(tgtCols[0].layoutItems) ? tgtCols[0].layoutItems : [tgtCols[0].layoutItems].filter(Boolean); items.push({ behavior: moveField.behavior || "Edit", field: moveField.field }); tgtCols[0].layoutItems = items; changes.push({ field: moveField.field, status: "moved" }); } }
       layout.layoutSections = sections;
       const deployResult = await conn.metadata.update("Layout", layout);
       const ok = Array.isArray(deployResult) ? deployResult[0]?.success : deployResult?.success;
