@@ -17,21 +17,41 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
       await connectToTargetOrg(req);
       const conn = sfClient.getConnection();
       const fields = Array.isArray(req.body) ? req.body : [req.body];
+      if (!fields.length) return res.json({ status: "error", message: "No fields provided" });
+
       const zip = new JSZip();
       const members = fields.map(f => `        <members>${f.fullName}</members>`).join("\n");
       zip.file("package.xml", `<?xml version="1.0" encoding="UTF-8"?>\n<Package xmlns="http://soap.sforce.com/2006/04/metadata">\n    <types>\n${members}\n        <name>CustomField</name>\n    </types>\n    <version>59.0</version>\n</Package>`);
+
       for (const f of fields) {
-        const [obj, fname] = f.fullName.split(".");
+        const fname = f.fullName.split(".")[1];
         const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
         zip.file(`fields/${f.fullName}.field-meta.xml`, `<?xml version="1.0" encoding="UTF-8"?>\n<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">\n    <fullName>${fname}</fullName>\n    <label>${f.label}</label>\n    <type>${f.type || "Text"}</type>\n    <formula>${esc(f.formula)}</formula>\n    <formulaTreatBlanksAs>${f.formulaTreatBlanksAs || "BlankAsBlank"}</formulaTreatBlanksAs>\n</CustomField>`);
       }
+
       const buf = await zip.generateAsync({ type: "nodebuffer" });
-      // ASYNC deploy - return deployId immediately
-      const deployJob = conn.metadata.deploy(buf, { singlePackage: true });
-      const pollResult = await deployJob.poll(5000, 120000);
+
+      // Use callback-style complete(true, callback) with a Promise wrapper
+      const result = await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error("Deploy timeout 90s")), 90000);
+        conn.metadata.deploy(buf, { singlePackage: true }).complete(true, (err, r) => {
+          clearTimeout(timeout);
+          if (err) reject(err);
+          else resolve(r);
+        });
+      });
+
       sfClient.clearTargetOrg();
-      res.json({ status: pollResult.success ? "deployed" : "failed", deployed: pollResult.numberComponentsDeployed, errors: pollResult.numberComponentErrors, failures: pollResult.details?.componentFailures || [] });
-    } catch (err) { sfClient.clearTargetOrg(); res.status(500).json({ status: "error", message: err.message }); }
+      res.json({
+        status: result.success ? "deployed" : "failed",
+        deployed: result.numberComponentsDeployed,
+        errors: result.numberComponentErrors,
+        failures: result.details?.componentFailures || []
+      });
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.status(500).json({ status: "error", message: err.message });
+    }
   });
 
   app.post("/api/update-layout", async (req, res) => {
