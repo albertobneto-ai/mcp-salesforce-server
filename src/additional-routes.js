@@ -17,37 +17,26 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
       const fields = Array.isArray(req.body) ? req.body : [req.body];
       if (!fields.length) return res.json({ status: "error", message: "No fields" });
 
-      // Build ZIP using jszip (same as sfClient uses internally)
       const { default: JSZip } = await import("jszip");
       const zip = new JSZip();
 
       const members = fields.map(f => "<members>" + f.fullName + "</members>").join("\n        ");
-      const pkgXml = '<?xml version="1.0" encoding="UTF-8"?>\n<Package xmlns="http://soap.sforce.com/2006/04/metadata">\n    <types>\n        ' + members + '\n        <name>CustomField</name>\n    </types>\n    <version>59.0</version>\n</Package>';
-      zip.file("package.xml", pkgXml);
+      zip.file("package.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<Package xmlns="http://soap.sforce.com/2006/04/metadata">\n    <types>\n        ' + members + '\n        <name>CustomField</name>\n    </types>\n    <version>59.0</version>\n</Package>');
 
       for (const f of fields) {
-        const fname = f.fullName.split(".")[1];
+        const [objName, fieldName] = f.fullName.split(".");
         const formula = f.formula.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-        const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">\n    <fullName>' + fname + '</fullName>\n    <label>' + f.label + '</label>\n    <type>' + (f.type || "Text") + '</type>\n    <formula>' + formula + '</formula>\n    <formulaTreatBlanksAs>' + (f.formulaTreatBlanksAs || "BlankAsBlank") + '</formulaTreatBlanksAs>\n</CustomField>';
-        zip.file("fields/" + f.fullName + ".field-meta.xml", xml);
+        const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">\n    <fullName>' + fieldName + '</fullName>\n    <label>' + f.label + '</label>\n    <type>' + (f.type || "Text") + '</type>\n    <formula>' + formula + '</formula>\n    <formulaTreatBlanksAs>' + (f.formulaTreatBlanksAs || "BlankAsBlank") + '</formulaTreatBlanksAs>\n</CustomField>';
+        // Correct path: objects/ObjectName/fields/FieldName.field-meta.xml
+        zip.file("objects/" + objName + "/fields/" + fieldName + ".field-meta.xml", xml);
       }
 
       const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
-
-      // Use sfClient.startDeploy like deploy-code does (async, returns deployId)
       const { deployId } = await sfClient.startDeploy(zipBuffer, { checkOnly: false, testLevel: "NoTestRun" });
 
       sfClient.clearTargetOrg();
-      res.json({
-        status: "deploying",
-        deployId,
-        checkStatusUrl: "/api/deploy-status/" + deployId,
-        fields: fields.map(f => f.fullName)
-      });
-    } catch (err) {
-      sfClient.clearTargetOrg();
-      res.status(500).json({ status: "error", message: err.message });
-    }
+      res.json({ status: "deploying", deployId, checkStatusUrl: "/api/deploy-status/" + deployId, fields: fields.map(f => f.fullName) });
+    } catch (err) { sfClient.clearTargetOrg(); res.status(500).json({ status: "error", message: err.message }); }
   });
 
   app.post("/api/update-layout", async (req, res) => {
@@ -89,5 +78,5 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
     } catch (err) { sfClient.clearTargetOrg(); res.status(500).json({ status: "error", message: err.message }); }
   });
 
-  console.log("Routes: execute-anonymous, deploy-formula-fields (async), update-layout");
+  console.log("Routes: execute-anonymous, deploy-formula-fields, update-layout");
 }
