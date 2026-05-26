@@ -95,6 +95,7 @@ app.get("/test-connection", async (req, res) => {
       orgId: sfClient.getOrgId(),
       username: identity.username,
       displayName: identity.display_name,
+      instanceUrl: sfClient.conn?.instanceUrl || process.env.SF_LOGIN_URL || null,
     });
   } catch (err) {
     res.status(500).json({ status: "error", message: err.message });
