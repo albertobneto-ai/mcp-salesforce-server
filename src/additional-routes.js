@@ -347,5 +347,35 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
     } catch (err) { sfClient.clearTargetOrg(); res.status(500).json({ status: "error", message: err.message }); }
   });
 
+
+  // --- Metadata Read (generic) ---
+  app.get("/api/metadata-read/:type/:fullName", async (req, res) => {
+    try {
+      await connectToTargetOrg(req);
+      const conn = sfClient.getConnection();
+      const result = await conn.metadata.read(req.params.type, decodeURIComponent(req.params.fullName));
+      sfClient.clearTargetOrg();
+      res.json(result);
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.status(500).json({ status: "error", message: err.message });
+    }
+  });
+
+  // --- Metadata Update (generic) ---
+  app.post("/api/metadata-update/:type", async (req, res) => {
+    try {
+      await connectToTargetOrg(req);
+      const conn = sfClient.getConnection();
+      const result = await conn.metadata.update(req.params.type, req.body);
+      sfClient.clearTargetOrg();
+      const item = Array.isArray(result) ? result[0] : result;
+      res.json({ success: item?.success, errors: item?.errors || null });
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.status(500).json({ status: "error", message: err.message });
+    }
+  });
+
   console.log("Routes: execute-anonymous, execute-apex-b64, soql-b64, soql-get, upsert, update-b64, composite, deploy-formula-fields, update-layout");
 }
