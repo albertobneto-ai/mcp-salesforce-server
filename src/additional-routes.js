@@ -348,6 +348,37 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
   });
 
 
+
+  // --- Metadata Create ---
+  app.post("/api/metadata-create/:type", async (req, res) => {
+    try {
+      await connectToTargetOrg(req);
+      const conn = sfClient.getConnection();
+      const result = await conn.metadata.create(req.params.type, req.body);
+      sfClient.clearTargetOrg();
+      const item = Array.isArray(result) ? result[0] : result;
+      res.json({ success: item?.success, fullName: item?.fullName, errors: item?.errors || null });
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.status(500).json({ status: "error", message: err.message });
+    }
+  });
+
+  // --- Metadata Upsert ---
+  app.post("/api/metadata-upsert/:type", async (req, res) => {
+    try {
+      await connectToTargetOrg(req);
+      const conn = sfClient.getConnection();
+      const result = await conn.metadata.upsert(req.params.type, req.body);
+      sfClient.clearTargetOrg();
+      const item = Array.isArray(result) ? result[0] : result;
+      res.json({ success: item?.success, fullName: item?.fullName, created: item?.created, errors: item?.errors || null });
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.status(500).json({ status: "error", message: err.message });
+    }
+  });
+
   // --- Metadata Read (generic) ---
   app.get("/api/metadata-read/:type/:fullName", async (req, res) => {
     try {
