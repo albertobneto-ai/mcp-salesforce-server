@@ -74,4 +74,53 @@ export class GitHubClient {
     }
     return null;
   }
+
+  // ── Multi-repo support ──────────────────────────────
+
+  async createRepo(name, description = "", isPrivate = false) {
+    return await this.request("POST", "/user/repos", {
+      name,
+      description,
+      private: isPrivate,
+      auto_init: true,
+    });
+  }
+
+  async listRepos() {
+    return await this.request("GET", `/users/${this.owner}/repos?per_page=50&sort=updated`);
+  }
+
+  async createFileInRepo(repo, path, content, message) {
+    const body = {
+      message: message || `Create ${path}`,
+      content: Buffer.from(content).toString("base64"),
+    };
+    // Check if file exists first
+    const existing = await this.request("GET", `/repos/${this.owner}/${repo}/contents/${path}`).catch(() => null);
+    if (existing && existing.sha) {
+      body.sha = existing.sha;
+    }
+    return await this.request("PUT", `/repos/${this.owner}/${repo}/contents/${path}`, body);
+  }
+
+  async getFileFromRepo(repo, path) {
+    const data = await this.request("GET", `/repos/${this.owner}/${repo}/contents/${path}`);
+    if (data.content) {
+      return {
+        name: data.name,
+        path: data.path,
+        sha: data.sha,
+        content: Buffer.from(data.content, "base64").toString("utf-8"),
+      };
+    }
+    return data;
+  }
+
+  async listFilesInRepo(repo, path = "") {
+    const data = await this.request("GET", `/repos/${this.owner}/${repo}/contents/${path}`);
+    if (Array.isArray(data)) {
+      return data.map(f => ({ name: f.name, path: f.path, type: f.type, size: f.size, sha: f.sha }));
+    }
+    return data;
+  }
 }
