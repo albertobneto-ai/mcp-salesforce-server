@@ -1,4 +1,6 @@
 
+import JSZip from "jszip";
+
 export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
 
   // =============================================
@@ -421,7 +423,6 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
       }
 
       // Build ZIP with LeadConvertSettings
-      const JSZip = (await import("jszip")).default;
       const zip = new JSZip();
       
       const mappingXml = mappings.map(m => 
