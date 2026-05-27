@@ -1,20 +1,17 @@
-// src/services/grok.js — xAI API (Grok) com Live Search
+// src/services/grok.js — xAI API (Grok) com Web Search via Tools API
 const API_URL = 'https://api.x.ai/v1/chat/completions';
 
 export async function call(systemPrompt, messages, maxTokens = 16384, options = {}) {
   const body = {
-    model: process.env.GROK_MODEL || 'grok-4.20-0309-non-reasoning',
+    model: process.env.GROK_MODEL || 'grok-3-mini-fast',
     max_tokens: maxTokens,
     messages: [{ role: 'system', content: systemPrompt }, ...messages],
   };
 
-  // Ativar busca web quando solicitado
+  // Ativar busca web via Tools API
   if (options.search) {
-    body.search_parameters = {
-      mode: 'auto',
-      return_citations: true,
-      from_date: options.fromDate || undefined,
-    };
+    body.tools = [{ type: 'web_search' }];
+    body.tool_choice = 'auto';
   }
 
   const res = await fetch(API_URL, {
@@ -38,7 +35,7 @@ export async function stream(systemPrompt, messages, maxTokens = 16384) {
       'Authorization': `Bearer ${process.env.GROK_KEY}`,
     },
     body: JSON.stringify({
-      model: process.env.GROK_MODEL || 'grok-4.20-0309-non-reasoning',
+      model: process.env.GROK_MODEL || 'grok-3-mini-fast',
       max_tokens: maxTokens,
       stream: true,
       messages: [{ role: 'system', content: systemPrompt }, ...messages],
