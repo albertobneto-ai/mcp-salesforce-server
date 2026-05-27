@@ -8,6 +8,8 @@ import specPrompt from '../prompts/spec.js';
 import hfPrompt from '../prompts/hf.js';
 import ataPrompt from '../prompts/ata.js';
 import deployPrompt from '../prompts/deploy.js';
+import pool from '../config/db.js';
+import * as sfMulti from '../services/sf-multi.js';
 import { knowledgeBase } from '../config/knowledge-base.js';
 
 const router = express.Router();
@@ -25,6 +27,14 @@ function needsKB(text) {
     'github', 'salesforce', 'connected app', 'oauth',
   ];
   return triggers.some(t => lower.includes(t));
+}
+
+// ── Helper: pegar org selecionada ──
+async function getSelectedOrg(req) {
+  const orgId = req.headers['x-org-id'] || req.query.orgId;
+  if (!orgId || orgId === 'default') return null; // usa org padrão (config vars)
+  const result = await pool.query('SELECT * FROM orgs WHERE id = $1', [orgId]);
+  return result.rows[0] || null;
 }
 
 // ── Permissões por perfil ──
@@ -302,16 +312,28 @@ router.post('/', authMiddleware, async (req, res) => {
         break;
       case 'describe': {
         const obj = messages[messages.length - 1].content.replace(/\/describe\s*/i, '').trim();
-        const base = `http://localhost:${process.env.PORT || 3000}`;
-        const r = await fetch(`${base}/api/describe/${aliasResolve(obj)}`);
-        response = JSON.stringify(await r.json(), null, 2);
+        const selectedOrg = await getSelectedOrg(req);
+        if (selectedOrg) {
+          const desc = await sfMulti.describeObject(selectedOrg, aliasResolve(obj));
+          response = JSON.stringify(desc, null, 2);
+        } else {
+          const base = `http://localhost:${process.env.PORT || 3000}`;
+          const r = await fetch(`${base}/api/describe/${aliasResolve(obj)}`);
+          response = JSON.stringify(await r.json(), null, 2);
+        }
         modelUsed = 'mcp-server'; modelLabel = 'MCP Server';
         break;
       }
       case 'status': {
-        const base = `http://localhost:${process.env.PORT || 3000}`;
-        const r = await fetch(`${base}/test-connection`);
-        response = JSON.stringify(await r.json(), null, 2);
+        const selectedOrg = await getSelectedOrg(req);
+        if (selectedOrg) {
+          const test = await sfMulti.testConnection(selectedOrg);
+          response = JSON.stringify(test, null, 2);
+        } else {
+          const base = `http://localhost:${process.env.PORT || 3000}`;
+          const r = await fetch(`${base}/test-connection`);
+          response = JSON.stringify(await r.json(), null, 2);
+        }
         modelUsed = 'mcp-server'; modelLabel = 'MCP Server';
         break;
       }
