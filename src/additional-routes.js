@@ -1,6 +1,4 @@
 
-import JSZip from "jszip";
-
 export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
 
   // =============================================
@@ -451,13 +449,11 @@ ${mappingXml}
       
       // Deploy with singlePackage (async + poll)
       const deployRes = await conn.metadata.deploy(zipBuf, { singlePackage: true, rollbackOnError: true });
-      const deployId = deployRes.id;
-      
       // Poll for completion (max 60s)
       let result = null;
       for (let i = 0; i < 30; i++) {
         await new Promise(r => setTimeout(r, 2000));
-        result = await conn.metadata.checkDeployStatus(deployId, true);
+        result = await sfClient.checkDeployStatus(deployId);
         if (result.done) break;
       }
       
