@@ -8,6 +8,7 @@ import specPrompt from '../prompts/spec.js';
 import hfPrompt from '../prompts/hf.js';
 import ataPrompt from '../prompts/ata.js';
 import deployPrompt from '../prompts/deploy.js';
+import { knowledgeBase } from '../config/knowledge-base.js';
 
 const router = express.Router();
 
@@ -276,7 +277,7 @@ router.post('/', authMiddleware, async (req, res) => {
         break;
       }
       default:
-        response = await grok.call('Voce e um assistente Salesforce.', messages);
+        response = await grok.call('Voce e um assistente Salesforce especialista no projeto Everi9/MCP Salesforce. Use a base de conhecimento abaixo para responder com precisao.\n\n' + knowledgeBase, messages);
         modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
     }
 
