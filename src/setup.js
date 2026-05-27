@@ -1,6 +1,7 @@
 // src/setup.js — Admin + RBAC
 import express from 'express';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import { authMiddleware } from './middleware/auth.js';
 
 const router = express.Router();
@@ -42,6 +43,9 @@ router.get('/init-db', async (req, res) => {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )`);
 
+    // Adicionar colunas se nao existirem (migracao)
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(100)');
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMPTZ');
     // Adicionar coluna role se nao existir (migracao)
     await pool.query(`DO $$ BEGIN
       ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'funcional';
@@ -188,6 +192,62 @@ router.get('/roles', (req, res) => {
       developer:  { label: 'Desenvolvedor', commands: ['/ata', '/deploy', '/describe'], description: 'Ata + Deploy + Describe' },
     }
   });
+});
+
+// POST /api/setup/users/:id/generate-link — Gera link de primeiro acesso
+router.post('/users/:id/generate-link', requireAdmin, async (req, res) => {
+  try {
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72h
+    const pg = await import('pg');
+    const pool = new pg.default.Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+    const user = await pool.query('SELECT name, email FROM users WHERE id = $1', [req.params.id]);
+    if (!user.rows.length) { await pool.end(); return res.status(404).json({ error: 'Usuario nao encontrado' }); }
+    await pool.query('UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE id = $3', [token, expires, req.params.id]);
+    // Setar senha temporaria aleatoria (usuario vai trocar pelo link)
+    const tempHash = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [tempHash, req.params.id]);
+    await pool.end();
+    const domain = process.env.DOMAIN || 'www.everi9.com';
+    const link = `https://${domain}/primeiro-acesso?token=${token}`;
+    res.json({ status: 'link_generated', user: user.rows[0], link, expires_at: expires.toISOString() });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/setup/verify-token/:token — Verifica se token é valido
+router.get('/verify-token/:token', async (req, res) => {
+  try {
+    const pg = await import('pg');
+    const pool = new pg.default.Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+    const result = await pool.query(
+      'SELECT id, name, email FROM users WHERE reset_token = $1 AND reset_token_expires > NOW()',
+      [req.params.token]
+    );
+    await pool.end();
+    if (!result.rows.length) return res.status(400).json({ valid: false, error: 'Token invalido ou expirado' });
+    res.json({ valid: true, user: result.rows[0] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/setup/set-password — Define senha via token
+router.post('/set-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ error: 'token e password obrigatorios' });
+    if (password.length < 6) return res.status(400).json({ error: 'Senha deve ter no minimo 6 caracteres' });
+    const pg = await import('pg');
+    const pool = new pg.default.Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+    const result = await pool.query(
+      'SELECT id, name, email FROM users WHERE reset_token = $1 AND reset_token_expires > NOW()',
+      [token]
+    );
+    if (!result.rows.length) { await pool.end(); return res.status(400).json({ error: 'Token invalido ou expirado' }); }
+    const hash = await bcrypt.hash(password, 10);
+    await pool.query('UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL WHERE id = $2',
+      [hash, result.rows[0].id]);
+    await pool.end();
+    res.json({ status: 'password_set', user: result.rows[0] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 export default router;
