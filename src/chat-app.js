@@ -2,7 +2,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
-import { existsSync, mkdirSync } from 'fs';
 import authRoutes from './routes/auth.js';
 import chatRoutes from './routes/chat.js';
 import downloadRoutes from './routes/download.js';
