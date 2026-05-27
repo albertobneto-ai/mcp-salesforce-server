@@ -27,6 +27,19 @@ function needsKB(text) {
   return triggers.some(t => lower.includes(t));
 }
 
+// ── Permissões por perfil ──
+const ROLE_PERMISSIONS = {
+  admin:     ['spec', 'hf', 'ata', 'deploy', 'describe', 'status', 'chat'],
+  funcional: ['hf', 'ata'],
+  architect: ['spec', 'ata'],
+  developer: ['deploy', 'describe', 'ata'],
+};
+
+function checkPermission(role, command) {
+  const perms = ROLE_PERMISSIONS[role] || [];
+  return perms.includes(command);
+}
+
 function detectCommand(messages) {
   const last = (messages[messages.length - 1]?.content || '').toLowerCase();
   if (last.startsWith('/spec') || last.includes('gere a spec')) return 'spec';
@@ -84,6 +97,17 @@ router.post('/', authMiddleware, async (req, res) => {
     if (!messages?.length) return res.status(400).json({ error: 'messages obrigatorio' });
 
     const command = detectCommand(messages);
+    const userRole = req.user?.role || 'funcional';
+
+    // Verificar permissão
+    if (userRole !== 'admin' && !checkPermission(userRole, command)) {
+      return res.json({
+        choices: [{ message: { content: '🔒 **Acesso negado**\n\nVocê não tem permissão de acesso à consultas externas e a AI.\n\nSeu perfil **' + userRole + '** permite apenas: ' + (ROLE_PERMISSIONS[userRole] || []).map(c => '/' + c).join(', ') + '.\n\nEntre em contato com o administrador para solicitar acesso.' } }],
+        modelo_usado: 'system',
+        modelo_label: 'Sistema',
+        tipo: 'error',
+      });
+    }
     let response, modelUsed, modelLabel;
 
     // ── SPEC: Claude Sonnet com streaming interno ──
