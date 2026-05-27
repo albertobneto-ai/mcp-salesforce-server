@@ -194,6 +194,48 @@ router.get('/roles', (req, res) => {
   });
 });
 
+// GET /api/setup/dashboard — Dados para o painel Insights (qualquer usuario logado)
+router.get('/dashboard', async (req, res) => {
+  // Extrair user do token se existir (sem bloquear)
+  let userRole = null;
+  try {
+    const header = req.headers.authorization;
+    if (header) {
+      const jwt = await import('jsonwebtoken');
+      const token = header.replace('Bearer ', '');
+      const decoded = jwt.default.verify(token, process.env.JWT_SECRET || 'everi9-dev-secret');
+      userRole = decoded.role;
+    }
+  } catch {}
+
+  try {
+    const pg = await import('pg');
+    const pool = new pg.default.Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+    
+    const users = await pool.query('SELECT COUNT(*) as total FROM users');
+    const convs = await pool.query('SELECT COUNT(*) as total FROM conversations');
+    const roles = await pool.query('SELECT role, COUNT(*) as total FROM users GROUP BY role');
+    
+    // Testar conexao SF
+    let orgStatus = 'offline';
+    try {
+      const sfRes = await fetch(`http://localhost:${process.env.PORT || 3000}/test-connection`);
+      const sfData = await sfRes.json();
+      orgStatus = sfData.status === 'connected' ? 'online' : 'offline';
+    } catch {}
+
+    await pool.end();
+
+    res.json({
+      users: parseInt(users.rows[0].total),
+      conversations: parseInt(convs.rows[0].total),
+      roles: Object.fromEntries(roles.rows.map(r => [r.role, parseInt(r.total)])),
+      org_status: orgStatus,
+      user_role: userRole,
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // POST /api/setup/users/:id/generate-link — Gera link de primeiro acesso
 router.post('/users/:id/generate-link', requireAdmin, async (req, res) => {
   try {
