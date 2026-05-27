@@ -1,10 +1,7 @@
 // src/services/claude.js — Anthropic API (Claude Sonnet)
 const API_URL = 'https://api.anthropic.com/v1/messages';
 
-/**
- * Chamada padrão (aguarda resposta completa)
- */
-async function call(systemPrompt, messages, maxTokens = 16384) {
+export async function call(systemPrompt, messages, maxTokens = 16384) {
   const res = await fetch(API_URL, {
     method: 'POST',
     headers: {
@@ -19,20 +16,12 @@ async function call(systemPrompt, messages, maxTokens = 16384) {
       messages,
     }),
   });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Claude ${res.status}: ${err}`);
-  }
-
+  if (!res.ok) throw new Error(`Claude ${res.status}: ${await res.text()}`);
   const data = await res.json();
   return data.content[0].text;
 }
 
-/**
- * Streaming SSE — retorna ReadableStream
- */
-async function stream(systemPrompt, messages, maxTokens = 16384) {
+export async function stream(systemPrompt, messages, maxTokens = 16384) {
   const res = await fetch(API_URL, {
     method: 'POST',
     headers: {
@@ -48,13 +37,6 @@ async function stream(systemPrompt, messages, maxTokens = 16384) {
       messages,
     }),
   });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Claude stream ${res.status}: ${err}`);
-  }
-
+  if (!res.ok) throw new Error(`Claude stream ${res.status}: ${await res.text()}`);
   return res.body;
 }
-
-module.exports = { call, stream };
