@@ -420,49 +420,31 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
         return res.status(400).json({ error: "mappings array required" });
       }
 
-      // Build ZIP with LeadConvertSettings
-      const zip = new JSZip();
-      
+      // Use sfClient.deploySettings for ZIP deploy
       const mappingXml = mappings.map(m => 
-        `        <mappingFields>\n            <inputField>${m.inputField}</inputField>\n            <outputField>${m.outputField}</outputField>\n        </mappingFields>`
+        `        <mappingFields>
+            <inputField>${m.inputField}</inputField>
+            <outputField>${m.outputField}</outputField>
+        </mappingFields>`
       ).join("\n");
 
-      zip.file("package.xml", `<?xml version="1.0" encoding="UTF-8"?>
-<Package xmlns="http://soap.sforce.com/2006/04/metadata">
-    <types>
-        <members>LeadConvert</members>
-        <name>Settings</name>
-    </types>
-    <version>${conn.version || "62.0"}</version>
-</Package>`);
-
-      zip.file("settings/LeadConvert.settings", `<?xml version="1.0" encoding="UTF-8"?>
+      const settingsXml = `<?xml version="1.0" encoding="UTF-8"?>
 <LeadConvertSettings xmlns="http://soap.sforce.com/2006/04/metadata">
     <objectMapping>
         <inputObject>Lead</inputObject>
         <outputObject>Opportunity</outputObject>
 ${mappingXml}
     </objectMapping>
-</LeadConvertSettings>`);
+</LeadConvertSettings>`;
 
-      const zipBuf = await zip.generateAsync({ type: "nodebuffer" });
-      
-      // Deploy with singlePackage (async + poll)
-      const deployRes = await conn.metadata.deploy(zipBuf, { singlePackage: true, rollbackOnError: true });
-      // Poll for completion (max 60s)
-      let result = null;
-      for (let i = 0; i < 30; i++) {
-        await new Promise(r => setTimeout(r, 2000));
-        result = await sfClient.checkDeployStatus(deployId);
-        if (result.done) break;
-      }
+      const result = await sfClient.deploySettings("LeadConvert", settingsXml);
       
       sfClient.clearTargetOrg();
       res.json({
         success: result?.success || false,
         status: result?.status || "unknown",
         componentsDeployed: result?.numberComponentsDeployed || 0,
-        errors: result?.details?.componentFailures || [],
+        errors: result?.componentFailures || [],
         mappings: mappings,
       });
     } catch (err) {
