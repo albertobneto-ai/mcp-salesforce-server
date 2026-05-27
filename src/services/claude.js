@@ -1,4 +1,4 @@
-// src/services/claude.js — Anthropic API (Claude Sonnet)
+// src/services/claude.js — Anthropic API com Prompt Caching
 const API_URL = 'https://api.anthropic.com/v1/messages';
 
 export async function call(systemPrompt, messages, maxTokens = 16384) {
@@ -12,7 +12,13 @@ export async function call(systemPrompt, messages, maxTokens = 16384) {
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: maxTokens,
-      system: systemPrompt,
+      system: [
+        {
+          type: 'text',
+          text: systemPrompt,
+          cache_control: { type: 'ephemeral' }
+        }
+      ],
       messages,
     }),
   });
@@ -33,7 +39,13 @@ export async function stream(systemPrompt, messages, maxTokens = 16384) {
       model: 'claude-sonnet-4-6',
       max_tokens: maxTokens,
       stream: true,
-      system: systemPrompt,
+      system: [
+        {
+          type: 'text',
+          text: systemPrompt,
+          cache_control: { type: 'ephemeral' }
+        }
+      ],
       messages,
     }),
   });
