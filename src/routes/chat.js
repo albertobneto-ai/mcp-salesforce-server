@@ -122,13 +122,69 @@ router.post('/', authMiddleware, async (req, res) => {
         return;
       }
 
-      // 3. Deploy via MCP Server
-      let deployResult;
+      // 3. Deploy via metadata-create (mais confiavel que deploy-b64)
+      const base = `http://localhost:${process.env.PORT || 3000}`;
+      const deployResults = [];
+      
       try {
-        const b64 = Buffer.from(JSON.stringify(manifest)).toString('base64');
-        const base = `http://localhost:${process.env.PORT || 3000}`;
-        const deployRes = await fetch(`${base}/api/deploy-b64/${b64}`);
-        deployResult = await deployRes.json();
+        // Deploy customFields
+        if (manifest.metadata?.customFields?.length) {
+          for (const field of manifest.metadata.customFields) {
+            const fullName = `${field.objectName}.${field.fieldName}`;
+            const body = { fullName, label: field.label, type: field.type };
+            if (field.length) body.length = field.length;
+            if (field.precision) body.precision = field.precision;
+            if (field.scale) body.scale = field.scale;
+            if (field.visibleLines) body.visibleLines = field.visibleLines;
+            if (field.referenceTo) body.referenceTo = field.referenceTo;
+            if (field.relationshipLabel) body.relationshipLabel = field.relationshipLabel;
+            if (field.picklist) {
+              body.valueSet = { valueSetDefinition: { value: field.picklist.map(v => ({ fullName: v, label: v, default: false })) } };
+            }
+            const r = await fetch(`${base}/api/metadata-create/CustomField`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body)
+            });
+            const result = await r.json();
+            deployResults.push({ component: `Field: ${fullName}`, ...result });
+          }
+        }
+
+        // Deploy permissionSets
+        if (manifest.metadata?.permissionSets?.length) {
+          for (const ps of manifest.metadata.permissionSets) {
+            const r = await fetch(`${base}/api/metadata-create/PermissionSet`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(ps)
+            });
+            const result = await r.json();
+            deployResults.push({ component: `PermSet: ${ps.label || ps.name}`, ...result });
+          }
+        }
+
+        // Deploy validationRules
+        if (manifest.metadata?.validationRules?.length) {
+          for (const vr of manifest.metadata.validationRules) {
+            const r = await fetch(`${base}/api/metadata-create/ValidationRule`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(vr)
+            });
+            const result = await r.json();
+            deployResults.push({ component: `Rule: ${vr.fullName}`, ...result });
+          }
+        }
+
+        // Deploy recordTypes
+        if (manifest.metadata?.recordTypes?.length) {
+          for (const rt of manifest.metadata.recordTypes) {
+            const r = await fetch(`${base}/api/metadata-create/RecordType`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(rt)
+            });
+            const result = await r.json();
+            deployResults.push({ component: `RecType: ${rt.fullName}`, ...result });
+          }
+        }
       } catch (err) {
         clearInterval(keepAlive);
         res.end(JSON.stringify({
@@ -137,11 +193,17 @@ router.post('/', authMiddleware, async (req, res) => {
         }));
         return;
       }
+      
+      const deployResult = {
+        success: deployResults.every(r => r.success),
+        total: deployResults.length,
+        results: deployResults,
+      };
 
       clearInterval(keepAlive);
 
       // 4. Formatar resultado
-      const success = deployResult.status === 'ok' || deployResult.success;
+      const success = deployResult.success;
       const resultLines = [];
       resultLines.push(success ? '## ✅ Deploy realizado com sucesso!' : '## ❌ Deploy falhou');
       resultLines.push('');
@@ -171,10 +233,14 @@ router.post('/', authMiddleware, async (req, res) => {
         }
       }
       resultLines.push('');
-      resultLines.push('### Resultado do servidor');
-      resultLines.push('```json');
-      resultLines.push(JSON.stringify(deployResult, null, 2));
-      resultLines.push('```');
+      resultLines.push('### Resultado');
+      resultLines.push('| Componente | Status |');
+      resultLines.push('|---|---|');
+      for (const r of deployResult.results || []) {
+        const icon = r.success ? '✅' : '❌';
+        const err = r.errors?.length ? ` — ${r.errors[0]?.message || ''}` : '';
+        resultLines.push(`| ${r.component} | ${icon}${err} |`);
+      }
 
       res.end(JSON.stringify({
         choices: [{ message: { content: resultLines.join('\n') } }],
