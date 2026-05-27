@@ -1,4 +1,4 @@
-// src/services/grok.js — xAI API (Grok) com Web Search via Tools API
+// src/services/grok.js — xAI API (Grok) com Live Search
 const API_URL = 'https://api.x.ai/v1/chat/completions';
 
 export async function call(systemPrompt, messages, maxTokens = 16384, options = {}) {
@@ -8,9 +8,8 @@ export async function call(systemPrompt, messages, maxTokens = 16384, options = 
     messages: [{ role: 'system', content: systemPrompt }, ...messages],
   };
 
-  // Ativar busca web via Tools API
   if (options.search) {
-    body.tools = [{ type: 'web_search' }];
+    body.tools = [{ type: 'live_search' }];
     body.tool_choice = 'auto';
   }
 
