@@ -12,6 +12,21 @@ import { knowledgeBase } from '../config/knowledge-base.js';
 
 const router = express.Router();
 
+// Detecta se a pergunta precisa da KB do projeto
+function needsKB(text) {
+  const lower = text.toLowerCase();
+  const triggers = [
+    'mcp', 'deploy', 'manifest', 'org', 'endpoint', 'heroku', 'scratch',
+    'spec', 'campo', 'field', 'objeto', 'object', 'layout', 'permission',
+    'picklist', 'validation', 'flow', 'apex', 'soql', 'metadata',
+    'algar', 'everi9', 'ever i9', 'aichat', 'provisioning',
+    'lead', 'account', 'opportunity', 'contact', 'quote', 'order',
+    'record type', 'describe', '/hf', '/spec', '/ata', '/deploy',
+    'github', 'salesforce', 'connected app', 'oauth',
+  ];
+  return triggers.some(t => lower.includes(t));
+}
+
 function detectCommand(messages) {
   const last = (messages[messages.length - 1]?.content || '').toLowerCase();
   if (last.startsWith('/spec') || last.includes('gere a spec')) return 'spec';
@@ -277,7 +292,13 @@ router.post('/', authMiddleware, async (req, res) => {
         break;
       }
       default:
-        response = await grok.call('Voce e um assistente Salesforce especialista no projeto Everi9/MCP Salesforce. Use a base de conhecimento abaixo para responder com precisao.\n\n' + knowledgeBase, messages);
+        const lastMsg = messages[messages.length - 1]?.content || '';
+        const basePrompt = 'Voce e um assistente Salesforce especialista. Responda em portugues do Brasil.';
+        if (needsKB(lastMsg)) {
+          response = await grok.call(basePrompt + '\n\nUse a base de conhecimento do projeto:\n\n' + knowledgeBase, messages);
+        } else {
+          response = await grok.call(basePrompt, messages);
+        }
         modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
     }
 
