@@ -57,7 +57,7 @@ function detectCommand(messages) {
   if (last.startsWith('/ata') || last.includes('ata de reuniao')) return 'ata';
   if (last.startsWith('/deploy')) return 'deploy';
   if (last.startsWith('/describe')) return 'describe';
-  if (last.startsWith('/status')) return 'status';
+  if (last.startsWith('/status') || last.startsWith('/org')) return 'status';
   return 'chat';
 }
 
@@ -177,26 +177,34 @@ router.post('/', authMiddleware, async (req, res) => {
       const deployResults = [];
       
       try {
+        const deployOrg = await getSelectedOrg(req);
+
         // Deploy customFields
         if (manifest.metadata?.customFields?.length) {
           for (const field of manifest.metadata.customFields) {
             const fullName = `${field.objectName}.${field.fieldName}`;
-            const body = { fullName, label: field.label, type: field.type };
-            if (field.length) body.length = field.length;
-            if (field.precision) body.precision = field.precision;
-            if (field.scale) body.scale = field.scale;
-            if (field.visibleLines) body.visibleLines = field.visibleLines;
-            if (field.referenceTo) body.referenceTo = field.referenceTo;
-            if (field.relationshipLabel) body.relationshipLabel = field.relationshipLabel;
-            if (field.picklist) {
-              body.valueSet = { valueSetDefinition: { value: field.picklist.map(v => ({ fullName: v, label: v, default: false })) } };
+            let result;
+            if (deployOrg) {
+              result = await sfMulti.deployField(deployOrg, field);
+            } else {
+              const body = { fullName, label: field.label, type: field.type };
+              if (field.length) body.length = field.length;
+              if (field.precision) body.precision = field.precision;
+              if (field.scale) body.scale = field.scale;
+              if (field.visibleLines) body.visibleLines = field.visibleLines;
+              if (field.referenceTo) body.referenceTo = field.referenceTo;
+              if (field.relationshipLabel) body.relationshipLabel = field.relationshipLabel;
+              if (field.picklist) {
+                body.valueSet = { valueSetDefinition: { value: field.picklist.map(v => ({ fullName: v, label: v, default: false })) } };
+              }
+              const r = await fetch(`${base}/api/metadata-create/CustomField`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+              });
+              result = await r.json();
+              result.component = `Field: ${fullName}`;
             }
-            const r = await fetch(`${base}/api/metadata-create/CustomField`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(body)
-            });
-            const result = await r.json();
-            deployResults.push({ component: `Field: ${fullName}`, ...result });
+            deployResults.push(result);
           }
         }
 
