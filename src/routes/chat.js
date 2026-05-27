@@ -348,11 +348,11 @@ router.post('/', authMiddleware, async (req, res) => {
       }
       default:
         const lastMsg = messages[messages.length - 1]?.content || '';
-        const basePrompt = 'Voce e um assistente Salesforce especialista. Responda em portugues do Brasil.';
+        const basePrompt = 'Voce e um assistente especialista. Responda em portugues do Brasil. Sempre traga informacoes atualizadas quando possivel.';
         if (needsKB(lastMsg)) {
-          response = await grok.call(basePrompt + '\n\nUse a base de conhecimento do projeto:\n\n' + knowledgeBase, messages);
+          response = await grok.call(basePrompt + '\n\nUse a base de conhecimento do projeto:\n\n' + knowledgeBase, messages, 16384, { search: true });
         } else {
-          response = await grok.call(basePrompt, messages);
+          response = await grok.call(basePrompt, messages, 16384, { search: true });
         }
         modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
     }
