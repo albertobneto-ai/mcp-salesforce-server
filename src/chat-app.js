@@ -5,6 +5,7 @@ import express from 'express';
 import authRoutes from './routes/auth.js';
 import chatRoutes from './routes/chat.js';
 import downloadRoutes from './routes/download.js';
+import setupRoutes from './setup.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -12,6 +13,7 @@ export function mountChatApp(app) {
   app.use('/api/auth', authRoutes);
   app.use('/api/chat', chatRoutes);
   app.use('/api/download', downloadRoutes);
+  app.use('/api/setup', setupRoutes);
 
   // React SPA (serve build estatico)
   const clientDist = path.join(__dirname, '..', 'client', 'dist');
@@ -24,5 +26,5 @@ export function mountChatApp(app) {
     });
   });
 
-  console.log('[everi9] Rotas montadas: /api/auth, /api/chat, /api/download');
+  console.log('[everi9] Rotas montadas: /api/auth, /api/chat, /api/download, /api/setup');
 }
