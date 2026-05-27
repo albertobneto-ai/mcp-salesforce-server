@@ -7,6 +7,7 @@ import chatRoutes from './routes/chat.js';
 import downloadRoutes from './routes/download.js';
 import setupRoutes from './setup.js';
 import orgRoutes from './routes/orgs.js';
+import packageRoutes from './routes/package.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -16,6 +17,7 @@ export function mountChatApp(app) {
   app.use('/api/download', downloadRoutes);
   app.use('/api/setup', setupRoutes);
   app.use('/api/orgs', orgRoutes);
+  app.use('/api/package', packageRoutes);
 
   // React SPA (serve build estatico)
   const clientDist = path.join(__dirname, '..', 'client', 'dist');
