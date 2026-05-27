@@ -8,6 +8,9 @@ import specPrompt from '../prompts/spec.js';
 import hfPrompt from '../prompts/hf.js';
 import ataPrompt from '../prompts/ata.js';
 import deployPrompt from '../prompts/deploy.js';
+import prototipoPrompt from '../prompts/prototipo.js';
+import { writeFileSync, mkdirSync, existsSync } from 'fs';
+import { randomBytes } from 'crypto';
 import pool from '../config/db.js';
 import * as sfMulti from '../services/sf-multi.js';
 import { knowledgeBase } from '../config/knowledge-base.js';
@@ -39,7 +42,7 @@ async function getSelectedOrg(req) {
 
 // ── Permissões por perfil ──
 const ROLE_PERMISSIONS = {
-  admin:     ['spec', 'hf', 'ata', 'deploy', 'describe', 'status', 'chat'],
+  admin:     ['spec', 'hf', 'ata', 'deploy', 'describe', 'status', 'chat', 'prototipo'],
   funcional: ['hf', 'ata'],
   architect: ['spec', 'ata'],
   developer: ['deploy', 'describe', 'ata'],
@@ -56,6 +59,7 @@ function detectCommand(messages) {
   if (last.startsWith('/spec') || last.includes('gere a spec')) return 'spec';
   if (last.startsWith('/hf') || last.includes('historia funcional')) return 'hf';
   if (last.startsWith('/ata') || last.includes('ata de reuniao')) return 'ata';
+  if (last.startsWith('/prototipo') || last.startsWith('/proto')) return 'prototipo';
   if (last.startsWith('/deploy')) return 'deploy';
   if (last.startsWith('/describe')) return 'describe';
   if (last.startsWith('/status') || last.startsWith('/org')) return 'status';
@@ -308,6 +312,245 @@ router.post('/', authMiddleware, async (req, res) => {
         tipo: 'deploy',
       }));
       return;
+    }
+
+    // ── PROTOTIPO: gera HTML + resumo HF + resumo Spec ──
+    if (command === 'prototipo') {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Transfer-Encoding', 'chunked');
+      res.write(' ');
+
+      const protoReq = messages[messages.length - 1].content.replace(/\/proto(tipo)?\s*/i, '').trim();
+      const keepAlive = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+
+      let protoText;
+      try {
+        protoText = await grok.call(prototipoPrompt, [{ role: 'user', content: protoReq }], 16384);
+      } catch (err) {
+        clearInterval(keepAlive);
+        res.end(JSON.stringify({
+          choices: [{ message: { content: '\u274c Erro ao gerar prototipo: ' + err.message } }],
+          modelo_usado: 'grok', modelo_label: 'Grok', tipo: 'prototipo',
+        }));
+        return;
+      }
+
+      clearInterval(keepAlive);
+
+      // Parsear blocos
+      const htmlMatch = protoText.match(/---HTML---(\s*[\s\S]*?)---HF---/);
+      const hfMatch = protoText.match(/---HF---(\s*[\s\S]*?)---SPEC---/);
+      const specMatch = protoText.match(/---SPEC---(\s*[\s\S]*?)---MANIFEST---/);
+      const manifestMatch = protoText.match(/---MANIFEST---(\s*[\s\S]*?)---FIM---/);
+
+      const htmlContent = htmlMatch ? htmlMatch[1].trim() : '';
+      const hfResumo = hfMatch ? hfMatch[1].trim() : 'Nao foi possivel gerar resumo HF';
+      const specResumo = specMatch ? specMatch[1].trim() : 'Nao foi possivel gerar resumo Spec';
+
+      let manifest = null;
+      if (manifestMatch) {
+        try { manifest = JSON.parse(manifestMatch[1].trim()); } catch {}
+        if (!manifest) {
+          const jsonStr = manifestMatch[1].match(/\{[\s\S]*\}/);
+          if (jsonStr) try { manifest = JSON.parse(jsonStr[0]); } catch {}
+        }
+      }
+
+      // Salvar HTML como arquivo acessivel
+      let protoUrl = '';
+      if (htmlContent) {
+        const protoDir = '/tmp/prototipos';
+        if (!existsSync(protoDir)) mkdirSync(protoDir, { recursive: true });
+        const protoId = randomBytes(6).toString('hex');
+        writeFileSync(protoDir + '/' + protoId + '.html', htmlContent);
+        const host = req.headers.host || 'everi9.albertobottaro.info';
+        protoUrl = 'https://' + host + '/prototipos/' + protoId + '.html';
+      }
+
+      // Montar resposta
+      const lines = [];
+      lines.push('## \u2705 Prototipo gerado!');
+      lines.push('');
+      if (protoUrl) {
+        lines.push('### \ud83d\udd17 Prototipo interativo');
+        lines.push('[\u27a1 Abrir prototipo](' + protoUrl + ')');
+        lines.push('');
+      }
+      lines.push('### \ud83d\udcdd Resumo da Historia Funcional');
+      lines.push(hfResumo);
+      lines.push('');
+      lines.push('### \ud83d\udee0 Resumo da Especificacao Tecnica');
+      lines.push(specResumo);
+      lines.push('');
+      lines.push('---');
+      lines.push('');
+      lines.push('**O que deseja fazer?**');
+      lines.push('');
+      lines.push('**1** \u2014 Gerar Historia Funcional completa');
+      lines.push('');
+      lines.push('**2** \u2014 Gerar Especificacao Tecnica completa');
+      lines.push('');
+      lines.push('**3** \u2014 Realizar deploy na org');
+      lines.push('');
+      lines.push('Digite o numero para prosseguir.');
+
+      res.end(JSON.stringify({
+        choices: [{ message: { content: lines.join('\n') } }],
+        modelo_usado: 'grok',
+        modelo_label: 'Grok',
+        tipo: 'prototipo',
+        protoUrl,
+        manifest: manifest ? JSON.stringify(manifest) : null,
+      }));
+      return;
+    }
+
+    // ── FOLLOW-UP: detectar 1, 2, 3 apos /prototipo ──
+    if ((command === 'chat') && messages.length >= 2) {
+      const lastUser = (messages[messages.length - 1]?.content || '').trim();
+      const prevAssistant = messages[messages.length - 2]?.content || '';
+      const isProtoFollowup = prevAssistant.includes('Gerar Historia Funcional completa') && prevAssistant.includes('Realizar deploy na org');
+
+      if (isProtoFollowup && ['1', '2', '3'].includes(lastUser)) {
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Transfer-Encoding', 'chunked');
+        res.write(' ');
+        const keepAlive2 = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+
+        // Extrair contexto do prototipo (resumos da mensagem anterior)
+        const contexto = prevAssistant;
+
+        if (lastUser === '1') {
+          // Gerar HF completa
+          const hfFull = await grok.call(hfPrompt, [{ role: 'user', content: 'Com base neste contexto, gere a Historia Funcional completa:\n\n' + contexto }], 16384);
+          clearInterval(keepAlive2);
+          res.end(JSON.stringify({
+            choices: [{ message: { content: hfFull } }],
+            modelo_usado: 'grok', modelo_label: 'Grok', tipo: 'hf',
+          }));
+          return;
+        }
+
+        if (lastUser === '2') {
+          // Gerar Spec completa via Claude
+          const readable = await claude.stream(specPrompt, [{ role: 'user', content: 'Com base neste contexto, gere a Especificacao Tecnica completa:\n\n' + contexto }]);
+          const specFull = await collectStream(readable);
+          clearInterval(keepAlive2);
+          res.end(JSON.stringify({
+            choices: [{ message: { content: specFull } }],
+            modelo_usado: 'claude-sonnet-4-6', modelo_label: 'Claude Sonnet 4.6', tipo: 'spec',
+          }));
+          return;
+        }
+
+        if (lastUser === '3') {
+          // Deploy — extrair manifest e confirmar org
+          let manifest = null;
+          const manifestMatch = contexto.match(/---MANIFEST---(\s*[\s\S]*?)---FIM---/);
+          if (manifestMatch) {
+            try { manifest = JSON.parse(manifestMatch[1].trim()); } catch {}
+          }
+
+          // Verificar org selecionada
+          const selectedOrg = await getSelectedOrg(req);
+          const orgName = selectedOrg ? selectedOrg.name : 'Dev Org (padrao)';
+
+          clearInterval(keepAlive2);
+          res.end(JSON.stringify({
+            choices: [{ message: { content: '## \ud83d\ude80 Deploy\n\n**Org selecionada:** ' + orgName + '\n\nDeseja confirmar o deploy nesta org?\n\n**sim** \u2014 Confirmar e deployar\n\n**nao** \u2014 Cancelar' } }],
+            modelo_usado: 'system', modelo_label: 'Sistema', tipo: 'prototipo',
+            manifest: manifest ? JSON.stringify(manifest) : null,
+          }));
+          return;
+        }
+      }
+
+      // Detectar confirmacao de deploy (sim/nao)
+      const isDeployConfirm = prevAssistant.includes('Deseja confirmar o deploy nesta org');
+      if (isDeployConfirm && (lastUser.toLowerCase() === 'sim' || lastUser.toLowerCase() === 's')) {
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Transfer-Encoding', 'chunked');
+        res.write(' ');
+        const keepAlive3 = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+
+        // Procurar manifest no historico
+        let manifest = null;
+        for (let i = messages.length - 1; i >= 0; i--) {
+          const msg = messages[i].content || '';
+          const mm = msg.match(/---MANIFEST---([\s\S]*?)---FIM---/);
+          if (mm) { try { manifest = JSON.parse(mm[1].trim()); } catch {} }
+          if (manifest) break;
+        }
+
+        if (!manifest) {
+          // Tentar gerar manifest a partir do contexto
+          try {
+            const manifestText = await grok.call(deployPrompt, [{ role: 'user', content: 'Gere o manifest para deploy com base neste contexto:\n\n' + prevAssistant }], 4096);
+            const start = manifestText.indexOf('{');
+            const end = manifestText.lastIndexOf('}');
+            if (start !== -1 && end !== -1) manifest = JSON.parse(manifestText.slice(start, end + 1));
+          } catch {}
+        }
+
+        if (!manifest) {
+          clearInterval(keepAlive3);
+          res.end(JSON.stringify({
+            choices: [{ message: { content: '\u274c Nao foi possivel extrair o manifest para deploy. Use /deploy para deployar manualmente.' } }],
+            modelo_usado: 'system', modelo_label: 'Sistema', tipo: 'error',
+          }));
+          return;
+        }
+
+        // Executar deploy
+        const selectedOrg = await getSelectedOrg(req);
+        const base = 'http://localhost:' + (process.env.PORT || 3000);
+        const deployResults = [];
+
+        if (manifest.metadata?.customFields?.length) {
+          for (const field of manifest.metadata.customFields) {
+            let result;
+            if (selectedOrg) {
+              result = await sfMulti.deployField(selectedOrg, field);
+            } else {
+              const fullName = field.objectName + '.' + field.fieldName;
+              const body = { fullName, label: field.label, type: field.type };
+              if (field.length) body.length = field.length;
+              if (field.precision) body.precision = field.precision;
+              if (field.scale) body.scale = field.scale;
+              if (field.picklist) {
+                body.valueSet = { valueSetDefinition: { value: field.picklist.map(v => ({ fullName: v, label: v, default: false })) } };
+              }
+              const r = await fetch(base + '/api/metadata-create/CustomField', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+              });
+              result = await r.json();
+              result.component = 'Field: ' + fullName;
+            }
+            deployResults.push(result);
+          }
+        }
+
+        clearInterval(keepAlive3);
+
+        const success = deployResults.every(r => r.success);
+        const resultLines = [];
+        resultLines.push(success ? '## \u2705 Deploy realizado com sucesso!' : '## \u274c Deploy com erros');
+        resultLines.push('');
+        resultLines.push('| Componente | Status |');
+        resultLines.push('|---|---|');
+        for (const r of deployResults) {
+          const icon = r.success ? '\u2705' : '\u274c';
+          const err = r.errors?.length ? ' \u2014 ' + (r.errors[0]?.message || '') : '';
+          resultLines.push('| ' + (r.component || 'N/A') + ' | ' + icon + err + ' |');
+        }
+
+        res.end(JSON.stringify({
+          choices: [{ message: { content: resultLines.join('\n') } }],
+          modelo_usado: 'system', modelo_label: 'MCP Server', tipo: 'deploy',
+        }));
+        return;
+      }
     }
 
     switch (command) {
