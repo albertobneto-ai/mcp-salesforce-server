@@ -1,4 +1,4 @@
-// src/routes/chat.js — Router de chat com streaming para /spec
+// src/routes/chat.js — Router de chat com /deploy funcional
 import express from 'express';
 import * as claude from '../services/claude.js';
 import * as grok from '../services/grok.js';
@@ -7,6 +7,7 @@ import { resolve as aliasResolve } from '../config/alias-map.js';
 import specPrompt from '../prompts/spec.js';
 import hfPrompt from '../prompts/hf.js';
 import ataPrompt from '../prompts/ata.js';
+import deployPrompt from '../prompts/deploy.js';
 
 const router = express.Router();
 
@@ -15,44 +16,52 @@ function detectCommand(messages) {
   if (last.startsWith('/spec') || last.includes('gere a spec')) return 'spec';
   if (last.startsWith('/hf') || last.includes('historia funcional')) return 'hf';
   if (last.startsWith('/ata') || last.includes('ata de reuniao')) return 'ata';
+  if (last.startsWith('/deploy')) return 'deploy';
   if (last.startsWith('/describe')) return 'describe';
   if (last.startsWith('/status')) return 'status';
-  if (last.startsWith('/deploy')) return 'deploy';
   return 'chat';
 }
 
-// ── Helper: parsear stream SSE da API e coletar texto completo ──
-async function collectStream(readable, format) {
+// ── Helper: parsear stream SSE e coletar texto completo ──
+async function collectStream(readable) {
   const reader = readable.getReader();
   const decoder = new TextDecoder();
   let full = '';
-
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     const chunk = decoder.decode(value, { stream: true });
     const lines = chunk.split('\n').filter(l => l.startsWith('data: '));
-
     for (const line of lines) {
       const raw = line.replace('data: ', '').trim();
       if (raw === '[DONE]') continue;
       try {
         const p = JSON.parse(raw);
-        // Claude format
-        if (p.type === 'content_block_delta' && p.delta?.text) {
-          full += p.delta.text;
-        }
-        // OpenAI/Grok format
-        if (p.choices?.[0]?.delta?.content) {
-          full += p.choices[0].delta.content;
-        }
-      } catch { /* partial */ }
+        if (p.type === 'content_block_delta' && p.delta?.text) full += p.delta.text;
+        if (p.choices?.[0]?.delta?.content) full += p.choices[0].delta.content;
+      } catch {}
     }
   }
   return full;
 }
 
-// POST /api/chat — com streaming interno pra evitar timeout de 30s do Heroku
+// ── Helper: extrair JSON de uma resposta de texto ──
+function extractJson(text) {
+  // Tentar parsear direto
+  try { return JSON.parse(text.trim()); } catch {}
+  // Procurar JSON dentro de markdown ```json ... ```
+  const m = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (m) { try { return JSON.parse(m[1].trim()); } catch {} }
+  // Procurar primeiro { ate ultimo }
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start !== -1 && end !== -1) {
+    try { return JSON.parse(text.slice(start, end + 1)); } catch {}
+  }
+  return null;
+}
+
+// POST /api/chat
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const { messages } = req.body;
@@ -61,26 +70,117 @@ router.post('/', authMiddleware, async (req, res) => {
     const command = detectCommand(messages);
     let response, modelUsed, modelLabel;
 
-    // Pra comandos que chamam modelos lentos (Claude), usar stream pra manter conexao viva
+    // ── SPEC: Claude Sonnet com streaming interno ──
     if (command === 'spec') {
-      // Iniciar resposta chunked imediatamente (evita timeout 30s do Heroku)
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Transfer-Encoding', 'chunked');
-      res.write(' '); // byte de keep-alive
-
+      res.write(' ');
       const readable = await claude.stream(specPrompt, messages);
-      // Manter conexao viva com pings
       const keepAlive = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
-      response = await collectStream(readable, 'claude');
+      response = await collectStream(readable);
       clearInterval(keepAlive);
-      modelUsed = 'claude-sonnet-4-6';
-      modelLabel = 'Claude Sonnet 4.6';
-
       res.end(JSON.stringify({
         choices: [{ message: { content: response } }],
-        modelo_usado: modelUsed,
-        modelo_label: modelLabel,
-        tipo: command,
+        modelo_usado: 'claude-sonnet-4-6',
+        modelo_label: 'Claude Sonnet 4.6',
+        tipo: 'spec',
+      }));
+      return;
+    }
+
+    // ── DEPLOY: Grok gera manifest → MCP Server deploya ──
+    if (command === 'deploy') {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Transfer-Encoding', 'chunked');
+      res.write(' ');
+
+      const userReq = messages[messages.length - 1].content.replace(/\/deploy\s*/i, '').trim();
+      
+      // 1. Grok gera o manifest
+      const keepAlive = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+      
+      let manifestText;
+      try {
+        manifestText = await grok.call(deployPrompt, [{ role: 'user', content: userReq }], 4096);
+      } catch (err) {
+        clearInterval(keepAlive);
+        res.end(JSON.stringify({
+          choices: [{ message: { content: '❌ Erro ao gerar manifest: ' + err.message } }],
+          modelo_usado: 'grok-4.20', modelo_label: 'Grok 4.20', tipo: 'deploy',
+        }));
+        return;
+      }
+
+      // 2. Extrair JSON do manifest
+      const manifest = extractJson(manifestText);
+      if (!manifest) {
+        clearInterval(keepAlive);
+        res.end(JSON.stringify({
+          choices: [{ message: { content: '❌ Nao consegui gerar um manifest valido.\n\nResposta do modelo:\n```\n' + manifestText + '\n```' } }],
+          modelo_usado: 'grok-4.20', modelo_label: 'Grok 4.20', tipo: 'deploy',
+        }));
+        return;
+      }
+
+      // 3. Deploy via MCP Server
+      let deployResult;
+      try {
+        const b64 = Buffer.from(JSON.stringify(manifest)).toString('base64');
+        const base = `http://localhost:${process.env.PORT || 3000}`;
+        const deployRes = await fetch(`${base}/api/deploy-b64/${b64}`);
+        deployResult = await deployRes.json();
+      } catch (err) {
+        clearInterval(keepAlive);
+        res.end(JSON.stringify({
+          choices: [{ message: { content: '❌ Erro no deploy: ' + err.message + '\n\nManifest gerado:\n```json\n' + JSON.stringify(manifest, null, 2) + '\n```' } }],
+          modelo_usado: 'grok-4.20', modelo_label: 'Grok 4.20', tipo: 'deploy',
+        }));
+        return;
+      }
+
+      clearInterval(keepAlive);
+
+      // 4. Formatar resultado
+      const success = deployResult.status === 'ok' || deployResult.success;
+      const resultLines = [];
+      resultLines.push(success ? '## ✅ Deploy realizado com sucesso!' : '## ❌ Deploy falhou');
+      resultLines.push('');
+      resultLines.push('### Manifest');
+      resultLines.push('**specName:** ' + (manifest.specName || 'N/A'));
+      if (manifest.metadata?.customFields?.length) {
+        resultLines.push('');
+        resultLines.push('### Campos criados');
+        resultLines.push('| Objeto | Campo | Tipo |');
+        resultLines.push('|---|---|---|');
+        for (const f of manifest.metadata.customFields) {
+          resultLines.push(`| ${f.objectName} | ${f.fieldName} | ${f.type} |`);
+        }
+      }
+      if (manifest.metadata?.permissionSets?.length) {
+        resultLines.push('');
+        resultLines.push('### Permission Sets');
+        for (const ps of manifest.metadata.permissionSets) {
+          resultLines.push('- **' + ps.name + '**: ' + (ps.fieldPermissions?.map(fp => fp.field).join(', ') || 'N/A'));
+        }
+      }
+      if (manifest.metadata?.validationRules?.length) {
+        resultLines.push('');
+        resultLines.push('### Validation Rules');
+        for (const vr of manifest.metadata.validationRules) {
+          resultLines.push('- **' + vr.fullName + '**');
+        }
+      }
+      resultLines.push('');
+      resultLines.push('### Resultado do servidor');
+      resultLines.push('```json');
+      resultLines.push(JSON.stringify(deployResult, null, 2));
+      resultLines.push('```');
+
+      res.end(JSON.stringify({
+        choices: [{ message: { content: resultLines.join('\n') } }],
+        modelo_usado: 'grok-4.20',
+        modelo_label: 'Grok 4.20',
+        tipo: 'deploy',
       }));
       return;
     }
