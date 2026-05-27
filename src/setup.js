@@ -1,15 +1,18 @@
 // src/setup.js — Admin + RBAC
 import express from 'express';
 import bcrypt from 'bcrypt';
+import { authMiddleware } from './middleware/auth.js';
 
 const router = express.Router();
 
 // ── Middleware: só admin ──
-async function requireAdmin(req, res, next) {
-  if (!req.user || req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Acesso restrito a administradores' });
-  }
-  next();
+function requireAdmin(req, res, next) {
+  authMiddleware(req, res, () => {
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Acesso restrito a administradores' });
+    }
+    next();
+  });
 }
 
 // GET /api/setup/status
