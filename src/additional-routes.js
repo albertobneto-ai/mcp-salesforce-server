@@ -516,5 +516,20 @@ ${mappingXml}
     }
   });
 
+  // --- Metadata Create (for new components like ReportType) ---
+  app.post("/api/metadata-create/:type", async (req, res) => {
+    try {
+      await connectToTargetOrg(req);
+      const conn = sfClient.getConnection();
+      const result = await conn.metadata.create(req.params.type, req.body);
+      sfClient.clearTargetOrg();
+      const item = Array.isArray(result) ? result[0] : result;
+      res.json({ success: item?.success, fullName: item?.fullName, errors: item?.errors || null });
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.status(500).json({ status: "error", message: err.message });
+    }
+  });
+
   console.log("Routes: execute-anonymous, execute-apex-b64, soql-b64, soql-get, upsert, update-b64, composite, deploy-formula-fields, update-layout, lead-convert-mapping, field-history");
 }
