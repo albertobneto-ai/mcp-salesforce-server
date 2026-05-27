@@ -1427,4 +1427,29 @@ export class SalesforceClient {
     });
     return { success: result.success !== false, id: result.id, errors: result.errors || [] };
   }
+
+  /**
+   * Deploy Settings metadata (LeadConvert, etc) via ZIP deploy
+   * @param {string} settingsName - e.g. "LeadConvert"  
+   * @param {string} settingsXml - the XML content
+   */
+  async deploySettings(settingsName, settingsXml, apiVersion = "62.0") {
+    const conn = this.getConnection();
+    const zip = new JSZip();
+    
+    zip.file("package.xml", `<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>${settingsName}</members>
+        <name>Settings</name>
+    </types>
+    <version>${apiVersion}</version>
+</Package>`);
+    
+    zip.file(`settings/${settingsName}.settings`, settingsXml);
+    
+    const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+    return await this.deployZip(zipBuffer, { singlePackage: true });
+  }
+
 }
