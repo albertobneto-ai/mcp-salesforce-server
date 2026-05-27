@@ -394,13 +394,20 @@ router.post('/', authMiddleware, async (req, res) => {
       lines.push('');
       lines.push('Digite o numero para prosseguir.');
 
+      // Incluir manifest oculto na resposta para o follow-up de deploy
+      if (manifest) {
+        lines.push('');
+        lines.push('---MANIFEST---');
+        lines.push(JSON.stringify(manifest));
+        lines.push('---FIM---');
+      }
+
       res.end(JSON.stringify({
         choices: [{ message: { content: lines.join('\n') } }],
         modelo_usado: 'grok',
         modelo_label: 'Grok',
         tipo: 'prototipo',
         protoUrl,
-        manifest: manifest ? JSON.stringify(manifest) : null,
       }));
       return;
     }
@@ -444,11 +451,18 @@ router.post('/', authMiddleware, async (req, res) => {
         }
 
         if (lastUser === '3') {
-          // Deploy — extrair manifest e confirmar org
+          // Deploy — extrair manifest de TODO o historico
           let manifest = null;
-          const manifestMatch = contexto.match(/---MANIFEST---(\s*[\s\S]*?)---FIM---/);
-          if (manifestMatch) {
-            try { manifest = JSON.parse(manifestMatch[1].trim()); } catch {}
+          for (let i = messages.length - 1; i >= 0; i--) {
+            const msg = messages[i].content || '';
+            const mm = msg.match(/---MANIFEST---(\s*[\s\S]*?)---FIM---/);
+            if (mm) {
+              try { manifest = JSON.parse(mm[1].trim()); } catch {
+                const jm = mm[1].match(/\{[\s\S]*\}/);
+                if (jm) try { manifest = JSON.parse(jm[0]); } catch {}
+              }
+            }
+            if (manifest) break;
           }
 
           // Verificar org selecionada
@@ -473,12 +487,18 @@ router.post('/', authMiddleware, async (req, res) => {
         res.write(' ');
         const keepAlive3 = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
 
-        // Procurar manifest no historico
+        // Procurar manifest em TODO o historico de mensagens
         let manifest = null;
         for (let i = messages.length - 1; i >= 0; i--) {
           const msg = messages[i].content || '';
-          const mm = msg.match(/---MANIFEST---([\s\S]*?)---FIM---/);
-          if (mm) { try { manifest = JSON.parse(mm[1].trim()); } catch {} }
+          const mm = msg.match(/---MANIFEST---(\s*[\s\S]*?)---FIM---/);
+          if (mm) {
+            const raw = mm[1].trim();
+            try { manifest = JSON.parse(raw); } catch {
+              const jm = raw.match(/\{[\s\S]*\}/);
+              if (jm) try { manifest = JSON.parse(jm[0]); } catch {}
+            }
+          }
           if (manifest) break;
         }
 
