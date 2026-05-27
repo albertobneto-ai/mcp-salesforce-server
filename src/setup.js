@@ -59,6 +59,15 @@ router.get('/init-db', async (req, res) => {
     )`);
 
     await pool.query('CREATE INDEX IF NOT EXISTS idx_conv_user ON conversations(user_id)');
+
+    // Tabela de orgs Salesforce
+    await pool.query(\`CREATE TABLE IF NOT EXISTS orgs (
+      id SERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL,
+      login_url VARCHAR(255) NOT NULL, username VARCHAR(255) NOT NULL,
+      password VARCHAR(255) NOT NULL, security_token VARCHAR(100) DEFAULT '',
+      org_type VARCHAR(20) DEFAULT 'sandbox', org_id VARCHAR(50),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )\`);
     await pool.query('CREATE INDEX IF NOT EXISTS idx_conv_updated ON conversations(updated_at DESC)');
 
     const check = await pool.query("SELECT id FROM users WHERE email = 'admin@everi9.com'");
