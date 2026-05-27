@@ -11,7 +11,7 @@ import packageRoutes from './routes/package.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export function mountChatApp(app) {
+export async function mountChatApp(app) {
   app.use('/api/auth', authRoutes);
   app.use('/api/chat', chatRoutes);
   app.use('/api/download', downloadRoutes);
@@ -19,12 +19,17 @@ export function mountChatApp(app) {
   app.use('/api/orgs', orgRoutes);
   app.use('/api/package', packageRoutes);
 
+  // Servir prototipos como HTML estatico
+  const protoDir = '/tmp/prototipos';
+  try { const fs = await import('fs'); fs.default.mkdirSync(protoDir, { recursive: true }); } catch {}
+  app.use('/prototipos', express.static(protoDir));
+
   // React SPA (serve build estatico)
   const clientDist = path.join(__dirname, '..', 'client', 'dist');
   app.use(express.static(clientDist));
 
-  // SPA fallback
-  app.get(/^\/(?!api\/).*/, (req, res) => {
+  // SPA fallback (exclui /api/ e /prototipos/)
+  app.get(/^\/(?!api\/|prototipos\/).*/, (req, res) => {
     res.sendFile(path.join(clientDist, 'index.html'), err => {
       if (err) res.status(404).json({ error: 'Frontend nao buildado' });
     });
