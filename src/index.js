@@ -65,7 +65,7 @@ async function connectToTargetOrg(req) {
 // =============================================
 
 // --- Health check ---
-app.get("/", (req, res) => {
+app.get("/api/health", (req, res) => {
   res.json({
     status: "running",
     server: "mcp-salesforce-provisioning",
