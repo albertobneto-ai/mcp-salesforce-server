@@ -1,4 +1,4 @@
-// src/middleware/auth.js — JWT
+// src/middleware/auth.js — JWT com role
 import jwt from 'jsonwebtoken';
 
 const SECRET = process.env.JWT_SECRET || 'everi9-dev-secret';
@@ -18,7 +18,7 @@ export function authMiddleware(req, res, next) {
 
 export function generateToken(user) {
   return jwt.sign(
-    { id: user.id, email: user.email, name: user.name },
+    { id: user.id, email: user.email, name: user.name, role: user.role || 'funcional' },
     SECRET,
     { expiresIn: '8h' }
   );
