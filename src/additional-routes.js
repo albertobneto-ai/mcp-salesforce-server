@@ -408,5 +408,131 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
     }
   });
 
-  console.log("Routes: execute-anonymous, execute-apex-b64, soql-b64, soql-get, upsert, update-b64, composite, deploy-formula-fields, update-layout");
+  // --- Deploy Lead Convert Field Mappings ---
+  app.post("/api/lead-convert-mapping", async (req, res) => {
+    try {
+      await connectToTargetOrg(req);
+      const conn = sfClient.getConnection();
+      const { mappings } = req.body;
+      // mappings: [{ inputField: "Sector__c", outputField: "Sector__c" }, ...]
+      
+      if (!mappings || !Array.isArray(mappings)) {
+        return res.status(400).json({ error: "mappings array required" });
+      }
+
+      // Build ZIP with LeadConvertSettings
+      const JSZip = (await import("jszip")).default;
+      const zip = new JSZip();
+      
+      const mappingXml = mappings.map(m => 
+        `        <mappingFields>\n            <inputField>${m.inputField}</inputField>\n            <outputField>${m.outputField}</outputField>\n        </mappingFields>`
+      ).join("\n");
+
+      zip.file("package.xml", `<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>LeadConvert</members>
+        <name>Settings</name>
+    </types>
+    <version>${conn.version || "62.0"}</version>
+</Package>`);
+
+      zip.file("settings/LeadConvert.settings", `<?xml version="1.0" encoding="UTF-8"?>
+<LeadConvertSettings xmlns="http://soap.sforce.com/2006/04/metadata">
+    <objectMapping>
+        <inputObject>Lead</inputObject>
+        <outputObject>Opportunity</outputObject>
+${mappingXml}
+    </objectMapping>
+</LeadConvertSettings>`);
+
+      const zipBuf = await zip.generateAsync({ type: "nodebuffer" });
+      
+      // Deploy with singlePackage
+      const deployResult = await new Promise((resolve, reject) => {
+        conn.metadata.deploy(zipBuf, { singlePackage: true, rollbackOnError: true })
+          .complete(true, (err, result) => {
+            if (err) reject(err);
+            else resolve(result);
+          });
+      });
+      
+      sfClient.clearTargetOrg();
+      res.json({
+        success: deployResult.success,
+        status: deployResult.status,
+        componentsDeployed: deployResult.numberComponentsDeployed,
+        errors: deployResult.details?.componentFailures || [],
+        mappings: mappings,
+      });
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.status(500).json({ status: "error", message: err.message });
+    }
+  });
+
+  // --- Enable Field History Tracking ---
+  app.post("/api/field-history", async (req, res) => {
+    try {
+      await connectToTargetOrg(req);
+      const conn = sfClient.getConnection();
+      const { object, fields } = req.body;
+      // object: "Opportunity", fields: ["Sector__c", "Board__c"]
+
+      if (!object || !fields || !Array.isArray(fields)) {
+        return res.status(400).json({ error: "object and fields array required" });
+      }
+
+      // Enable history tracking on the object first
+      try {
+        await conn.metadata.update("CustomObject", {
+          fullName: object,
+          enableHistory: true,
+        });
+      } catch(e) { /* might already be enabled */ }
+
+      // Update each field to enable trackHistory
+      const results = [];
+      for (const field of fields) {
+        try {
+          // Read current field metadata
+          const fullName = `${object}.${field}`;
+          const existing = await conn.metadata.read("CustomField", fullName);
+          
+          if (existing && existing.fullName) {
+            // Update with trackHistory enabled
+            const updateResult = await conn.metadata.update("CustomField", {
+              fullName: fullName,
+              label: existing.label,
+              type: existing.type,
+              trackHistory: true,
+              ...(existing.length && { length: existing.length }),
+              ...(existing.precision && { precision: existing.precision }),
+              ...(existing.scale != null && { scale: existing.scale }),
+              ...(existing.valueSet && { valueSet: existing.valueSet }),
+            });
+            const success = Array.isArray(updateResult) ? updateResult[0].success : updateResult.success;
+            results.push({ field, success, error: success ? null : (updateResult.errors || "unknown") });
+          } else {
+            results.push({ field, success: false, error: "Field not found" });
+          }
+        } catch (err) {
+          results.push({ field, success: false, error: err.message });
+        }
+      }
+
+      sfClient.clearTargetOrg();
+      res.json({
+        object,
+        results,
+        totalSuccess: results.filter(r => r.success).length,
+        totalFailed: results.filter(r => !r.success).length,
+      });
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.status(500).json({ status: "error", message: err.message });
+    }
+  });
+
+  console.log("Routes: execute-anonymous, execute-apex-b64, soql-b64, soql-get, upsert, update-b64, composite, deploy-formula-fields, update-layout, lead-convert-mapping, field-history");
 }
