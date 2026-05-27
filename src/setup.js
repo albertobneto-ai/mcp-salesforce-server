@@ -253,7 +253,7 @@ router.post('/users/:id/generate-link', requireAdmin, async (req, res) => {
     const tempHash = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
     await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [tempHash, req.params.id]);
     await pool.end();
-    const domain = process.env.DOMAIN || 'www.everi9.com';
+    const domain = req.headers.host || process.env.DOMAIN || 'www.everi9.com';
     const link = `https://${domain}/primeiro-acesso?token=${token}`;
     res.json({ status: 'link_generated', user: user.rows[0], link, expires_at: expires.toISOString() });
   } catch (err) { res.status(500).json({ error: err.message }); }
