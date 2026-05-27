@@ -449,21 +449,24 @@ ${mappingXml}
 
       const zipBuf = await zip.generateAsync({ type: "nodebuffer" });
       
-      // Deploy with singlePackage
-      const deployResult = await new Promise((resolve, reject) => {
-        conn.metadata.deploy(zipBuf, { singlePackage: true, rollbackOnError: true })
-          .complete(true, (err, result) => {
-            if (err) reject(err);
-            else resolve(result);
-          });
-      });
+      // Deploy with singlePackage (async + poll)
+      const deployRes = await conn.metadata.deploy(zipBuf, { singlePackage: true, rollbackOnError: true });
+      const deployId = deployRes.id;
+      
+      // Poll for completion (max 60s)
+      let result = null;
+      for (let i = 0; i < 30; i++) {
+        await new Promise(r => setTimeout(r, 2000));
+        result = await conn.metadata.checkDeployStatus(deployId, true);
+        if (result.done) break;
+      }
       
       sfClient.clearTargetOrg();
       res.json({
-        success: deployResult.success,
-        status: deployResult.status,
-        componentsDeployed: deployResult.numberComponentsDeployed,
-        errors: deployResult.details?.componentFailures || [],
+        success: result?.success || false,
+        status: result?.status || "unknown",
+        componentsDeployed: result?.numberComponentsDeployed || 0,
+        errors: result?.details?.componentFailures || [],
         mappings: mappings,
       });
     } catch (err) {
