@@ -7,6 +7,7 @@ import { GitHubClient } from "./github-client.js";
 import { ManifestManager } from "./manifest-manager.js";
 import { registerAdditionalRoutes } from "./additional-routes.js";
 import { registerGitHubMultiRepoRoutes } from "./github-multi-repo.js";
+import { mountChatApp } from "./chat-app.js";
 
 const app = express();
 app.use(express.json({ limit: "10mb" }));
@@ -2105,6 +2106,9 @@ app.get("/api/assign-record-types/:objectName", async (req, res) => {
 
 // --- Additional Routes ---
 registerAdditionalRoutes(app, sfClient, connectToTargetOrg);
+
+// --- Everi9 Chat App ---
+mountChatApp(app);
 
 // --- Start ---
 const PORT = process.env.PORT || 3000;
