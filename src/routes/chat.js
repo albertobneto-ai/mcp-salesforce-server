@@ -113,7 +113,7 @@ router.post('/', authMiddleware, async (req, res) => {
     // Verificar permissão
     if (userRole !== 'admin' && !checkPermission(userRole, command)) {
       return res.json({
-        choices: [{ message: { content: '🔒 **Acesso negado**\n\nVocê não tem permissão de acesso à consultas externas e a AI.\n\nSeu perfil **' + userRole + '** permite apenas: ' + (ROLE_PERMISSIONS[userRole] || []).map(c => '/' + c).join(', ') + '.\n\nEntre em contato com o administrador para solicitar acesso.' } }],
+        choices: [{ message: { content: '🔒 **Comando não disponível**\n\nSeu perfil **' + userRole + '** não tem acesso a este comando.\n\n' + (userRole === 'candidato' ? 'Você pode usar o chat normalmente para fazer perguntas.' : 'Comandos disponíveis: ' + (ROLE_PERMISSIONS[userRole] || []).map(c => '/' + c).join(', ')) + '\n\nPrecisa de mais acesso? Fale com o administrador.' } }],
         modelo_usado: 'system',
         modelo_label: 'Sistema',
         tipo: 'error',
