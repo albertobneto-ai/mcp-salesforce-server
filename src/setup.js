@@ -97,7 +97,7 @@ router.post('/users', requireAdmin, async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
     if (!name || !email || !password) return res.status(400).json({ error: 'name, email, password obrigatorios' });
-    const validRoles = ['admin', 'funcional', 'developer', 'architect'];
+    const validRoles = ['admin', 'funcional', 'developer', 'architect', 'candidato'];
     const userRole = validRoles.includes(role) ? role : 'funcional';
     const pg = await import('pg');
     const pool = new pg.default.Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
@@ -141,7 +141,7 @@ router.post('/users/:id/reset-password', requireAdmin, async (req, res) => {
 router.patch('/users/:id/role', requireAdmin, async (req, res) => {
   try {
     const { role } = req.body;
-    const validRoles = ['admin', 'funcional', 'developer', 'architect'];
+    const validRoles = ['admin', 'funcional', 'developer', 'architect', 'candidato'];
     if (!validRoles.includes(role)) return res.status(400).json({ error: 'Role invalido. Use: ' + validRoles.join(', ') });
     const pg = await import('pg');
     const pool = new pg.default.Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
@@ -193,6 +193,7 @@ router.get('/roles', (req, res) => {
       funcional:  { label: 'Funcional',     commands: ['/ata', '/hf'], description: 'Ata de reuniao + Historia funcional' },
       architect:  { label: 'Arquiteto',     commands: ['/ata', '/spec'], description: 'Ata de reuniao + Spec tecnica' },
       developer:  { label: 'Desenvolvedor', commands: ['/ata', '/deploy', '/describe'], description: 'Ata + Deploy + Describe' },
+      candidato: { label: 'Candidato',     commands: ['chat'], description: 'Apenas consultas gerais a IA' },
     }
   });
 });
