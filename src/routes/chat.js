@@ -1,4 +1,4 @@
-// src/routes/chat.js — Router de chat (substitui proxy.php)
+// src/routes/chat.js — Router de chat com streaming para /spec
 import express from 'express';
 import * as claude from '../services/claude.js';
 import * as grok from '../services/grok.js';
@@ -12,7 +12,6 @@ const router = express.Router();
 
 function detectCommand(messages) {
   const last = (messages[messages.length - 1]?.content || '').toLowerCase();
-  // SPEC antes de HF (bug historico)
   if (last.startsWith('/spec') || last.includes('gere a spec')) return 'spec';
   if (last.startsWith('/hf') || last.includes('historia funcional')) return 'hf';
   if (last.startsWith('/ata') || last.includes('ata de reuniao')) return 'ata';
@@ -22,7 +21,38 @@ function detectCommand(messages) {
   return 'chat';
 }
 
-// POST /api/chat — resposta completa
+// ── Helper: parsear stream SSE da API e coletar texto completo ──
+async function collectStream(readable, format) {
+  const reader = readable.getReader();
+  const decoder = new TextDecoder();
+  let full = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value, { stream: true });
+    const lines = chunk.split('\n').filter(l => l.startsWith('data: '));
+
+    for (const line of lines) {
+      const raw = line.replace('data: ', '').trim();
+      if (raw === '[DONE]') continue;
+      try {
+        const p = JSON.parse(raw);
+        // Claude format
+        if (p.type === 'content_block_delta' && p.delta?.text) {
+          full += p.delta.text;
+        }
+        // OpenAI/Grok format
+        if (p.choices?.[0]?.delta?.content) {
+          full += p.choices[0].delta.content;
+        }
+      } catch { /* partial */ }
+    }
+  }
+  return full;
+}
+
+// POST /api/chat — com streaming interno pra evitar timeout de 30s do Heroku
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const { messages } = req.body;
@@ -31,11 +61,31 @@ router.post('/', authMiddleware, async (req, res) => {
     const command = detectCommand(messages);
     let response, modelUsed, modelLabel;
 
+    // Pra comandos que chamam modelos lentos (Claude), usar stream pra manter conexao viva
+    if (command === 'spec') {
+      // Iniciar resposta chunked imediatamente (evita timeout 30s do Heroku)
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Transfer-Encoding', 'chunked');
+      res.write(' '); // byte de keep-alive
+
+      const readable = await claude.stream(specPrompt, messages);
+      // Manter conexao viva com pings
+      const keepAlive = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+      response = await collectStream(readable, 'claude');
+      clearInterval(keepAlive);
+      modelUsed = 'claude-sonnet-4-6';
+      modelLabel = 'Claude Sonnet 4.6';
+
+      res.end(JSON.stringify({
+        choices: [{ message: { content: response } }],
+        modelo_usado: modelUsed,
+        modelo_label: modelLabel,
+        tipo: command,
+      }));
+      return;
+    }
+
     switch (command) {
-      case 'spec':
-        response = await claude.call(specPrompt, messages);
-        modelUsed = 'claude-sonnet-4-6'; modelLabel = 'Claude Sonnet 4.6';
-        break;
       case 'hf':
         response = await grok.call(hfPrompt, messages);
         modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
@@ -72,11 +122,11 @@ router.post('/', authMiddleware, async (req, res) => {
     });
   } catch (err) {
     console.error('Chat error:', err.message);
-    res.status(503).json({ erro: `Erro: ${err.message}` });
+    try { res.status(503).json({ erro: `Erro: ${err.message}` }); } catch {}
   }
 });
 
-// GET /api/chat/stream — SSE streaming
+// GET /api/chat/stream — SSE streaming puro
 router.get('/stream', authMiddleware, async (req, res) => {
   try {
     const messages = JSON.parse(req.query.messages || '[]');
@@ -106,7 +156,7 @@ router.get('/stream', authMiddleware, async (req, res) => {
           const p = JSON.parse(raw);
           const text = p.delta?.text || p.choices?.[0]?.delta?.content || '';
           if (text) res.write(`data: ${JSON.stringify({ text })}\n\n`);
-        } catch { /* partial chunk */ }
+        } catch {}
       }
     }
     res.write('data: [DONE]\n\n');
