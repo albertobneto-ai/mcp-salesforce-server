@@ -185,19 +185,6 @@ router.get('/conversations', requireAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /api/setup/emergency-reset/:key — Reset admin (temporario)
-router.get('/emergency-reset/:key', async (req, res) => {
-  if (req.params.key !== 'ev9-reset-2026') return res.status(403).json({ error: 'invalid key' });
-  try {
-    const pg = await import('pg');
-    const pool = new pg.default.Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
-    const hash = await bcrypt.hash('Ever2026', 10);
-    await pool.query("UPDATE users SET password_hash = $1 WHERE email = 'admin@everi9.com'", [hash]);
-    await pool.end();
-    res.json({ status: 'reset', password: 'Ever2026' });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 // GET /api/setup/roles — Lista perfis disponiveis
 router.get('/roles', (req, res) => {
   res.json({
