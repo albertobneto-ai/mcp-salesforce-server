@@ -43,6 +43,7 @@ const ROLE_PERMISSIONS = {
   funcional: ['hf', 'ata'],
   architect: ['spec', 'ata'],
   developer: ['deploy', 'describe', 'ata'],
+  candidato: ['chat'],
 };
 
 function checkPermission(role, command) {
