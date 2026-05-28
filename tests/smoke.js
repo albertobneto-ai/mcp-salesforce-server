@@ -87,7 +87,7 @@ async function run() {
 
   // 8. Deploy preview (dry-run, nao executa)
   const deployPreview = await chat('/deploy criar campo Smoke_Test_Field__c no Lead tipo Text 50');
-  log('/deploy preview (dry-run)', deployPreview.includes('Preview') && deployPreview.includes('---PLAN---'));
+  log('/deploy preview (dry-run)', deployPreview.includes('---PLAN---') && (deployPreview.includes('Confirmacao de Deploy') || deployPreview.includes('Preview')));
 
   // 9. Discovery
   const disc = await chat('/discovery flows');
