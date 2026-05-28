@@ -572,7 +572,9 @@ router.post('/', authMiddleware, async (req, res) => {
             '',
             'Gere um JSON com array de steps. Cada step tem:',
             '- type: "metadata-update" | "metadata-create" | "execute-apex" | "setup-instruction"',
-            '- Para metadata-update: metadataType, body (JSON COMPLETO do metadata atualizado, nao parcial)',
+            '- Para metadata-update: metadataType, body (JSON COMPLETO do metadata atualizado)',
+            '- Para add-to-layout: object (ex: Lead), field (ex: MCP_Server__c), section (ex: Lead Information), layout (ex: Lead Layout)',
+            '- Para add-permission: field (ex: Lead.MCP_Server__c) ou fields (array), permissionSetName, permissionSetLabel',
             '- Para execute-apex: code (codigo Apex anonimo)',
             '- Para setup-instruction: step (caminho COMPLETO no Setup), setupUrl (URL direta do Setup Lightning, ex: /lightning/setup/Forecasting/home, /lightning/setup/ObjectManager/Lead/FieldsAndRelationships/view, /lightning/setup/PermSets/home)',
             '- setupUrl OBRIGATORIO em setup-instruction. Use o path Lightning Setup correto. Exemplos:',
@@ -626,7 +628,9 @@ router.post('/', authMiddleware, async (req, res) => {
             '- Se NAO precisa de codigo (metadata resolve tudo), code pode ser null',
             '',
             'HIERARQUIA (siga nesta ordem):',
-            '1. metadata-create/update → campos, permission sets, validation rules, settings',
+            '1. metadata-create → campos, validation rules, record types',
+            '   add-to-layout → adicionar campo ao layout (object, field, section)',
+            '   add-permission → dar permissão no campo (field no formato Objeto.Campo__c)',
             '2. code (Apex + LWC) → logica customizada, telas, calculos, integracao',
             '3. setup-instruction → APENAS se e impossivel via codigo (ex: ativar feature flag na UI)',
             '   Quando usar setup-instruction, SEMPRE inclua setupUrl com o path Lightning Setup',
@@ -689,6 +693,48 @@ router.post('/', authMiddleware, async (req, res) => {
                 });
                 const result = await r.json();
                 deployResults.push({ component: (step.description || 'Apex'), success: result.success !== false, errors: result.errors || [] });
+
+              } else if (step.type === 'add-to-layout') {
+                // Usar endpoint existente do MCP Server
+                const r = await fetch(base + '/api/move-field-in-layout', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    objectName: step.object,
+                    fieldName: step.field,
+                    targetSection: step.section || 'Lead Information',
+                    layoutName: step.layout || (step.object + ' Layout'),
+                  }),
+                });
+                const result = await r.json();
+                deployResults.push({ component: (step.description || 'Layout: ' + step.field + ' → ' + (step.section || 'default')), success: result.success !== false, errors: result.errors || (result.error ? [{ message: result.error }] : []) });
+
+              } else if (step.type === 'add-permission') {
+                // Criar ou atualizar Permission Set com o campo
+                const psName = step.permissionSetName || 'Everi9_FieldAccess';
+                const psLabel = step.permissionSetLabel || 'Everi9 Field Access';
+                const body = {
+                  fullName: psName,
+                  label: psLabel,
+                  fieldPermissions: (step.fields || [step.field]).map(f => ({
+                    field: f,
+                    editable: true,
+                    readable: true,
+                  })),
+                };
+                // Tentar criar, se já existe tentar update
+                let r = await fetch(base + '/api/metadata-create/PermissionSet', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(body),
+                });
+                let result = await r.json();
+                if (!result.success) {
+                  r = await fetch(base + '/api/metadata-update/PermissionSet', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                  });
+                  result = await r.json();
+                }
+                deployResults.push({ component: (step.description || 'Permission: ' + psName), success: result.success !== false, errors: result.errors || [] });
 
               } else if (step.type === 'setup-instruction') {
                 deployResults.push({ component: step.step || step.description, success: true, manual: true, setupUrl: step.setupUrl || '', errors: [] });
