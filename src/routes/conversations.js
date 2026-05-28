@@ -6,7 +6,7 @@ import { authMiddleware } from '../middleware/auth.js';
 const router = express.Router();
 
 function getPool() {
-  return new pg.default.Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+  return new pg.Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
 }
 
 // GET /api/conversations — lista conversas do usuário
