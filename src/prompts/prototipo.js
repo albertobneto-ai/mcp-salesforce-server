@@ -39,7 +39,7 @@ const prototipoInstructions = [
   "- execute-apex: executa Apex anonimo para configuracoes que so podem ser feitas via codigo",
   "- field-history: ativa Field History Tracking em campos",
   "- setup-instruction: APENAS para passos que NAO podem ser automatizados via API",
-  "- Picklist SEMPRE como array de strings simples: ["V1", "V2"]",
+  '- Picklist SEMPRE como array de strings simples: ["V1", "V2"]',
   "- customFields podem estar vazios se nao houver campos novos",
   "- NUNCA deixe configSteps vazio - sempre indique o que precisa ser feito",
   "",
