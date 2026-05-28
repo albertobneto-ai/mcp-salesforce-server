@@ -1378,6 +1378,9 @@ clearInterval(keepAlive);
         };
 
         const argLower = listArg.toLowerCase().replace(/\s/g, '');
+        let listContent = '';
+        let fileName = '';
+        let displayText = '';
 
         // /list all — listar TODOS os objetos da org
         if (argLower === 'all' || argLower === 'todos' || argLower === 'objetos' || argLower === 'objects') {
