@@ -1054,7 +1054,7 @@ clearInterval(keepAlive);
 
         // Listar Validation Rules
         try {
-          const vSoql = Buffer.from("SELECT ValidationName, Active, Description, ErrorMessage FROM ValidationRule WHERE Active = true ORDER BY ValidationName").toString('base64');
+          const vSoql = Buffer.from("SELECT ValidationName, Active, Description, ErrorMessage FROM ValidationRule ORDER BY ValidationName").toString('base64');
           const vr = await fetch(baseArch + '/api/soql-b64/' + vSoql);
           const vd = await vr.json();
           orgScan.validationRules = (vd.records || []).map(v => ({ name: v.ValidationName, description: v.Description, errorMessage: v.ErrorMessage }));
@@ -1062,7 +1062,7 @@ clearInterval(keepAlive);
 
         // Listar Permission Sets custom
         try {
-          const pSoql = Buffer.from("SELECT Name, Label, Description FROM PermissionSet WHERE IsCustom = true AND NamespacePrefix = null ORDER BY Label").toString('base64');
+          const pSoql = Buffer.from("SELECT Name, Label, Description FROM PermissionSet WHERE IsOwnedByProfile = false AND NamespacePrefix = null ORDER BY Label").toString('base64');
           const pr = await fetch(baseArch + '/api/soql-b64/' + pSoql);
           const pd = await pr.json();
           orgScan.permissionSets = (pd.records || []).map(p => ({ name: p.Name, label: p.Label, description: p.Description }));
@@ -1383,14 +1383,14 @@ clearInterval(keepAlive);
         if (argLower === 'all' || argLower === 'todos' || argLower === 'objetos' || argLower === 'objects') {
           try {
             const base2 = 'http://localhost:' + (process.env.PORT || 3000);
-            const soql = "SELECT QualifiedApiName, Label, KeyPrefix, IsCustom, IsCustomSetting FROM EntityDefinition WHERE IsLayoutable = true ORDER BY QualifiedApiName";
+            const soql = "SELECT QualifiedApiName, Label, KeyPrefix FROM EntityDefinition WHERE IsLayoutable = true ORDER BY QualifiedApiName";
             const encSoql = Buffer.from(soql).toString('base64');
             const sr = await fetch(base2 + '/api/soql-b64/' + encSoql);
             const soqlResult = await sr.json();
             const items = soqlResult.records || [];
 
-            const standard = items.filter(i => !i.IsCustom);
-            const custom = items.filter(i => i.IsCustom);
+            const custom = items.filter(i => (i.QualifiedApiName || '').endsWith('__c'));
+            const standard = items.filter(i => !(i.QualifiedApiName || '').endsWith('__c'));
 
             fileName = 'All_Objects.txt';
             const lines = [];
@@ -1488,11 +1488,11 @@ clearInterval(keepAlive);
               'ApexClass': "SELECT Id, Name, Status, LengthWithoutComments, CreatedDate, LastModifiedDate FROM ApexClass WHERE NamespacePrefix = null ORDER BY Name",
               'ApexTrigger': "SELECT Id, Name, TableEnumOrId, Status, CreatedDate FROM ApexTrigger WHERE NamespacePrefix = null ORDER BY Name",
               'Flow': "SELECT Id, ApiName, Label, ProcessType, TriggerType, IsActive, Description FROM FlowDefinitionView ORDER BY Label",
-              'PermissionSet': "SELECT Id, Name, Label, IsCustom, Description FROM PermissionSet WHERE IsCustom = true ORDER BY Label",
+              'PermissionSet': "SELECT Id, Name, Label, Description FROM PermissionSet WHERE IsOwnedByProfile = false AND NamespacePrefix = null ORDER BY Label",
               'Profile': "SELECT Id, Name FROM Profile ORDER BY Name",
               'ValidationRule': "SELECT Id, ValidationName, EntityDefinition.QualifiedApiName, Active, Description FROM ValidationRule ORDER BY ValidationName",
               'RecordType': "SELECT Id, Name, DeveloperName, SobjectType, IsActive FROM RecordType ORDER BY SobjectType, Name",
-              'CustomObject': "SELECT Id, DeveloperName, Description FROM CustomObject WHERE DeveloperName != null ORDER BY DeveloperName",
+              'CustomObject': "SELECT QualifiedApiName, Label, KeyPrefix FROM EntityDefinition WHERE QualifiedApiName LIKE '%__c' AND IsLayoutable = true ORDER BY QualifiedApiName",
               'Report': "SELECT Id, Name, DeveloperName, FolderName FROM Report ORDER BY FolderName, Name LIMIT 200",
               'Dashboard': "SELECT Id, Title, DeveloperName, FolderName FROM Dashboard ORDER BY FolderName, Title LIMIT 200",
               'EmailTemplate': "SELECT Id, Name, DeveloperName, FolderName, Subject FROM EmailTemplate ORDER BY FolderName, Name LIMIT 200",
