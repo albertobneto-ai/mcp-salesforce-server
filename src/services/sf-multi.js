@@ -105,3 +105,59 @@ export async function deleteField(org, fullName) {
   const conn = await connectToOrg(org);
   return await conn.metadata.delete('CustomField', fullName);
 }
+
+// Atualizar metadado em qualquer org
+export async function metadataUpdate(org, type, metadata) {
+  const conn = await connectToOrg(org);
+  return await conn.metadata.update(type, metadata);
+}
+
+// Deletar metadado generico em qualquer org
+export async function metadataDelete(org, type, fullName) {
+  const conn = await connectToOrg(org);
+  return await conn.metadata.delete(type, fullName);
+}
+
+// Executar Apex anonimo em qualquer org
+export async function executeApex(org, code) {
+  const conn = await connectToOrg(org);
+  const result = await conn.tooling.executeAnonymous(code);
+  return result;
+}
+
+// Adicionar/mover campo em layout em qualquer org
+export async function moveFieldInLayout(org, layoutName, fieldName, toSectionLabel) {
+  const conn = await connectToOrg(org);
+  const layout = await conn.metadata.read('Layout', layoutName);
+  if (!layout || !layout.fullName) return { status: 'error', message: 'Layout not found' };
+  const sections = Array.isArray(layout.layoutSections) ? layout.layoutSections : [layout.layoutSections];
+  let fieldItem = null, fromSection = null;
+  for (const section of sections) {
+    const columns = Array.isArray(section.layoutColumns) ? section.layoutColumns : section.layoutColumns ? [section.layoutColumns] : [];
+    for (const col of columns) {
+      const items = Array.isArray(col.layoutItems) ? col.layoutItems : col.layoutItems ? [col.layoutItems] : [];
+      const idx = items.findIndex(item => item.field === fieldName);
+      if (idx >= 0) { fieldItem = items[idx]; fromSection = section.label; items.splice(idx, 1); col.layoutItems = items; break; }
+    }
+    if (fieldItem) break;
+  }
+  if (!fieldItem) {
+    const addTarget = sections.find(s => s.label === toSectionLabel) || sections[0];
+    const addCols = Array.isArray(addTarget.layoutColumns) ? addTarget.layoutColumns : [addTarget.layoutColumns];
+    const addCol = addCols[0];
+    const newItem = { behavior: 'Edit', field: fieldName };
+    if (!addCol.layoutItems) addCol.layoutItems = [newItem];
+    else if (Array.isArray(addCol.layoutItems)) addCol.layoutItems.push(newItem);
+    else addCol.layoutItems = [addCol.layoutItems, newItem];
+    await conn.metadata.update('Layout', layout);
+    return { status: 'added', field: fieldName, section: toSectionLabel, success: true };
+  }
+  const targetSection = sections.find(s => s.label === toSectionLabel) || sections[0];
+  const tgtColumns = Array.isArray(targetSection.layoutColumns) ? targetSection.layoutColumns : [targetSection.layoutColumns];
+  const tgtItems = Array.isArray(tgtColumns[0].layoutItems) ? tgtColumns[0].layoutItems : tgtColumns[0].layoutItems ? [tgtColumns[0].layoutItems] : [];
+  tgtItems.push(fieldItem);
+  tgtColumns[0].layoutItems = tgtItems;
+  const result = await conn.metadata.update('Layout', layout);
+  const item = Array.isArray(result) ? result[0] : result;
+  return { status: item?.success ? 'moved' : 'failed', field: fieldName, from: fromSection, to: toSectionLabel, success: item?.success };
+}
