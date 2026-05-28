@@ -1015,7 +1015,9 @@ clearInterval(keepAlive);
           try {
             // Tentar como Flow
             const discArgSafe = discArg.replace(/'/g, "\\'");
-            let encSoql = Buffer.from("SELECT Id, ApiName, Label, ProcessType, TriggerType, Description, IsActive FROM FlowDefinitionView WHERE Label LIKE '%" + discArgSafe + "%' OR ApiName LIKE '%" + discArgSafe.replace(/ /g, '') + "%'").toString('base64');
+            const discArgNoSpaces = discArgSafe.replace(/ /g, '');
+            // Buscar por Label (com espaços) E ApiName (sem espaços) E ApiName (como digitado)
+            let encSoql = Buffer.from("SELECT Id, ApiName, Label, ProcessType, TriggerType, Description, IsActive FROM FlowDefinitionView WHERE Label LIKE '%" + discArgSafe + "%' OR ApiName = '" + discArgNoSpaces + "' OR ApiName = '" + discArgSafe + "'").toString('base64');
             let sr = await fetch(baseDisc + '/api/soql-b64/' + encSoql);
             let result = await sr.json();
             if (result.records?.length) {
