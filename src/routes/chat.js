@@ -619,7 +619,7 @@ router.post('/', authMiddleware, async (req, res) => {
       const prevAssistant = messages[messages.length - 2]?.content || '';
 
       // ── CONFIRMAR deploy apos preview (dry-run) ──
-      const isDryRunPreview = (prevAssistant.includes('Preview do Deploy') || prevAssistant.includes('Confirmacao de Exclusao')) && prevAssistant.includes('---PLAN---');
+      const isDryRunPreview = prevAssistant.includes('---PLAN---') && (prevAssistant.includes('Confirmacao de Deploy') || prevAssistant.includes('Confirmacao de Exclusao') || prevAssistant.includes('Preview do Deploy'));
       if (isDryRunPreview && ['confirmar', 'confirma', 'sim', '1', 'seguir'].includes(lastUser.toLowerCase())) {
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Transfer-Encoding', 'chunked');
