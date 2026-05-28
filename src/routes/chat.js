@@ -710,7 +710,6 @@ router.post('/', authMiddleware, async (req, res) => {
                 deployResults.push({ component: (step.description || 'Layout: ' + step.field + ' → ' + (step.section || 'default')), success: result.success !== false && !result.error, errors: result.error ? [{ message: result.error }] : (result.errors || []) });
 
               } else if (step.type === 'add-permission') {
-                // Criar ou atualizar Permission Set com o campo
                 const psName = step.permissionSetName || 'Everi9_FieldAccess';
                 const psLabel = step.permissionSetLabel || 'Everi9 Field Access';
                 const body = {
@@ -722,20 +721,34 @@ router.post('/', authMiddleware, async (req, res) => {
                     readable: true,
                   })),
                 };
-                // Tentar criar, se já existe tentar update
+                // Criar PS (ou update se já existe)
                 let r = await fetch(base + '/api/metadata-create/PermissionSet', {
                   method: 'POST', headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(body),
                 });
                 let result = await r.json();
-                if (!result.success) {
+                const alreadyExists = (result.errors || []).some(e => (e.message || '').includes('already') || (e.message || '').includes('duplicate'));
+                if (!result.success && !alreadyExists) {
                   r = await fetch(base + '/api/metadata-update/PermissionSet', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body),
                   });
                   result = await r.json();
                 }
-                deployResults.push({ component: (step.description || 'Permission: ' + psName), success: result.success !== false, errors: result.errors || [] });
+                deployResults.push({ component: (step.description || 'Permission Set: ' + psName), success: result.success !== false || alreadyExists, errors: alreadyExists ? [] : (result.errors || []) });
+
+                // ATRIBUIR PS a todos os users ativos via Apex
+                try {
+                  const assignApex = "PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = '" + psName + "' LIMIT 1]; List<User> users = [SELECT Id FROM User WHERE IsActive = true AND Id NOT IN (SELECT AssigneeId FROM PermissionSetAssignment WHERE PermissionSetId = :ps.Id)]; List<PermissionSetAssignment> psas = new List<PermissionSetAssignment>(); for (User u : users) { psas.add(new PermissionSetAssignment(AssigneeId = u.Id, PermissionSetId = ps.Id)); } if (!psas.isEmpty()) insert psas;";
+                  const ar = await fetch(base + '/api/execute-anonymous', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: assignApex }),
+                  });
+                  const assignResult = await ar.json();
+                  deployResults.push({ component: 'Atribuir PS a todos os usuarios', success: assignResult.success !== false, errors: assignResult.errors || [] });
+                } catch (assignErr) {
+                  deployResults.push({ component: 'Atribuir PS', success: false, errors: [{ message: assignErr.message }] });
+                }
 
               } else if (step.type === 'setup-instruction') {
                 deployResults.push({ component: step.step || step.description, success: true, manual: true, setupUrl: step.setupUrl || '', errors: [] });
