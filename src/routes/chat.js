@@ -42,9 +42,9 @@ async function getSelectedOrg(req) {
 
 // ── Permissões por perfil ──
 const ROLE_PERMISSIONS = {
-  admin:     ['spec', 'hf', 'ata', 'deploy', 'describe', 'status', 'chat', 'prototipo', 'list', 'discovery'],
+  admin:     ['spec', 'hf', 'ata', 'deploy', 'describe', 'status', 'chat', 'prototipo', 'list', 'discovery', 'arch'],
   funcional: ['hf', 'ata'],
-  architect: ['spec', 'ata', 'list', 'discovery'],
+  architect: ['spec', 'ata', 'list', 'discovery', 'arch'],
   developer: ['deploy', 'describe', 'ata', 'list', 'discovery'],
   candidato: ['chat'],
 };
@@ -59,6 +59,7 @@ function detectCommand(messages) {
   if (last.startsWith('/spec') || last.includes('gere a spec')) return 'spec';
   if (last.startsWith('/hf') || last.includes('historia funcional')) return 'hf';
   if (last.startsWith('/ata') || last.includes('ata de reuniao')) return 'ata';
+  if (last.startsWith('/arch')) return 'arch';
   if (last.startsWith('/discovery') || last.startsWith('/disc')) return 'discovery';
   if (last.startsWith('/list')) return 'list';
   if (last.startsWith('/prototipo') || last.startsWith('/proto')) return 'prototipo';
@@ -426,6 +427,38 @@ clearInterval(keepAlive);
     if ((command === 'chat') && messages.length >= 2) {
       const lastUser = (messages[messages.length - 1]?.content || '').trim();
       const prevAssistant = messages[messages.length - 2]?.content || '';
+      const isArchFollowup = prevAssistant.includes('Gerar Spec tecnica com base no gap') && prevAssistant.includes('Deploy do que falta na org');
+
+      if (isArchFollowup && ['1', '2'].includes(lastUser)) {
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Transfer-Encoding', 'chunked');
+        res.write(' ');
+        const keepAliveArchF = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+
+        if (lastUser === '1') {
+          // Gerar Spec com base no gap
+          const specFromGap = await claude.call(specPrompt, [{ role: 'user', content: 'Gere a Especificacao Tecnica com base nesta analise de gap:\n\n' + prevAssistant }], 16384);
+          clearInterval(keepAliveArchF);
+          res.end(JSON.stringify({
+            choices: [{ message: { content: specFromGap } }],
+            modelo_usado: 'claude-sonnet-4-6', modelo_label: 'Claude Sonnet 4.6', tipo: 'spec',
+          }));
+          return;
+        }
+
+        if (lastUser === '2') {
+          // Extrair gaps e deployar — redirecionar pro smart deploy
+          const selectedOrgArchF = await getSelectedOrg(req);
+          const orgName = selectedOrgArchF ? selectedOrgArchF.name : 'Dev Org (padrao)';
+          clearInterval(keepAliveArchF);
+          res.end(JSON.stringify({
+            choices: [{ message: { content: '## \ud83d\ude80 Deploy\n\n**Org selecionada:** ' + orgName + '\n\nDeseja confirmar o deploy do que falta nesta org?\n\n**sim** \u2014 Confirmar e deployar\n\n**nao** \u2014 Cancelar' } }],
+            modelo_usado: 'system', modelo_label: 'Sistema', tipo: 'arch',
+          }));
+          return;
+        }
+      }
+
       const isProtoFollowup = prevAssistant.includes('Gerar Historia Funcional completa') && prevAssistant.includes('Realizar deploy na org');
 
       if (isProtoFollowup && ['1', '2', '3'].includes(lastUser)) {
@@ -964,6 +997,173 @@ clearInterval(keepAlive);
     }
 
         switch (command) {
+      case 'arch': {
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Transfer-Encoding', 'chunked');
+        res.write(' ');
+        const keepAliveArch = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+
+        const archReq = messages[messages.length - 1].content.replace(/\/arch\s*/i, '').trim();
+        const selectedOrgArch = await getSelectedOrg(req);
+        const baseArch = 'http://localhost:' + (process.env.PORT || 3000);
+
+        // ── SCAN DA ORG ──
+        const orgScan = {};
+
+        // Detectar objetos mencionados no requisito
+        const archLower = archReq.toLowerCase();
+        const allObjects = ['Lead','Opportunity','Account','Contact','Case','Quote','Order','Contract','Campaign','Task','Event','Product2','PricebookEntry','OpportunityLineItem','Asset','Entitlement','Solution','ForecastingItem'];
+        const mentionedObjects = allObjects.filter(o => archLower.includes(o.toLowerCase()));
+        if (mentionedObjects.length === 0) mentionedObjects.push('Lead', 'Opportunity', 'Account');
+
+        // Descrever objetos
+        for (const obj of mentionedObjects) {
+          try {
+            const dr = await fetch(baseArch + '/api/describe/' + obj);
+            const desc = await dr.json();
+            orgScan['fields_' + obj] = (desc.fields || []).map(f => ({
+              name: f.name, label: f.label, type: f.type, custom: f.custom,
+              picklistValues: f.picklistValues?.length > 0 ? f.picklistValues.map(p => p.value) : undefined,
+            }));
+          } catch {}
+        }
+
+        // Listar Flows
+        try {
+          const fSoql = Buffer.from("SELECT ApiName, Label, ProcessType, TriggerType, Description, IsActive FROM FlowDefinitionView WHERE IsActive = true ORDER BY Label").toString('base64');
+          const fr = await fetch(baseArch + '/api/soql-b64/' + fSoql);
+          const fd = await fr.json();
+          orgScan.flows = (fd.records || []).map(f => ({ apiName: f.ApiName, label: f.Label, type: f.ProcessType, trigger: f.TriggerType, description: f.Description }));
+        } catch {}
+
+        // Listar Apex Classes
+        try {
+          const aSoql = Buffer.from("SELECT Name, Body, LengthWithoutComments FROM ApexClass WHERE NamespacePrefix = null ORDER BY Name").toString('base64');
+          const ar = await fetch(baseArch + '/api/soql-b64/' + aSoql);
+          const ad = await ar.json();
+          orgScan.apexClasses = (ad.records || []).map(c => ({ name: c.Name, preview: (c.Body || '').slice(0, 300), size: c.LengthWithoutComments }));
+        } catch {}
+
+        // Listar Triggers
+        try {
+          const tSoql = Buffer.from("SELECT Name, TableEnumOrId, Body FROM ApexTrigger WHERE NamespacePrefix = null ORDER BY Name").toString('base64');
+          const tr2 = await fetch(baseArch + '/api/soql-b64/' + tSoql);
+          const td = await tr2.json();
+          orgScan.triggers = (td.records || []).map(t => ({ name: t.Name, object: t.TableEnumOrId, preview: (t.Body || '').slice(0, 300) }));
+        } catch {}
+
+        // Listar Validation Rules
+        try {
+          const vSoql = Buffer.from("SELECT ValidationName, Active, Description, ErrorMessage FROM ValidationRule WHERE Active = true ORDER BY ValidationName").toString('base64');
+          const vr = await fetch(baseArch + '/api/soql-b64/' + vSoql);
+          const vd = await vr.json();
+          orgScan.validationRules = (vd.records || []).map(v => ({ name: v.ValidationName, description: v.Description, errorMessage: v.ErrorMessage }));
+        } catch {}
+
+        // Listar Permission Sets custom
+        try {
+          const pSoql = Buffer.from("SELECT Name, Label, Description FROM PermissionSet WHERE IsCustom = true AND NamespacePrefix = null ORDER BY Label").toString('base64');
+          const pr = await fetch(baseArch + '/api/soql-b64/' + pSoql);
+          const pd = await pr.json();
+          orgScan.permissionSets = (pd.records || []).map(p => ({ name: p.Name, label: p.Label, description: p.Description }));
+        } catch {}
+
+        // Listar Record Types
+        try {
+          const rSoql = Buffer.from("SELECT Name, DeveloperName, SobjectType, IsActive FROM RecordType ORDER BY SobjectType, Name").toString('base64');
+          const rr = await fetch(baseArch + '/api/soql-b64/' + rSoql);
+          const rd = await rr.json();
+          orgScan.recordTypes = (rd.records || []).map(r => ({ name: r.Name, devName: r.DeveloperName, object: r.SobjectType, active: r.IsActive }));
+        } catch {}
+
+        // ── ANÁLISE COM CLAUDE ──
+        const archPrompt = [
+          'Voce e um ARQUITETO SALESFORCE SENIOR fazendo uma ANALISE DE GAP.',
+          'Recebeu um REQUISITO/ESPECIFICACAO e o ESTADO COMPLETO DA ORG.',
+          'Sua missao: identificar o que JA EXISTE, o que ATENDE PARCIALMENTE, e o que FALTA implementar.',
+          '',
+          'FORMATO DA RESPOSTA:',
+          '',
+          '## Analise de Gap',
+          '',
+          '### Resumo',
+          '[2-3 frases sobre a cobertura geral]',
+          '',
+          '### Ja existe na org',
+          'Para cada item que ja atende ao requisito:',
+          '- **[Tipo: Campo/Flow/Apex/VR/PS/RT]** [Nome] — [como atende ao requisito]',
+          '',
+          '### Atende parcialmente',
+          'Para cada item que existe mas precisa de ajuste:',
+          '- **[Tipo]** [Nome] — [o que ja faz] → [o que precisa mudar]',
+          '',
+          '### Nao existe (gap)',
+          'Para cada item que precisa ser criado:',
+          '- **[Tipo]** [Nome sugerido] — [descricao do que precisa ser criado]',
+          '',
+          '### Recomendacao',
+          '[Abordagem recomendada: OOTB, Flow, Apex, LWC]',
+          '[Estimativa de esforco: baixo/medio/alto]',
+          '[Riscos ou dependencias]',
+          '',
+          'REGRAS:',
+          '- Seja ESPECIFICO: cite nomes de campos, flows, classes que ja existem',
+          '- Compare campo por campo, automacao por automacao',
+          '- Se um Flow ja faz parte do que o requisito pede, cite-o',
+          '- Se um campo custom ja existe com nome similar, cite-o',
+          '- Nao invente componentes que nao estao no scan',
+          '- Responda em portugues do Brasil',
+        ].join('\n');
+
+        let analysis;
+        try {
+          const scanStr = JSON.stringify(orgScan, null, 1);
+          const truncatedScan = scanStr.length > 30000 ? scanStr.slice(0, 30000) + '\n... (truncado)' : scanStr;
+          analysis = await claude.call(archPrompt, [{
+            role: 'user',
+            content: 'REQUISITO/ESPECIFICACAO:\n' + archReq + '\n\nESTADO DA ORG:\n' + truncatedScan,
+          }], 16384);
+        } catch (aiErr) {
+          analysis = 'Erro na analise: ' + aiErr.message;
+        }
+
+        clearInterval(keepAliveArch);
+
+        // Salvar como .txt
+        const archFileName = 'Arch_Gap_Analysis.txt';
+        try {
+          const fs = await import('fs');
+          const dir = '/tmp/prototipos';
+          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+          fs.writeFileSync(dir + '/' + archFileName, [
+            '='.repeat(60),
+            '  ANALISE DE GAP — EVER i9 ARCH',
+            '  Org: ' + (selectedOrgArch?.name || 'Dev Org (padrao)'),
+            '  Data: ' + new Date().toLocaleString('pt-BR'),
+            '='.repeat(60),
+            '',
+            'REQUISITO:',
+            archReq,
+            '',
+            '='.repeat(60),
+            '',
+            analysis,
+            '',
+            '='.repeat(60),
+            '  FIM DA ANALISE',
+            '='.repeat(60),
+          ].join('\n'));
+        } catch {}
+
+        const host = req.headers.host || 'everi9.albertobottaro.info';
+        const downloadLink = '\n\n[\u2b07 Baixar relatorio .txt](https://' + host + '/prototipos/' + archFileName + ')';
+
+        const menu = '\n\n---\n\n**O que deseja fazer?**\n\n**1** \u2014 Gerar Spec tecnica com base no gap\n\n**2** \u2014 Deploy do que falta na org\n\nDigite o numero para prosseguir.';
+
+        response = analysis + downloadLink + menu;
+        modelUsed = 'claude-sonnet-4-6'; modelLabel = 'Claude Sonnet (Arch)';
+        break;
+      }
       case 'discovery': {
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Transfer-Encoding', 'chunked');
