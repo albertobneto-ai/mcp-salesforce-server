@@ -573,7 +573,7 @@ router.post('/', authMiddleware, async (req, res) => {
             'Gere um JSON com array de steps. Cada step tem:',
             '- type: "metadata-update" | "metadata-create" | "execute-apex" | "setup-instruction"',
             '- Para metadata-update: metadataType, body (JSON COMPLETO do metadata atualizado)',
-            '- Para add-to-layout: object (ex: Lead), field (ex: MCP_Server__c), section (ex: Lead Information), layout (ex: Lead Layout)',
+            '- Para add-to-layout: object (ex: Lead), field (ex: MCP_Server__c), section (ex: Lead Information), layout (FORMATO: {Object}-{Object} Layout, ex: Lead-Lead Layout, Account-Account Layout)',
             '- Para add-permission: field (ex: Lead.MCP_Server__c) ou fields (array), permissionSetName, permissionSetLabel',
             '- Para execute-apex: code (codigo Apex anonimo)',
             '- Para setup-instruction: step (caminho COMPLETO no Setup), setupUrl (URL direta do Setup Lightning, ex: /lightning/setup/Forecasting/home, /lightning/setup/ObjectManager/Lead/FieldsAndRelationships/view, /lightning/setup/PermSets/home)',
@@ -696,7 +696,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
               } else if (step.type === 'add-to-layout') {
                 // GET /api/move-field-in-layout/:layoutName/:fieldName/:toSection
-                const layoutName = encodeURIComponent(step.layout || (step.object + ' Layout'));
+                const layoutName = encodeURIComponent(step.layout || (step.object + '-' + step.object + ' Layout'));
                 const fieldName = encodeURIComponent(step.field);
                 const section = encodeURIComponent(step.section || (step.object + ' Information'));
                 const r = await fetch(base + '/api/move-field-in-layout/' + layoutName + '/' + fieldName + '/' + section);
