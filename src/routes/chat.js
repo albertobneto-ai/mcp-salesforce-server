@@ -1012,14 +1012,19 @@ clearInterval(keepAlive);
           }
         } else {
           // Tratar como nome de componente específico — buscar por nome
+          const discArgSafe = discArg.replace(/'/g, "\\'");
+          const discArgNoSpaces = discArgSafe.replace(/ /g, '');
           try {
-            // Tentar como Flow
-            const discArgSafe = discArg.replace(/'/g, "\\'");
-            const discArgNoSpaces = discArgSafe.replace(/ /g, '');
-            // Buscar por Label (com espaços) E ApiName (sem espaços) E ApiName (como digitado)
-            let encSoql = Buffer.from("SELECT Id, ApiName, Label, ProcessType, TriggerType, Description, IsActive FROM FlowDefinitionView WHERE Label LIKE '%" + discArgSafe + "%' OR ApiName = '" + discArgNoSpaces + "' OR ApiName = '" + discArgSafe + "'").toString('base64');
+            // Tentar como Flow — Label primeiro, depois ApiName (OR nao suportado)
+            let encSoql = Buffer.from("SELECT Id, ApiName, Label, ProcessType, TriggerType, Description, IsActive FROM FlowDefinitionView WHERE Label LIKE '%" + discArgSafe + "%'").toString('base64');
             let sr = await fetch(baseDisc + '/api/soql-b64/' + encSoql);
             let result = await sr.json();
+            if (!result.records?.length) {
+              // Tentar por ApiName exato
+              encSoql = Buffer.from("SELECT Id, ApiName, Label, ProcessType, TriggerType, Description, IsActive FROM FlowDefinitionView WHERE ApiName = '" + discArgNoSpaces + "'").toString('base64');
+              sr = await fetch(baseDisc + '/api/soql-b64/' + encSoql);
+              result = await sr.json();
+            }
             if (result.records?.length) {
               discoveryData = result.records;
               discoveryType = 'flow';
