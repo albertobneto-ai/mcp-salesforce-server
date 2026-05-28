@@ -695,18 +695,13 @@ router.post('/', authMiddleware, async (req, res) => {
                 deployResults.push({ component: (step.description || 'Apex'), success: result.success !== false, errors: result.errors || [] });
 
               } else if (step.type === 'add-to-layout') {
-                // Usar endpoint existente do MCP Server
-                const r = await fetch(base + '/api/move-field-in-layout', {
-                  method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    objectName: step.object,
-                    fieldName: step.field,
-                    targetSection: step.section || 'Lead Information',
-                    layoutName: step.layout || (step.object + ' Layout'),
-                  }),
-                });
+                // GET /api/move-field-in-layout/:layoutName/:fieldName/:toSection
+                const layoutName = encodeURIComponent(step.layout || (step.object + ' Layout'));
+                const fieldName = encodeURIComponent(step.field);
+                const section = encodeURIComponent(step.section || (step.object + ' Information'));
+                const r = await fetch(base + '/api/move-field-in-layout/' + layoutName + '/' + fieldName + '/' + section);
                 const result = await r.json();
-                deployResults.push({ component: (step.description || 'Layout: ' + step.field + ' → ' + (step.section || 'default')), success: result.success !== false, errors: result.errors || (result.error ? [{ message: result.error }] : []) });
+                deployResults.push({ component: (step.description || 'Layout: ' + step.field + ' → ' + (step.section || 'default')), success: result.success !== false && !result.error, errors: result.error ? [{ message: result.error }] : (result.errors || []) });
 
               } else if (step.type === 'add-permission') {
                 // Criar ou atualizar Permission Set com o campo
