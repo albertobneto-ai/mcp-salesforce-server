@@ -513,20 +513,36 @@ router.post('/', authMiddleware, async (req, res) => {
         }
 
         if (!manifest) {
-          clearInterval(keepAlive3);
-          res.end(JSON.stringify({
-            choices: [{ message: { content: '\u274c Nao foi possivel extrair o manifest para deploy. Use /deploy para deployar manualmente.' } }],
-            modelo_usado: 'system', modelo_label: 'Sistema', tipo: 'error',
-          }));
-          return;
+          // Sem manifest — tentar gerar a partir do contexto
+          try {
+            const mText = await grok.call(deployPrompt, [{ role: 'user', content: 'Gere o manifest com base neste contexto:\n\n' + prevAssistant }], 4096);
+            const ms = mText.indexOf('{');
+            const me = mText.lastIndexOf('}');
+            if (ms !== -1 && me !== -1) manifest = JSON.parse(mText.slice(ms, me + 1));
+          } catch {}
         }
 
-        // Executar deploy
+        // Verificar se há componentes para deploy
+        const hasFields = manifest?.metadata?.customFields?.length > 0;
+        const hasPS = manifest?.metadata?.permissionSets?.length > 0;
+        const hasVR = manifest?.metadata?.validationRules?.length > 0;
+        const hasMetadata = hasFields || hasPS || hasVR;
+
+        // Detectar se precisa de LWC/Apex (buscar no historico)
+        let needsLWC = false;
+        let needsApex = false;
+        for (let i = messages.length - 1; i >= 0; i--) {
+          const msg = (messages[i].content || '').toLowerCase();
+          if (msg.includes('lwc') || msg.includes('lightning web component') || msg.includes('componente')) needsLWC = true;
+          if (msg.includes('apex') || msg.includes('trigger')) needsApex = true;
+        }
+
         const selectedOrg = await getSelectedOrg(req);
         const base = 'http://localhost:' + (process.env.PORT || 3000);
         const deployResults = [];
 
-        if (manifest.metadata?.customFields?.length) {
+        // 1. Deploy de campos via metadata-create
+        if (hasFields) {
           for (const field of manifest.metadata.customFields) {
             let result;
             if (selectedOrg) {
@@ -551,7 +567,75 @@ router.post('/', authMiddleware, async (req, res) => {
           }
         }
 
+        // 2. Deploy de LWC via ZIP (se necessario)
+        if (needsLWC || (!hasMetadata && !needsApex)) {
+          try {
+            // Gerar codigo LWC via Grok
+            const lwcContext = messages.map(m => m.content).join('\n').slice(-3000);
+            const lwcCode = await grok.call(
+              'Voce e um desenvolvedor Salesforce LWC. Gere o codigo completo de um Lightning Web Component para o requisito abaixo. ' +
+              'Responda com 3 blocos EXATOS:\n' +
+              '---JS---\n[codigo .js do componente]\n---HTML---\n[template .html]\n---META---\n[arquivo .js-meta.xml]\n---FIM---\n' +
+              'Use LWC moderno, @wire, @api. O meta deve ter isExposed=true e targets corretos.',
+              [{ role: 'user', content: lwcContext }], 8192
+            );
+
+            const jsMatch = lwcCode.match(/---JS---(\s*[\s\S]*?)---HTML---/);
+            const htmlMatch = lwcCode.match(/---HTML---(\s*[\s\S]*?)---META---/);
+            const metaMatch = lwcCode.match(/---META---(\s*[\s\S]*?)---FIM---/);
+
+            if (jsMatch && htmlMatch && metaMatch) {
+              const compName = (manifest?.specName || 'customComponent').replace(/[^a-zA-Z0-9]/g, '').replace(/^./, c => c.toLowerCase());
+
+              // Montar ZIP SFDX
+              const JSZip = (await import('jszip')).default;
+              const zip = new JSZip();
+              const lwcPath = 'force-app/main/default/lwc/' + compName;
+              zip.file(lwcPath + '/' + compName + '.js', jsMatch[1].trim());
+              zip.file(lwcPath + '/' + compName + '.html', htmlMatch[1].trim());
+              zip.file(lwcPath + '/' + compName + '.js-meta.xml', metaMatch[1].trim());
+              zip.file('force-app/main/default/lwc/.eslintrc.json', '{}');
+
+              // Package.xml
+              zip.file('package.xml', '<?xml version="1.0" encoding="UTF-8"?>\n<Package xmlns="http://soap.sforce.com/2006/04/metadata">\n  <types>\n    <members>' + compName + '</members>\n    <name>LightningComponentBundle</name>\n  </types>\n  <version>62.0</version>\n</Package>');
+
+              const zipBuffer = await zip.generateAsync({ type: 'base64' });
+
+              // Deploy via /api/deploy-code
+              const deployRes = await fetch(base + '/api/deploy-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ zipBase64: zipBuffer, checkOnly: false }),
+              });
+              const deployData = await deployRes.json();
+
+              deployResults.push({
+                component: 'LWC: ' + compName,
+                success: deployData.success || deployData.status === 'Succeeded',
+                deployId: deployData.id,
+                status: deployData.status,
+                errors: deployData.errors || [],
+              });
+            }
+          } catch (lwcErr) {
+            deployResults.push({
+              component: 'LWC (geracao)',
+              success: false,
+              errors: [{ message: lwcErr.message }],
+            });
+          }
+        }
+
         clearInterval(keepAlive3);
+
+        // Resultado
+        if (deployResults.length === 0) {
+          res.end(JSON.stringify({
+            choices: [{ message: { content: '## \u26a0\ufe0f Nenhum componente para deploy\n\nEsta solucao nao requer metadados ou componentes deployaveis via API.\n\nUse a opcao **2** para gerar a Spec Tecnica completa com instrucoes de implementacao manual.' } }],
+            modelo_usado: 'system', modelo_label: 'Sistema', tipo: 'prototipo',
+          }));
+          return;
+        }
 
         const success = deployResults.every(r => r.success);
         const resultLines = [];
@@ -561,8 +645,13 @@ router.post('/', authMiddleware, async (req, res) => {
         resultLines.push('|---|---|');
         for (const r of deployResults) {
           const icon = r.success ? '\u2705' : '\u274c';
-          const err = r.errors?.length ? ' \u2014 ' + (r.errors[0]?.message || '') : '';
-          resultLines.push('| ' + (r.component || 'N/A') + ' | ' + icon + err + ' |');
+          const errMsg = r.errors?.length ? ' \u2014 ' + (r.errors[0]?.message || r.errors[0]?.problem || '') : '';
+          const extra = r.deployId ? ' (ID: ' + r.deployId + ')' : '';
+          resultLines.push('| ' + (r.component || 'N/A') + ' | ' + icon + errMsg + extra + ' |');
+        }
+        if (deployResults.some(r => r.deployId)) {
+          resultLines.push('');
+          resultLines.push('*Deploy assincrono em andamento. Use /org para verificar o status.*');
         }
 
         res.end(JSON.stringify({
