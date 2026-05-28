@@ -592,7 +592,7 @@ router.post('/', authMiddleware, async (req, res) => {
             '- O codigo sera deployado automaticamente na org via SFDX ZIP'
           ].join('\n');
 
-          const smartResp = await grok.call(smartPrompt, [{ role: 'user', content: 'Gere os comandos para implementar o requisito' }], 8192);
+          const smartResp = await claude.call(smartPrompt, [{ role: 'user', content: 'Gere os comandos JSON para implementar o requisito. NUNCA retorne apenas setup-instruction. Se metadata API nao suporta, GERE codigo Apex + LWC completo no campo code.' }], 16384);
           
           // Parsear resposta
           const jsonStart = smartResp.indexOf('{');
