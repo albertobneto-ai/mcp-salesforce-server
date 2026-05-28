@@ -500,22 +500,51 @@ router.post('/', authMiddleware, async (req, res) => {
           }
         }
 
-        // Ler metadados relevantes da org para contexto
+        // Ler metadados relevantes da org (DINAMICO baseado no requisito)
         let orgContext = '';
         try {
-          // Detectar que metadata ler com base no requisito
           const reqLower = originalReq.toLowerCase();
           const metadataReads = [];
 
-          if (reqLower.includes('forecast')) {
-            const fr = await fetch(base + '/api/metadata-read/ForecastingSettings/Forecasting');
-            metadataReads.push({ type: 'ForecastingSettings', data: await fr.json() });
+          // Detectar objetos mencionados e descrever
+          const sfObjects = ['Lead','Opportunity','Account','Contact','Case','Quote','Order','Contract','Campaign','Task','Event','Product2','PricebookEntry','OpportunityLineItem','Asset','Entitlement'];
+          for (const obj of sfObjects) {
+            if (reqLower.includes(obj.toLowerCase())) {
+              try {
+                const dr = await fetch(base + '/api/describe/' + obj);
+                const desc = await dr.json();
+                metadataReads.push({ type: 'Describe_' + obj, fields: (desc.fields || []).slice(0, 40).map(f => f.name + ' (' + f.type + (f.custom ? ', custom' : '') + ')') });
+              } catch {}
+            }
           }
-          if (reqLower.includes('lead') || reqLower.includes('opportunity') || reqLower.includes('account') || reqLower.includes('contact')) {
-            const objName = reqLower.includes('lead') ? 'Lead' : reqLower.includes('opportunity') ? 'Opportunity' : reqLower.includes('account') ? 'Account' : 'Contact';
-            const dr = await fetch(base + '/api/describe/' + objName);
-            const desc = await dr.json();
-            metadataReads.push({ type: 'Describe_' + objName, fields: (desc.fields || []).slice(0, 30).map(f => f.name + ' (' + f.type + ')') });
+
+          // Detectar settings relevantes
+          const settingsMap = {
+            'forecast': ['ForecastingSettings', 'Forecasting'],
+            'territory': ['Territory2Settings', 'Territory2'],
+            'lead convert': ['LeadConvertSettings', 'LeadConvert'],
+            'case': ['CaseSettings', 'Case'],
+            'knowledge': ['KnowledgeSettings', 'Knowledge'],
+            'opportunity': ['OpportunitySettings', 'Opportunity'],
+            'activity': ['ActivitySettings', 'Activity'],
+            'sharing': ['SharingSettings', 'Sharing'],
+          };
+          for (const [keyword, [metaType, fullName]] of Object.entries(settingsMap)) {
+            if (reqLower.includes(keyword)) {
+              try {
+                const sr = await fetch(base + '/api/metadata-read/' + metaType + '/' + fullName);
+                metadataReads.push({ type: metaType, data: await sr.json() });
+              } catch {}
+            }
+          }
+
+          // Se nenhum objeto detectado, descrever os mais comuns
+          if (metadataReads.length === 0) {
+            try {
+              const dr = await fetch(base + '/api/describe/Opportunity');
+              const desc = await dr.json();
+              metadataReads.push({ type: 'Describe_Opportunity', fields: (desc.fields || []).slice(0, 20).map(f => f.name + ' (' + f.type + ')') });
+            } catch {}
           }
 
           orgContext = JSON.stringify(metadataReads, null, 2);
@@ -527,7 +556,9 @@ router.post('/', authMiddleware, async (req, res) => {
         let smartCommands;
         try {
           const smartPrompt = [
-            'Voce e um configurador Salesforce. Com base no ESTADO ATUAL da org e no REQUISITO, gere os comandos EXATOS para implementar.',
+            'Voce e um ARQUITETO SALESFORCE SENIOR com capacidade de IMPLEMENTAR qualquer solucao.',
+            'Sua funcao: receber um requisito + estado atual da org e retornar TUDO que precisa ser feito para implementar.',
+            'Voce TEM que resolver. NAO existe "nao e possivel". Sempre ha um caminho: metadata API, Apex, LWC, Flow metadata, ou combinacao.',
             '',
             'INSTANCE URL DA ORG: ' + (selectedOrg?.login_url || 'https://orgfarm-6450ce60e0-dev-ed.develop.my.salesforce.com'),
             '',
@@ -584,12 +615,28 @@ router.post('/', authMiddleware, async (req, res) => {
             '  }',
             '}',
             '',
-            'REGRAS DE CODE:',
-            '- Se a solucao precisa de Apex ou LWC, inclua o codigo COMPLETO em code',
-            '- apexClasses: codigo .cls completo e funcional',
-            '- lwc: JS, HTML e meta.xml completos',
-            '- Se NAO precisa de codigo, deixe code como null',
-            '- O codigo sera deployado automaticamente na org via SFDX ZIP'
+            'REGRAS DE CODE (OBRIGATORIAS):',
+            '- Se metadata API nao resolve SOZINHA, GERE codigo Apex + LWC que resolve',
+            '- apexClasses: codigo .cls COMPLETO, compilavel, com @AuraEnabled, with sharing, SOQL correto',
+            '- lwc: js (@wire/@api), html (lightning-datatable/lightning-card), meta.xml (isExposed=true, targets)',
+            '- O codigo sera deployado automaticamente na org — precisa compilar de primeira',
+            '- NUNCA diga "crie manualmente" ou "copie e cole" — o sistema FAZ o deploy',
+            '- Se NAO precisa de codigo (metadata resolve tudo), code pode ser null',
+            '',
+            'HIERARQUIA (siga nesta ordem):',
+            '1. metadata-create/update → campos, permission sets, validation rules, settings',
+            '2. code (Apex + LWC) → logica customizada, telas, calculos, integracao',
+            '3. setup-instruction → APENAS se e impossivel via codigo (ex: ativar feature flag na UI)',
+            '   Quando usar setup-instruction, SEMPRE inclua setupUrl com o path Lightning Setup',
+            '',
+            'EXEMPLOS DE setupUrl:',
+            '  /lightning/setup/Forecasting/home',
+            '  /lightning/setup/ObjectManager/{Obj}/FieldsAndRelationships/view',
+            '  /lightning/setup/PermSets/home',
+            '  /lightning/setup/Flows/home',
+            '  /lightning/setup/SecuritySharing/home',
+            '  /lightning/setup/EnhancedProfiles/home',
+            '  /lightning/setup/CustomMetadata/home'
           ].join('\n');
 
           const smartResp = await claude.call(smartPrompt, [{ role: 'user', content: 'Gere os comandos JSON para implementar o requisito. NUNCA retorne apenas setup-instruction. Se metadata API nao suporta, GERE codigo Apex + LWC completo no campo code.' }], 16384);
