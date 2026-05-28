@@ -561,7 +561,23 @@ router.post('/', authMiddleware, async (req, res) => {
             '- Se NAO for possivel via API, use setup-instruction com o caminho EXATO',
             '- Responda APENAS com o JSON, sem markdown nem explicacao',
             '',
-            'FORMATO: {"steps":[...], "summary":"descricao do que sera feito"}'
+            'FORMATO:',
+            '{',
+            '  "steps": [...],',
+            '  "summary": "descricao do que sera feito",',
+            '  "code": {',
+            '    "apexClasses": [{"name":"NomeClasse","body":"codigo apex completo"}],',
+            '    "lwc": [{"name":"nomeComponente","js":"codigo js","html":"template html","meta":"xml meta"}],',
+            '    "apexTriggers": [{"name":"NomeTrigger","body":"codigo trigger","object":"Opportunity"}]',
+            '  }',
+            '}',
+            '',
+            'REGRAS DE CODE:',
+            '- Se a solucao precisa de Apex ou LWC, inclua o codigo COMPLETO em code',
+            '- apexClasses: codigo .cls completo e funcional',
+            '- lwc: JS, HTML e meta.xml completos',
+            '- Se NAO precisa de codigo, deixe code como null',
+            '- O codigo sera deployado automaticamente na org via SFDX ZIP'
           ].join('\n');
 
           const smartResp = await grok.call(smartPrompt, [{ role: 'user', content: 'Gere os comandos para implementar o requisito' }], 8192);
@@ -661,9 +677,95 @@ router.post('/', authMiddleware, async (req, res) => {
           if (manifest?.configSteps?.length) {
             for (const step of manifest.configSteps) {
               if (step.type === 'setup-instruction') {
-                deployResults.push({ component: step.step, success: true, manual: true, errors: [] });
+                deployResults.push({ component: step.step, success: true, manual: true, setupUrl: step.setupUrl || '', errors: [] });
               }
             }
+          }
+        }
+
+        // ── Deploy de código (Apex + LWC) via ZIP ──
+        if (smartCommands?.code) {
+          try {
+            const JSZip = (await import('jszip')).default;
+            const zip = new JSZip();
+            const pkgMembers = [];
+
+            // Apex Classes
+            if (smartCommands.code.apexClasses?.length) {
+              for (const cls of smartCommands.code.apexClasses) {
+                zip.file('force-app/main/default/classes/' + cls.name + '.cls', cls.body);
+                zip.file('force-app/main/default/classes/' + cls.name + '.cls-meta.xml',
+                  '<?xml version="1.0" encoding="UTF-8"?>\n<ApexClass xmlns="http://soap.sforce.com/2006/04/metadata">\n  <apiVersion>62.0</apiVersion>\n  <status>Active</status>\n</ApexClass>');
+                pkgMembers.push({ type: 'ApexClass', name: cls.name });
+              }
+            }
+
+            // Apex Triggers
+            if (smartCommands.code.apexTriggers?.length) {
+              for (const trg of smartCommands.code.apexTriggers) {
+                zip.file('force-app/main/default/triggers/' + trg.name + '.trigger', trg.body);
+                zip.file('force-app/main/default/triggers/' + trg.name + '.trigger-meta.xml',
+                  '<?xml version="1.0" encoding="UTF-8"?>\n<ApexTrigger xmlns="http://soap.sforce.com/2006/04/metadata">\n  <apiVersion>62.0</apiVersion>\n  <status>Active</status>\n</ApexTrigger>');
+                pkgMembers.push({ type: 'ApexTrigger', name: trg.name });
+              }
+            }
+
+            // LWC
+            if (smartCommands.code.lwc?.length) {
+              for (const comp of smartCommands.code.lwc) {
+                const path = 'force-app/main/default/lwc/' + comp.name + '/';
+                zip.file(path + comp.name + '.js', comp.js);
+                zip.file(path + comp.name + '.html', comp.html);
+                zip.file(path + comp.name + '.js-meta.xml', comp.meta);
+                pkgMembers.push({ type: 'LightningComponentBundle', name: comp.name });
+              }
+            }
+
+            // Package.xml
+            if (pkgMembers.length > 0) {
+              let pkgXml = '<?xml version="1.0" encoding="UTF-8"?>\n<Package xmlns="http://soap.sforce.com/2006/04/metadata">\n';
+              const byType = {};
+              for (const m of pkgMembers) {
+                if (!byType[m.type]) byType[m.type] = [];
+                byType[m.type].push(m.name);
+              }
+              for (const [type, names] of Object.entries(byType)) {
+                pkgXml += '  <types>\n';
+                for (const n of names) pkgXml += '    <members>' + n + '</members>\n';
+                pkgXml += '    <name>' + type + '</name>\n  </types>\n';
+              }
+              pkgXml += '  <version>62.0</version>\n</Package>';
+              zip.file('package.xml', pkgXml);
+
+              const zipB64 = await zip.generateAsync({ type: 'base64' });
+
+              // Deploy via /api/deploy-code
+              const codeRes = await fetch(base + '/api/deploy-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ zipBase64: zipB64, checkOnly: false }),
+              });
+              const codeData = await codeRes.json();
+
+              for (const m of pkgMembers) {
+                deployResults.push({
+                  component: m.type + ': ' + m.name,
+                  success: codeData.success || codeData.status === 'Succeeded' || codeData.status === 'InProgress',
+                  deployId: codeData.id,
+                  errors: codeData.details?.componentFailures || [],
+                });
+              }
+
+              // Se deploy assincrono, adicionar nota
+              if (codeData.id && codeData.status !== 'Succeeded') {
+                deployResults.push({
+                  component: 'Deploy assincrono iniciado (ID: ' + codeData.id + '). Verificar status em ~30s.',
+                  success: true, manual: true, errors: [],
+                });
+              }
+            }
+          } catch (codeErr) {
+            deployResults.push({ component: 'Deploy de codigo', success: false, errors: [{ message: codeErr.message }] });
           }
         }
 
