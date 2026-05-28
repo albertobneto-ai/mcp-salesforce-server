@@ -145,172 +145,180 @@ router.post('/', authMiddleware, async (req, res) => {
       return;
     }
 
-    // ── DEPLOY: Grok gera manifest → MCP Server deploya ──
+    // ── DEPLOY: Claude smart deploy (lê org + decide + executa) ──
     if (command === 'deploy') {
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Transfer-Encoding', 'chunked');
       res.write(' ');
 
       const userReq = messages[messages.length - 1].content.replace(/\/deploy\s*/i, '').trim();
-      
-      // 1. Grok gera o manifest
       const keepAlive = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
-      
-      let manifestText;
+      const selectedOrgDeploy = await getSelectedOrg(req);
+      const baseDeploy = 'http://localhost:' + (process.env.PORT || 3000);
+
+      // 1. Ler estado da org
+      let orgContextDeploy = '';
       try {
-        manifestText = await grok.call(deployPrompt, [{ role: 'user', content: userReq }], 4096);
-      } catch (err) {
+        const reqLower = userReq.toLowerCase();
+        const metadataReads = [];
+        const sfObjects = ['Lead','Opportunity','Account','Contact','Case','Quote','Order','Contract','Campaign','Product2','Asset'];
+        for (const obj of sfObjects) {
+          if (reqLower.includes(obj.toLowerCase())) {
+            try {
+              const dr = await fetch(baseDeploy + '/api/describe/' + obj);
+              const desc = await dr.json();
+              metadataReads.push({ type: 'Describe_' + obj, fields: (desc.fields || []).slice(0, 40).map(f => f.name + ' (' + f.type + (f.custom ? ', custom' : '') + ')') });
+            } catch {}
+          }
+        }
+        orgContextDeploy = JSON.stringify(metadataReads, null, 2);
+      } catch {}
+
+      // 2. Claude decide o que fazer
+      let smartDeploy;
+      try {
+        const deploySmartPrompt = [
+          'Voce e um ARQUITETO SALESFORCE SENIOR. Implemente o requisito abaixo na org.',
+          '',
+          'ESTADO ATUAL DA ORG:', orgContextDeploy || 'Nao disponivel',
+          '',
+          'REQUISITO:', userReq,
+          '',
+          'Retorne JSON com steps e opcionalmente code (Apex/LWC):',
+          '{',
+          '  "steps": [',
+          '    {"type":"metadata-create","metadataType":"CustomField","body":{"fullName":"Obj.Campo__c","label":"Label","type":"Text","length":100},"description":"Descricao"},',
+          '    {"type":"add-to-layout","object":"Lead","field":"Campo__c","section":"Lead Information","layout":"Lead-Lead Layout","description":"Descricao"},',
+          '    {"type":"add-permission","field":"Lead.Campo__c","permissionSetName":"Nome_PS","permissionSetLabel":"Label PS","description":"Descricao"},',
+          '    {"type":"metadata-update","metadataType":"Tipo","body":{...},"description":"Descricao"},',
+          '    {"type":"execute-apex","code":"codigo apex","description":"Descricao"},',
+          '    {"type":"setup-instruction","step":"Caminho no Setup","setupUrl":"/lightning/setup/...","description":"Descricao"}',
+          '  ],',
+          '  "code": { "apexClasses": [], "lwc": [], "apexTriggers": [] },',
+          '  "summary": "Resumo do que sera feito"',
+          '}',
+          '',
+          'REGRAS:',
+          '- HIERARQUIA: metadata-create > add-to-layout > add-permission > code > setup-instruction',
+          '- Picklist: valueSet com valueSetDefinition e value array [{fullName,label,default:false}]',
+          '- Layout name formato: {Object}-{Object} Layout (ex: Lead-Lead Layout)',
+          '- Permission field formato: {Object}.{Campo__c}',
+          '- SEMPRE incluir add-to-layout e add-permission para novos campos',
+          '- Se precisa Apex/LWC, inclua codigo COMPLETO em code',
+          '- setup-instruction APENAS se impossivel via API, com setupUrl',
+          '- Responda APENAS JSON, sem markdown',
+        ].join('\n');
+
+        const smartResp = await claude.call(deploySmartPrompt, [{ role: 'user', content: 'Implemente: ' + userReq }], 16384);
+        const jsonStart = smartResp.indexOf('{');
+        const jsonEnd = smartResp.lastIndexOf('}');
+        if (jsonStart !== -1 && jsonEnd !== -1) {
+          smartDeploy = JSON.parse(smartResp.slice(jsonStart, jsonEnd + 1));
+        }
+      } catch (aiErr) {
         clearInterval(keepAlive);
         res.end(JSON.stringify({
-          choices: [{ message: { content: '❌ Erro ao gerar manifest: ' + err.message } }],
-          modelo_usado: 'grok-4.20', modelo_label: 'Grok 4.20', tipo: 'deploy',
+          choices: [{ message: { content: '\u274c Erro ao planejar deploy: ' + aiErr.message } }],
+          modelo_usado: 'claude', modelo_label: 'Claude Sonnet', tipo: 'deploy',
         }));
         return;
       }
 
-      // 2. Extrair JSON do manifest
-      const manifest = extractJson(manifestText);
-      if (!manifest) {
+      if (!smartDeploy?.steps?.length) {
         clearInterval(keepAlive);
         res.end(JSON.stringify({
-          choices: [{ message: { content: '❌ Nao consegui gerar um manifest valido.\n\nResposta do modelo:\n```\n' + manifestText + '\n```' } }],
-          modelo_usado: 'grok-4.20', modelo_label: 'Grok 4.20', tipo: 'deploy',
+          choices: [{ message: { content: '\u274c Nao foi possivel planejar o deploy. Tente com mais detalhes.' } }],
+          modelo_usado: 'claude', modelo_label: 'Claude Sonnet', tipo: 'deploy',
         }));
         return;
       }
 
-      // 3. Deploy via metadata-create (mais confiavel que deploy-b64)
-      const base = `http://localhost:${process.env.PORT || 3000}`;
+      // 3. Executar steps
       const deployResults = [];
-      
-      try {
-        const deployOrg = await getSelectedOrg(req);
-
-        // Deploy customFields
-        if (manifest.metadata?.customFields?.length) {
-          for (const field of manifest.metadata.customFields) {
-            const fullName = `${field.objectName}.${field.fieldName}`;
-            let result;
-            if (deployOrg) {
-              result = await sfMulti.deployField(deployOrg, field);
-            } else {
-              const body = { fullName, label: field.label, type: field.type };
-              if (field.length) body.length = field.length;
-              if (field.precision) body.precision = field.precision;
-              if (field.scale) body.scale = field.scale;
-              if (field.visibleLines) body.visibleLines = field.visibleLines;
-              if (field.referenceTo) body.referenceTo = field.referenceTo;
-              if (field.relationshipLabel) body.relationshipLabel = field.relationshipLabel;
-              if (field.picklist) {
-                body.valueSet = { valueSetDefinition: { value: field.picklist.map(v => ({ fullName: v, label: v, default: false })) } };
-              }
-              const r = await fetch(`${base}/api/metadata-create/CustomField`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-              });
-              result = await r.json();
-              result.component = `Field: ${fullName}`;
-            }
-            deployResults.push(result);
-          }
-        }
-
-        // Deploy permissionSets
-        if (manifest.metadata?.permissionSets?.length) {
-          for (const ps of manifest.metadata.permissionSets) {
-            const r = await fetch(`${base}/api/metadata-create/PermissionSet`, {
+      for (const step of smartDeploy.steps) {
+        try {
+          if (step.type === 'metadata-create') {
+            const r = await fetch(baseDeploy + '/api/metadata-create/' + step.metadataType, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(ps)
+              body: JSON.stringify(step.body),
             });
             const result = await r.json();
-            deployResults.push({ component: `PermSet: ${ps.label || ps.name}`, ...result });
-          }
-        }
+            const alreadyExists = (result.errors || []).some(e => (e.message || '').includes('already') || (e.message || '').includes('duplicate'));
+            deployResults.push({ component: (step.description || step.metadataType), success: result.success || alreadyExists, errors: alreadyExists ? [] : (result.errors || []) });
 
-        // Deploy validationRules
-        if (manifest.metadata?.validationRules?.length) {
-          for (const vr of manifest.metadata.validationRules) {
-            const r = await fetch(`${base}/api/metadata-create/ValidationRule`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(vr)
-            });
+          } else if (step.type === 'add-to-layout') {
+            const ln = encodeURIComponent(step.layout || (step.object + '-' + step.object + ' Layout'));
+            const fn = encodeURIComponent(step.field);
+            const sn = encodeURIComponent(step.section || (step.object + ' Information'));
+            const r = await fetch(baseDeploy + '/api/move-field-in-layout/' + ln + '/' + fn + '/' + sn);
             const result = await r.json();
-            deployResults.push({ component: `Rule: ${vr.fullName}`, ...result });
-          }
-        }
+            deployResults.push({ component: (step.description || 'Layout: ' + step.field), success: result.success || result.status === 'added' || result.status === 'moved', errors: result.error ? [{ message: result.error }] : [] });
 
-        // Deploy recordTypes
-        if (manifest.metadata?.recordTypes?.length) {
-          for (const rt of manifest.metadata.recordTypes) {
-            const r = await fetch(`${base}/api/metadata-create/RecordType`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(rt)
-            });
+          } else if (step.type === 'add-permission') {
+            const psName = step.permissionSetName || 'Everi9_Deploy_Access';
+            const body = { fullName: psName, label: step.permissionSetLabel || psName.replace(/_/g, ' '), fieldPermissions: (step.fields || [step.field]).map(f => ({ field: f, editable: true, readable: true })) };
+            let r = await fetch(baseDeploy + '/api/metadata-create/PermissionSet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            let result = await r.json();
+            if (!result.success) { r = await fetch(baseDeploy + '/api/metadata-update/PermissionSet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); result = await r.json(); }
+            deployResults.push({ component: (step.description || 'Permission Set'), success: result.success !== false, errors: result.errors || [] });
+            // Assign PS
+            try {
+              const assignApex = "PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = '" + psName + "' LIMIT 1]; List<User> users = [SELECT Id FROM User WHERE IsActive = true AND UserType = 'Standard' AND Id NOT IN (SELECT AssigneeId FROM PermissionSetAssignment WHERE PermissionSetId = :ps.Id)]; List<PermissionSetAssignment> psas = new List<PermissionSetAssignment>(); for (User u : users) { psas.add(new PermissionSetAssignment(AssigneeId = u.Id, PermissionSetId = ps.Id)); } if (!psas.isEmpty()) insert psas;";
+              await fetch(baseDeploy + '/api/execute-anonymous', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: assignApex }) });
+              deployResults.push({ component: 'Atribuir PS aos usuarios', success: true, errors: [] });
+            } catch {}
+
+          } else if (step.type === 'metadata-update') {
+            const r = await fetch(baseDeploy + '/api/metadata-update/' + step.metadataType, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(step.body) });
             const result = await r.json();
-            deployResults.push({ component: `RecType: ${rt.fullName}`, ...result });
+            deployResults.push({ component: (step.description || step.metadataType), success: result.success !== false, errors: result.errors || [] });
+
+          } else if (step.type === 'execute-apex') {
+            const r = await fetch(baseDeploy + '/api/execute-anonymous', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: step.code }) });
+            const result = await r.json();
+            deployResults.push({ component: (step.description || 'Apex'), success: result.success !== false, errors: result.errors || [] });
+
+          } else if (step.type === 'setup-instruction') {
+            deployResults.push({ component: step.step || step.description, success: true, manual: true, setupUrl: step.setupUrl || '', errors: [] });
           }
+        } catch (stepErr) {
+          deployResults.push({ component: (step.description || step.type), success: false, errors: [{ message: stepErr.message }] });
         }
-      } catch (err) {
-        clearInterval(keepAlive);
-        res.end(JSON.stringify({
-          choices: [{ message: { content: '❌ Erro no deploy: ' + err.message + '\n\nManifest gerado:\n```json\n' + JSON.stringify(manifest, null, 2) + '\n```' } }],
-          modelo_usado: 'grok-4.20', modelo_label: 'Grok 4.20', tipo: 'deploy',
-        }));
-        return;
       }
-      
-      const deployResult = {
-        success: deployResults.every(r => r.success),
-        total: deployResults.length,
-        results: deployResults,
-      };
-
-      clearInterval(keepAlive);
+clearInterval(keepAlive);
 
       // 4. Formatar resultado
-      const success = deployResult.success;
+      const successDeploy = deployResults.filter(r => !r.manual).every(r => r.success);
       const resultLines = [];
-      resultLines.push(success ? '## ✅ Deploy realizado com sucesso!' : '## ❌ Deploy falhou');
+      resultLines.push(successDeploy ? '## \u2705 Deploy realizado com sucesso!' : '## \u26a0\ufe0f Deploy parcial');
+      if (smartDeploy.summary) { resultLines.push(''); resultLines.push('**Resumo:** ' + smartDeploy.summary); }
       resultLines.push('');
-      resultLines.push('### Manifest');
-      resultLines.push('**specName:** ' + (manifest.specName || 'N/A'));
-      if (manifest.metadata?.customFields?.length) {
-        resultLines.push('');
-        resultLines.push('### Campos criados');
-        resultLines.push('| Objeto | Campo | Tipo |');
-        resultLines.push('|---|---|---|');
-        for (const f of manifest.metadata.customFields) {
-          resultLines.push(`| ${f.objectName} | ${f.fieldName} | ${f.type} |`);
-        }
-      }
-      if (manifest.metadata?.permissionSets?.length) {
-        resultLines.push('');
-        resultLines.push('### Permission Sets');
-        for (const ps of manifest.metadata.permissionSets) {
-          resultLines.push('- **' + ps.name + '**: ' + (ps.fieldPermissions?.map(fp => fp.field).join(', ') || 'N/A'));
-        }
-      }
-      if (manifest.metadata?.validationRules?.length) {
-        resultLines.push('');
-        resultLines.push('### Validation Rules');
-        for (const vr of manifest.metadata.validationRules) {
-          resultLines.push('- **' + vr.fullName + '**');
-        }
-      }
-      resultLines.push('');
-      resultLines.push('### Resultado');
-      resultLines.push('| Componente | Status |');
-      resultLines.push('|---|---|');
-      for (const r of deployResult.results || []) {
-        const icon = r.success ? '✅' : '❌';
-        const err = r.errors?.length ? ` — ${r.errors[0]?.message || ''}` : '';
-        resultLines.push(`| ${r.component} | ${icon}${err} |`);
+      resultLines.push('### Passos executados');
+      resultLines.push('| # | Acao | Status |');
+      resultLines.push('|---|---|---|');
+      deployResults.forEach((r, idx) => {
+        const icon = r.manual ? '\ud83d\udcdd' : (r.success ? '\u2705' : '\u274c');
+        const errMsg = r.errors?.length ? ' \u2014 ' + (r.errors[0]?.message || '') : '';
+        resultLines.push('| ' + (idx + 1) + ' | ' + (r.component || 'N/A') + ' | ' + icon + errMsg + ' |');
+      });
+
+      const manualSteps = deployResults.filter(r => r.manual);
+      if (manualSteps.length > 0) {
+        resultLines.push(''); resultLines.push('---'); resultLines.push('');
+        resultLines.push('### Configuracao manual');
+        let instanceUrl = '';
+        try { const cr = await fetch(baseDeploy + '/test-connection'); instanceUrl = (await cr.json()).instanceUrl || ''; } catch {}
+        manualSteps.forEach((step, idx) => {
+          resultLines.push('**Passo ' + (idx + 1) + ':** ' + step.component);
+          if (step.setupUrl && instanceUrl) resultLines.push('[\u27a1 Abrir no Setup](' + instanceUrl + step.setupUrl + ')');
+          resultLines.push('');
+        });
       }
 
       res.end(JSON.stringify({
         choices: [{ message: { content: resultLines.join('\n') } }],
-        modelo_usado: 'grok-4.20',
-        modelo_label: 'Grok 4.20',
+        modelo_usado: 'claude-sonnet-4-6',
+        modelo_label: 'Claude Sonnet (Smart Deploy)',
         tipo: 'deploy',
       }));
       return;
