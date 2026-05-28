@@ -529,6 +529,8 @@ router.post('/', authMiddleware, async (req, res) => {
           const smartPrompt = [
             'Voce e um configurador Salesforce. Com base no ESTADO ATUAL da org e no REQUISITO, gere os comandos EXATOS para implementar.',
             '',
+            'INSTANCE URL DA ORG: ' + (selectedOrg?.login_url || 'https://orgfarm-6450ce60e0-dev-ed.develop.my.salesforce.com'),
+            '',
             'ESTADO ATUAL DA ORG:',
             orgContext,
             '',
@@ -539,7 +541,17 @@ router.post('/', authMiddleware, async (req, res) => {
             '- type: "metadata-update" | "metadata-create" | "execute-apex" | "setup-instruction"',
             '- Para metadata-update: metadataType, body (JSON COMPLETO do metadata atualizado, nao parcial)',
             '- Para execute-apex: code (codigo Apex anonimo)',
-            '- Para setup-instruction: step (caminho COMPLETO no Setup com cada clique)',
+            '- Para setup-instruction: step (caminho COMPLETO no Setup), setupUrl (URL direta do Setup Lightning, ex: /lightning/setup/Forecasting/home, /lightning/setup/ObjectManager/Lead/FieldsAndRelationships/view, /lightning/setup/PermSets/home)',
+            '- setupUrl OBRIGATORIO em setup-instruction. Use o path Lightning Setup correto. Exemplos:',
+            '  Forecasts: /lightning/setup/Forecasting/home',
+            '  Fields: /lightning/setup/ObjectManager/{Objeto}/FieldsAndRelationships/view',
+            '  Permission Sets: /lightning/setup/PermSets/home',
+            '  Sharing: /lightning/setup/SecuritySharing/home',
+            '  Profiles: /lightning/setup/EnhancedProfiles/home',
+            '  Flows: /lightning/setup/Flows/home',
+            '  Custom Metadata: /lightning/setup/CustomMetadata/home',
+            '  Assignment Rules: /lightning/setup/LeadRules/home',
+            '  Validation Rules: /lightning/setup/ObjectManager/{Objeto}/ValidationRules/view',
             '- description: descricao do que o passo faz',
             '',
             'REGRAS:',
@@ -602,7 +614,7 @@ router.post('/', authMiddleware, async (req, res) => {
                 deployResults.push({ component: (step.description || 'Apex'), success: result.success !== false, errors: result.errors || [] });
 
               } else if (step.type === 'setup-instruction') {
-                deployResults.push({ component: step.step || step.description, success: true, manual: true, errors: [] });
+                deployResults.push({ component: step.step || step.description, success: true, manual: true, setupUrl: step.setupUrl || '', errors: [] });
               }
             } catch (stepErr) {
               deployResults.push({ component: (step.description || step.type), success: false, errors: [{ message: stepErr.message }] });
@@ -693,7 +705,22 @@ router.post('/', authMiddleware, async (req, res) => {
           resultLines.push('### Configuracao manual necessaria');
           resultLines.push('');
           manualSteps.forEach((step, idx) => {
-            resultLines.push('**Passo ' + (idx + 1) + ':** ' + step.component);
+            const setupUrl = step.setupUrl || '';
+            if (setupUrl) {
+              const instanceBase = selectedOrg ? selectedOrg.login_url.replace('https://test.salesforce.com', '') : 'https://orgfarm-6450ce60e0-dev-ed.develop.my.salesforce.com';
+              // Tentar montar URL direta
+              let fullUrl = '';
+              try {
+                // Buscar instanceUrl da conexao
+                const connRes = await fetch(base + '/test-connection');
+                const connData = await connRes.json();
+                fullUrl = (connData.instanceUrl || instanceBase) + setupUrl;
+              } catch { fullUrl = instanceBase + setupUrl; }
+              resultLines.push('**Passo ' + (idx + 1) + ':** ' + step.component);
+              resultLines.push('[Abrir no Setup](' + fullUrl + ')');
+            } else {
+              resultLines.push('**Passo ' + (idx + 1) + ':** ' + step.component);
+            }
             resultLines.push('');
           });
         }
