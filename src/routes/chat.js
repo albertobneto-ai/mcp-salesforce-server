@@ -147,9 +147,12 @@ function formatDeployResult(smartDeploy, deployResults) {
 }
 
 // Helper: monta preview (dry-run) de um plano
-function formatDeployPreview(smartDeploy) {
+function formatDeployPreview(smartDeploy, orgName) {
   const lines = [];
-  lines.push('## \ud83d\udd0d Preview do Deploy (dry-run)');
+  lines.push('[[CONFIRM-BOX]]');
+  lines.push('## \u26a0\ufe0f Confirmacao de Deploy');
+  lines.push('');
+  lines.push('### \ud83c\udfe2 Org de destino: ' + (orgName || 'Dev Org (padrao)'));
   if (smartDeploy.summary) { lines.push(''); lines.push('**Resumo:** ' + smartDeploy.summary); }
   lines.push('');
   lines.push('### O que sera feito');
@@ -169,7 +172,10 @@ function formatDeployPreview(smartDeploy) {
   lines.push('');
   lines.push('---');
   lines.push('');
-  lines.push('Nada foi alterado na org ainda. Digite **confirmar** para executar ou **cancelar**.');
+  lines.push('Nada foi alterado na org ainda.');
+  lines.push('');
+  lines.push('**1** \u2014 Seguir e aplicar na org    **2** \u2014 Cancelar');
+  lines.push('[[/CONFIRM-BOX]]');
   lines.push('');
   lines.push('---PLAN---');
   lines.push(JSON.stringify(smartDeploy));
@@ -400,8 +406,9 @@ router.post('/', authMiddleware, async (req, res) => {
 
       // 3. DRY-RUN: mostrar preview do plano (nao executa ainda)
       clearInterval(keepAlive);
+      const orgNameDeploy = selectedOrgDeploy ? selectedOrgDeploy.name : 'Dev Org (padrao)';
       res.end(JSON.stringify({
-        choices: [{ message: { content: formatDeployPreview(smartDeploy) } }],
+        choices: [{ message: { content: formatDeployPreview(smartDeploy, orgNameDeploy) } }],
         modelo_usado: 'claude-sonnet-4-6',
         modelo_label: 'Claude Sonnet (Preview)',
         tipo: 'deploy',
@@ -477,8 +484,12 @@ router.post('/', authMiddleware, async (req, res) => {
 
       // Preview com aviso forte (delete e irreversivel)
       clearInterval(kaDel);
+      const orgNameDel = (await getSelectedOrg(req))?.name || 'Dev Org (padrao)';
       const lines = [];
+      lines.push('[[CONFIRM-BOX]]');
       lines.push('## \u26a0\ufe0f Confirmacao de Exclusao');
+      lines.push('');
+      lines.push('### \ud83c\udfe2 Org de destino: ' + orgNameDel);
       if (delPlan.summary) { lines.push(''); lines.push('**' + delPlan.summary + '**'); }
       lines.push('');
       lines.push('### Sera excluido:');
@@ -488,11 +499,10 @@ router.post('/', authMiddleware, async (req, res) => {
         lines.push('| ' + (i + 1) + ' | ' + (s.metadataType || 'Metadata') + ' | ' + (s.fullName || s.description) + ' |');
       });
       lines.push('');
-      lines.push('---');
-      lines.push('');
       lines.push('\u26a0\ufe0f **Exclusao e irreversivel** (soft-delete de 15 dias). Nada foi excluido ainda.');
       lines.push('');
-      lines.push('Digite **confirmar** para excluir ou **cancelar**.');
+      lines.push('**1** \u2014 Seguir e excluir    **2** \u2014 Cancelar');
+      lines.push('[[/CONFIRM-BOX]]');
       lines.push('');
       lines.push('---PLAN---');
       lines.push(JSON.stringify(delPlan));
@@ -610,7 +620,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
       // ── CONFIRMAR deploy apos preview (dry-run) ──
       const isDryRunPreview = (prevAssistant.includes('Preview do Deploy') || prevAssistant.includes('Confirmacao de Exclusao')) && prevAssistant.includes('---PLAN---');
-      if (isDryRunPreview && ['confirmar', 'confirma', 'sim'].includes(lastUser.toLowerCase())) {
+      if (isDryRunPreview && ['confirmar', 'confirma', 'sim', '1', 'seguir'].includes(lastUser.toLowerCase())) {
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Transfer-Encoding', 'chunked');
         res.write(' ');
@@ -641,7 +651,7 @@ router.post('/', authMiddleware, async (req, res) => {
       }
 
       // Cancelar deploy
-      if (isDryRunPreview && ['cancelar', 'cancela', 'nao', 'não'].includes(lastUser.toLowerCase())) {
+      if (isDryRunPreview && ['cancelar', 'cancela', 'nao', 'não', '2'].includes(lastUser.toLowerCase())) {
         res.json({
           choices: [{ message: { content: 'Deploy cancelado. Nada foi alterado na org.' } }],
           modelo_usado: 'system', modelo_label: 'Sistema', tipo: 'deploy',
