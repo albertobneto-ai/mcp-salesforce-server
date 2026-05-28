@@ -506,8 +506,30 @@ app.get("/api/move-field-in-layout/:layoutName/:fieldName/:toSection", async (re
       if (fieldItem) break;
     }
     if (!fieldItem) {
-      sfClient.clearTargetOrg();
-      return res.json({ status: "not_found", field: fieldName });
+      // Campo nao existe no layout - ADICIONAR na secao alvo
+      const addTarget = sections.find(s => s.label === toSectionLabel);
+      if (!addTarget) {
+        sfClient.clearTargetOrg();
+        return res.json({ status: "error", message: "Section not found: " + toSectionLabel });
+      }
+      const addCols = Array.isArray(addTarget.layoutColumns) ? addTarget.layoutColumns : [addTarget.layoutColumns];
+      const addCol = addCols[0];
+      const newItem = { behavior: "Edit", field: fieldName };
+      if (!addCol.layoutItems) {
+        addCol.layoutItems = [newItem];
+      } else if (Array.isArray(addCol.layoutItems)) {
+        addCol.layoutItems.push(newItem);
+      } else {
+        addCol.layoutItems = [addCol.layoutItems, newItem];
+      }
+      try {
+        await conn.metadata.update("Layout", layout);
+        sfClient.clearTargetOrg();
+        return res.json({ status: "added", field: fieldName, section: toSectionLabel, success: true });
+      } catch (updateErr) {
+        sfClient.clearTargetOrg();
+        return res.json({ status: "error", message: updateErr.message, success: false });
+      }
     }
     const targetSection = sections.find(s => s.label === toSectionLabel);
     if (!targetSection) {
