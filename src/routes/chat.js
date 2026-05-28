@@ -40,6 +40,107 @@ async function execDescribe(req, objectName) {
   return await r.json();
 }
 
+// Helper: executa os steps de um plano de deploy e retorna resultados
+async function runDeploySteps(smartDeploy, req) {
+  const baseDeploy = 'http://localhost:' + (process.env.PORT || 3000);
+  const deployResults = [];
+  for (const step of smartDeploy.steps) {
+    try {
+      if (step.type === 'metadata-create') {
+        const r = await fetch(baseDeploy + '/api/metadata-create/' + step.metadataType, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(step.body),
+        });
+        const result = await r.json();
+        const alreadyExists = (result.errors || []).some(e => (e.message || '').includes('already') || (e.message || '').includes('duplicate'));
+        deployResults.push({ component: (step.description || step.metadataType), success: result.success || alreadyExists, errors: alreadyExists ? [] : (result.errors || []) });
+      } else if (step.type === 'add-to-layout') {
+        const ln = encodeURIComponent(step.layout || (step.object + '-' + step.object + ' Layout'));
+        const fn = encodeURIComponent(step.field);
+        const sn = encodeURIComponent(step.section || (step.object + ' Information'));
+        const r = await fetch(baseDeploy + '/api/move-field-in-layout/' + ln + '/' + fn + '/' + sn);
+        const result = await r.json();
+        deployResults.push({ component: (step.description || 'Layout: ' + step.field), success: result.success || result.status === 'added' || result.status === 'moved', errors: result.error ? [{ message: result.error }] : [] });
+      } else if (step.type === 'add-permission') {
+        const psName = step.permissionSetName || 'Everi9_Deploy_Access';
+        const body = { fullName: psName, label: step.permissionSetLabel || psName.replace(/_/g, ' '), fieldPermissions: (step.fields || [step.field]).map(f => ({ field: f, editable: true, readable: true })) };
+        let r = await fetch(baseDeploy + '/api/metadata-create/PermissionSet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        let result = await r.json();
+        if (!result.success) { r = await fetch(baseDeploy + '/api/metadata-update/PermissionSet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); result = await r.json(); }
+        deployResults.push({ component: (step.description || 'Permission Set'), success: result.success !== false, errors: result.errors || [] });
+        try {
+          const assignApex = "PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = '" + psName + "' LIMIT 1]; List<User> users = [SELECT Id FROM User WHERE IsActive = true AND UserType = 'Standard' AND Id NOT IN (SELECT AssigneeId FROM PermissionSetAssignment WHERE PermissionSetId = :ps.Id)]; List<PermissionSetAssignment> psas = new List<PermissionSetAssignment>(); for (User u : users) { psas.add(new PermissionSetAssignment(AssigneeId = u.Id, PermissionSetId = ps.Id)); } if (!psas.isEmpty()) insert psas;";
+          await fetch(baseDeploy + '/api/execute-anonymous', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: assignApex }) });
+          deployResults.push({ component: 'Atribuir PS aos usuarios', success: true, errors: [] });
+        } catch {}
+      } else if (step.type === 'metadata-update') {
+        const r = await fetch(baseDeploy + '/api/metadata-update/' + step.metadataType, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(step.body) });
+        const result = await r.json();
+        deployResults.push({ component: (step.description || step.metadataType), success: result.success !== false, errors: result.errors || [] });
+      } else if (step.type === 'execute-apex') {
+        const r = await fetch(baseDeploy + '/api/execute-anonymous', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: step.code }) });
+        const result = await r.json();
+        deployResults.push({ component: (step.description || 'Apex'), success: result.success !== false, errors: result.errors || [] });
+      } else if (step.type === 'setup-instruction') {
+        deployResults.push({ component: step.step || step.description, success: true, manual: true, setupUrl: step.setupUrl || '', errors: [] });
+      }
+    } catch (stepErr) {
+      deployResults.push({ component: (step.description || step.type), success: false, errors: [{ message: stepErr.message }] });
+    }
+  }
+  return deployResults;
+}
+
+// Helper: formata resultado do deploy
+function formatDeployResult(smartDeploy, deployResults) {
+  const successDeploy = deployResults.filter(r => !r.manual).every(r => r.success);
+  const resultLines = [];
+  resultLines.push(successDeploy ? '## \u2705 Deploy realizado com sucesso!' : '## \u26a0\ufe0f Deploy parcial');
+  if (smartDeploy.summary) { resultLines.push(''); resultLines.push('**Resumo:** ' + smartDeploy.summary); }
+  resultLines.push('');
+  resultLines.push('### Passos executados');
+  resultLines.push('| # | Acao | Status |');
+  resultLines.push('|---|---|---|');
+  deployResults.forEach((r, idx) => {
+    const icon = r.manual ? '\ud83d\udcdd' : (r.success ? '\u2705' : '\u274c');
+    const errMsg = r.errors?.length ? ' \u2014 ' + (r.errors[0]?.message || '') : '';
+    resultLines.push('| ' + (idx + 1) + ' | ' + (r.component || 'N/A') + ' | ' + icon + errMsg + ' |');
+  });
+  return resultLines.join('\n');
+}
+
+// Helper: monta preview (dry-run) de um plano
+function formatDeployPreview(smartDeploy) {
+  const lines = [];
+  lines.push('## \ud83d\udd0d Preview do Deploy (dry-run)');
+  if (smartDeploy.summary) { lines.push(''); lines.push('**Resumo:** ' + smartDeploy.summary); }
+  lines.push('');
+  lines.push('### O que sera feito');
+  lines.push('| # | Tipo | Acao |');
+  lines.push('|---|---|---|');
+  const typeLabels = { 'metadata-create': 'Criar', 'add-to-layout': 'Layout', 'add-permission': 'Permissao', 'metadata-update': 'Config', 'execute-apex': 'Apex', 'setup-instruction': 'Manual' };
+  smartDeploy.steps.forEach((step, idx) => {
+    lines.push('| ' + (idx + 1) + ' | ' + (typeLabels[step.type] || step.type) + ' | ' + (step.description || step.metadataType || step.field || step.type) + ' |');
+  });
+  if (smartDeploy.code) {
+    const codeItems = [];
+    if (smartDeploy.code.apexClasses?.length) codeItems.push(smartDeploy.code.apexClasses.length + ' Apex Class(es)');
+    if (smartDeploy.code.apexTriggers?.length) codeItems.push(smartDeploy.code.apexTriggers.length + ' Trigger(s)');
+    if (smartDeploy.code.lwc?.length) codeItems.push(smartDeploy.code.lwc.length + ' LWC');
+    if (codeItems.length) { lines.push(''); lines.push('**Codigo a deployar:** ' + codeItems.join(', ')); }
+  }
+  lines.push('');
+  lines.push('---');
+  lines.push('');
+  lines.push('Nada foi alterado na org ainda. Digite **confirmar** para executar ou **cancelar**.');
+  lines.push('');
+  lines.push('---PLAN---');
+  lines.push(JSON.stringify(smartDeploy));
+  lines.push('---FIM---');
+  return lines.join('\n');
+}
+
+
 // Detecta se a pergunta precisa da KB do projeto
 function needsKB(text) {
   const lower = text.toLowerCase();
@@ -257,92 +358,12 @@ router.post('/', authMiddleware, async (req, res) => {
         return;
       }
 
-      // 3. Executar steps
-      const deployResults = [];
-      for (const step of smartDeploy.steps) {
-        try {
-          if (step.type === 'metadata-create') {
-            const r = await fetch(baseDeploy + '/api/metadata-create/' + step.metadataType, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(step.body),
-            });
-            const result = await r.json();
-            const alreadyExists = (result.errors || []).some(e => (e.message || '').includes('already') || (e.message || '').includes('duplicate'));
-            deployResults.push({ component: (step.description || step.metadataType), success: result.success || alreadyExists, errors: alreadyExists ? [] : (result.errors || []) });
-
-          } else if (step.type === 'add-to-layout') {
-            const ln = encodeURIComponent(step.layout || (step.object + '-' + step.object + ' Layout'));
-            const fn = encodeURIComponent(step.field);
-            const sn = encodeURIComponent(step.section || (step.object + ' Information'));
-            const r = await fetch(baseDeploy + '/api/move-field-in-layout/' + ln + '/' + fn + '/' + sn);
-            const result = await r.json();
-            deployResults.push({ component: (step.description || 'Layout: ' + step.field), success: result.success || result.status === 'added' || result.status === 'moved', errors: result.error ? [{ message: result.error }] : [] });
-
-          } else if (step.type === 'add-permission') {
-            const psName = step.permissionSetName || 'Everi9_Deploy_Access';
-            const body = { fullName: psName, label: step.permissionSetLabel || psName.replace(/_/g, ' '), fieldPermissions: (step.fields || [step.field]).map(f => ({ field: f, editable: true, readable: true })) };
-            let r = await fetch(baseDeploy + '/api/metadata-create/PermissionSet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-            let result = await r.json();
-            if (!result.success) { r = await fetch(baseDeploy + '/api/metadata-update/PermissionSet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); result = await r.json(); }
-            deployResults.push({ component: (step.description || 'Permission Set'), success: result.success !== false, errors: result.errors || [] });
-            // Assign PS
-            try {
-              const assignApex = "PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = '" + psName + "' LIMIT 1]; List<User> users = [SELECT Id FROM User WHERE IsActive = true AND UserType = 'Standard' AND Id NOT IN (SELECT AssigneeId FROM PermissionSetAssignment WHERE PermissionSetId = :ps.Id)]; List<PermissionSetAssignment> psas = new List<PermissionSetAssignment>(); for (User u : users) { psas.add(new PermissionSetAssignment(AssigneeId = u.Id, PermissionSetId = ps.Id)); } if (!psas.isEmpty()) insert psas;";
-              await fetch(baseDeploy + '/api/execute-anonymous', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: assignApex }) });
-              deployResults.push({ component: 'Atribuir PS aos usuarios', success: true, errors: [] });
-            } catch {}
-
-          } else if (step.type === 'metadata-update') {
-            const r = await fetch(baseDeploy + '/api/metadata-update/' + step.metadataType, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(step.body) });
-            const result = await r.json();
-            deployResults.push({ component: (step.description || step.metadataType), success: result.success !== false, errors: result.errors || [] });
-
-          } else if (step.type === 'execute-apex') {
-            const r = await fetch(baseDeploy + '/api/execute-anonymous', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: step.code }) });
-            const result = await r.json();
-            deployResults.push({ component: (step.description || 'Apex'), success: result.success !== false, errors: result.errors || [] });
-
-          } else if (step.type === 'setup-instruction') {
-            deployResults.push({ component: step.step || step.description, success: true, manual: true, setupUrl: step.setupUrl || '', errors: [] });
-          }
-        } catch (stepErr) {
-          deployResults.push({ component: (step.description || step.type), success: false, errors: [{ message: stepErr.message }] });
-        }
-      }
-clearInterval(keepAlive);
-
-      // 4. Formatar resultado
-      const successDeploy = deployResults.filter(r => !r.manual).every(r => r.success);
-      const resultLines = [];
-      resultLines.push(successDeploy ? '## \u2705 Deploy realizado com sucesso!' : '## \u26a0\ufe0f Deploy parcial');
-      if (smartDeploy.summary) { resultLines.push(''); resultLines.push('**Resumo:** ' + smartDeploy.summary); }
-      resultLines.push('');
-      resultLines.push('### Passos executados');
-      resultLines.push('| # | Acao | Status |');
-      resultLines.push('|---|---|---|');
-      deployResults.forEach((r, idx) => {
-        const icon = r.manual ? '\ud83d\udcdd' : (r.success ? '\u2705' : '\u274c');
-        const errMsg = r.errors?.length ? ' \u2014 ' + (r.errors[0]?.message || '') : '';
-        resultLines.push('| ' + (idx + 1) + ' | ' + (r.component || 'N/A') + ' | ' + icon + errMsg + ' |');
-      });
-
-      const manualSteps = deployResults.filter(r => r.manual);
-      if (manualSteps.length > 0) {
-        resultLines.push(''); resultLines.push('---'); resultLines.push('');
-        resultLines.push('### Configuracao manual');
-        let instanceUrl = '';
-        try { const cr = await fetch(baseDeploy + '/test-connection'); instanceUrl = (await cr.json()).instanceUrl || ''; } catch {}
-        manualSteps.forEach((step, idx) => {
-          resultLines.push('**Passo ' + (idx + 1) + ':** ' + step.component);
-          if (step.setupUrl && instanceUrl) resultLines.push('[\u27a1 Abrir no Setup](' + instanceUrl + step.setupUrl + ')');
-          resultLines.push('');
-        });
-      }
-
+      // 3. DRY-RUN: mostrar preview do plano (nao executa ainda)
+      clearInterval(keepAlive);
       res.end(JSON.stringify({
-        choices: [{ message: { content: resultLines.join('\n') } }],
+        choices: [{ message: { content: formatDeployPreview(smartDeploy) } }],
         modelo_usado: 'claude-sonnet-4-6',
-        modelo_label: 'Claude Sonnet (Smart Deploy)',
+        modelo_label: 'Claude Sonnet (Preview)',
         tipo: 'deploy',
       }));
       return;
@@ -450,6 +471,48 @@ clearInterval(keepAlive);
     if ((command === 'chat') && messages.length >= 2) {
       const lastUser = (messages[messages.length - 1]?.content || '').trim();
       const prevAssistant = messages[messages.length - 2]?.content || '';
+
+      // ── CONFIRMAR deploy apos preview (dry-run) ──
+      const isDryRunPreview = prevAssistant.includes('Preview do Deploy') && prevAssistant.includes('---PLAN---');
+      if (isDryRunPreview && ['confirmar', 'confirma', 'sim'].includes(lastUser.toLowerCase())) {
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Transfer-Encoding', 'chunked');
+        res.write(' ');
+        const kaConfirm = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+
+        // Extrair plano embutido
+        let plan = null;
+        const pm = prevAssistant.match(/---PLAN---([\s\S]*?)---FIM---/);
+        if (pm) { try { plan = JSON.parse(pm[1].trim()); } catch {} }
+
+        if (!plan?.steps?.length) {
+          clearInterval(kaConfirm);
+          res.end(JSON.stringify({
+            choices: [{ message: { content: '\u274c Nao consegui recuperar o plano. Rode o /deploy novamente.' } }],
+            modelo_usado: 'system', modelo_label: 'Sistema', tipo: 'deploy',
+          }));
+          return;
+        }
+
+        // Executar
+        const deployResults = await runDeploySteps(plan, req);
+        clearInterval(kaConfirm);
+        res.end(JSON.stringify({
+          choices: [{ message: { content: formatDeployResult(plan, deployResults) } }],
+          modelo_usado: 'claude-sonnet-4-6', modelo_label: 'Claude Sonnet (Deploy)', tipo: 'deploy',
+        }));
+        return;
+      }
+
+      // Cancelar deploy
+      if (isDryRunPreview && ['cancelar', 'cancela', 'nao', 'não'].includes(lastUser.toLowerCase())) {
+        res.json({
+          choices: [{ message: { content: 'Deploy cancelado. Nada foi alterado na org.' } }],
+          modelo_usado: 'system', modelo_label: 'Sistema', tipo: 'deploy',
+        });
+        return;
+      }
+
       const isArchFollowup = prevAssistant.includes('Gerar Spec tecnica com base no gap') && prevAssistant.includes('Deploy do que falta na org');
 
       if (isArchFollowup && ['1', '2'].includes(lastUser)) {
