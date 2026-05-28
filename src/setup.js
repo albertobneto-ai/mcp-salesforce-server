@@ -46,6 +46,7 @@ router.get('/init-db', async (req, res) => {
     // Adicionar colunas se nao existirem (migracao)
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(100)');
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMPTZ');
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS session_version INT DEFAULT 1');
     // Adicionar coluna role se nao existir (migracao)
     await pool.query(`DO $$ BEGIN
       ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'funcional';
@@ -113,6 +114,20 @@ router.post('/users', requireAdmin, async (req, res) => {
 });
 
 // DELETE /api/setup/users/:id
+// POST /api/setup/users/:id/end-session — encerra a sessao do usuario (forca novo login)
+router.post('/users/:id/end-session', requireAdmin, async (req, res) => {
+  const pool = new pg.default.Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+  try {
+    const result = await pool.query('UPDATE users SET session_version = COALESCE(session_version, 1) + 1 WHERE id = $1 RETURNING id, name, session_version', [req.params.id]);
+    if (!result.rows.length) { await pool.end(); return res.status(404).json({ error: 'Usuario nao encontrado' }); }
+    await pool.end();
+    res.json({ ok: true, message: 'Sessao encerrada. O usuario sera redirecionado ao login na proxima interacao.', user: result.rows[0] });
+  } catch (err) {
+    await pool.end();
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.delete('/users/:id', requireAdmin, async (req, res) => {
   try {
     const pg = await import('pg');
