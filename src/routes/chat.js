@@ -40,6 +40,17 @@ async function execDescribe(req, objectName) {
   return await r.json();
 }
 
+// Helper: metadata-read na org selecionada ou default
+async function execMetadataRead(req, type, fullName) {
+  const selectedOrg = await getSelectedOrg(req);
+  if (selectedOrg) {
+    return await sfMulti.metadataRead(selectedOrg, type, fullName);
+  }
+  const base = 'http://localhost:' + (process.env.PORT || 3000);
+  const r = await fetch(base + '/api/metadata-read/' + type + '/' + fullName);
+  return await r.json();
+}
+
 // Helper: executa os steps de um plano de deploy e retorna resultados
 async function runDeploySteps(smartDeploy, req) {
   const baseDeploy = 'http://localhost:' + (process.env.PORT || 3000);
@@ -317,8 +328,7 @@ router.post('/', authMiddleware, async (req, res) => {
         for (const obj of sfObjects) {
           if (reqLower.includes(obj.toLowerCase())) {
             try {
-              const dr = await fetch(baseDeploy + '/api/describe/' + obj);
-              const desc = await dr.json();
+              const desc = await execDescribe(req, obj);
               metadataReads.push({ type: 'Describe_' + obj, fields: (desc.fields || []).slice(0, 40).map(f => f.name + ' (' + f.type + (f.custom ? ', custom' : '') + ')') });
             } catch {}
           }
@@ -766,8 +776,7 @@ router.post('/', authMiddleware, async (req, res) => {
           for (const obj of sfObjects) {
             if (reqLower.includes(obj.toLowerCase())) {
               try {
-                const dr = await fetch(base + '/api/describe/' + obj);
-                const desc = await dr.json();
+                const desc = await execDescribe(req, obj);
                 metadataReads.push({ type: 'Describe_' + obj, fields: (desc.fields || []).slice(0, 40).map(f => f.name + ' (' + f.type + (f.custom ? ', custom' : '') + ')') });
               } catch {}
             }
@@ -787,8 +796,8 @@ router.post('/', authMiddleware, async (req, res) => {
           for (const [keyword, [metaType, fullName]] of Object.entries(settingsMap)) {
             if (reqLower.includes(keyword)) {
               try {
-                const sr = await fetch(base + '/api/metadata-read/' + metaType + '/' + fullName);
-                metadataReads.push({ type: metaType, data: await sr.json() });
+                const mdata = await execMetadataRead(req, metaType, fullName);
+                metadataReads.push({ type: metaType, data: mdata });
               } catch {}
             }
           }
@@ -796,8 +805,7 @@ router.post('/', authMiddleware, async (req, res) => {
           // Se nenhum objeto detectado, descrever os mais comuns
           if (metadataReads.length === 0) {
             try {
-              const dr = await fetch(base + '/api/describe/Opportunity');
-              const desc = await dr.json();
+              const desc = await execDescribe(req, 'Opportunity');
               metadataReads.push({ type: 'Describe_Opportunity', fields: (desc.fields || []).slice(0, 20).map(f => f.name + ' (' + f.type + ')') });
             } catch {}
           }
@@ -1231,8 +1239,7 @@ router.post('/', authMiddleware, async (req, res) => {
         // Descrever objetos
         for (const obj of mentionedObjects) {
           try {
-            const dr = await fetch(baseArch + '/api/describe/' + obj);
-            const desc = await dr.json();
+            const desc = await execDescribe(req, obj);
             orgScan['fields_' + obj] = (desc.fields || []).map(f => ({
               name: f.name, label: f.label, type: f.type, custom: f.custom,
               picklistValues: f.picklistValues?.length > 0 ? f.picklistValues.map(p => p.value) : undefined,
@@ -1436,9 +1443,7 @@ router.post('/', authMiddleware, async (req, res) => {
                 discoveryType = 'apex';
               } else {
                 // Tentar como Trigger
-                encSoql = Buffer.from("SELECT Id, Name, Body, TableEnumOrId, Status FROM ApexTrigger WHERE Name LIKE '%" + discArgSafe.replace(/ /g, '') + "%'").toString('base64');
-                sr = await fetch(baseDisc + '/api/soql-b64/' + encSoql);
-                result = await sr.json();
+                result = await execSoql(req, "SELECT Id, Name, Body, TableEnumOrId, Status FROM ApexTrigger WHERE Name LIKE '%" + discArgSafe.replace(/ /g, '') + "%'");
                 if (result.records?.length) {
                   discoveryData = result.records;
                   discoveryType = 'trigger';
