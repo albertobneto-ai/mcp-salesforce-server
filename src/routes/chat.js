@@ -42,10 +42,10 @@ async function getSelectedOrg(req) {
 
 // ── Permissões por perfil ──
 const ROLE_PERMISSIONS = {
-  admin:     ['spec', 'hf', 'ata', 'deploy', 'describe', 'status', 'chat', 'prototipo', 'list'],
+  admin:     ['spec', 'hf', 'ata', 'deploy', 'describe', 'status', 'chat', 'prototipo', 'list', 'discovery'],
   funcional: ['hf', 'ata'],
-  architect: ['spec', 'ata', 'list'],
-  developer: ['deploy', 'describe', 'ata', 'list'],
+  architect: ['spec', 'ata', 'list', 'discovery'],
+  developer: ['deploy', 'describe', 'ata', 'list', 'discovery'],
   candidato: ['chat'],
 };
 
@@ -59,6 +59,7 @@ function detectCommand(messages) {
   if (last.startsWith('/spec') || last.includes('gere a spec')) return 'spec';
   if (last.startsWith('/hf') || last.includes('historia funcional')) return 'hf';
   if (last.startsWith('/ata') || last.includes('ata de reuniao')) return 'ata';
+  if (last.startsWith('/discovery') || last.startsWith('/disc')) return 'discovery';
   if (last.startsWith('/list')) return 'list';
   if (last.startsWith('/prototipo') || last.startsWith('/proto')) return 'prototipo';
   if (last.startsWith('/deploy')) return 'deploy';
@@ -895,6 +896,189 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 
         switch (command) {
+      case 'discovery': {
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Transfer-Encoding', 'chunked');
+        res.write(' ');
+        const keepAliveDisc = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+
+        const discArg = messages[messages.length - 1].content.replace(/\/(discovery|disc)\s*/i, '').trim();
+        const discLower = discArg.toLowerCase().replace(/\s/g, '');
+        const selectedOrgDisc = await getSelectedOrg(req);
+        const baseDisc = 'http://localhost:' + (process.env.PORT || 3000);
+
+        // Mapear tipo de componente para SOQL que traz detalhes
+        const discoveryQueries = {
+          'flow': "SELECT Id, DurableId, ApiName, Label, ProcessType, TriggerType, Description, IsActive, ActiveVersionId FROM FlowDefinitionView ORDER BY Label",
+          'flows': "SELECT Id, DurableId, ApiName, Label, ProcessType, TriggerType, Description, IsActive, ActiveVersionId FROM FlowDefinitionView ORDER BY Label",
+          'apex': "SELECT Id, Name, Body, LengthWithoutComments, Status FROM ApexClass WHERE NamespacePrefix = null ORDER BY Name",
+          'classes': "SELECT Id, Name, Body, LengthWithoutComments, Status FROM ApexClass WHERE NamespacePrefix = null ORDER BY Name",
+          'trigger': "SELECT Id, Name, Body, TableEnumOrId, Status FROM ApexTrigger WHERE NamespacePrefix = null ORDER BY Name",
+          'triggers': "SELECT Id, Name, Body, TableEnumOrId, Status FROM ApexTrigger WHERE NamespacePrefix = null ORDER BY Name",
+          'validationrules': "SELECT Id, ValidationName, EntityDefinition.QualifiedApiName, Active, Description, ErrorMessage FROM ValidationRule ORDER BY EntityDefinition.QualifiedApiName, ValidationName",
+          'vr': "SELECT Id, ValidationName, EntityDefinition.QualifiedApiName, Active, Description, ErrorMessage FROM ValidationRule ORDER BY EntityDefinition.QualifiedApiName, ValidationName",
+          'permissionsets': "SELECT Id, Name, Label, Description, IsCustom FROM PermissionSet WHERE IsCustom = true ORDER BY Label",
+          'ps': "SELECT Id, Name, Label, Description, IsCustom FROM PermissionSet WHERE IsCustom = true ORDER BY Label",
+          'recordtypes': "SELECT Id, Name, DeveloperName, SobjectType, IsActive, Description FROM RecordType ORDER BY SobjectType, Name",
+          'rt': "SELECT Id, Name, DeveloperName, SobjectType, IsActive, Description FROM RecordType ORDER BY SobjectType, Name",
+        };
+
+        let discoveryData = [];
+        let discoveryType = '';
+        const soql = discoveryQueries[discLower];
+
+        if (soql) {
+          discoveryType = discLower;
+          try {
+            const encSoql = Buffer.from(soql).toString('base64');
+            const sr = await fetch(baseDisc + '/api/soql-b64/' + encSoql);
+            const result = await sr.json();
+            discoveryData = result.records || [];
+          } catch (e) {
+            clearInterval(keepAliveDisc);
+            res.end(JSON.stringify({
+              choices: [{ message: { content: '\u274c Erro ao consultar: ' + e.message } }],
+              modelo_usado: 'system', modelo_label: 'Sistema', tipo: 'discovery',
+            }));
+            return;
+          }
+        } else {
+          // Tratar como nome de componente específico — buscar por nome
+          try {
+            // Tentar como Flow
+            let encSoql = Buffer.from("SELECT Id, ApiName, Label, ProcessType, TriggerType, Description, IsActive FROM FlowDefinitionView WHERE ApiName = '" + discArg + "' OR Label LIKE '%" + discArg + "%'").toString('base64');
+            let sr = await fetch(baseDisc + '/api/soql-b64/' + encSoql);
+            let result = await sr.json();
+            if (result.records?.length) {
+              discoveryData = result.records;
+              discoveryType = 'flow';
+            } else {
+              // Tentar como Apex
+              encSoql = Buffer.from("SELECT Id, Name, Body, Status FROM ApexClass WHERE Name LIKE '%" + discArg + "%'").toString('base64');
+              sr = await fetch(baseDisc + '/api/soql-b64/' + encSoql);
+              result = await sr.json();
+              if (result.records?.length) {
+                discoveryData = result.records;
+                discoveryType = 'apex';
+              } else {
+                // Tentar como Trigger
+                encSoql = Buffer.from("SELECT Id, Name, Body, TableEnumOrId, Status FROM ApexTrigger WHERE Name LIKE '%" + discArg + "%'").toString('base64');
+                sr = await fetch(baseDisc + '/api/soql-b64/' + encSoql);
+                result = await sr.json();
+                if (result.records?.length) {
+                  discoveryData = result.records;
+                  discoveryType = 'trigger';
+                }
+              }
+            }
+          } catch {}
+        }
+
+        if (discoveryData.length === 0) {
+          clearInterval(keepAliveDisc);
+          res.end(JSON.stringify({
+            choices: [{ message: { content: '\u26a0\ufe0f Nenhum componente encontrado para: **' + discArg + '**\n\nUse: /discovery flow, /discovery apex, /discovery triggers, /discovery vr, /discovery ps, /discovery rt\n\nOu passe o nome especifico: /discovery MeuFlowName' } }],
+            modelo_usado: 'system', modelo_label: 'Sistema', tipo: 'discovery',
+          }));
+          return;
+        }
+
+        // Montar contexto para análise da IA
+        let componentSummary = '';
+        if (['flow', 'flows'].includes(discoveryType)) {
+          componentSummary = discoveryData.map(f => {
+            return 'Flow: ' + (f.Label || f.ApiName) + ' | Tipo: ' + (f.ProcessType || '?') + ' | Trigger: ' + (f.TriggerType || 'N/A') + ' | Ativo: ' + (f.IsActive ? 'Sim' : 'Nao') + ' | Desc: ' + (f.Description || 'sem descricao');
+          }).join('\n');
+        } else if (['apex', 'classes'].includes(discoveryType)) {
+          componentSummary = discoveryData.map(c => {
+            const bodyPreview = (c.Body || '').slice(0, 500).replace(/\n/g, ' ');
+            return 'Classe: ' + c.Name + ' | Status: ' + c.Status + ' | Tamanho: ' + (c.LengthWithoutComments || '?') + ' chars | Preview: ' + bodyPreview;
+          }).join('\n---\n');
+        } else if (['trigger', 'triggers'].includes(discoveryType)) {
+          componentSummary = discoveryData.map(t => {
+            const bodyPreview = (t.Body || '').slice(0, 500).replace(/\n/g, ' ');
+            return 'Trigger: ' + t.Name + ' | Objeto: ' + t.TableEnumOrId + ' | Status: ' + t.Status + ' | Preview: ' + bodyPreview;
+          }).join('\n---\n');
+        } else if (['validationrules', 'vr'].includes(discoveryType)) {
+          componentSummary = discoveryData.map(v => {
+            return 'VR: ' + (v.ValidationName || '') + ' | Objeto: ' + (v.EntityDefinition?.QualifiedApiName || '?') + ' | Ativa: ' + (v.Active ? 'Sim' : 'Nao') + ' | Msg: ' + (v.ErrorMessage || '') + ' | Desc: ' + (v.Description || '');
+          }).join('\n');
+        } else if (['permissionsets', 'ps'].includes(discoveryType)) {
+          componentSummary = discoveryData.map(p => {
+            return 'PS: ' + (p.Label || p.Name) + ' | API: ' + p.Name + ' | Desc: ' + (p.Description || 'sem descricao');
+          }).join('\n');
+        } else if (['recordtypes', 'rt'].includes(discoveryType)) {
+          componentSummary = discoveryData.map(r => {
+            return 'RT: ' + r.Name + ' | API: ' + r.DeveloperName + ' | Objeto: ' + r.SobjectType + ' | Ativo: ' + (r.IsActive ? 'Sim' : 'Nao') + ' | Desc: ' + (r.Description || '');
+          }).join('\n');
+        }
+
+        // Enviar para Claude analisar
+        const analysisPrompt = [
+          'Voce e um analista Salesforce. Analise os componentes abaixo e descreva a FUNCIONALIDADE de cada um.',
+          'Para cada componente, explique:',
+          '1. O que ele faz (objetivo/funcionalidade)',
+          '2. Como funciona (logica principal)',
+          '3. Objetos/campos impactados',
+          '4. Observacoes relevantes (riscos, dependencias, melhorias)',
+          '',
+          'Formato da resposta para cada componente:',
+          '### [Nome do Componente]',
+          '**Funcionalidade:** [descricao clara]',
+          '**Logica:** [como funciona]',
+          '**Impacto:** [objetos/campos]',
+          '**Observacoes:** [riscos/dependencias]',
+          '',
+          'Se for codigo Apex, analise o codigo e descreva metodos, queries, DML.',
+          'Se for Flow, descreva o tipo, trigger, e acoes principais.',
+          'Se for Validation Rule, explique a regra e quando bloqueia.',
+          'Responda em portugues do Brasil.',
+        ].join('\n');
+
+        let analysis;
+        try {
+          analysis = await claude.call(analysisPrompt, [{ role: 'user', content: 'Analise estes ' + discoveryData.length + ' componentes:\n\n' + componentSummary }], 16384);
+        } catch (aiErr) {
+          analysis = 'Erro na analise: ' + aiErr.message + '\n\nDados brutos:\n' + componentSummary;
+        }
+
+        clearInterval(keepAliveDisc);
+
+        // Salvar análise como .txt
+        const discFileName = 'Discovery_' + discoveryType + '.txt';
+        try {
+          const fs = await import('fs');
+          const dir = '/tmp/prototipos';
+          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+          const txtContent = [
+            '='.repeat(60),
+            '  DISCOVERY: ' + discoveryType.toUpperCase(),
+            '  Org: ' + (selectedOrgDisc?.name || 'Dev Org (padrao)'),
+            '  Data: ' + new Date().toLocaleString('pt-BR'),
+            '  Componentes analisados: ' + discoveryData.length,
+            '='.repeat(60),
+            '',
+            analysis,
+            '',
+            '='.repeat(60),
+            '  FIM DO DISCOVERY',
+            '='.repeat(60),
+          ].join('\n');
+          fs.writeFileSync(dir + '/' + discFileName, txtContent);
+        } catch {}
+
+        const host = req.headers.host || 'everi9.albertobottaro.info';
+        const header = '## Discovery: ' + discoveryType + '\n\n**Componentes analisados:** ' + discoveryData.length + '\n\n';
+        const downloadLink = '\n\n[\u2b07 Baixar ' + discFileName + '](https://' + host + '/prototipos/' + discFileName + ')';
+
+        res.end(JSON.stringify({
+          choices: [{ message: { content: header + analysis + downloadLink } }],
+          modelo_usado: 'claude-sonnet-4-6',
+          modelo_label: 'Claude Sonnet 4.6',
+          tipo: 'discovery',
+        }));
+        return;
+      }
       case 'list': {
         const listArg = messages[messages.length - 1].content.replace(/\/list\s*/i, '').trim();
         const selectedOrg = await getSelectedOrg(req);
