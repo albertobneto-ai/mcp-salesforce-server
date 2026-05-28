@@ -572,12 +572,20 @@ router.post('/', authMiddleware, async (req, res) => {
           for (const step of manifest.configSteps) {
             try {
               if (step.type === 'metadata-update') {
+                const updateBody = step.body || {};
+                if (step.fullName) updateBody.fullName = step.fullName;
                 const r = await fetch(base + '/api/metadata-update/' + step.metadataType, {
                   method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(step.body || { fullName: step.fullName, ...step.body }),
+                  body: JSON.stringify(updateBody),
                 });
                 const result = await r.json();
-                deployResults.push({ component: 'Config: ' + (step.metadataType) + ' (' + (step.fullName || '') + ')', success: result.success !== false, errors: result.errors || [] });
+                const updateSuccess = result.success !== false;
+                deployResults.push({ component: 'Config: ' + step.metadataType + (step.fullName ? ' (' + step.fullName + ')' : ''), success: updateSuccess, errors: result.errors || [] });
+                
+                // Se falhou e tem fallback de instrucao, adicionar como passo manual
+                if (!updateSuccess && step.fallbackInstruction) {
+                  deployResults.push({ component: 'Manual: ' + step.fallbackInstruction, success: true, manual: true, errors: [] });
+                }
 
               } else if (step.type === 'metadata-create') {
                 const r = await fetch(base + '/api/metadata-create/' + step.metadataType, {
@@ -699,6 +707,35 @@ router.post('/', authMiddleware, async (req, res) => {
         if (deployResults.some(r => r.deployId)) {
           resultLines.push('');
           resultLines.push('*Deploy assincrono em andamento. Use /org para verificar o status.*');
+        }
+
+        // Mostrar passos manuais de forma detalhada
+        const manualSteps = deployResults.filter(r => r.manual);
+        if (manualSteps.length > 0) {
+          resultLines.push('');
+          resultLines.push('---');
+          resultLines.push('');
+          resultLines.push('### Passos de configuracao manual');
+          resultLines.push('');
+          manualSteps.forEach((step, idx) => {
+            resultLines.push('**Passo ' + (idx + 1) + ':** ' + step.component.replace('Manual: ', ''));
+            resultLines.push('');
+          });
+        }
+
+        // Mostrar erros com orientacao
+        const failedSteps = deployResults.filter(r => !r.success && !r.manual);
+        if (failedSteps.length > 0) {
+          resultLines.push('');
+          resultLines.push('---');
+          resultLines.push('');
+          resultLines.push('### Configuracoes que precisam de atencao');
+          resultLines.push('');
+          failedSteps.forEach(step => {
+            const err = step.errors?.[0]?.message || step.errors?.[0]?.problem || 'Erro desconhecido';
+            resultLines.push('**' + step.component + '**: ' + err);
+            resultLines.push('');
+          });
         }
 
         res.end(JSON.stringify({
