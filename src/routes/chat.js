@@ -1014,7 +1014,7 @@ clearInterval(keepAlive);
           // Tratar como nome de componente específico — buscar por nome
           try {
             // Tentar como Flow
-            let encSoql = Buffer.from("SELECT Id, ApiName, Label, ProcessType, TriggerType, Description, IsActive FROM FlowDefinitionView WHERE ApiName = '" + discArg + "' OR Label LIKE '%" + discArg + "%'").toString('base64');
+            let encSoql = Buffer.from("SELECT Id, ApiName, Label, ProcessType, TriggerType, Description, IsActive FROM FlowDefinitionView WHERE ApiName LIKE '%" + discArg.replace(/ /g, '%') + "%' OR Label LIKE '%" + discArg + "%'").toString('base64');
             let sr = await fetch(baseDisc + '/api/soql-b64/' + encSoql);
             let result = await sr.json();
             if (result.records?.length) {
@@ -1022,7 +1022,7 @@ clearInterval(keepAlive);
               discoveryType = 'flow';
             } else {
               // Tentar como Apex
-              encSoql = Buffer.from("SELECT Id, Name, Body, Status FROM ApexClass WHERE Name LIKE '%" + discArg + "%'").toString('base64');
+              encSoql = Buffer.from("SELECT Id, Name, Body, Status FROM ApexClass WHERE Name LIKE '%" + discArg.replace(/ /g, '%') + "%'").toString('base64');
               sr = await fetch(baseDisc + '/api/soql-b64/' + encSoql);
               result = await sr.json();
               if (result.records?.length) {
@@ -1030,7 +1030,7 @@ clearInterval(keepAlive);
                 discoveryType = 'apex';
               } else {
                 // Tentar como Trigger
-                encSoql = Buffer.from("SELECT Id, Name, Body, TableEnumOrId, Status FROM ApexTrigger WHERE Name LIKE '%" + discArg + "%'").toString('base64');
+                encSoql = Buffer.from("SELECT Id, Name, Body, TableEnumOrId, Status FROM ApexTrigger WHERE Name LIKE '%" + discArg.replace(/ /g, '%') + "%'").toString('base64');
                 sr = await fetch(baseDisc + '/api/soql-b64/' + encSoql);
                 result = await sr.json();
                 if (result.records?.length) {
