@@ -1014,7 +1014,8 @@ clearInterval(keepAlive);
           // Tratar como nome de componente específico — buscar por nome
           try {
             // Tentar como Flow
-            let encSoql = Buffer.from("SELECT Id, ApiName, Label, ProcessType, TriggerType, Description, IsActive FROM FlowDefinitionView WHERE ApiName LIKE '%" + discArg.replace(/ /g, '%') + "%' OR Label LIKE '%" + discArg + "%'").toString('base64');
+            const discArgSafe = discArg.replace(/'/g, "\\'");
+            let encSoql = Buffer.from("SELECT Id, ApiName, Label, ProcessType, TriggerType, Description, IsActive FROM FlowDefinitionView WHERE Label LIKE '%" + discArgSafe + "%' OR ApiName LIKE '%" + discArgSafe.replace(/ /g, '') + "%'").toString('base64');
             let sr = await fetch(baseDisc + '/api/soql-b64/' + encSoql);
             let result = await sr.json();
             if (result.records?.length) {
@@ -1022,7 +1023,7 @@ clearInterval(keepAlive);
               discoveryType = 'flow';
             } else {
               // Tentar como Apex
-              encSoql = Buffer.from("SELECT Id, Name, Body, Status FROM ApexClass WHERE Name LIKE '%" + discArg.replace(/ /g, '%') + "%'").toString('base64');
+              encSoql = Buffer.from("SELECT Id, Name, Body, Status FROM ApexClass WHERE Name LIKE '%" + discArgSafe.replace(/ /g, '') + "%'").toString('base64');
               sr = await fetch(baseDisc + '/api/soql-b64/' + encSoql);
               result = await sr.json();
               if (result.records?.length) {
@@ -1030,7 +1031,7 @@ clearInterval(keepAlive);
                 discoveryType = 'apex';
               } else {
                 // Tentar como Trigger
-                encSoql = Buffer.from("SELECT Id, Name, Body, TableEnumOrId, Status FROM ApexTrigger WHERE Name LIKE '%" + discArg.replace(/ /g, '%') + "%'").toString('base64');
+                encSoql = Buffer.from("SELECT Id, Name, Body, TableEnumOrId, Status FROM ApexTrigger WHERE Name LIKE '%" + discArgSafe.replace(/ /g, '') + "%'").toString('base64');
                 sr = await fetch(baseDisc + '/api/soql-b64/' + encSoql);
                 result = await sr.json();
                 if (result.records?.length) {
@@ -1329,11 +1330,12 @@ clearInterval(keepAlive);
             listContent = lines.join('\n');
             displayText = '## Listagem: ' + metaType + '\n\n';
             displayText += '**Total:** ' + items.length + ' registros\n\n';
-            displayText += '| # | Nome | Detalhes |\n|---|---|---|\n';
+            displayText += '| # | Nome | API Name | Detalhes |\n|---|---|---|---|\n';
             items.slice(0, 30).forEach((item, idx) => {
-              const name = item.Name || item.Label || item.MasterLabel || item.DeveloperName || item.ApiName || item.ValidationName || item.Title || 'N/A';
+              const name = item.Name || item.Label || item.MasterLabel || item.ValidationName || item.Title || 'N/A';
+              const apiName = item.ApiName || item.DeveloperName || item.Name || '';
               const detail = item.ProcessType || item.Status || item.SobjectType || item.FolderName || (item.IsActive === true ? 'Active' : item.IsActive === false ? 'Inactive' : '') || '';
-              displayText += '| ' + (idx + 1) + ' | ' + name + ' | ' + detail + ' |\n';
+              displayText += '| ' + (idx + 1) + ' | ' + name + ' | ' + apiName + ' | ' + detail + ' |\n';
             });
             if (items.length > 30) {
               displayText += '\n*...e mais ' + (items.length - 30) + ' registros no arquivo .txt*';
