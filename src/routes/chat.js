@@ -42,10 +42,10 @@ async function getSelectedOrg(req) {
 
 // ── Permissões por perfil ──
 const ROLE_PERMISSIONS = {
-  admin:     ['spec', 'hf', 'ata', 'deploy', 'describe', 'status', 'chat', 'prototipo'],
+  admin:     ['spec', 'hf', 'ata', 'deploy', 'describe', 'status', 'chat', 'prototipo', 'list'],
   funcional: ['hf', 'ata'],
-  architect: ['spec', 'ata'],
-  developer: ['deploy', 'describe', 'ata'],
+  architect: ['spec', 'ata', 'list'],
+  developer: ['deploy', 'describe', 'ata', 'list'],
   candidato: ['chat'],
 };
 
@@ -59,6 +59,7 @@ function detectCommand(messages) {
   if (last.startsWith('/spec') || last.includes('gere a spec')) return 'spec';
   if (last.startsWith('/hf') || last.includes('historia funcional')) return 'hf';
   if (last.startsWith('/ata') || last.includes('ata de reuniao')) return 'ata';
+  if (last.startsWith('/list')) return 'list';
   if (last.startsWith('/prototipo') || last.startsWith('/proto')) return 'prototipo';
   if (last.startsWith('/deploy')) return 'deploy';
   if (last.startsWith('/describe')) return 'describe';
@@ -894,6 +895,182 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 
         switch (command) {
+      case 'list': {
+        const listArg = messages[messages.length - 1].content.replace(/\/list\s*/i, '').trim();
+        const selectedOrg = await getSelectedOrg(req);
+
+        // Tipos de componentes que podem ser listados via metadata
+        const metadataTypes = {
+          'flows': 'Flow', 'flow': 'Flow',
+          'apex': 'ApexClass', 'classes': 'ApexClass', 'apexclass': 'ApexClass',
+          'triggers': 'ApexTrigger', 'trigger': 'ApexTrigger',
+          'lwc': 'LightningComponentBundle', 'components': 'LightningComponentBundle',
+          'permissionsets': 'PermissionSet', 'ps': 'PermissionSet',
+          'profiles': 'Profile', 'perfis': 'Profile',
+          'validationrules': 'ValidationRule', 'vr': 'ValidationRule',
+          'recordtypes': 'RecordType', 'rt': 'RecordType',
+          'customobjects': 'CustomObject', 'objetos': 'CustomObject',
+          'reports': 'Report', 'relatorios': 'Report',
+          'dashboards': 'Dashboard', 'paineis': 'Dashboard',
+          'emailtemplates': 'EmailTemplate', 'emails': 'EmailTemplate',
+          'queues': 'Queue', 'filas': 'Queue',
+          'groups': 'Group', 'grupos': 'Group',
+        };
+
+        const argLower = listArg.toLowerCase().replace(/\s/g, '');
+        const metaType = metadataTypes[argLower];
+
+        let listContent = '';
+        let fileName = '';
+        let displayText = '';
+
+        if (metaType) {
+          // Listar componentes via SOQL no Tooling API ou metadata
+          try {
+            let items = [];
+            const base2 = 'http://localhost:' + (process.env.PORT || 3000);
+
+            // Usar SOQL para listar componentes
+            const soqlMap = {
+              'ApexClass': "SELECT Id, Name, Status, LengthWithoutComments, CreatedDate, LastModifiedDate FROM ApexClass WHERE NamespacePrefix = null ORDER BY Name",
+              'ApexTrigger': "SELECT Id, Name, TableEnumOrId, Status, CreatedDate FROM ApexTrigger WHERE NamespacePrefix = null ORDER BY Name",
+              'Flow': "SELECT Id, MasterLabel, ProcessType, Status, Description FROM FlowDefinitionView ORDER BY MasterLabel",
+              'PermissionSet': "SELECT Id, Name, Label, IsCustom, Description FROM PermissionSet WHERE IsCustom = true ORDER BY Label",
+              'Profile': "SELECT Id, Name FROM Profile ORDER BY Name",
+              'ValidationRule': "SELECT Id, ValidationName, EntityDefinition.QualifiedApiName, Active, Description FROM ValidationRule ORDER BY ValidationName",
+              'RecordType': "SELECT Id, Name, DeveloperName, SobjectType, IsActive FROM RecordType ORDER BY SobjectType, Name",
+              'CustomObject': "SELECT Id, DeveloperName, Description FROM CustomObject WHERE DeveloperName != null ORDER BY DeveloperName",
+              'Report': "SELECT Id, Name, DeveloperName, FolderName FROM Report ORDER BY FolderName, Name LIMIT 200",
+              'Dashboard': "SELECT Id, Title, DeveloperName, FolderName FROM Dashboard ORDER BY FolderName, Title LIMIT 200",
+              'EmailTemplate': "SELECT Id, Name, DeveloperName, FolderName, Subject FROM EmailTemplate ORDER BY FolderName, Name LIMIT 200",
+            };
+
+            const soql = soqlMap[metaType];
+            if (soql) {
+              const encSoql = Buffer.from(soql).toString('base64');
+              const sr = await fetch(base2 + '/api/soql-b64/' + encSoql);
+              const soqlResult = await sr.json();
+              items = soqlResult.records || [];
+            }
+
+            fileName = metaType + '_list.txt';
+            const lines = [];
+            lines.push('='.repeat(60));
+            lines.push('  LISTAGEM: ' + metaType);
+            lines.push('  Org: ' + (selectedOrg?.name || 'Dev Org (padrao)'));
+            lines.push('  Data: ' + new Date().toLocaleString('pt-BR'));
+            lines.push('  Total: ' + items.length + ' registros');
+            lines.push('='.repeat(60));
+            lines.push('');
+
+            for (const item of items) {
+              const attrs = item.attributes || {};
+              delete item.attributes;
+              const fields = Object.entries(item).filter(([k,v]) => v !== null && k !== 'Id');
+              lines.push('-'.repeat(40));
+              for (const [key, val] of fields) {
+                if (typeof val === 'object' && val !== null) {
+                  lines.push('  ' + key + ': ' + JSON.stringify(val));
+                } else {
+                  lines.push('  ' + key + ': ' + val);
+                }
+              }
+            }
+            lines.push('');
+            lines.push('='.repeat(60));
+            lines.push('  FIM DA LISTAGEM');
+            lines.push('='.repeat(60));
+
+            listContent = lines.join('\n');
+            displayText = '## Listagem: ' + metaType + '\n\n';
+            displayText += '**Total:** ' + items.length + ' registros\n\n';
+            displayText += '| # | Nome | Detalhes |\n|---|---|---|\n';
+            items.slice(0, 30).forEach((item, idx) => {
+              const name = item.Name || item.MasterLabel || item.DeveloperName || item.ValidationName || item.Title || 'N/A';
+              const detail = item.Status || item.ProcessType || item.SobjectType || item.FolderName || item.Label || '';
+              displayText += '| ' + (idx + 1) + ' | ' + name + ' | ' + detail + ' |\n';
+            });
+            if (items.length > 30) {
+              displayText += '\n*...e mais ' + (items.length - 30) + ' registros no arquivo .txt*';
+            }
+          } catch (listErr) {
+            displayText = '\u274c Erro ao listar ' + metaType + ': ' + listErr.message;
+          }
+
+        } else {
+          // Tratar como objeto Salesforce — listar campos
+          const objName = aliasResolve(listArg);
+          try {
+            const base2 = 'http://localhost:' + (process.env.PORT || 3000);
+            let descData;
+            if (selectedOrg) {
+              descData = await sfMulti.describeObject(selectedOrg, objName);
+            } else {
+              const dr = await fetch(base2 + '/api/describe/' + objName);
+              descData = await dr.json();
+            }
+
+            const fields = descData.fields || [];
+            fileName = objName + '_fields.txt';
+
+            const lines = [];
+            lines.push('='.repeat(60));
+            lines.push('  OBJETO: ' + (descData.label || objName) + ' (' + (descData.name || objName) + ')');
+            lines.push('  Org: ' + (selectedOrg?.name || 'Dev Org (padrao)'));
+            lines.push('  Data: ' + new Date().toLocaleString('pt-BR'));
+            lines.push('  Total de campos: ' + fields.length);
+            lines.push('='.repeat(60));
+            lines.push('');
+            lines.push('API Name'.padEnd(40) + 'Label'.padEnd(30) + 'Type'.padEnd(15) + 'Custom');
+            lines.push('-'.repeat(90));
+
+            for (const f of fields) {
+              lines.push(
+                (f.name || '').padEnd(40) +
+                (f.label || '').padEnd(30) +
+                (f.type || '').padEnd(15) +
+                (f.custom ? 'Yes' : '')
+              );
+            }
+            lines.push('');
+            lines.push('='.repeat(60));
+            lines.push('  FIM DA LISTAGEM');
+            lines.push('='.repeat(60));
+
+            listContent = lines.join('\n');
+            displayText = '## Objeto: ' + (descData.label || objName) + '\n\n';
+            displayText += '**API Name:** ' + (descData.name || objName) + '\n';
+            displayText += '**Total de campos:** ' + fields.length + '\n\n';
+            displayText += '| # | Campo | API Name | Tipo | Custom |\n|---|---|---|---|---|\n';
+            fields.slice(0, 30).forEach((f, idx) => {
+              displayText += '| ' + (idx + 1) + ' | ' + (f.label || '') + ' | ' + (f.name || '') + ' | ' + (f.type || '') + ' | ' + (f.custom ? 'Sim' : '') + ' |\n';
+            });
+            if (fields.length > 30) {
+              displayText += '\n*...e mais ' + (fields.length - 30) + ' campos no arquivo .txt*';
+            }
+          } catch (descErr) {
+            displayText = '\u274c Erro ao descrever ' + objName + ': ' + descErr.message;
+          }
+        }
+
+        // Salvar .txt em /tmp/prototipos para download
+        if (listContent && fileName) {
+          try {
+            const fs = await import('fs');
+            const path = await import('path');
+            const dir = '/tmp/prototipos';
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(path.join(dir, fileName), listContent);
+            const host = req.headers.host || 'everi9.albertobottaro.info';
+            const downloadUrl = 'https://' + host + '/prototipos/' + fileName;
+            displayText += '\n\n[\u2b07 Baixar ' + fileName + '](' + downloadUrl + ')';
+          } catch {}
+        }
+
+        response = displayText;
+        modelUsed = 'mcp-server'; modelLabel = 'MCP Server';
+        break;
+      }
       case 'hf':
         response = await grok.call(hfPrompt, messages);
         modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
