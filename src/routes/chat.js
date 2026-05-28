@@ -1211,7 +1211,7 @@ router.post('/', authMiddleware, async (req, res) => {
             const soqlMap = {
               'ApexClass': "SELECT Id, Name, Status, LengthWithoutComments, CreatedDate, LastModifiedDate FROM ApexClass WHERE NamespacePrefix = null ORDER BY Name",
               'ApexTrigger': "SELECT Id, Name, TableEnumOrId, Status, CreatedDate FROM ApexTrigger WHERE NamespacePrefix = null ORDER BY Name",
-              'Flow': "SELECT Id, MasterLabel, ProcessType, Status, Description FROM FlowDefinitionView ORDER BY MasterLabel",
+              'Flow': "SELECT Id, ApiName, Label, ProcessType, TriggerType, IsActive, Description FROM FlowDefinitionView ORDER BY Label",
               'PermissionSet': "SELECT Id, Name, Label, IsCustom, Description FROM PermissionSet WHERE IsCustom = true ORDER BY Label",
               'Profile': "SELECT Id, Name FROM Profile ORDER BY Name",
               'ValidationRule': "SELECT Id, ValidationName, EntityDefinition.QualifiedApiName, Active, Description FROM ValidationRule ORDER BY ValidationName",
@@ -1263,8 +1263,8 @@ router.post('/', authMiddleware, async (req, res) => {
             displayText += '**Total:** ' + items.length + ' registros\n\n';
             displayText += '| # | Nome | Detalhes |\n|---|---|---|\n';
             items.slice(0, 30).forEach((item, idx) => {
-              const name = item.Name || item.MasterLabel || item.DeveloperName || item.ValidationName || item.Title || 'N/A';
-              const detail = item.Status || item.ProcessType || item.SobjectType || item.FolderName || item.Label || '';
+              const name = item.Name || item.Label || item.MasterLabel || item.DeveloperName || item.ApiName || item.ValidationName || item.Title || 'N/A';
+              const detail = item.ProcessType || item.Status || item.SobjectType || item.FolderName || (item.IsActive === true ? 'Active' : item.IsActive === false ? 'Inactive' : '') || '';
               displayText += '| ' + (idx + 1) + ' | ' + name + ' | ' + detail + ' |\n';
             });
             if (items.length > 30) {
