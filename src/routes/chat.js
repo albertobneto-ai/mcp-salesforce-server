@@ -567,7 +567,52 @@ router.post('/', authMiddleware, async (req, res) => {
           }
         }
 
-        // 2. Deploy de LWC via ZIP (se necessario)
+        // 2. Executar configSteps (OOTB, metadata-update, execute-apex, etc.)
+        if (manifest?.configSteps?.length) {
+          for (const step of manifest.configSteps) {
+            try {
+              if (step.type === 'metadata-update') {
+                const r = await fetch(base + '/api/metadata-update/' + step.metadataType, {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(step.body || { fullName: step.fullName, ...step.body }),
+                });
+                const result = await r.json();
+                deployResults.push({ component: 'Config: ' + (step.metadataType) + ' (' + (step.fullName || '') + ')', success: result.success !== false, errors: result.errors || [] });
+
+              } else if (step.type === 'metadata-create') {
+                const r = await fetch(base + '/api/metadata-create/' + step.metadataType, {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(step.body),
+                });
+                const result = await r.json();
+                deployResults.push({ component: 'Create: ' + step.metadataType + ' (' + (step.body?.fullName || '') + ')', ...result });
+
+              } else if (step.type === 'execute-apex') {
+                const r = await fetch(base + '/api/execute-anonymous', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ code: step.code }),
+                });
+                const result = await r.json();
+                deployResults.push({ component: 'Apex: ' + (step.description || step.code.slice(0, 40) + '...'), success: result.success !== false, errors: result.errors || [] });
+
+              } else if (step.type === 'field-history') {
+                const r = await fetch(base + '/api/field-history', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ object: step.object, fields: step.fields }),
+                });
+                const result = await r.json();
+                deployResults.push({ component: 'History: ' + step.object + ' (' + step.fields.join(', ') + ')', success: result.success !== false, errors: result.errors || [] });
+
+              } else if (step.type === 'setup-instruction') {
+                deployResults.push({ component: 'Manual: ' + step.step, success: true, manual: true, errors: [] });
+              }
+            } catch (stepErr) {
+              deployResults.push({ component: 'Step: ' + (step.type || '?'), success: false, errors: [{ message: stepErr.message }] });
+            }
+          }
+        }
+
+        // 3. Deploy de LWC via ZIP (se necessario)
         if (needsLWC || (!hasMetadata && !needsApex)) {
           try {
             // Gerar codigo LWC via Grok
@@ -644,10 +689,11 @@ router.post('/', authMiddleware, async (req, res) => {
         resultLines.push('| Componente | Status |');
         resultLines.push('|---|---|');
         for (const r of deployResults) {
-          const icon = r.success ? '\u2705' : '\u274c';
+          const icon = r.manual ? '\ud83d\udcdd' : (r.success ? '\u2705' : '\u274c');
           const errMsg = r.errors?.length ? ' \u2014 ' + (r.errors[0]?.message || r.errors[0]?.problem || '') : '';
           const extra = r.deployId ? ' (ID: ' + r.deployId + ')' : '';
-          resultLines.push('| ' + (r.component || 'N/A') + ' | ' + icon + errMsg + extra + ' |');
+          const manualNote = r.manual ? ' (passo manual)' : '';
+          resultLines.push('| ' + (r.component || 'N/A') + ' | ' + icon + errMsg + extra + manualNote + ' |');
         }
         if (deployResults.some(r => r.deployId)) {
           resultLines.push('');
