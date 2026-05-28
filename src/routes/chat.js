@@ -17,6 +17,29 @@ import { knowledgeBase } from '../config/knowledge-base.js';
 
 const router = express.Router();
 
+// Helper: executa SOQL na org selecionada ou default
+async function execSoql(req, soql) {
+  const selectedOrg = await getSelectedOrg(req);
+  if (selectedOrg) {
+    return await sfMulti.runSoql(selectedOrg, soql);
+  }
+  const base = 'http://localhost:' + (process.env.PORT || 3000);
+  const enc = Buffer.from(soql).toString('base64');
+  const r = await fetch(base + '/api/soql-b64/' + enc);
+  return await r.json();
+}
+
+// Helper: describe na org selecionada ou default
+async function execDescribe(req, objectName) {
+  const selectedOrg = await getSelectedOrg(req);
+  if (selectedOrg) {
+    return await sfMulti.describeObject(selectedOrg, objectName);
+  }
+  const base = 'http://localhost:' + (process.env.PORT || 3000);
+  const r = await fetch(base + '/api/describe/' + objectName);
+  return await r.json();
+}
+
 // Detecta se a pergunta precisa da KB do projeto
 function needsKB(text) {
   const lower = text.toLowerCase();
@@ -1030,49 +1053,43 @@ clearInterval(keepAlive);
 
         // Listar Flows
         try {
-          const fSoql = Buffer.from("SELECT ApiName, Label, ProcessType, TriggerType, Description, IsActive FROM FlowDefinitionView WHERE IsActive = true ORDER BY Label").toString('base64');
-          const fr = await fetch(baseArch + '/api/soql-b64/' + fSoql);
-          const fd = await fr.json();
+          const fSoql = ("SELECT ApiName, Label, ProcessType, TriggerType, Description, IsActive FROM FlowDefinitionView WHERE IsActive = true ORDER BY Label");
+          const fd = await execSoql(req, fSoql);
           orgScan.flows = (fd.records || []).map(f => ({ apiName: f.ApiName, label: f.Label, type: f.ProcessType, trigger: f.TriggerType, description: f.Description }));
         } catch {}
 
         // Listar Apex Classes
         try {
-          const aSoql = Buffer.from("SELECT Name, Body, LengthWithoutComments FROM ApexClass WHERE NamespacePrefix = null ORDER BY Name").toString('base64');
-          const ar = await fetch(baseArch + '/api/soql-b64/' + aSoql);
-          const ad = await ar.json();
+          const aSoql = ("SELECT Name, Body, LengthWithoutComments FROM ApexClass WHERE NamespacePrefix = null ORDER BY Name");
+          const ad = await execSoql(req, aSoql);
           orgScan.apexClasses = (ad.records || []).map(c => ({ name: c.Name, preview: (c.Body || '').slice(0, 300), size: c.LengthWithoutComments }));
         } catch {}
 
         // Listar Triggers
         try {
-          const tSoql = Buffer.from("SELECT Name, TableEnumOrId, Body FROM ApexTrigger WHERE NamespacePrefix = null ORDER BY Name").toString('base64');
-          const tr2 = await fetch(baseArch + '/api/soql-b64/' + tSoql);
-          const td = await tr2.json();
+          const tSoql = ("SELECT Name, TableEnumOrId, Body FROM ApexTrigger WHERE NamespacePrefix = null ORDER BY Name");
+          const td = await execSoql(req, tSoql);
           orgScan.triggers = (td.records || []).map(t => ({ name: t.Name, object: t.TableEnumOrId, preview: (t.Body || '').slice(0, 300) }));
         } catch {}
 
         // Listar Validation Rules
         try {
-          const vSoql = Buffer.from("SELECT ValidationName, Active, Description, ErrorMessage FROM ValidationRule ORDER BY ValidationName").toString('base64');
-          const vr = await fetch(baseArch + '/api/soql-b64/' + vSoql);
-          const vd = await vr.json();
+          const vSoql = ("SELECT ValidationName, Active, Description, ErrorMessage FROM ValidationRule ORDER BY ValidationName");
+          const vd = await execSoql(req, vSoql);
           orgScan.validationRules = (vd.records || []).map(v => ({ name: v.ValidationName, description: v.Description, errorMessage: v.ErrorMessage }));
         } catch {}
 
         // Listar Permission Sets custom
         try {
-          const pSoql = Buffer.from("SELECT Name, Label, Description FROM PermissionSet WHERE IsOwnedByProfile = false AND NamespacePrefix = null ORDER BY Label").toString('base64');
-          const pr = await fetch(baseArch + '/api/soql-b64/' + pSoql);
-          const pd = await pr.json();
+          const pSoql = ("SELECT Name, Label, Description FROM PermissionSet WHERE IsOwnedByProfile = false AND NamespacePrefix = null ORDER BY Label");
+          const pd = await execSoql(req, pSoql);
           orgScan.permissionSets = (pd.records || []).map(p => ({ name: p.Name, label: p.Label, description: p.Description }));
         } catch {}
 
         // Listar Record Types
         try {
-          const rSoql = Buffer.from("SELECT Name, DeveloperName, SobjectType, IsActive FROM RecordType ORDER BY SobjectType, Name").toString('base64');
-          const rr = await fetch(baseArch + '/api/soql-b64/' + rSoql);
-          const rd = await rr.json();
+          const rSoql = ("SELECT Name, DeveloperName, SobjectType, IsActive FROM RecordType ORDER BY SobjectType, Name");
+          const rd = await execSoql(req, rSoql);
           orgScan.recordTypes = (rd.records || []).map(r => ({ name: r.Name, devName: r.DeveloperName, object: r.SobjectType, active: r.IsActive }));
         } catch {}
 
@@ -1198,9 +1215,7 @@ clearInterval(keepAlive);
         if (soql) {
           discoveryType = discLower;
           try {
-            const encSoql = Buffer.from(soql).toString('base64');
-            const sr = await fetch(baseDisc + '/api/soql-b64/' + encSoql);
-            const result = await sr.json();
+            const result = await execSoql(req, soql);
             discoveryData = result.records || [];
           } catch (e) {
             clearInterval(keepAliveDisc);
@@ -1216,23 +1231,17 @@ clearInterval(keepAlive);
           const discArgNoSpaces = discArgSafe.replace(/ /g, '');
           try {
             // Tentar como Flow — Label primeiro, depois ApiName (OR nao suportado)
-            let encSoql = Buffer.from("SELECT Id, ApiName, Label, ProcessType, TriggerType, Description, IsActive FROM FlowDefinitionView WHERE Label LIKE '%" + discArgSafe + "%'").toString('base64');
-            let sr = await fetch(baseDisc + '/api/soql-b64/' + encSoql);
-            let result = await sr.json();
+            let result = await execSoql(req, "SELECT Id, ApiName, Label, ProcessType, TriggerType, Description, IsActive FROM FlowDefinitionView WHERE Label LIKE '%" + discArgSafe + "%'");
             if (!result.records?.length) {
               // Tentar por ApiName exato
-              encSoql = Buffer.from("SELECT Id, ApiName, Label, ProcessType, TriggerType, Description, IsActive FROM FlowDefinitionView WHERE ApiName = '" + discArgNoSpaces + "'").toString('base64');
-              sr = await fetch(baseDisc + '/api/soql-b64/' + encSoql);
-              result = await sr.json();
+              result = await execSoql(req, "SELECT Id, ApiName, Label, ProcessType, TriggerType, Description, IsActive FROM FlowDefinitionView WHERE ApiName = '" + discArgNoSpaces + "'");
             }
             if (result.records?.length) {
               discoveryData = result.records;
               discoveryType = 'flow';
             } else {
               // Tentar como Apex
-              encSoql = Buffer.from("SELECT Id, Name, Body, Status FROM ApexClass WHERE Name LIKE '%" + discArgSafe.replace(/ /g, '') + "%'").toString('base64');
-              sr = await fetch(baseDisc + '/api/soql-b64/' + encSoql);
-              result = await sr.json();
+              result = await execSoql(req, "SELECT Id, Name, Body, Status FROM ApexClass WHERE Name LIKE '%" + discArgSafe.replace(/ /g, '') + "%'");
               if (result.records?.length) {
                 discoveryData = result.records;
                 discoveryType = 'apex';
@@ -1387,9 +1396,7 @@ clearInterval(keepAlive);
           try {
             const base2 = 'http://localhost:' + (process.env.PORT || 3000);
             const soql = "SELECT QualifiedApiName, Label, KeyPrefix FROM EntityDefinition WHERE IsLayoutable = true ORDER BY QualifiedApiName";
-            const encSoql = Buffer.from(soql).toString('base64');
-            const sr = await fetch(base2 + '/api/soql-b64/' + encSoql);
-            const soqlResult = await sr.json();
+            const soqlResult = await execSoql(req, soql);
             const items = soqlResult.records || [];
 
             const custom = items.filter(i => (i.QualifiedApiName || '').endsWith('__c'));
@@ -1500,9 +1507,7 @@ clearInterval(keepAlive);
 
             const soql = soqlMap[metaType];
             if (soql) {
-              const encSoql = Buffer.from(soql).toString('base64');
-              const sr = await fetch(base2 + '/api/soql-b64/' + encSoql);
-              const soqlResult = await sr.json();
+              const soqlResult = await execSoql(req, soql);
               items = soqlResult.records || [];
             }
 
@@ -1557,12 +1562,7 @@ clearInterval(keepAlive);
           try {
             const base2 = 'http://localhost:' + (process.env.PORT || 3000);
             let descData;
-            if (selectedOrg) {
-              descData = await sfMulti.describeObject(selectedOrg, objName);
-            } else {
-              const dr = await fetch(base2 + '/api/describe/' + objName);
-              descData = await dr.json();
-            }
+            descData = await execDescribe(req, objName);
 
             const fields = descData.fields || [];
             fileName = objName + '_fields.txt';
