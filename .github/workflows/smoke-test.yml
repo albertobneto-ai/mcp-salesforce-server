@@ -1,0 +1,23 @@
+name: Smoke Test Pos-Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Aguardar deploy do Heroku
+        run: sleep 90
+      - name: Rodar smoke test
+        env:
+          BASE_URL: https://mcp-sf-provisioning-462dd29c2455.herokuapp.com
+          ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
+          ADMIN_PASS: ${{ secrets.SMOKE_ADMIN_PASS }}
+        run: node tests/smoke.js
