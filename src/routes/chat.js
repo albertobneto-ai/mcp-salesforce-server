@@ -612,8 +612,9 @@ router.post('/', authMiddleware, async (req, res) => {
           }
         }
 
-        // 3. Deploy de LWC via ZIP (se necessario)
-        if (needsLWC || (!hasMetadata && !needsApex)) {
+        // 3. Deploy de LWC via ZIP (somente se nao teve configSteps e precisa de LWC)
+        const hadConfigSteps = manifest?.configSteps?.length > 0;
+        if (needsLWC && !hadConfigSteps) {
           try {
             // Gerar codigo LWC via Grok
             const lwcContext = messages.map(m => m.content).join('\n').slice(-3000);
