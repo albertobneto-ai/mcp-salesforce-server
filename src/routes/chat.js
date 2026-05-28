@@ -174,7 +174,7 @@ function formatDeployPreview(smartDeploy, orgName) {
   lines.push('');
   lines.push('Nada foi alterado na org ainda.');
   lines.push('');
-  lines.push('**1** \u2014 Seguir e aplicar na org    **2** \u2014 Cancelar');
+  lines.push('[[BTN-CONFIRM:Seguir e aplicar]]');
   lines.push('[[/CONFIRM-BOX]]');
   lines.push('');
   lines.push('---PLAN---');
@@ -501,7 +501,7 @@ router.post('/', authMiddleware, async (req, res) => {
       lines.push('');
       lines.push('\u26a0\ufe0f **Exclusao e irreversivel** (soft-delete de 15 dias). Nada foi excluido ainda.');
       lines.push('');
-      lines.push('**1** \u2014 Seguir e excluir    **2** \u2014 Cancelar');
+      lines.push('[[BTN-CONFIRM:Seguir e excluir]]');
       lines.push('[[/CONFIRM-BOX]]');
       lines.push('');
       lines.push('---PLAN---');
