@@ -918,6 +918,99 @@ router.post('/', authMiddleware, async (req, res) => {
         };
 
         const argLower = listArg.toLowerCase().replace(/\s/g, '');
+
+        // /list all — listar TODOS os objetos da org
+        if (argLower === 'all' || argLower === 'todos' || argLower === 'objetos' || argLower === 'objects') {
+          try {
+            const base2 = 'http://localhost:' + (process.env.PORT || 3000);
+            const soql = "SELECT QualifiedApiName, Label, KeyPrefix, IsCustom, IsCustomSetting FROM EntityDefinition WHERE IsLayoutable = true ORDER BY QualifiedApiName";
+            const encSoql = Buffer.from(soql).toString('base64');
+            const sr = await fetch(base2 + '/api/soql-b64/' + encSoql);
+            const soqlResult = await sr.json();
+            const items = soqlResult.records || [];
+
+            const standard = items.filter(i => !i.IsCustom);
+            const custom = items.filter(i => i.IsCustom);
+
+            fileName = 'All_Objects.txt';
+            const lines = [];
+            lines.push('='.repeat(70));
+            lines.push('  TODOS OS OBJETOS DA ORG');
+            lines.push('  Org: ' + (selectedOrg?.name || 'Dev Org (padrao)'));
+            lines.push('  Data: ' + new Date().toLocaleString('pt-BR'));
+            lines.push('  Total: ' + items.length + ' objetos (' + standard.length + ' standard, ' + custom.length + ' custom)');
+            lines.push('='.repeat(70));
+            lines.push('');
+            lines.push('--- OBJETOS CUSTOM ---');
+            lines.push('');
+            lines.push('API Name'.padEnd(45) + 'Label'.padEnd(35) + 'Prefix');
+            lines.push('-'.repeat(85));
+            for (const obj of custom) {
+              lines.push(
+                (obj.QualifiedApiName || '').padEnd(45) +
+                (obj.Label || '').padEnd(35) +
+                (obj.KeyPrefix || '')
+              );
+            }
+            lines.push('');
+            lines.push('--- OBJETOS STANDARD ---');
+            lines.push('');
+            lines.push('API Name'.padEnd(45) + 'Label'.padEnd(35) + 'Prefix');
+            lines.push('-'.repeat(85));
+            for (const obj of standard) {
+              lines.push(
+                (obj.QualifiedApiName || '').padEnd(45) +
+                (obj.Label || '').padEnd(35) +
+                (obj.KeyPrefix || '')
+              );
+            }
+            lines.push('');
+            lines.push('='.repeat(70));
+            lines.push('  FIM DA LISTAGEM');
+            lines.push('='.repeat(70));
+
+            listContent = lines.join('\n');
+            displayText = '## Todos os objetos da org\n\n';
+            displayText += '**Total:** ' + items.length + ' objetos (' + custom.length + ' custom, ' + standard.length + ' standard)\n\n';
+
+            if (custom.length > 0) {
+              displayText += '### Objetos Custom (' + custom.length + ')\n\n';
+              displayText += '| # | API Name | Label |\n|---|---|---|\n';
+              custom.forEach((obj, idx) => {
+                displayText += '| ' + (idx + 1) + ' | ' + (obj.QualifiedApiName || '') + ' | ' + (obj.Label || '') + ' |\n';
+              });
+              displayText += '\n';
+            }
+
+            displayText += '### Objetos Standard (primeiros 30 de ' + standard.length + ')\n\n';
+            displayText += '| # | API Name | Label |\n|---|---|---|\n';
+            standard.slice(0, 30).forEach((obj, idx) => {
+              displayText += '| ' + (idx + 1) + ' | ' + (obj.QualifiedApiName || '') + ' | ' + (obj.Label || '') + ' |\n';
+            });
+            if (standard.length > 30) {
+              displayText += '\n*...e mais ' + (standard.length - 30) + ' objetos no arquivo .txt*';
+            }
+          } catch (allErr) {
+            displayText = '\u274c Erro ao listar objetos: ' + allErr.message;
+          }
+
+          // Salvar .txt
+          if (listContent && fileName) {
+            try {
+              const fs = await import('fs');
+              const dir = '/tmp/prototipos';
+              if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+              fs.writeFileSync(dir + '/' + fileName, listContent);
+              const host = req.headers.host || 'everi9.albertobottaro.info';
+              displayText += '\n\n[\u2b07 Baixar ' + fileName + '](https://' + host + '/prototipos/' + fileName + ')';
+            } catch {}
+          }
+
+          response = displayText;
+          modelUsed = 'mcp-server'; modelLabel = 'MCP Server';
+          break;
+        }
+
         const metaType = metadataTypes[argLower];
 
         let listContent = '';
