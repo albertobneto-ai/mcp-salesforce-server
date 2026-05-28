@@ -43,51 +43,70 @@ async function execDescribe(req, objectName) {
 // Helper: executa os steps de um plano de deploy e retorna resultados
 async function runDeploySteps(smartDeploy, req) {
   const baseDeploy = 'http://localhost:' + (process.env.PORT || 3000);
+  const org = await getSelectedOrg(req); // null = org padrao
   const deployResults = [];
+
+  // Helpers que roteiam pra org selecionada (sfMulti) ou padrao (fetch interno)
+  async function doCreate(type, body) {
+    if (org) { try { const r = await sfMulti.metadataCreate(org, type, body); const i = Array.isArray(r) ? r[0] : r; return { success: i?.success, errors: i?.errors ? (Array.isArray(i.errors) ? i.errors : [i.errors]) : [] }; } catch (e) { return { success: false, errors: [{ message: e.message }] }; } }
+    const r = await fetch(baseDeploy + '/api/metadata-create/' + type, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    return await r.json();
+  }
+  async function doUpdate(type, body) {
+    if (org) { try { const r = await sfMulti.metadataUpdate(org, type, body); const i = Array.isArray(r) ? r[0] : r; return { success: i?.success !== false, errors: i?.errors ? (Array.isArray(i.errors) ? i.errors : [i.errors]) : [] }; } catch (e) { return { success: false, errors: [{ message: e.message }] }; } }
+    const r = await fetch(baseDeploy + '/api/metadata-update/' + type, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    return await r.json();
+  }
+  async function doDelete(type, fullName) {
+    if (org) { try { const r = await sfMulti.metadataDelete(org, type, fullName); const i = Array.isArray(r) ? r[0] : r; return { success: i?.success !== false, errors: i?.errors ? (Array.isArray(i.errors) ? i.errors : [i.errors]) : [] }; } catch (e) { return { success: false, errors: [{ message: e.message }] }; } }
+    const r = await fetch(baseDeploy + '/api/metadata-delete/' + type + '/' + encodeURIComponent(fullName));
+    return await r.json();
+  }
+  async function doApex(code) {
+    if (org) { try { const r = await sfMulti.executeApex(org, code); return { success: r?.success !== false, errors: r?.compileProblem ? [{ message: r.compileProblem }] : (r?.exceptionMessage ? [{ message: r.exceptionMessage }] : []) }; } catch (e) { return { success: false, errors: [{ message: e.message }] }; } }
+    const r = await fetch(baseDeploy + '/api/execute-anonymous', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+    return await r.json();
+  }
+  async function doLayout(layoutName, fieldName, sectionLabel) {
+    if (org) { try { return await sfMulti.moveFieldInLayout(org, layoutName, fieldName, sectionLabel); } catch (e) { return { success: false, error: e.message }; } }
+    const r = await fetch(baseDeploy + '/api/move-field-in-layout/' + encodeURIComponent(layoutName) + '/' + encodeURIComponent(fieldName) + '/' + encodeURIComponent(sectionLabel));
+    return await r.json();
+  }
+
   for (const step of smartDeploy.steps) {
     try {
       if (step.type === 'metadata-create') {
-        const r = await fetch(baseDeploy + '/api/metadata-create/' + step.metadataType, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(step.body),
-        });
-        const result = await r.json();
+        const result = await doCreate(step.metadataType, step.body);
         const alreadyExists = (result.errors || []).some(e => (e.message || '').includes('already') || (e.message || '').includes('duplicate'));
         deployResults.push({ component: (step.description || step.metadataType), success: result.success || alreadyExists, errors: alreadyExists ? [] : (result.errors || []) });
       } else if (step.type === 'add-to-layout') {
-        const ln = encodeURIComponent(step.layout || (step.object + '-' + step.object + ' Layout'));
-        const fn = encodeURIComponent(step.field);
-        const sn = encodeURIComponent(step.section || (step.object + ' Information'));
-        const r = await fetch(baseDeploy + '/api/move-field-in-layout/' + ln + '/' + fn + '/' + sn);
-        const result = await r.json();
+        const ln = step.layout || (step.object + '-' + step.object + ' Layout');
+        const sn = step.section || (step.object + ' Information');
+        const result = await doLayout(ln, step.field, sn);
         deployResults.push({ component: (step.description || 'Layout: ' + step.field), success: result.success || result.status === 'added' || result.status === 'moved', errors: result.error ? [{ message: result.error }] : [] });
       } else if (step.type === 'add-permission') {
         const psName = step.permissionSetName || 'Everi9_Deploy_Access';
         const body = { fullName: psName, label: step.permissionSetLabel || psName.replace(/_/g, ' '), fieldPermissions: (step.fields || [step.field]).map(f => ({ field: f, editable: true, readable: true })) };
-        let r = await fetch(baseDeploy + '/api/metadata-create/PermissionSet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        let result = await r.json();
-        if (!result.success) { r = await fetch(baseDeploy + '/api/metadata-update/PermissionSet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); result = await r.json(); }
+        let result = await doCreate('PermissionSet', body);
+        if (!result.success) { result = await doUpdate('PermissionSet', body); }
         deployResults.push({ component: (step.description || 'Permission Set'), success: result.success !== false, errors: result.errors || [] });
         try {
           const assignApex = "PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = '" + psName + "' LIMIT 1]; List<User> users = [SELECT Id FROM User WHERE IsActive = true AND UserType = 'Standard' AND Id NOT IN (SELECT AssigneeId FROM PermissionSetAssignment WHERE PermissionSetId = :ps.Id)]; List<PermissionSetAssignment> psas = new List<PermissionSetAssignment>(); for (User u : users) { psas.add(new PermissionSetAssignment(AssigneeId = u.Id, PermissionSetId = ps.Id)); } if (!psas.isEmpty()) insert psas;";
-          await fetch(baseDeploy + '/api/execute-anonymous', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: assignApex }) });
+          await doApex(assignApex);
           deployResults.push({ component: 'Atribuir PS aos usuarios', success: true, errors: [] });
         } catch {}
       } else if (step.type === 'metadata-update') {
-        const r = await fetch(baseDeploy + '/api/metadata-update/' + step.metadataType, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(step.body) });
-        const result = await r.json();
+        const result = await doUpdate(step.metadataType, step.body);
         deployResults.push({ component: (step.description || step.metadataType), success: result.success !== false, errors: result.errors || [] });
       } else if (step.type === 'execute-apex') {
-        const r = await fetch(baseDeploy + '/api/execute-anonymous', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: step.code }) });
-        const result = await r.json();
+        const result = await doApex(step.code);
         deployResults.push({ component: (step.description || 'Apex'), success: result.success !== false, errors: result.errors || [] });
       } else if (step.type === 'delete-metadata' || step.type === 'delete-field') {
         const mtype = step.metadataType || 'CustomField';
         const fullName = step.fullName || step.field;
-        const r = await fetch(baseDeploy + '/api/metadata-delete/' + mtype + '/' + encodeURIComponent(fullName));
-        const result = await r.json();
-        const notExists = (result.errors || []).some(e => (e.message || '').includes('does not exist') || (e.message || '').includes('not found'));
-        deployResults.push({ component: (step.description || 'Excluir ' + fullName), success: result.success !== false || notExists, errors: notExists ? [] : (result.errors || []) });
+        const result = await doDelete(mtype, fullName);
+        const notExists = (result.errors || []).some(e => (e.message || '').includes('does not exist') || (e.message || '').includes('not found') || (e.message || '').includes('no CustomObject'));
+        deployResults.push({ component: (step.description || 'Excluir ' + fullName), success: result.success !== false || notExists, errors: notExists ? [{ message: 'Componente nao encontrado nesta org' }] : (result.errors || []) });
       } else if (step.type === 'setup-instruction') {
         deployResults.push({ component: step.step || step.description, success: true, manual: true, setupUrl: step.setupUrl || '', errors: [] });
       }
