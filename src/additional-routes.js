@@ -364,6 +364,37 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
     }
   });
 
+  // --- Metadata Delete (GET com fullName na URL) ---
+  app.get("/api/metadata-delete/:type/:fullName", async (req, res) => {
+    try {
+      await connectToTargetOrg(req);
+      const conn = sfClient.getConnection();
+      const result = await conn.metadata.delete(req.params.type, req.params.fullName);
+      sfClient.clearTargetOrg();
+      const item = Array.isArray(result) ? result[0] : result;
+      res.json({ success: item?.success !== false, fullName: req.params.fullName, errors: item?.errors || null });
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.status(500).json({ status: "error", message: err.message });
+    }
+  });
+
+  // --- Metadata Delete (POST com array de fullNames) ---
+  app.post("/api/metadata-delete/:type", async (req, res) => {
+    try {
+      await connectToTargetOrg(req);
+      const conn = sfClient.getConnection();
+      const names = req.body.fullNames || [req.body.fullName];
+      const result = await conn.metadata.delete(req.params.type, names);
+      sfClient.clearTargetOrg();
+      const items = Array.isArray(result) ? result : [result];
+      res.json({ success: items.every(i => i?.success !== false), results: items });
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.status(500).json({ status: "error", message: err.message });
+    }
+  });
+
   // --- Metadata Upsert ---
   app.post("/api/metadata-upsert/:type", async (req, res) => {
     try {
