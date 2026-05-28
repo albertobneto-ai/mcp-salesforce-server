@@ -116,6 +116,7 @@ router.post('/users', requireAdmin, async (req, res) => {
 // DELETE /api/setup/users/:id
 // POST /api/setup/users/:id/end-session — encerra a sessao do usuario (forca novo login)
 router.post('/users/:id/end-session', requireAdmin, async (req, res) => {
+  const pg = await import('pg');
   const pool = new pg.default.Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
   try {
     const result = await pool.query('UPDATE users SET session_version = COALESCE(session_version, 1) + 1 WHERE id = $1 RETURNING id, name, session_version', [req.params.id]);
