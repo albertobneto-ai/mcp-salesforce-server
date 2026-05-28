@@ -684,7 +684,13 @@ router.post('/', authMiddleware, async (req, res) => {
                   body: JSON.stringify(step.body),
                 });
                 const result = await r.json();
-                deployResults.push({ component: (step.description || 'Criar: ' + step.metadataType), ...result });
+                // Se "already exists" tratar como sucesso
+                const alreadyExists = (result.errors || []).some(e => (e.message || '').includes('already') || (e.message || '').includes('duplicate'));
+                if (alreadyExists) {
+                  deployResults.push({ component: (step.description || 'Criar: ' + step.metadataType) + ' (ja existia)', success: true, errors: [] });
+                } else {
+                  deployResults.push({ component: (step.description || 'Criar: ' + step.metadataType), ...result });
+                }
 
               } else if (step.type === 'execute-apex') {
                 const r = await fetch(base + '/api/execute-anonymous', {
