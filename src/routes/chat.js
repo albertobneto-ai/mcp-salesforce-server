@@ -1476,9 +1476,6 @@ clearInterval(keepAlive);
 
         const metaType = metadataTypes[argLower];
 
-        let listContent = '';
-        let fileName = '';
-        let displayText = '';
 
         if (metaType) {
           // Listar componentes via SOQL no Tooling API ou metadata
