@@ -696,6 +696,14 @@ router.post('/', authMiddleware, async (req, res) => {
           resultLines.push('| ' + (idx + 1) + ' | ' + (r.component || 'N/A') + ' | ' + icon + errMsg + tag + ' |');
         });
 
+        // Obter instanceUrl para links do Setup
+        let instanceUrl = '';
+        try {
+          const connRes = await fetch(base + '/test-connection');
+          const connData = await connRes.json();
+          instanceUrl = connData.instanceUrl || '';
+        } catch {}
+
         // Passos manuais detalhados
         const manualSteps = deployResults.filter(r => r.manual);
         if (manualSteps.length > 0) {
@@ -705,21 +713,10 @@ router.post('/', authMiddleware, async (req, res) => {
           resultLines.push('### Configuracao manual necessaria');
           resultLines.push('');
           manualSteps.forEach((step, idx) => {
-            const setupUrl = step.setupUrl || '';
-            if (setupUrl) {
-              const instanceBase = selectedOrg ? selectedOrg.login_url.replace('https://test.salesforce.com', '') : 'https://orgfarm-6450ce60e0-dev-ed.develop.my.salesforce.com';
-              // Tentar montar URL direta
-              let fullUrl = '';
-              try {
-                // Buscar instanceUrl da conexao
-                const connRes = await fetch(base + '/test-connection');
-                const connData = await connRes.json();
-                fullUrl = (connData.instanceUrl || instanceBase) + setupUrl;
-              } catch { fullUrl = instanceBase + setupUrl; }
-              resultLines.push('**Passo ' + (idx + 1) + ':** ' + step.component);
-              resultLines.push('[Abrir no Setup](' + fullUrl + ')');
-            } else {
-              resultLines.push('**Passo ' + (idx + 1) + ':** ' + step.component);
+            const sUrl = step.setupUrl || '';
+            resultLines.push('**Passo ' + (idx + 1) + ':** ' + step.component);
+            if (sUrl && instanceUrl) {
+              resultLines.push('[\u27a1 Abrir no Setup](' + instanceUrl + sUrl + ')');
             }
             resultLines.push('');
           });
