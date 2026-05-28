@@ -173,10 +173,10 @@ async function getSelectedOrg(req) {
 
 // ── Permissões por perfil ──
 const ROLE_PERMISSIONS = {
-  admin:     ['spec', 'hf', 'ata', 'deploy', 'describe', 'status', 'chat', 'prototipo', 'list', 'discovery', 'arch'],
+  admin:     ['spec', 'hf', 'ata', 'deploy', 'delete', 'describe', 'status', 'chat', 'prototipo', 'list', 'discovery', 'arch'],
   funcional: ['hf', 'ata'],
   architect: ['spec', 'ata', 'list', 'discovery', 'arch'],
-  developer: ['deploy', 'describe', 'ata', 'list', 'discovery'],
+  developer: ['deploy', 'delete', 'describe', 'ata', 'list', 'discovery'],
   candidato: ['chat'],
 };
 
@@ -195,6 +195,7 @@ function detectCommand(messages) {
   if (last.startsWith('/list')) return 'list';
   if (last.startsWith('/prototipo') || last.startsWith('/proto')) return 'prototipo';
   if (last.startsWith('/deploy')) return 'deploy';
+  if (last.startsWith('/delete') || last.startsWith('/del ')) return 'delete';
   if (last.startsWith('/describe')) return 'describe';
   if (last.startsWith('/status') || last.startsWith('/org')) return 'status';
   return 'chat';
@@ -379,6 +380,102 @@ router.post('/', authMiddleware, async (req, res) => {
       return;
     }
 
+    // ── DELETE: exclui metadado com dry-run obrigatorio ──
+    if (command === 'delete') {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Transfer-Encoding', 'chunked');
+      res.write(' ');
+
+      const delReq = messages[messages.length - 1].content.replace(/\/del(ete)?\s*/i, '').trim();
+      const kaDel = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+      const baseDel = 'http://localhost:' + (process.env.PORT || 3000);
+
+      // Ler contexto da org pra resolver nomes exatos
+      let orgCtxDel = '';
+      try {
+        const reqLower = delReq.toLowerCase();
+        const sfObjs = ['Lead','Opportunity','Account','Contact','Case','Quote','Order','Contract','Campaign','Product2','Asset'];
+        for (const obj of sfObjs) {
+          if (reqLower.includes(obj.toLowerCase())) {
+            const desc = await execDescribe(req, obj);
+            const customFields = (desc.fields || []).filter(f => f.custom).map(f => f.name);
+            if (customFields.length) orgCtxDel += obj + ' campos custom: ' + customFields.join(', ') + '\n';
+          }
+        }
+      } catch {}
+
+      // Claude monta o plano de exclusao
+      let delPlan;
+      try {
+        const delPrompt = [
+          'Voce e um ARQUITETO SALESFORCE. O usuario quer EXCLUIR metadados da org.',
+          '',
+          'CONTEXTO DA ORG:', orgCtxDel || 'Nao disponivel',
+          '',
+          'PEDIDO DE EXCLUSAO:', delReq,
+          '',
+          'Retorne JSON com os steps de exclusao:',
+          '{',
+          '  "steps": [',
+          '    {"type":"delete-metadata","metadataType":"CustomField","fullName":"Lead.Campo__c","description":"Excluir campo X"},',
+          '    {"type":"delete-metadata","metadataType":"ValidationRule","fullName":"Lead.Regra","description":"Excluir VR Y"}',
+          '  ],',
+          '  "summary":"Resumo do que sera excluido"',
+          '}',
+          '',
+          'REGRAS:',
+          '- metadataType: CustomField (campos), ValidationRule (regras), WebLink, CustomObject (objetos), Layout, etc.',
+          '- fullName de campo: Objeto.Campo__c (ex: Lead.Origem__c)',
+          '- fullName de VR: Objeto.NomeRegra',
+          '- Use os nomes EXATOS do contexto da org. Se o usuario deu nome aproximado, encontre o match no contexto',
+          '- Se nao encontrar o componente no contexto, ainda assim monte o step com o nome fornecido',
+          '- Responda APENAS JSON, sem markdown',
+        ].join('\n');
+        const delResp = await claude.call(delPrompt, [{ role: 'user', content: 'Excluir: ' + delReq }], 4096);
+        const js = delResp.indexOf('{'); const je = delResp.lastIndexOf('}');
+        if (js !== -1 && je !== -1) delPlan = JSON.parse(delResp.slice(js, je + 1));
+      } catch (e) {
+        clearInterval(kaDel);
+        res.end(JSON.stringify({ choices: [{ message: { content: '\u274c Erro ao planejar exclusao: ' + e.message } }], modelo_usado: 'claude', modelo_label: 'Claude', tipo: 'delete' }));
+        return;
+      }
+
+      if (!delPlan?.steps?.length) {
+        clearInterval(kaDel);
+        res.end(JSON.stringify({ choices: [{ message: { content: '\u274c Nao identifiquei o que excluir. Seja especifico (ex: "/delete campo Origem__c do Lead").' } }], modelo_usado: 'claude', modelo_label: 'Claude', tipo: 'delete' }));
+        return;
+      }
+
+      // Preview com aviso forte (delete e irreversivel)
+      clearInterval(kaDel);
+      const lines = [];
+      lines.push('## \u26a0\ufe0f Confirmacao de Exclusao');
+      if (delPlan.summary) { lines.push(''); lines.push('**' + delPlan.summary + '**'); }
+      lines.push('');
+      lines.push('### Sera excluido:');
+      lines.push('| # | Tipo | Componente |');
+      lines.push('|---|---|---|');
+      delPlan.steps.forEach((s, i) => {
+        lines.push('| ' + (i + 1) + ' | ' + (s.metadataType || 'Metadata') + ' | ' + (s.fullName || s.description) + ' |');
+      });
+      lines.push('');
+      lines.push('---');
+      lines.push('');
+      lines.push('\u26a0\ufe0f **Exclusao e irreversivel** (soft-delete de 15 dias). Nada foi excluido ainda.');
+      lines.push('');
+      lines.push('Digite **confirmar** para excluir ou **cancelar**.');
+      lines.push('');
+      lines.push('---PLAN---');
+      lines.push(JSON.stringify(delPlan));
+      lines.push('---FIM---');
+
+      res.end(JSON.stringify({
+        choices: [{ message: { content: lines.join('\n') } }],
+        modelo_usado: 'claude-sonnet-4-6', modelo_label: 'Claude Sonnet (Delete Preview)', tipo: 'delete',
+      }));
+      return;
+    }
+
     // ── PROTOTIPO: gera HTML + resumo HF + resumo Spec ──
     if (command === 'prototipo') {
       res.setHeader('Content-Type', 'application/json');
@@ -483,7 +580,7 @@ router.post('/', authMiddleware, async (req, res) => {
       const prevAssistant = messages[messages.length - 2]?.content || '';
 
       // ── CONFIRMAR deploy apos preview (dry-run) ──
-      const isDryRunPreview = prevAssistant.includes('Preview do Deploy') && prevAssistant.includes('---PLAN---');
+      const isDryRunPreview = (prevAssistant.includes('Preview do Deploy') || prevAssistant.includes('Confirmacao de Exclusao')) && prevAssistant.includes('---PLAN---');
       if (isDryRunPreview && ['confirmar', 'confirma', 'sim'].includes(lastUser.toLowerCase())) {
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Transfer-Encoding', 'chunked');
