@@ -487,104 +487,102 @@ router.post('/', authMiddleware, async (req, res) => {
         res.write(' ');
         const keepAlive3 = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
 
-        // Procurar manifest em TODO o historico de mensagens
-        let manifest = null;
-        for (let i = messages.length - 1; i >= 0; i--) {
-          const msg = messages[i].content || '';
-          const mm = msg.match(/---MANIFEST---(\s*[\s\S]*?)---FIM---/);
-          if (mm) {
-            const raw = mm[1].trim();
-            try { manifest = JSON.parse(raw); } catch {
-              const jm = raw.match(/\{[\s\S]*\}/);
-              if (jm) try { manifest = JSON.parse(jm[0]); } catch {}
-            }
-          }
-          if (manifest) break;
-        }
-
-        if (!manifest) {
-          // Tentar gerar manifest a partir do contexto
-          try {
-            const manifestText = await grok.call(deployPrompt, [{ role: 'user', content: 'Gere o manifest para deploy com base neste contexto:\n\n' + prevAssistant }], 4096);
-            const start = manifestText.indexOf('{');
-            const end = manifestText.lastIndexOf('}');
-            if (start !== -1 && end !== -1) manifest = JSON.parse(manifestText.slice(start, end + 1));
-          } catch {}
-        }
-
-        if (!manifest) {
-          // Sem manifest — tentar gerar a partir do contexto
-          try {
-            const mText = await grok.call(deployPrompt, [{ role: 'user', content: 'Gere o manifest com base neste contexto:\n\n' + prevAssistant }], 4096);
-            const ms = mText.indexOf('{');
-            const me = mText.lastIndexOf('}');
-            if (ms !== -1 && me !== -1) manifest = JSON.parse(mText.slice(ms, me + 1));
-          } catch {}
-        }
-
-        // Verificar se há componentes para deploy
-        const hasFields = manifest?.metadata?.customFields?.length > 0;
-        const hasPS = manifest?.metadata?.permissionSets?.length > 0;
-        const hasVR = manifest?.metadata?.validationRules?.length > 0;
-        const hasMetadata = hasFields || hasPS || hasVR;
-
-        // Detectar se precisa de LWC/Apex (buscar no historico)
-        let needsLWC = false;
-        let needsApex = false;
-        for (let i = messages.length - 1; i >= 0; i--) {
-          const msg = (messages[i].content || '').toLowerCase();
-          if (msg.includes('lwc') || msg.includes('lightning web component') || msg.includes('componente')) needsLWC = true;
-          if (msg.includes('apex') || msg.includes('trigger')) needsApex = true;
-        }
-
+        // ── SMART DEPLOY: ler estado da org + IA decide o que fazer ──
         const selectedOrg = await getSelectedOrg(req);
         const base = 'http://localhost:' + (process.env.PORT || 3000);
-        const deployResults = [];
 
-        // 1. Deploy de campos via metadata-create
-        if (hasFields) {
-          for (const field of manifest.metadata.customFields) {
-            let result;
-            if (selectedOrg) {
-              result = await sfMulti.deployField(selectedOrg, field);
-            } else {
-              const fullName = field.objectName + '.' + field.fieldName;
-              const body = { fullName, label: field.label, type: field.type };
-              if (field.length) body.length = field.length;
-              if (field.precision) body.precision = field.precision;
-              if (field.scale) body.scale = field.scale;
-              if (field.picklist) {
-                body.valueSet = { valueSetDefinition: { value: field.picklist.map(v => ({ fullName: v, label: v, default: false })) } };
-              }
-              const r = await fetch(base + '/api/metadata-create/CustomField', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-              });
-              result = await r.json();
-              result.component = 'Field: ' + fullName;
-            }
-            deployResults.push(result);
+        // Extrair contexto original do historico
+        let originalReq = '';
+        for (const m of messages) {
+          if (m.role === 'user' && (m.content || '').toLowerCase().startsWith('/proto')) {
+            originalReq = m.content;
+            break;
           }
         }
 
-        // 2. Executar configSteps (OOTB, metadata-update, execute-apex, etc.)
-        if (manifest?.configSteps?.length) {
-          for (const step of manifest.configSteps) {
+        // Ler metadados relevantes da org para contexto
+        let orgContext = '';
+        try {
+          // Detectar que metadata ler com base no requisito
+          const reqLower = originalReq.toLowerCase();
+          const metadataReads = [];
+
+          if (reqLower.includes('forecast')) {
+            const fr = await fetch(base + '/api/metadata-read/ForecastingSettings/Forecasting');
+            metadataReads.push({ type: 'ForecastingSettings', data: await fr.json() });
+          }
+          if (reqLower.includes('lead') || reqLower.includes('opportunity') || reqLower.includes('account') || reqLower.includes('contact')) {
+            const objName = reqLower.includes('lead') ? 'Lead' : reqLower.includes('opportunity') ? 'Opportunity' : reqLower.includes('account') ? 'Account' : 'Contact';
+            const dr = await fetch(base + '/api/describe/' + objName);
+            const desc = await dr.json();
+            metadataReads.push({ type: 'Describe_' + objName, fields: (desc.fields || []).slice(0, 30).map(f => f.name + ' (' + f.type + ')') });
+          }
+
+          orgContext = JSON.stringify(metadataReads, null, 2);
+        } catch (readErr) {
+          orgContext = 'Erro ao ler metadata: ' + readErr.message;
+        }
+
+        // Pedir ao Grok para gerar os comandos EXATOS baseado no estado real da org
+        let smartCommands;
+        try {
+          const smartPrompt = [
+            'Voce e um configurador Salesforce. Com base no ESTADO ATUAL da org e no REQUISITO, gere os comandos EXATOS para implementar.',
+            '',
+            'ESTADO ATUAL DA ORG:',
+            orgContext,
+            '',
+            'REQUISITO ORIGINAL:',
+            originalReq,
+            '',
+            'Gere um JSON com array de steps. Cada step tem:',
+            '- type: "metadata-update" | "metadata-create" | "execute-apex" | "setup-instruction"',
+            '- Para metadata-update: metadataType, body (JSON COMPLETO do metadata atualizado, nao parcial)',
+            '- Para execute-apex: code (codigo Apex anonimo)',
+            '- Para setup-instruction: step (caminho COMPLETO no Setup com cada clique)',
+            '- description: descricao do que o passo faz',
+            '',
+            'REGRAS:',
+            '- Analise o estado atual e gere APENAS as mudancas necessarias',
+            '- Se a config ja esta ativa, NAO repita',
+            '- Para ForecastingSettings: envie o metadata COMPLETO com as alteracoes incluidas',
+            '- Se NAO for possivel via API, use setup-instruction com o caminho EXATO',
+            '- Responda APENAS com o JSON, sem markdown nem explicacao',
+            '',
+            'FORMATO: {"steps":[...], "summary":"descricao do que sera feito"}'
+          ].join('\n');
+
+          const smartResp = await grok.call(smartPrompt, [{ role: 'user', content: 'Gere os comandos para implementar o requisito' }], 8192);
+          
+          // Parsear resposta
+          const jsonStart = smartResp.indexOf('{');
+          const jsonEnd = smartResp.lastIndexOf('}');
+          if (jsonStart !== -1 && jsonEnd !== -1) {
+            smartCommands = JSON.parse(smartResp.slice(jsonStart, jsonEnd + 1));
+          }
+        } catch (aiErr) {
+          smartCommands = null;
+        }
+
+        const deployResults = [];
+
+        if (smartCommands?.steps?.length) {
+          // Executar cada step
+          for (const step of smartCommands.steps) {
             try {
               if (step.type === 'metadata-update') {
-                const updateBody = step.body || {};
-                if (step.fullName) updateBody.fullName = step.fullName;
                 const r = await fetch(base + '/api/metadata-update/' + step.metadataType, {
                   method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(updateBody),
+                  body: JSON.stringify(step.body),
                 });
                 const result = await r.json();
-                const updateSuccess = result.success !== false;
-                deployResults.push({ component: 'Config: ' + step.metadataType + (step.fullName ? ' (' + step.fullName + ')' : ''), success: updateSuccess, errors: result.errors || [] });
-                
-                // Se falhou e tem fallback de instrucao, adicionar como passo manual
-                if (!updateSuccess && step.fallbackInstruction) {
-                  deployResults.push({ component: 'Manual: ' + step.fallbackInstruction, success: true, manual: true, errors: [] });
+                const ok = result.success !== false;
+                deployResults.push({
+                  component: (step.description || 'Config: ' + step.metadataType),
+                  success: ok, errors: result.errors || [],
+                });
+                if (!ok && step.fallbackInstruction) {
+                  deployResults.push({ component: step.fallbackInstruction, success: true, manual: true, errors: [] });
                 }
 
               } else if (step.type === 'metadata-create') {
@@ -593,7 +591,7 @@ router.post('/', authMiddleware, async (req, res) => {
                   body: JSON.stringify(step.body),
                 });
                 const result = await r.json();
-                deployResults.push({ component: 'Create: ' + step.metadataType + ' (' + (step.body?.fullName || '') + ')', ...result });
+                deployResults.push({ component: (step.description || 'Criar: ' + step.metadataType), ...result });
 
               } else if (step.type === 'execute-apex') {
                 const r = await fetch(base + '/api/execute-anonymous', {
@@ -601,152 +599,116 @@ router.post('/', authMiddleware, async (req, res) => {
                   body: JSON.stringify({ code: step.code }),
                 });
                 const result = await r.json();
-                deployResults.push({ component: 'Apex: ' + (step.description || step.code.slice(0, 40) + '...'), success: result.success !== false, errors: result.errors || [] });
-
-              } else if (step.type === 'field-history') {
-                const r = await fetch(base + '/api/field-history', {
-                  method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ object: step.object, fields: step.fields }),
-                });
-                const result = await r.json();
-                deployResults.push({ component: 'History: ' + step.object + ' (' + step.fields.join(', ') + ')', success: result.success !== false, errors: result.errors || [] });
+                deployResults.push({ component: (step.description || 'Apex'), success: result.success !== false, errors: result.errors || [] });
 
               } else if (step.type === 'setup-instruction') {
-                deployResults.push({ component: 'Manual: ' + step.step, success: true, manual: true, errors: [] });
+                deployResults.push({ component: step.step || step.description, success: true, manual: true, errors: [] });
               }
             } catch (stepErr) {
-              deployResults.push({ component: 'Step: ' + (step.type || '?'), success: false, errors: [{ message: stepErr.message }] });
+              deployResults.push({ component: (step.description || step.type), success: false, errors: [{ message: stepErr.message }] });
             }
           }
-        }
-
-        // 3. Deploy de LWC via ZIP (somente se nao teve configSteps e precisa de LWC)
-        const hadConfigSteps = manifest?.configSteps?.length > 0;
-        if (needsLWC && !hadConfigSteps) {
-          try {
-            // Gerar codigo LWC via Grok
-            const lwcContext = messages.map(m => m.content).join('\n').slice(-3000);
-            const lwcCode = await grok.call(
-              'Voce e um desenvolvedor Salesforce LWC. Gere o codigo completo de um Lightning Web Component para o requisito abaixo. ' +
-              'Responda com 3 blocos EXATOS:\n' +
-              '---JS---\n[codigo .js do componente]\n---HTML---\n[template .html]\n---META---\n[arquivo .js-meta.xml]\n---FIM---\n' +
-              'Use LWC moderno, @wire, @api. O meta deve ter isExposed=true e targets corretos.',
-              [{ role: 'user', content: lwcContext }], 8192
-            );
-
-            const jsMatch = lwcCode.match(/---JS---(\s*[\s\S]*?)---HTML---/);
-            const htmlMatch = lwcCode.match(/---HTML---(\s*[\s\S]*?)---META---/);
-            const metaMatch = lwcCode.match(/---META---(\s*[\s\S]*?)---FIM---/);
-
-            if (jsMatch && htmlMatch && metaMatch) {
-              const compName = (manifest?.specName || 'customComponent').replace(/[^a-zA-Z0-9]/g, '').replace(/^./, c => c.toLowerCase());
-
-              // Montar ZIP SFDX
-              const JSZip = (await import('jszip')).default;
-              const zip = new JSZip();
-              const lwcPath = 'force-app/main/default/lwc/' + compName;
-              zip.file(lwcPath + '/' + compName + '.js', jsMatch[1].trim());
-              zip.file(lwcPath + '/' + compName + '.html', htmlMatch[1].trim());
-              zip.file(lwcPath + '/' + compName + '.js-meta.xml', metaMatch[1].trim());
-              zip.file('force-app/main/default/lwc/.eslintrc.json', '{}');
-
-              // Package.xml
-              zip.file('package.xml', '<?xml version="1.0" encoding="UTF-8"?>\n<Package xmlns="http://soap.sforce.com/2006/04/metadata">\n  <types>\n    <members>' + compName + '</members>\n    <name>LightningComponentBundle</name>\n  </types>\n  <version>62.0</version>\n</Package>');
-
-              const zipBuffer = await zip.generateAsync({ type: 'base64' });
-
-              // Deploy via /api/deploy-code
-              const deployRes = await fetch(base + '/api/deploy-code', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ zipBase64: zipBuffer, checkOnly: false }),
-              });
-              const deployData = await deployRes.json();
-
-              deployResults.push({
-                component: 'LWC: ' + compName,
-                success: deployData.success || deployData.status === 'Succeeded',
-                deployId: deployData.id,
-                status: deployData.status,
-                errors: deployData.errors || [],
-              });
+        } else {
+          // Fallback: tentar com manifest do historico
+          let manifest = null;
+          for (let i = messages.length - 1; i >= 0; i--) {
+            const msg = messages[i].content || '';
+            const mm = msg.match(/---MANIFEST---(\s*[\s\S]*?)---FIM---/);
+            if (mm) {
+              try { manifest = JSON.parse(mm[1].trim()); } catch {
+                const jm = mm[1].match(/\{[\s\S]*\}/);
+                if (jm) try { manifest = JSON.parse(jm[0]); } catch {}
+              }
             }
-          } catch (lwcErr) {
-            deployResults.push({
-              component: 'LWC (geracao)',
-              success: false,
-              errors: [{ message: lwcErr.message }],
-            });
+            if (manifest) break;
+          }
+
+          if (manifest?.metadata?.customFields?.length) {
+            for (const field of manifest.metadata.customFields) {
+              let result;
+              if (selectedOrg) {
+                result = await sfMulti.deployField(selectedOrg, field);
+              } else {
+                const fullName = field.objectName + '.' + field.fieldName;
+                const body = { fullName, label: field.label, type: field.type };
+                if (field.length) body.length = field.length;
+                if (field.picklist) {
+                  body.valueSet = { valueSetDefinition: { value: field.picklist.map(v => ({ fullName: v, label: v, default: false })) } };
+                }
+                const r = await fetch(base + '/api/metadata-create/CustomField', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(body)
+                });
+                result = await r.json();
+                result.component = 'Field: ' + fullName;
+              }
+              deployResults.push(result);
+            }
+          }
+          
+          if (manifest?.configSteps?.length) {
+            for (const step of manifest.configSteps) {
+              if (step.type === 'setup-instruction') {
+                deployResults.push({ component: step.step, success: true, manual: true, errors: [] });
+              }
+            }
           }
         }
 
         clearInterval(keepAlive3);
 
-        // Resultado
         if (deployResults.length === 0) {
           res.end(JSON.stringify({
-            choices: [{ message: { content: '## \u26a0\ufe0f Nenhum componente para deploy\n\nEsta solucao nao requer metadados ou componentes deployaveis via API.\n\nUse a opcao **2** para gerar a Spec Tecnica completa com instrucoes de implementacao manual.' } }],
+            choices: [{ message: { content: '\u26a0\ufe0f Nao foi possivel determinar as configuracoes necessarias. Use a opcao **2** para gerar a Spec com instrucoes detalhadas.' } }],
             modelo_usado: 'system', modelo_label: 'Sistema', tipo: 'prototipo',
           }));
           return;
         }
 
-        const success = deployResults.every(r => r.success);
+        const success = deployResults.filter(r => !r.manual).every(r => r.success);
         const resultLines = [];
-        resultLines.push(success ? '## \u2705 Deploy realizado com sucesso!' : '## \u274c Deploy com erros');
-        resultLines.push('');
-        resultLines.push('| Componente | Status |');
-        resultLines.push('|---|---|');
-        for (const r of deployResults) {
-          const icon = r.manual ? '\ud83d\udcdd' : (r.success ? '\u2705' : '\u274c');
-          const errMsg = r.errors?.length ? ' \u2014 ' + (r.errors[0]?.message || r.errors[0]?.problem || '') : '';
-          const extra = r.deployId ? ' (ID: ' + r.deployId + ')' : '';
-          const manualNote = r.manual ? ' (passo manual)' : '';
-          resultLines.push('| ' + (r.component || 'N/A') + ' | ' + icon + errMsg + extra + manualNote + ' |');
-        }
-        if (deployResults.some(r => r.deployId)) {
+        resultLines.push(success ? '## \u2705 Configuracao realizada!' : '## \u26a0\ufe0f Configuracao parcial');
+        if (smartCommands?.summary) {
           resultLines.push('');
-          resultLines.push('*Deploy assincrono em andamento. Use /org para verificar o status.*');
+          resultLines.push('**Resumo:** ' + smartCommands.summary);
         }
+        resultLines.push('');
+        resultLines.push('### Passos executados');
+        resultLines.push('');
+        resultLines.push('| # | Acao | Status |');
+        resultLines.push('|---|---|---|');
+        deployResults.forEach((r, idx) => {
+          const icon = r.manual ? '\ud83d\udcdd' : (r.success ? '\u2705' : '\u274c');
+          const errMsg = r.errors?.length ? ' — ' + (r.errors[0]?.message || r.errors[0]?.problem || '') : '';
+          const tag = r.manual ? ' *(manual)*' : '';
+          resultLines.push('| ' + (idx + 1) + ' | ' + (r.component || 'N/A') + ' | ' + icon + errMsg + tag + ' |');
+        });
 
-        // Mostrar passos manuais de forma detalhada
+        // Passos manuais detalhados
         const manualSteps = deployResults.filter(r => r.manual);
         if (manualSteps.length > 0) {
           resultLines.push('');
           resultLines.push('---');
           resultLines.push('');
-          resultLines.push('### Passos de configuracao manual');
+          resultLines.push('### Configuracao manual necessaria');
           resultLines.push('');
           manualSteps.forEach((step, idx) => {
-            resultLines.push('**Passo ' + (idx + 1) + ':** ' + step.component.replace('Manual: ', ''));
-            resultLines.push('');
-          });
-        }
-
-        // Mostrar erros com orientacao
-        const failedSteps = deployResults.filter(r => !r.success && !r.manual);
-        if (failedSteps.length > 0) {
-          resultLines.push('');
-          resultLines.push('---');
-          resultLines.push('');
-          resultLines.push('### Configuracoes que precisam de atencao');
-          resultLines.push('');
-          failedSteps.forEach(step => {
-            const err = step.errors?.[0]?.message || step.errors?.[0]?.problem || 'Erro desconhecido';
-            resultLines.push('**' + step.component + '**: ' + err);
+            resultLines.push('**Passo ' + (idx + 1) + ':** ' + step.component);
             resultLines.push('');
           });
         }
 
         res.end(JSON.stringify({
           choices: [{ message: { content: resultLines.join('\n') } }],
-          modelo_usado: 'system', modelo_label: 'MCP Server', tipo: 'deploy',
+          modelo_usado: 'grok + mcp',
+          modelo_label: 'Smart Deploy',
+          tipo: 'deploy',
         }));
         return;
       }
     }
 
-    switch (command) {
+        switch (command) {
       case 'hf':
         response = await grok.call(hfPrompt, messages);
         modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
