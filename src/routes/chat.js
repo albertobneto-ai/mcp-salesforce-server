@@ -81,6 +81,13 @@ async function runDeploySteps(smartDeploy, req) {
         const r = await fetch(baseDeploy + '/api/execute-anonymous', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: step.code }) });
         const result = await r.json();
         deployResults.push({ component: (step.description || 'Apex'), success: result.success !== false, errors: result.errors || [] });
+      } else if (step.type === 'delete-metadata' || step.type === 'delete-field') {
+        const mtype = step.metadataType || 'CustomField';
+        const fullName = step.fullName || step.field;
+        const r = await fetch(baseDeploy + '/api/metadata-delete/' + mtype + '/' + encodeURIComponent(fullName));
+        const result = await r.json();
+        const notExists = (result.errors || []).some(e => (e.message || '').includes('does not exist') || (e.message || '').includes('not found'));
+        deployResults.push({ component: (step.description || 'Excluir ' + fullName), success: result.success !== false || notExists, errors: notExists ? [] : (result.errors || []) });
       } else if (step.type === 'setup-instruction') {
         deployResults.push({ component: step.step || step.description, success: true, manual: true, setupUrl: step.setupUrl || '', errors: [] });
       }
@@ -118,7 +125,7 @@ function formatDeployPreview(smartDeploy) {
   lines.push('### O que sera feito');
   lines.push('| # | Tipo | Acao |');
   lines.push('|---|---|---|');
-  const typeLabels = { 'metadata-create': 'Criar', 'add-to-layout': 'Layout', 'add-permission': 'Permissao', 'metadata-update': 'Config', 'execute-apex': 'Apex', 'setup-instruction': 'Manual' };
+  const typeLabels = { 'metadata-create': 'Criar', 'add-to-layout': 'Layout', 'add-permission': 'Permissao', 'metadata-update': 'Config', 'execute-apex': 'Apex', 'delete-metadata': 'Excluir', 'delete-field': 'Excluir', 'setup-instruction': 'Manual' };
   smartDeploy.steps.forEach((step, idx) => {
     lines.push('| ' + (idx + 1) + ' | ' + (typeLabels[step.type] || step.type) + ' | ' + (step.description || step.metadataType || step.field || step.type) + ' |');
   });
@@ -317,6 +324,7 @@ router.post('/', authMiddleware, async (req, res) => {
           '    {"type":"add-permission","field":"Lead.Campo__c","permissionSetName":"Nome_PS","permissionSetLabel":"Label PS","description":"Descricao"},',
           '    {"type":"metadata-update","metadataType":"Tipo","body":{...},"description":"Descricao"},',
           '    {"type":"execute-apex","code":"codigo apex","description":"Descricao"},',
+          '    {"type":"delete-metadata","metadataType":"CustomField","fullName":"Lead.Campo__c","description":"Descricao"},',
           '    {"type":"setup-instruction","step":"Caminho no Setup","setupUrl":"/lightning/setup/...","description":"Descricao"}',
           '  ],',
           '  "code": { "apexClasses": [], "lwc": [], "apexTriggers": [] },',
@@ -330,7 +338,9 @@ router.post('/', authMiddleware, async (req, res) => {
           '- Permission field formato: {Object}.{Campo__c}',
           '- SEMPRE incluir add-to-layout e add-permission para novos campos',
           '- Se precisa Apex/LWC, inclua codigo COMPLETO em code',
-          '- setup-instruction APENAS se impossivel via API, com setupUrl',
+          '- EXCLUSAO E SUPORTADA: para deletar campo use delete-metadata com metadataType=CustomField e fullName=Objeto.Campo__c (ex: Lead.Origem__c)',
+          '- delete-metadata tambem serve para ValidationRule (Objeto.Regra), WebLink, etc. NAO use setup-instruction para excluir campos',
+          '- setup-instruction APENAS se REALMENTE impossivel via API (ex: LeadConvertSettings em Dev Edition), com setupUrl',
           '- Responda APENAS JSON, sem markdown',
         ].join('\n');
 
