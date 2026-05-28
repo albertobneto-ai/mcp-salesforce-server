@@ -1271,9 +1271,47 @@ clearInterval(keepAlive);
         // Montar contexto para análise da IA
         let componentSummary = '';
         if (['flow', 'flows'].includes(discoveryType)) {
-          componentSummary = discoveryData.map(f => {
-            return 'Flow: ' + (f.Label || f.ApiName) + ' | Tipo: ' + (f.ProcessType || '?') + ' | Trigger: ' + (f.TriggerType || 'N/A') + ' | Ativo: ' + (f.IsActive ? 'Sim' : 'Nao') + ' | Desc: ' + (f.Description || 'sem descricao');
-          }).join('\n');
+          // Buscar definição COMPLETA dos flows via Tooling API
+          const flowDetails = [];
+          for (const f of discoveryData.slice(0, 10)) { // Limitar a 10 para não estourar contexto
+            let detail = 'Flow: ' + (f.Label || f.ApiName) + ' | Tipo: ' + (f.ProcessType || '?') + ' | Trigger: ' + (f.TriggerType || 'N/A') + ' | Ativo: ' + (f.IsActive ? 'Sim' : 'Nao') + ' | Desc: ' + (f.Description || 'sem descricao');
+            try {
+              // Ler definição completa via metadata-read
+              const selectedOrgFlow = await getSelectedOrg(req);
+              let flowDef;
+              if (selectedOrgFlow) {
+                flowDef = await sfMulti.metadataRead(selectedOrgFlow, 'Flow', f.ApiName);
+              } else {
+                const baseFlow = 'http://localhost:' + (process.env.PORT || 3000);
+                const fr = await fetch(baseFlow + '/api/metadata-read/Flow/' + encodeURIComponent(f.ApiName));
+                flowDef = await fr.json();
+              }
+              if (flowDef && !flowDef.error) {
+                // Extrair elementos relevantes da definição
+                const elements = [];
+                if (flowDef.processMetadataValues) elements.push('ProcessBuilder: ' + JSON.stringify(flowDef.processMetadataValues).slice(0, 200));
+                if (flowDef.recordCreates) elements.push('Record Creates: ' + JSON.stringify(flowDef.recordCreates).slice(0, 300));
+                if (flowDef.recordUpdates) elements.push('Record Updates: ' + JSON.stringify(flowDef.recordUpdates).slice(0, 300));
+                if (flowDef.recordLookups) elements.push('Record Lookups: ' + JSON.stringify(flowDef.recordLookups).slice(0, 300));
+                if (flowDef.decisions) elements.push('Decisions: ' + JSON.stringify(flowDef.decisions).slice(0, 300));
+                if (flowDef.assignments) elements.push('Assignments: ' + JSON.stringify(flowDef.assignments).slice(0, 300));
+                if (flowDef.actionCalls) elements.push('Action Calls: ' + JSON.stringify(flowDef.actionCalls).slice(0, 300));
+                if (flowDef.screens) elements.push('Screens: ' + JSON.stringify(flowDef.screens).slice(0, 300));
+                if (flowDef.start) elements.push('Start: ' + JSON.stringify(flowDef.start).slice(0, 300));
+                if (flowDef.variables) elements.push('Variables: ' + JSON.stringify(flowDef.variables).slice(0, 200));
+                if (flowDef.formulas) elements.push('Formulas: ' + JSON.stringify(flowDef.formulas).slice(0, 200));
+                if (flowDef.loops) elements.push('Loops: ' + JSON.stringify(flowDef.loops).slice(0, 200));
+                if (flowDef.subflows) elements.push('Subflows: ' + JSON.stringify(flowDef.subflows).slice(0, 200));
+                if (elements.length > 0) {
+                  detail += '\n  DEFINICAO COMPLETA:\n  ' + elements.join('\n  ');
+                }
+              }
+            } catch (flowErr) {
+              detail += '\n  (erro ao ler definicao: ' + flowErr.message + ')';
+            }
+            flowDetails.push(detail);
+          }
+          componentSummary = flowDetails.join('\n---\n');
         } else if (['apex', 'classes'].includes(discoveryType)) {
           componentSummary = discoveryData.map(c => {
             const bodyPreview = (c.Body || '').slice(0, 500).replace(/\n/g, ' ');
