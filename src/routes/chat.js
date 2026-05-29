@@ -785,23 +785,27 @@ REGRAS:
 
       const apresUser = [{ role: 'user', content: 'CONTEXTO DA CONVERSA:\n\n' + convoContext + '\n\n---\nGere a apresentacao HTML interativa e didatica sobre o contexto principal acima.' }];
 
+      const genApres = async () => {
+        if (selectedModel.startsWith('claude-')) return await claude.callAny(selectedModel, apresSystem, apresUser, 32000);
+        if (selectedModel === 'deepseek-chat') return await deepseek.call(apresSystem, apresUser, 8192);
+        return await claude.call(apresSystem, apresUser, 32000); // auto/grok/free -> Claude Sonnet
+      };
       let raw = '';
       try {
-        if (selectedModel.startsWith('claude-')) {
-          raw = await claude.callAny(selectedModel, apresSystem, apresUser, 32000);
-        } else if (selectedModel === 'deepseek-chat') {
-          raw = await deepseek.call(apresSystem, apresUser, 8192);
-        } else {
-          // auto / grok / free -> usa Claude Sonnet (melhor qualidade de HTML, evita timeout do Grok)
-          raw = await claude.call(apresSystem, apresUser, 32000);
+        raw = await genApres();
+      } catch (err1) {
+        // Retry 1x para erros transitorios (ex.: 503 upstream do provedor)
+        try {
+          await new Promise(r => setTimeout(r, 2000));
+          raw = await genApres();
+        } catch (err2) {
+          clearInterval(kaApres);
+          res.end(JSON.stringify({
+            choices: [{ message: { content: '\u274c Erro ao gerar apresentacao: ' + err2.message + '\n\nTente novamente em instantes.' } }],
+            modelo_usado: 'apresentacao', modelo_label: 'Apresentacao', tipo: 'apresentacao',
+          }));
+          return;
         }
-      } catch (err) {
-        clearInterval(kaApres);
-        res.end(JSON.stringify({
-          choices: [{ message: { content: '\u274c Erro ao gerar apresentacao: ' + err.message } }],
-          modelo_usado: 'apresentacao', modelo_label: 'Apresentacao', tipo: 'apresentacao',
-        }));
-        return;
       }
       clearInterval(kaApres);
 
