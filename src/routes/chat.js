@@ -306,6 +306,10 @@ function extractJson(text) {
 router.get('/usage', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
+    if (req.query.raw === '1') {
+      const rr = await pool.query('SELECT id, command, model, input_tokens, output_tokens, created_at FROM token_usage WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20', [userId]);
+      return res.json({ raw: rr.rows });
+    }
     const used = await getMonthlyUsage(userId);
     const breakdown = await getUsageBreakdown(userId);
     let limit = null;
