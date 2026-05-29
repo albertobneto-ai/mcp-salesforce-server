@@ -409,7 +409,7 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Transfer-Encoding', 'chunked');
       res.write(' ');
-      const readable = await claude.stream(specPrompt, messages);
+      const readable = await claude.stream(specPrompt, messages, 48000);
       const keepAlive = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
       response = await collectStream(readable);
       clearInterval(keepAlive);
