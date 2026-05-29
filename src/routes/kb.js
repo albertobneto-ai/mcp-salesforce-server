@@ -56,6 +56,8 @@ router.get('/test-model/:model', async (req, res) => {
       const r = await claude.callHaiku('You are helpful.', [{role:'user',content:'say OK'}], 50);
       return res.json({ ok: true, model: 'haiku', response: r });
     }
-    res.json({ ok: false, error: 'modelo nao suportado para teste' });
-  } catch (e) { res.json({ ok: false, error: e.message }); }
+    // Modelo genérico via callAny
+    const r = await claude.callAny(model, 'You are helpful.', [{role:'user',content:'say OK'}], 50);
+    return res.json({ ok: true, model, response: r });
+  } catch (e) { res.json({ ok: false, model: req.params.model, error: e.message?.slice(0, 200) }); }
 });
