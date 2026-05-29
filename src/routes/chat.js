@@ -2282,23 +2282,48 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
       default:
         const lastMsg = messages[messages.length - 1]?.content || '';
         const basePrompt = 'Voce e um assistente especialista. Responda em portugues do Brasil. Sempre traga informacoes atualizadas quando possivel.';
+        // RAG: busca a base de conhecimento (full-text) e injeta contexto se houver match.
+        // Cobre pedidos como "projeto algar", "projeto da algar", duvidas sobre o projeto/Salesforce.
+        let basePromptKb = basePrompt;
+        try {
+          const kbChunks = await kbdb.searchChunks(lastMsg, 5, null);
+          if (kbChunks.length) {
+            basePromptKb = basePrompt +
+              '\n\n---\nCONTEXTO DA BASE DE CONHECIMENTO INTERNA (use como fonte factual quando relevante para a pergunta):\n' +
+              kbChunks.map(c => '[' + c.title + ']\n' + c.content).join('\n\n');
+          }
+        } catch {}
         if (usesFree) {
           try {
-            const fr = await openrouter.callWithFallback(basePrompt, messages, selectedModel);
+            const fr = await openrouter.callWithFallback(basePromptKb, messages, selectedModel);
             response = '[[ALERT-FREE:' + openrouter.labelFor(fr.model) + ']]\n\n' + fr.text;
             modelUsed = fr.model; modelLabel = openrouter.labelFor(fr.model);
-          } catch { response = FREE_UNAVAILABLE; modelUsed = 'free-unavailable'; modelLabel = 'Indisponivel'; }
+          } catch {
+            // Fallback 1: DeepSeek
+            try {
+              const dsResp = await deepseek.call(basePromptKb, messages);
+              response = '[[ALERT-FALLBACK:DeepSeek Chat]]\n\n' + dsResp;
+              modelUsed = 'deepseek-chat'; modelLabel = 'DeepSeek Chat';
+            } catch {
+              // Fallback 2: Claude Haiku 4.5
+              try {
+                const haikuResp = await claude.callHaiku(basePromptKb, messages);
+                response = '[[ALERT-FALLBACK:Claude Haiku 4.5]]\n\n' + haikuResp;
+                modelUsed = 'claude-haiku-4-5'; modelLabel = 'Claude Haiku 4.5';
+              } catch { response = FREE_UNAVAILABLE; modelUsed = 'free-unavailable'; modelLabel = 'Indisponivel'; }
+            }
+          }
         } else if (selectedModel.startsWith('claude-')) {
-          response = await claude.callAny(selectedModel, basePrompt, messages);
+          response = await claude.callAny(selectedModel, basePromptKb, messages);
           modelUsed = selectedModel; modelLabel = selectedModel === 'claude-opus-4-8' ? 'Claude Opus 4.8' : selectedModel;
         } else if (selectedModel === 'deepseek-chat') {
-          response = await deepseek.call(basePrompt, messages);
+          response = await deepseek.call(basePromptKb, messages);
           modelUsed = 'deepseek-chat'; modelLabel = 'DeepSeek Chat';
         } else if (needsKB(lastMsg)) {
-          response = await grok.call(basePrompt + '\n\nUse a base de conhecimento do projeto:\n\n' + knowledgeBase, messages, 16384, { search: true });
+          response = await grok.call(basePromptKb + '\n\nUse tambem a base de conhecimento do projeto:\n\n' + knowledgeBase, messages, 16384, { search: true });
           modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
         } else {
-          response = await grok.call(basePrompt, messages, 16384, { search: true });
+          response = await grok.call(basePromptKb, messages, 16384, { search: true });
           modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
         }
     }
