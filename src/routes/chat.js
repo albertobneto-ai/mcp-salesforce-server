@@ -2096,9 +2096,9 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
       case 'hf':
         if (usesFree) {
           try {
-            const fr = await openrouter.callWithFallback(hfPrompt, messages, selectedModel);
-            response = '[[ALERT-FREE:' + openrouter.labelFor(fr.model) + ']]\n\n' + fr.text;
-            modelUsed = fr.model; modelLabel = openrouter.labelFor(fr.model);
+            const fr = await openrouter.callWithDynamicPool(hfPrompt, messages);
+            response = '[[ALERT-FREE:' + fr.label + ']]\n\n' + fr.text;
+            modelUsed = fr.model; modelLabel = fr.label;
           } catch { response = FREE_UNAVAILABLE; modelUsed = 'free-unavailable'; modelLabel = 'Indisponivel'; }
         } else {
           response = await grok.call(hfPrompt, messages);
