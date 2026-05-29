@@ -14,6 +14,8 @@ import { randomBytes } from 'crypto';
 import pool from '../config/db.js';
 import * as sfMulti from '../services/sf-multi.js';
 import { knowledgeBase } from '../config/knowledge-base.js';
+import { usageALS, pushUsage } from '../services/usage-context.js';
+import { recordUsage, getMonthlyUsage, getUsageBreakdown } from '../services/usage-db.js';
 
 const router = express.Router();
 
@@ -242,6 +244,7 @@ async function collectStream(readable) {
   const reader = readable.getReader();
   const decoder = new TextDecoder();
   let full = '';
+  let usageIn = 0, usageOut = 0, usageCacheRead = 0, usageCacheWrite = 0, sawUsage = false;
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -254,8 +257,30 @@ async function collectStream(readable) {
         const p = JSON.parse(raw);
         if (p.type === 'content_block_delta' && p.delta?.text) full += p.delta.text;
         if (p.choices?.[0]?.delta?.content) full += p.choices[0].delta.content;
+        // Captura passiva de usage (Claude stream)
+        if (p.type === 'message_start' && p.message?.usage) {
+          usageIn = p.message.usage.input_tokens || 0;
+          usageCacheRead = p.message.usage.cache_read_input_tokens || 0;
+          usageCacheWrite = p.message.usage.cache_creation_input_tokens || 0;
+          sawUsage = true;
+        }
+        if (p.type === 'message_delta' && p.usage?.output_tokens != null) {
+          usageOut = p.usage.output_tokens; sawUsage = true;
+        }
+        // Grok stream (se include_usage estiver ativo)
+        if (p.usage && (p.usage.prompt_tokens != null || p.usage.completion_tokens != null)) {
+          usageIn = p.usage.prompt_tokens || usageIn;
+          usageOut = p.usage.completion_tokens || usageOut;
+          sawUsage = true;
+        }
       } catch {}
     }
+  }
+  if (sawUsage) {
+    pushUsage('claude-sonnet-4-6', {
+      input_tokens: usageIn, output_tokens: usageOut,
+      cache_read_input_tokens: usageCacheRead, cache_creation_input_tokens: usageCacheWrite,
+    });
   }
   return full;
 }
@@ -277,13 +302,38 @@ function extractJson(text) {
 }
 
 // POST /api/chat
-router.post('/', authMiddleware, async (req, res) => {
+// GET /api/chat/usage — consumo de tokens do mes corrente (proprio usuario)
+router.get('/usage', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const used = await getMonthlyUsage(userId);
+    const breakdown = await getUsageBreakdown(userId);
+    let limit = null;
+    try {
+      const r = await pool.query('SELECT token_limit FROM users WHERE id = $1', [userId]);
+      limit = r.rows[0]?.token_limit ?? null;
+    } catch {}
+    res.json({ userId, month_used: used, token_limit: limit, breakdown });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Middleware: contexto de uso de tokens por requisicao (ALS, passivo)
+function usageContext(req, res, next) {
+  const store = { userId: req.user?.id, command: null, pending: [] };
+  res.on('finish', () => { try { recordUsage(store.userId, store.command, store.pending); } catch {} });
+  usageALS.run(store, () => next());
+}
+
+router.post('/', authMiddleware, usageContext, async (req, res) => {
   try {
     const { messages } = req.body;
     if (!messages?.length) return res.status(400).json({ error: 'messages obrigatorio' });
 
     const command = detectCommand(messages);
     const userRole = req.user?.role || 'funcional';
+    try { const _s = usageALS.getStore(); if (_s) _s.command = command; } catch {}
 
     // Verificar permissão
     if (userRole !== 'admin' && !checkPermission(userRole, command)) {
