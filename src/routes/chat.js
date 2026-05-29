@@ -2158,10 +2158,10 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
           res.setHeader('Transfer-Encoding', 'chunked');
           res.write(' ');
           const kaHf = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+          // hfPromptKb definido fora do try para estar acessivel no catch (fallback Haiku)
+          let hfPromptKb = hfPrompt;
           try {
             // Consulta a KB (full-text, ZERO custo) e injeta como referencia de metodo/fatos.
-            // Enquadrado para NAO violar a regra de fidelidade do /hf (nao inventar conteudo de negocio).
-            let hfPromptKb = hfPrompt;
             try {
               const reqTextHf = (messages[messages.length - 1]?.content || '');
               const kbChunks = await kbdb.searchChunks(reqTextHf, 6, 'hf');
