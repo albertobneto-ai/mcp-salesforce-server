@@ -333,8 +333,14 @@ function usageContext(req, res, next) {
 
 router.post('/', authMiddleware, usageContext, async (req, res) => {
   try {
-    const { messages } = req.body;
-    if (!messages?.length) return res.status(400).json({ error: 'messages obrigatorio' });
+    const { messages: rawMessages } = req.body;
+    if (!rawMessages?.length) return res.status(400).json({ error: 'messages obrigatorio' });
+    // Sanitiza: remove mensagens sem conteudo (ex.: saudacao de boas-vindas, que so tem greeting/commands).
+    // APIs como DeepSeek rejeitam mensagens assistant sem 'content'.
+    const messages = rawMessages
+      .filter(m => m && typeof m.content === 'string' && m.content.trim())
+      .map(m => ({ role: m.role, content: m.content }));
+    if (!messages.length) return res.status(400).json({ error: 'messages obrigatorio' });
 
     const command = detectCommand(messages);
     const userRole = req.user?.role || 'funcional';
