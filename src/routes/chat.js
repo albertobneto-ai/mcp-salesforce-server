@@ -17,6 +17,7 @@ import { knowledgeBase } from '../config/knowledge-base.js';
 import { usageALS, pushUsage } from '../services/usage-context.js';
 import { recordUsage, getMonthlyUsage, getUsageBreakdown } from '../services/usage-db.js';
 import * as openrouter from '../services/openrouter.js';
+import * as kbdb from '../services/kb-db.js';
 
 const router = express.Router();
 
@@ -2102,7 +2103,22 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
           res.write(' ');
           const kaHf = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
           try {
-            const fr = await openrouter.callWithDynamicPool(hfPrompt, messages);
+            // Consulta a KB (full-text, ZERO custo) e injeta como referencia de metodo/fatos.
+            // Enquadrado para NAO violar a regra de fidelidade do /hf (nao inventar conteudo de negocio).
+            let hfPromptKb = hfPrompt;
+            try {
+              const reqTextHf = (messages[messages.length - 1]?.content || '');
+              const kbChunks = await kbdb.searchChunks(reqTextHf, 6, 'hf');
+              if (kbChunks.length) {
+                hfPromptKb = hfPrompt +
+                  '\n\n---\nBASE DE CONHECIMENTO INTERNA (referencia):\n' +
+                  kbChunks.map(c => '[' + c.title + ']\n' + c.content).join('\n\n') +
+                  '\n\nUSE o material acima como guia de METODO e como fonte FACTUAL de apoio. ' +
+                  'NAO copie conteudo de negocio que nao esteja na solicitacao do usuario. ' +
+                  'A regra de fidelidade continua valendo: so descreva o que foi pedido.';
+              }
+            } catch {}
+            const fr = await openrouter.callWithDynamicPool(hfPromptKb, messages);
             clearInterval(kaHf);
             res.end(JSON.stringify({
               choices: [{ message: { content: '[[ALERT-FREE:' + fr.label + ']]\n\n' + fr.text } }],
