@@ -16,6 +16,7 @@ import * as sfMulti from '../services/sf-multi.js';
 import { knowledgeBase } from '../config/knowledge-base.js';
 import { usageALS, pushUsage } from '../services/usage-context.js';
 import { recordUsage, getMonthlyUsage, getUsageBreakdown } from '../services/usage-db.js';
+import * as openrouter from '../services/openrouter.js';
 
 const router = express.Router();
 
@@ -334,6 +335,62 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
     const command = detectCommand(messages);
     const userRole = req.user?.role || 'funcional';
     try { const _s = usageALS.getStore(); if (_s) _s.command = command; } catch {}
+
+    // ── GATE Fase 2: roteamento de modelo gratuito + limite de tokens ──
+    const selectedModel = req.headers['x-model'] || 'auto';
+    const usesFree = openrouter.isFreeModel(selectedModel);
+    const FREE_ALLOWED = ['hf', 'ata', 'chat'];
+    const MODERN_REQUIRED = ['spec', 'deploy', 'delete', 'arch', 'discovery', 'prototipo'];
+    const MCP_ONLY = ['describe', 'status', 'list', 'org', 'orgs', 'scratch', 'mock'];
+
+    // Detectar follow-up de confirmacao (deploy/delete) para NAO aplicar o gate nessas
+    const _lastUser = (messages[messages.length - 1]?.content || '').toLowerCase().trim();
+    const _prevAssist = [...messages].reverse().find(m => m.role === 'assistant')?.content || '';
+    const _isConfirmFollowup = _prevAssist.includes('---PLAN---') &&
+      ['1', '2', 'seguir', 'cancelar', 'confirmar', 'confirma', 'cancela', 'sim', 'nao', 'não'].includes(_lastUser);
+
+    if (!_isConfirmFollowup) {
+      // (a) Modelo gratuito + comando que exige modelo moderno → bloqueio roxo
+      if (usesFree && MODERN_REQUIRED.includes(command)) {
+        return res.json({
+          choices: [{ message: { content:
+            '[[BLOCK-MODERN]]\n## \ud83d\udfe3 Modelo moderno necessario\n\n' +
+            'As funcionalidades **Spec, Deploy e Delete** devem ser executadas com **modelos modernos** (Claude ou Grok), ' +
+            'pela criticidade tecnica e por envolverem a org.\n\n' +
+            'Selecione **Claude** ou **Grok** no seletor de modelo para continuar.\n[[/BLOCK-MODERN]]'
+          } }],
+          tipo: command, modelo_label: 'Bloqueado',
+        });
+      }
+      // (b) Limite de tokens (modo pago/auto, comandos de IA)
+      if (!usesFree && !MCP_ONLY.includes(command)) {
+        const limit = req.user?.token_limit;
+        if (limit && Number(limit) > 0) {
+          const used = await getMonthlyUsage(req.user.id);
+          if (used >= Number(limit)) {
+            if (FREE_ALLOWED.includes(command)) {
+              return res.json({
+                choices: [{ message: { content:
+                  '[[LIMIT-EXCEEDED]]\n## \ud83d\udd34 Limite de tokens excedido\n\n' +
+                  'O limite de tokens designados ao seu usuario foi excedido. ' +
+                  'Contate o administrador ou escolha uma das opcoes abaixo:\n[[FREE-BUTTONS]]\n[[/LIMIT-EXCEEDED]]'
+                } }],
+                tipo: command, modelo_label: 'Limite excedido',
+              });
+            } else {
+              return res.json({
+                choices: [{ message: { content:
+                  '[[LIMIT-EXCEEDED]]\n## \ud83d\udd34 Limite de tokens excedido\n\n' +
+                  'O limite de tokens designados ao seu usuario foi excedido. Esta funcionalidade exige um ' +
+                  '**modelo moderno** (Claude/Grok) e nao pode usar modelos gratuitos. Contate o administrador para liberar.\n[[/LIMIT-EXCEEDED]]'
+                } }],
+                tipo: command, modelo_label: 'Limite excedido',
+              });
+            }
+          }
+        }
+      }
+    }
 
     // Verificar permissão
     if (userRole !== 'admin' && !checkPermission(userRole, command)) {
@@ -1918,12 +1975,24 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
         break;
       }
       case 'hf':
-        response = await grok.call(hfPrompt, messages);
-        modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
+        if (usesFree) {
+          const fr = await openrouter.callWithFallback(hfPrompt, messages, selectedModel);
+          response = '[[ALERT-FREE:' + openrouter.labelFor(fr.model) + ']]\n\n' + fr.text;
+          modelUsed = fr.model; modelLabel = openrouter.labelFor(fr.model);
+        } else {
+          response = await grok.call(hfPrompt, messages);
+          modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
+        }
         break;
       case 'ata':
-        response = await grok.call(ataPrompt, messages);
-        modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
+        if (usesFree) {
+          const fr = await openrouter.callWithFallback(ataPrompt, messages, selectedModel);
+          response = '[[ALERT-FREE:' + openrouter.labelFor(fr.model) + ']]\n\n' + fr.text;
+          modelUsed = fr.model; modelLabel = openrouter.labelFor(fr.model);
+        } else {
+          response = await grok.call(ataPrompt, messages);
+          modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
+        }
         break;
       case 'describe': {
         const obj = messages[messages.length - 1].content.replace(/\/describe\s*/i, '').trim();
@@ -1955,12 +2024,17 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
       default:
         const lastMsg = messages[messages.length - 1]?.content || '';
         const basePrompt = 'Voce e um assistente especialista. Responda em portugues do Brasil. Sempre traga informacoes atualizadas quando possivel.';
-        if (needsKB(lastMsg)) {
+        if (usesFree) {
+          const fr = await openrouter.callWithFallback(basePrompt, messages, selectedModel);
+          response = '[[ALERT-FREE:' + openrouter.labelFor(fr.model) + ']]\n\n' + fr.text;
+          modelUsed = fr.model; modelLabel = openrouter.labelFor(fr.model);
+        } else if (needsKB(lastMsg)) {
           response = await grok.call(basePrompt + '\n\nUse a base de conhecimento do projeto:\n\n' + knowledgeBase, messages, 16384, { search: true });
+          modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
         } else {
           response = await grok.call(basePrompt, messages, 16384, { search: true });
+          modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
         }
-        modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
     }
 
     res.json({
