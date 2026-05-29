@@ -2288,6 +2288,12 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
             response = '[[ALERT-FREE:' + openrouter.labelFor(fr.model) + ']]\n\n' + fr.text;
             modelUsed = fr.model; modelLabel = openrouter.labelFor(fr.model);
           } catch { response = FREE_UNAVAILABLE; modelUsed = 'free-unavailable'; modelLabel = 'Indisponivel'; }
+        } else if (selectedModel.startsWith('claude-')) {
+          response = await claude.callAny(selectedModel, basePrompt, messages);
+          modelUsed = selectedModel; modelLabel = selectedModel === 'claude-opus-4-8' ? 'Claude Opus 4.8' : selectedModel;
+        } else if (selectedModel === 'deepseek-chat') {
+          response = await deepseek.call(basePrompt, messages);
+          modelUsed = 'deepseek-chat'; modelLabel = 'DeepSeek Chat';
         } else if (needsKB(lastMsg)) {
           response = await grok.call(basePrompt + '\n\nUse a base de conhecimento do projeto:\n\n' + knowledgeBase, messages, 16384, { search: true });
           modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
