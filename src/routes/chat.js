@@ -214,11 +214,11 @@ async function getSelectedOrg(req) {
 
 // ── Permissões por perfil ──
 const ROLE_PERMISSIONS = {
-  admin:     ['spec', 'spec-deep', 'hf', 'ata', 'deploy', 'delete', 'describe', 'status', 'chat', 'prototipo', 'list', 'discovery', 'arch', 'kb'],
-  funcional: ['hf', 'ata', 'kb'],
-  architect: ['spec', 'spec-deep', 'ata', 'list', 'discovery', 'arch', 'kb'],
-  developer: ['deploy', 'delete', 'describe', 'ata', 'list', 'discovery', 'kb'],
-  candidato: ['chat', 'kb'],
+  admin:     ['spec', 'spec-deep', 'hf', 'ata', 'deploy', 'delete', 'describe', 'status', 'chat', 'prototipo', 'apresentacao', 'list', 'discovery', 'arch', 'kb'],
+  funcional: ['hf', 'ata', 'kb', 'apresentacao'],
+  architect: ['spec', 'spec-deep', 'ata', 'list', 'discovery', 'arch', 'kb', 'apresentacao'],
+  developer: ['deploy', 'delete', 'describe', 'ata', 'list', 'discovery', 'kb', 'apresentacao'],
+  candidato: ['chat', 'kb', 'apresentacao'],
 };
 
 function checkPermission(role, command) {
@@ -241,8 +241,17 @@ function detectCommand(messages) {
   if (last.startsWith('/delete') || last.startsWith('/del ')) return 'delete';
   if (last.startsWith('/describe')) return 'describe';
   if (last.startsWith('/status') || last.startsWith('/org')) return 'status';
+  // Linguagem natural: pedido de criar HTML/apresentacao/slides interativo sobre o contexto
+  if (wantsPresentation(last)) return 'apresentacao';
   return 'chat';
 }
+
+// Detecta intencao de gerar uma apresentacao/HTML interativo (sem comando slash)
+function wantsPresentation(text) {
+  const t = (text || '').toLowerCase();
+  const verbo = /\b(monte|montar|crie|criar|cria|gere|gerar|gera|fa[çc]a|fazer|quero|preciso|elabore|elaborar|transforme|transformar|desenvolva|desenvolver)\b/.test(t);
+  const artefato = /\b(html|apresenta[çc]|slides?|interativ|did[áa]ti|p[áa]gina\s*web|infogr[áa]fic|landing\s*page|prot[óo]tipo visual)\b/.test(t);
+  return verbo && artefato;
 
 // ── Helper: parsear stream SSE e coletar texto completo ──
 async function collectStream(readable) {
@@ -751,6 +760,76 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
     }
 
     // ── PROTOTIPO: gera HTML + resumo HF + resumo Spec ──
+    if (command === 'apresentacao') {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Transfer-Encoding', 'chunked');
+      res.write(' ');
+      const kaApres = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+
+      // Contexto: usa toda a conversa (o caso de uso / fluxo ja discutido)
+      const convoContext = messages
+        .map(m => (m.role === 'user' ? 'Usuario' : 'Assistente') + ': ' + m.content)
+        .join('\n\n');
+
+      const apresSystem = `Voce e um designer de apresentacoes interativas. Gere uma pagina HTML COMPLETA, autocontida e profissional sobre o CONTEXTO PRINCIPAL da conversa (o caso de uso, funcionalidade ou fluxo discutido).
+
+REGRAS:
+- Retorne APENAS o HTML completo dentro de um unico bloco \`\`\`html ... \`\`\`. Nada antes ou depois.
+- Documento unico: todo CSS em <style> e todo JS em <script> inline. Sem dependencias externas (exceto, se necessario, fontes do Google Fonts e icones via CDN).
+- Interativa e DIDATICA: navegacao entre secoes/etapas (abas, passos, ou slides com botoes Anterior/Proximo), animacoes suaves, diagramas do fluxo (use HTML/CSS/SVG, NAO imagens externas que possam quebrar).
+- Visual moderno: paleta coerente, tipografia legivel, responsivo (mobile-first), cards, badges.
+- Conteudo em portugues do Brasil, fiel ao que foi discutido na conversa. Nao invente dados que nao estejam no contexto.
+- Foque no contexto principal: explique o caso de uso/fluxo de forma visual e progressiva (problema -> solucao -> passos -> resultado/beneficios).
+- Se houver campos, objetos ou etapas mencionados, represente-os visualmente (ex.: cards de campos, timeline de etapas, fluxograma).`;
+
+      const apresUser = [{ role: 'user', content: 'CONTEXTO DA CONVERSA:\n\n' + convoContext + '\n\n---\nGere a apresentacao HTML interativa e didatica sobre o contexto principal acima.' }];
+
+      let raw = '';
+      try {
+        if (selectedModel.startsWith('claude-')) {
+          raw = await claude.callAny(selectedModel, apresSystem, apresUser, 32000);
+        } else if (selectedModel === 'deepseek-chat') {
+          raw = await deepseek.call(apresSystem, apresUser, 8192);
+        } else {
+          // auto / grok / free -> usa Claude Sonnet (melhor qualidade de HTML, evita timeout do Grok)
+          raw = await claude.call(apresSystem, apresUser, 32000);
+        }
+      } catch (err) {
+        clearInterval(kaApres);
+        res.end(JSON.stringify({
+          choices: [{ message: { content: '\u274c Erro ao gerar apresentacao: ' + err.message } }],
+          modelo_usado: 'apresentacao', modelo_label: 'Apresentacao', tipo: 'apresentacao',
+        }));
+        return;
+      }
+      clearInterval(kaApres);
+
+      // Extrair HTML
+      let htmlContent = '';
+      const m = raw.match(/```html\s*([\s\S]*?)```/i);
+      if (m) htmlContent = m[1].trim();
+      else if (raw.includes('<!DOCTYPE') || raw.includes('<html')) htmlContent = raw.trim();
+
+      if (htmlContent) {
+        const dir = '/tmp/prototipos';
+        if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+        const id = randomBytes(6).toString('hex');
+        writeFileSync(dir + '/' + id + '.html', htmlContent);
+        const host = req.headers.host || 'everi9.albertobottaro.info';
+        const url = 'https://' + host + '/prototipos/' + id + '.html';
+        res.end(JSON.stringify({
+          choices: [{ message: { content: '## \ud83c\udfa8 Apresentacao gerada!\n\n[\u27a1 Abrir apresentacao interativa](' + url + ')\n\nApresentacao interativa e didatica baseada no contexto da conversa. Clique para abrir em tela cheia.' } }],
+          modelo_usado: 'apresentacao', modelo_label: 'Apresentacao HTML', tipo: 'apresentacao',
+        }));
+      } else {
+        res.end(JSON.stringify({
+          choices: [{ message: { content: '\u274c Nao consegui extrair o HTML. Tente reformular o pedido (ex.: "monte um html interativo do fluxo discutido").' } }],
+          modelo_usado: 'apresentacao', modelo_label: 'Apresentacao', tipo: 'apresentacao',
+        }));
+      }
+      return;
+    }
+
     if (command === 'prototipo') {
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Transfer-Encoding', 'chunked');
