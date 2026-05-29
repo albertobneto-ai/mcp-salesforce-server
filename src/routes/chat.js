@@ -252,6 +252,7 @@ function wantsPresentation(text) {
   const verbo = /\b(monte|montar|crie|criar|cria|gere|gerar|gera|fa[çc]a|fazer|quero|preciso|elabore|elaborar|transforme|transformar|desenvolva|desenvolver)\b/.test(t);
   const artefato = /\b(html|apresenta[çc]|slides?|interativ|did[áa]ti|p[áa]gina\s*web|infogr[áa]fic|landing\s*page|prot[óo]tipo visual)\b/.test(t);
   return verbo && artefato;
+}
 
 // ── Helper: parsear stream SSE e coletar texto completo ──
 async function collectStream(readable) {
