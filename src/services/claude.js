@@ -1,4 +1,5 @@
 // src/services/claude.js — Anthropic API com Prompt Caching
+import { pushUsage } from './usage-context.js';
 const API_URL = 'https://api.anthropic.com/v1/messages';
 
 export async function call(systemPrompt, messages, maxTokens = 16384) {
@@ -24,6 +25,7 @@ export async function call(systemPrompt, messages, maxTokens = 16384) {
   });
   if (!res.ok) throw new Error(`Claude ${res.status}: ${await res.text()}`);
   const data = await res.json();
+  pushUsage('claude-sonnet-4-6', data.usage);
   return data.content[0].text;
 }
 
