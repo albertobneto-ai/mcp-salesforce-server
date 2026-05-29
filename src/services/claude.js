@@ -54,3 +54,25 @@ export async function stream(systemPrompt, messages, maxTokens = 16384) {
   if (!res.ok) throw new Error(`Claude stream ${res.status}: ${await res.text()}`);
   return res.body;
 }
+
+// Claude Haiku 4.5 — fallback quando modelos grátis estão indisponíveis (/hf, /ata)
+export async function callHaiku(systemPrompt, messages, maxTokens = 8192) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: maxTokens,
+      system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+      messages,
+    }),
+  });
+  if (!res.ok) throw new Error(`Haiku ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  pushUsage('claude-haiku-4-5', data.usage);
+  return data.content?.[0]?.text || '';
+}
