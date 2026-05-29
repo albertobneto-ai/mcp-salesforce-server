@@ -18,6 +18,7 @@ import { usageALS, pushUsage } from '../services/usage-context.js';
 import { recordUsage, getMonthlyUsage, getUsageBreakdown } from '../services/usage-db.js';
 import * as openrouter from '../services/openrouter.js';
 import * as kbdb from '../services/kb-db.js';
+import * as deepseek from '../services/deepseek.js';
 
 const router = express.Router();
 
@@ -2181,20 +2182,30 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
               modelo_usado: fr.model, modelo_label: fr.label, tipo: 'hf',
             }));
           } catch {
-            // Fallback: Claude Haiku 4.5 (todos os gratuitos indisponiveis)
+            // Fallback 1: DeepSeek (API direta, custo baixo)
             try {
-              const haikuResp = await claude.callHaiku(hfPromptKb, messages);
+              const dsResp = await deepseek.call(hfPromptKb, messages);
               clearInterval(kaHf);
               res.end(JSON.stringify({
-                choices: [{ message: { content: '[[ALERT-HAIKU]]\n\n' + haikuResp } }],
-                modelo_usado: 'claude-haiku-4-5', modelo_label: 'Claude Haiku 4.5', tipo: 'hf',
+                choices: [{ message: { content: '[[ALERT-FALLBACK:DeepSeek Chat]]\n\n' + dsResp } }],
+                modelo_usado: 'deepseek-chat', modelo_label: 'DeepSeek Chat', tipo: 'hf',
               }));
             } catch {
-              clearInterval(kaHf);
-              res.end(JSON.stringify({
-                choices: [{ message: { content: FREE_UNAVAILABLE } }],
-                modelo_usado: 'free-unavailable', modelo_label: 'Indisponivel', tipo: 'hf',
-              }));
+              // Fallback 2: Claude Haiku 4.5
+              try {
+                const haikuResp = await claude.callHaiku(hfPromptKb, messages);
+                clearInterval(kaHf);
+                res.end(JSON.stringify({
+                  choices: [{ message: { content: '[[ALERT-FALLBACK:Claude Haiku 4.5]]\n\n' + haikuResp } }],
+                  modelo_usado: 'claude-haiku-4-5', modelo_label: 'Claude Haiku 4.5', tipo: 'hf',
+                }));
+              } catch {
+                clearInterval(kaHf);
+                res.end(JSON.stringify({
+                  choices: [{ message: { content: FREE_UNAVAILABLE } }],
+                  modelo_usado: 'free-unavailable', modelo_label: 'Indisponivel', tipo: 'hf',
+                }));
+              }
             }
           }
           return;
@@ -2213,12 +2224,19 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
             response = '[[ALERT-FREE:' + openrouter.labelFor(fr.model) + ']]\n\n' + fr.text;
             modelUsed = fr.model; modelLabel = openrouter.labelFor(fr.model);
           } catch {
-            // Fallback: Claude Haiku 4.5 (gratuitos indisponiveis)
+            // Fallback 1: DeepSeek (API direta)
             try {
-              const haikuResp = await claude.callHaiku(ataPrompt, messages);
-              response = '[[ALERT-HAIKU]]\n\n' + haikuResp;
-              modelUsed = 'claude-haiku-4-5'; modelLabel = 'Claude Haiku 4.5';
-            } catch { response = FREE_UNAVAILABLE; modelUsed = 'free-unavailable'; modelLabel = 'Indisponivel'; }
+              const dsResp = await deepseek.call(ataPrompt, messages);
+              response = '[[ALERT-FALLBACK:DeepSeek Chat]]\n\n' + dsResp;
+              modelUsed = 'deepseek-chat'; modelLabel = 'DeepSeek Chat';
+            } catch {
+              // Fallback 2: Claude Haiku 4.5
+              try {
+                const haikuResp = await claude.callHaiku(ataPrompt, messages);
+                response = '[[ALERT-FALLBACK:Claude Haiku 4.5]]\n\n' + haikuResp;
+                modelUsed = 'claude-haiku-4-5'; modelLabel = 'Claude Haiku 4.5';
+              } catch { response = FREE_UNAVAILABLE; modelUsed = 'free-unavailable'; modelLabel = 'Indisponivel'; }
+            }
           }
         } else if (selectedModel.startsWith('claude-')) {
           response = await claude.callAny(selectedModel, ataPrompt, messages);
