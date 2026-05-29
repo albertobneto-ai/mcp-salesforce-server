@@ -28,7 +28,7 @@ export async function authMiddleware(req, res, next) {
       return res.status(401).json({ error: 'Sessao encerrada', code: 'SESSION_ENDED' });
     }
     // role sempre do banco (reflete mudanças sem precisar re-login enquanto sessão valida)
-    req.user = { id: decoded.id, email: decoded.email, name: decoded.name, role: user.role || decoded.role };
+    req.user = { id: decoded.id, email: decoded.email, name: decoded.name, role: user.role || decoded.role, token_limit: decoded.token_limit ?? null };
     next();
   } catch (err) {
     // Fail-open: se o banco falhar, aceita o token para nao trancar todos os usuarios
@@ -46,6 +46,7 @@ export function generateToken(user) {
       name: user.name,
       role: user.role || 'funcional',
       sv: user.session_version || 1,
+      token_limit: user.token_limit ?? null,
     },
     SECRET,
     { expiresIn: '8h' }
