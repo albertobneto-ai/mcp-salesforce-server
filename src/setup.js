@@ -100,7 +100,7 @@ router.get('/users', requireAdmin, async (req, res) => {
   try {
     const pg = await import('pg');
     const pool = new pg.default.Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
-    const result = await pool.query('SELECT id, name, email, role, created_at FROM users ORDER BY id');
+    const result = await pool.query('SELECT id, name, email, role, token_limit, created_at FROM users ORDER BY id');
     await pool.end();
     res.json({ total: result.rows.length, users: result.rows });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -127,6 +127,24 @@ router.post('/users', requireAdmin, async (req, res) => {
 });
 
 // DELETE /api/setup/users/:id
+// PATCH /api/setup/users/:id/token-limit — define limite mensal de tokens (null/0 = ilimitado)
+router.patch('/users/:id/token-limit', requireAdmin, async (req, res) => {
+  const pg = await import('pg');
+  const pool = new pg.default.Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+  try {
+    let limit = req.body?.limit;
+    if (limit === '' || limit === undefined || limit === null || Number(limit) <= 0) limit = null;
+    else limit = Math.floor(Number(limit));
+    const r = await pool.query('UPDATE users SET token_limit = $1 WHERE id = $2 RETURNING id, name, token_limit', [limit, req.params.id]);
+    await pool.end();
+    if (!r.rows.length) return res.status(404).json({ error: 'Usuario nao encontrado' });
+    res.json({ ok: true, user: r.rows[0], message: 'Limite atualizado. Vale na proxima sessao do usuario (use Encerrar sessao para aplicar agora).' });
+  } catch (err) {
+    try { await pool.end(); } catch {}
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/setup/users/:id/end-session — encerra a sessao do usuario (forca novo login)
 router.post('/users/:id/end-session', requireAdmin, async (req, res) => {
   const pg = await import('pg');
