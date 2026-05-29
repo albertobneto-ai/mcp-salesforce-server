@@ -2181,11 +2181,21 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
               modelo_usado: fr.model, modelo_label: fr.label, tipo: 'hf',
             }));
           } catch {
-            clearInterval(kaHf);
-            res.end(JSON.stringify({
-              choices: [{ message: { content: FREE_UNAVAILABLE } }],
-              modelo_usado: 'free-unavailable', modelo_label: 'Indisponivel', tipo: 'hf',
-            }));
+            // Fallback: Claude Haiku 4.5 (todos os gratuitos indisponiveis)
+            try {
+              const haikuResp = await claude.callHaiku(hfPromptKb, messages);
+              clearInterval(kaHf);
+              res.end(JSON.stringify({
+                choices: [{ message: { content: '[[ALERT-HAIKU]]\n\n' + haikuResp } }],
+                modelo_usado: 'claude-haiku-4-5', modelo_label: 'Claude Haiku 4.5', tipo: 'hf',
+              }));
+            } catch {
+              clearInterval(kaHf);
+              res.end(JSON.stringify({
+                choices: [{ message: { content: FREE_UNAVAILABLE } }],
+                modelo_usado: 'free-unavailable', modelo_label: 'Indisponivel', tipo: 'hf',
+              }));
+            }
           }
           return;
         } else {
@@ -2199,7 +2209,14 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
             const fr = await openrouter.callWithFallback(ataPrompt, messages, selectedModel);
             response = '[[ALERT-FREE:' + openrouter.labelFor(fr.model) + ']]\n\n' + fr.text;
             modelUsed = fr.model; modelLabel = openrouter.labelFor(fr.model);
-          } catch { response = FREE_UNAVAILABLE; modelUsed = 'free-unavailable'; modelLabel = 'Indisponivel'; }
+          } catch {
+            // Fallback: Claude Haiku 4.5 (gratuitos indisponiveis)
+            try {
+              const haikuResp = await claude.callHaiku(ataPrompt, messages);
+              response = '[[ALERT-HAIKU]]\n\n' + haikuResp;
+              modelUsed = 'claude-haiku-4-5'; modelLabel = 'Claude Haiku 4.5';
+            } catch { response = FREE_UNAVAILABLE; modelUsed = 'free-unavailable'; modelLabel = 'Indisponivel'; }
+          }
         } else {
           response = await grok.call(ataPrompt, messages);
           modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
