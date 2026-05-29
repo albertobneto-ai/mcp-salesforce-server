@@ -11,7 +11,7 @@ export const FREE_MODELS = [
 ];
 
 export function isFreeModel(model) {
-  return !!model && FREE_MODELS.some(m => m.id === model);
+  return model === 'free' || (!!model && FREE_MODELS.some(m => m.id === model));
 }
 
 export function labelFor(model) {
