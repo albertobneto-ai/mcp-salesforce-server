@@ -1,4 +1,5 @@
 // src/services/grok.js — xAI API (Grok) com Web Search via Responses API
+import { pushUsage } from './usage-context.js';
 const CHAT_URL = 'https://api.x.ai/v1/chat/completions';
 const RESPONSES_URL = 'https://api.x.ai/v1/responses';
 
@@ -23,6 +24,7 @@ export async function call(systemPrompt, messages, maxTokens = 16384, options = 
     });
     if (!res.ok) throw new Error(`Grok search ${res.status}: ${await res.text()}`);
     const data = await res.json();
+    pushUsage('grok-search', data.usage);
     // Responses API retorna output_text ou output array
     if (data.output_text) return data.output_text;
     if (data.output) {
@@ -52,6 +54,7 @@ export async function call(systemPrompt, messages, maxTokens = 16384, options = 
   });
   if (!res.ok) throw new Error(`Grok ${res.status}: ${await res.text()}`);
   const data = await res.json();
+  pushUsage(process.env.GROK_MODEL || 'grok-3-mini-fast', data.usage);
   return data.choices[0].message.content;
 }
 
