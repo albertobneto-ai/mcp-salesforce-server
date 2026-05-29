@@ -212,9 +212,9 @@ async function getSelectedOrg(req) {
 
 // ── Permissões por perfil ──
 const ROLE_PERMISSIONS = {
-  admin:     ['spec', 'hf', 'ata', 'deploy', 'delete', 'describe', 'status', 'chat', 'prototipo', 'list', 'discovery', 'arch'],
+  admin:     ['spec', 'spec-deep', 'hf', 'ata', 'deploy', 'delete', 'describe', 'status', 'chat', 'prototipo', 'list', 'discovery', 'arch'],
   funcional: ['hf', 'ata'],
-  architect: ['spec', 'ata', 'list', 'discovery', 'arch'],
+  architect: ['spec', 'spec-deep', 'ata', 'list', 'discovery', 'arch'],
   developer: ['deploy', 'delete', 'describe', 'ata', 'list', 'discovery'],
   candidato: ['chat'],
 };
@@ -226,6 +226,7 @@ function checkPermission(role, command) {
 
 function detectCommand(messages) {
   const last = (messages[messages.length - 1]?.content || '').toLowerCase();
+  if (last.startsWith('/spec deep') || last.startsWith('/spec-deep')) return 'spec-deep';
   if (last.startsWith('/spec') || last.includes('gere a spec')) return 'spec';
   if (last.startsWith('/hf') || last.includes('historia funcional')) return 'hf';
   if (last.startsWith('/ata') || last.includes('ata de reuniao')) return 'ata';
@@ -341,14 +342,14 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
     const selectedModel = req.headers['x-model'] || 'auto';
     const usesFree = openrouter.isFreeModel(selectedModel);
     const FREE_ALLOWED = ['hf', 'ata', 'chat'];
-    const MODERN_REQUIRED = ['spec', 'deploy', 'delete', 'arch', 'discovery', 'prototipo'];
+    const MODERN_REQUIRED = ['spec', 'spec-deep', 'deploy', 'delete', 'arch', 'discovery', 'prototipo'];
     const MCP_ONLY = ['describe', 'status', 'list', 'org', 'orgs', 'scratch', 'mock'];
 
     // Detectar follow-up de confirmacao (deploy/delete) para NAO aplicar o gate nessas
     const _lastUser = (messages[messages.length - 1]?.content || '').toLowerCase().trim();
     const _prevAssist = [...messages].reverse().find(m => m.role === 'assistant')?.content || '';
-    const _isConfirmFollowup = _prevAssist.includes('---PLAN---') &&
-      ['1', '2', 'seguir', 'cancelar', 'confirmar', 'confirma', 'cancela', 'sim', 'nao', 'não'].includes(_lastUser);
+    const _isConfirmFollowup = (_prevAssist.includes('---PLAN---') || _prevAssist.includes('---SPECDEEP---')) &&
+      ['1', '2', 'seguir', 'cancelar', 'confirmar', 'confirma', 'cancela', 'sim', 'nao', 'não', 'reaproveitar', 'criar', 'criar novos', 'criar mesmo assim'].includes(_lastUser);
 
     if (!_isConfirmFollowup) {
       // (a) Modelo gratuito + comando que exige modelo moderno → bloqueio roxo
@@ -393,6 +394,40 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
       }
     }
 
+    // ── Follow-up de /spec deep: usuario decidiu sobre os conflitos ──
+    const _isSpecDeepFollowup = _prevAssist.includes('---SPECDEEP---') &&
+      ['1', '2', 'reaproveitar', 'criar', 'criar novos', 'criar mesmo assim'].includes(_lastUser);
+    if (_isSpecDeepFollowup && (userRole === 'admin' || checkPermission(userRole, 'spec'))) {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Transfer-Encoding', 'chunked');
+      res.write(' ');
+      const kaF = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+      try {
+        const m = _prevAssist.match(/---SPECDEEP---\s*([\s\S]*?)\s*---FIM---/);
+        const data = m ? JSON.parse(m[1]) : { requirement: '', orgName: '', conflicts: [] };
+        const reuse = ['1', 'reaproveitar'].includes(_lastUser);
+        const decisionNote = reuse
+          ? 'O usuario decidiu REAPROVEITAR os campos ja existentes. NAO especifique a criacao desses campos; indique reutilizar os existentes na org.'
+          : 'O usuario decidiu CRIAR novos campos mesmo assim. Especifique a criacao normalmente.';
+        const existListing = (data.conflicts || []).map(cf => {
+          const diverge = (cf.existingType || '').toLowerCase() !== (cf.proposedType || '').toLowerCase();
+          return '- ' + cf.object + '.' + cf.field + ' (existe como ' + cf.existingType + (diverge ? ', DIVERGE do tipo sugerido ' + cf.proposedType + ' - apenas AVISE na spec' : '') + ')';
+        }).join('\n');
+        const augmented = (data.requirement || '') +
+          '\n\n[CONTEXTO DA ORG ' + (data.orgName || '') + ' - validado somente leitura]\nCampos ja existentes relevantes:\n' +
+          existListing + '\n\nDecisao do usuario: ' + decisionNote;
+        const readable = await claude.stream(specPrompt, [{ role: 'user', content: augmented }], 48000);
+        const out = await collectStream(readable);
+        clearInterval(kaF);
+        res.end(JSON.stringify({ choices: [{ message: { content: out } }], modelo_usado: 'claude-sonnet-4-6', modelo_label: 'Claude Sonnet 4.6', tipo: 'spec' }));
+        return;
+      } catch (err) {
+        clearInterval(kaF);
+        res.end(JSON.stringify({ choices: [{ message: { content: 'Erro ao gerar spec deep: ' + err.message } }], tipo: 'spec' }));
+        return;
+      }
+    }
+
     // Verificar permissão
     if (userRole !== 'admin' && !checkPermission(userRole, command)) {
       return res.json({
@@ -420,6 +455,89 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
         tipo: 'spec',
       }));
       return;
+    }
+
+    // ── SPEC DEEP: valida campos contra a org (SOMENTE LEITURA) antes de gerar ──
+    if (command === 'spec-deep') {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Transfer-Encoding', 'chunked');
+      res.write(' ');
+      const keepAliveSD = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+      try {
+        const reqText = messages[messages.length - 1].content.replace(/\/spec[\s-]deep\s*/i, '').trim();
+        const orgSD = await getSelectedOrg(req);
+        const orgNameSD = orgSD ? orgSD.name : 'Dev Org (padrao)';
+
+        // Passada 1: extrair data model proposto (objetos + campos custom)
+        const extractPrompt = 'Voce e um arquiteto Salesforce. Dado um requisito, liste APENAS os objetos Salesforce e os campos customizados que precisariam ser CRIADOS para atende-lo. Responda SOMENTE com JSON valido, sem markdown nem texto extra, no formato exato: {"objects":[{"name":"Lead","fields":[{"name":"Score__c","type":"Number"}]}]}. Use API names (sufixo __c nos customizados). Use nomes de objetos padrao quando aplicavel (Lead, Opportunity, Account, Contact, Case, Quote, Order, Asset, Contract). Nao inclua campos padrao.';
+        let proposed = { objects: [] };
+        try {
+          const raw = await claude.call(extractPrompt, [{ role: 'user', content: reqText }], 1500);
+          proposed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+        } catch (e) { proposed = { objects: [] }; }
+
+        // Comparar proposto x existente (SOMENTE LEITURA: describe)
+        const conflicts = [];
+        for (const obj of (proposed.objects || [])) {
+          const existing = {};
+          try {
+            const desc = await execDescribe(req, obj.name);
+            const fields = desc?.fields || desc?.result?.fields || [];
+            for (const fd of fields) { if (fd && fd.name) existing[fd.name.toLowerCase()] = fd.type || fd.soapType || '?'; }
+          } catch {}
+          for (const fd of (obj.fields || [])) {
+            const key = (fd.name || '').toLowerCase();
+            if (key && existing[key]) {
+              conflicts.push({ object: obj.name, field: fd.name, existingType: existing[key], proposedType: fd.type || '?' });
+            }
+          }
+        }
+
+        clearInterval(keepAliveSD);
+
+        if (conflicts.length > 0) {
+          const lines = [];
+          lines.push('[[SPEC-CONFLICT]]');
+          lines.push('## \u26a0\ufe0f Campos ja existentes na org');
+          lines.push('');
+          lines.push('### \ud83c\udfe2 Org consultada (somente leitura): ' + orgNameSD);
+          lines.push('');
+          lines.push('Encontrei campos que o requisito criaria, mas que **ja existem** na org:');
+          lines.push('');
+          lines.push('| Objeto | Campo | Tipo existente | Tipo sugerido |');
+          lines.push('|---|---|---|---|');
+          for (const cf of conflicts) {
+            const diverge = (cf.existingType || '').toLowerCase() !== (cf.proposedType || '').toLowerCase();
+            lines.push('| ' + cf.object + ' | ' + cf.field + ' | ' + cf.existingType + (diverge ? ' \u26a0\ufe0f' : '') + ' | ' + cf.proposedType + ' |');
+          }
+          lines.push('');
+          lines.push('\u26a0\ufe0f = divergencia de tipo (a spec apenas avisa, nao altera nada na org).');
+          lines.push('');
+          lines.push('Como proceder?');
+          lines.push('[[SPEC-BTNS]]');
+          lines.push('[[/SPEC-CONFLICT]]');
+          lines.push('');
+          lines.push('---SPECDEEP---');
+          lines.push(JSON.stringify({ requirement: reqText, orgName: orgNameSD, conflicts }));
+          lines.push('---FIM---');
+          res.end(JSON.stringify({ choices: [{ message: { content: lines.join('\n') } }], tipo: 'spec-deep', modelo_label: 'Validacao org' }));
+          return;
+        }
+
+        // Sem conflitos: gera direto, com nota de validacao
+        const augmented = reqText + '\n\n[CONTEXTO: validado contra a org ' + orgNameSD + ' (somente leitura) - nenhum campo conflitante encontrado.]';
+        res.write(' ');
+        const ka2 = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+        const readableSD = await claude.stream(specPrompt, [{ role: 'user', content: augmented }], 48000);
+        const specOut = await collectStream(readableSD);
+        clearInterval(ka2);
+        res.end(JSON.stringify({ choices: [{ message: { content: specOut } }], modelo_usado: 'claude-sonnet-4-6', modelo_label: 'Claude Sonnet 4.6', tipo: 'spec' }));
+        return;
+      } catch (err) {
+        clearInterval(keepAliveSD);
+        res.end(JSON.stringify({ choices: [{ message: { content: 'Erro no /spec deep: ' + err.message } }], tipo: 'spec-deep' }));
+        return;
+      }
     }
 
     // ── DEPLOY: Claude smart deploy (lê org + decide + executa) ──
