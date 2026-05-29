@@ -336,6 +336,7 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
     const userRole = req.user?.role || 'funcional';
     try { const _s = usageALS.getStore(); if (_s) _s.command = command; } catch {}
 
+    const FREE_UNAVAILABLE = '[[ALERT-FREE:indisponivel]]\n\nOs modelos gratuitos estao temporariamente sobrecarregados (limite do tier gratuito do OpenRouter). Tente novamente em alguns instantes, ou use um modelo moderno (Claude/Grok).';
     // ── GATE Fase 2: roteamento de modelo gratuito + limite de tokens ──
     const selectedModel = req.headers['x-model'] || 'auto';
     const usesFree = openrouter.isFreeModel(selectedModel);
@@ -1976,9 +1977,11 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
       }
       case 'hf':
         if (usesFree) {
-          const fr = await openrouter.callWithFallback(hfPrompt, messages, selectedModel);
-          response = '[[ALERT-FREE:' + openrouter.labelFor(fr.model) + ']]\n\n' + fr.text;
-          modelUsed = fr.model; modelLabel = openrouter.labelFor(fr.model);
+          try {
+            const fr = await openrouter.callWithFallback(hfPrompt, messages, selectedModel);
+            response = '[[ALERT-FREE:' + openrouter.labelFor(fr.model) + ']]\n\n' + fr.text;
+            modelUsed = fr.model; modelLabel = openrouter.labelFor(fr.model);
+          } catch { response = FREE_UNAVAILABLE; modelUsed = 'free-unavailable'; modelLabel = 'Indisponivel'; }
         } else {
           response = await grok.call(hfPrompt, messages);
           modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
@@ -1986,9 +1989,11 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
         break;
       case 'ata':
         if (usesFree) {
-          const fr = await openrouter.callWithFallback(ataPrompt, messages, selectedModel);
-          response = '[[ALERT-FREE:' + openrouter.labelFor(fr.model) + ']]\n\n' + fr.text;
-          modelUsed = fr.model; modelLabel = openrouter.labelFor(fr.model);
+          try {
+            const fr = await openrouter.callWithFallback(ataPrompt, messages, selectedModel);
+            response = '[[ALERT-FREE:' + openrouter.labelFor(fr.model) + ']]\n\n' + fr.text;
+            modelUsed = fr.model; modelLabel = openrouter.labelFor(fr.model);
+          } catch { response = FREE_UNAVAILABLE; modelUsed = 'free-unavailable'; modelLabel = 'Indisponivel'; }
         } else {
           response = await grok.call(ataPrompt, messages);
           modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
@@ -2025,9 +2030,11 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
         const lastMsg = messages[messages.length - 1]?.content || '';
         const basePrompt = 'Voce e um assistente especialista. Responda em portugues do Brasil. Sempre traga informacoes atualizadas quando possivel.';
         if (usesFree) {
-          const fr = await openrouter.callWithFallback(basePrompt, messages, selectedModel);
-          response = '[[ALERT-FREE:' + openrouter.labelFor(fr.model) + ']]\n\n' + fr.text;
-          modelUsed = fr.model; modelLabel = openrouter.labelFor(fr.model);
+          try {
+            const fr = await openrouter.callWithFallback(basePrompt, messages, selectedModel);
+            response = '[[ALERT-FREE:' + openrouter.labelFor(fr.model) + ']]\n\n' + fr.text;
+            modelUsed = fr.model; modelLabel = openrouter.labelFor(fr.model);
+          } catch { response = FREE_UNAVAILABLE; modelUsed = 'free-unavailable'; modelLabel = 'Indisponivel'; }
         } else if (needsKB(lastMsg)) {
           response = await grok.call(basePrompt + '\n\nUse a base de conhecimento do projeto:\n\n' + knowledgeBase, messages, 16384, { search: true });
           modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
