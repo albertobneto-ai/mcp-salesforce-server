@@ -46,3 +46,16 @@ router.get('/search', authMiddleware, async (req, res) => {
 });
 
 export default router;
+
+// Teste de modelos Claude (diagnóstico temporário)
+router.get('/test-model/:model', async (req, res) => {
+  try {
+    const claude = await import('../services/claude.js');
+    const model = req.params.model;
+    if (model === 'haiku') {
+      const r = await claude.callHaiku('You are helpful.', [{role:'user',content:'say OK'}], 50);
+      return res.json({ ok: true, model: 'haiku', response: r });
+    }
+    res.json({ ok: false, error: 'modelo nao suportado para teste' });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
