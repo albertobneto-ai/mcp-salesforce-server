@@ -1857,16 +1857,19 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
           // Parse subcomandos
           let kbQuery = kbAfter;
           let kbLabel = 'Base de Conhecimento';
+          let kbScope = null;
           if (/^(projeto|project)\b/i.test(kbAfter)) {
             kbQuery = kbAfter.replace(/^(projeto|project)\s*/i, '').trim() || 'projeto funcionalidades componentes arquitetura endpoints';
             kbLabel = 'Projeto';
+            kbScope = 'projeto';
           } else if (/^(sf|salesforce)\b/i.test(kbAfter)) {
             kbQuery = kbAfter.replace(/^(sf|salesforce)\s*/i, '').trim();
             if (!kbQuery) kbQuery = 'salesforce objetos campos automacao';
             kbLabel = 'Salesforce';
+            kbScope = 'sf';
           }
 
-          const kbChunks = await kbdb.searchChunks(kbQuery, 8);
+          const kbChunks = await kbdb.searchChunks(kbQuery, 8, kbScope);
           if (!kbChunks.length) {
             response = '## \ud83d\udcda ' + kbLabel + '\n\nNenhum resultado para **"' + kbQuery + '"** na base.\n\nTente termos diferentes ou suba mais documentos pelo **Admin > Base de Conhecimento**.';
           } else {
