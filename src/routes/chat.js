@@ -213,11 +213,11 @@ async function getSelectedOrg(req) {
 
 // ── Permissões por perfil ──
 const ROLE_PERMISSIONS = {
-  admin:     ['spec', 'spec-deep', 'hf', 'ata', 'deploy', 'delete', 'describe', 'status', 'chat', 'prototipo', 'list', 'discovery', 'arch'],
-  funcional: ['hf', 'ata'],
-  architect: ['spec', 'spec-deep', 'ata', 'list', 'discovery', 'arch'],
-  developer: ['deploy', 'delete', 'describe', 'ata', 'list', 'discovery'],
-  candidato: ['chat'],
+  admin:     ['spec', 'spec-deep', 'hf', 'ata', 'deploy', 'delete', 'describe', 'status', 'chat', 'prototipo', 'list', 'discovery', 'arch', 'kb'],
+  funcional: ['hf', 'ata', 'kb'],
+  architect: ['spec', 'spec-deep', 'ata', 'list', 'discovery', 'arch', 'kb'],
+  developer: ['deploy', 'delete', 'describe', 'ata', 'list', 'discovery', 'kb'],
+  candidato: ['chat', 'kb'],
 };
 
 function checkPermission(role, command) {
@@ -233,6 +233,7 @@ function detectCommand(messages) {
   if (last.startsWith('/ata') || last.includes('ata de reuniao')) return 'ata';
   if (last.startsWith('/arch')) return 'arch';
   if (last.startsWith('/discovery') || last.startsWith('/disc')) return 'discovery';
+  if (last.startsWith('/kb')) return 'kb';
   if (last.startsWith('/list')) return 'list';
   if (last.startsWith('/prototipo') || last.startsWith('/proto')) return 'prototipo';
   if (last.startsWith('/deploy')) return 'deploy';
@@ -344,7 +345,7 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
     const usesFree = openrouter.isFreeModel(selectedModel);
     const FREE_ALLOWED = ['hf', 'ata', 'chat'];
     const MODERN_REQUIRED = ['spec', 'spec-deep', 'deploy', 'delete', 'arch', 'discovery', 'prototipo'];
-    const MCP_ONLY = ['describe', 'status', 'list', 'org', 'orgs', 'scratch', 'mock'];
+    const MCP_ONLY = ['describe', 'status', 'list', 'org', 'orgs', 'scratch', 'mock', 'kb'];
 
     // Detectar follow-up de confirmacao (deploy/delete) para NAO aplicar o gate nessas
     const _lastUser = (messages[messages.length - 1]?.content || '').toLowerCase().trim();
@@ -1832,6 +1833,58 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
           tipo: 'discovery',
         }));
         return;
+      }
+      case 'kb': {
+        // ── KB: busca na base de conhecimento (ZERO IA, ZERO custo, ZERO org) ──
+        const kbFullText = (messages[messages.length - 1]?.content || '');
+        const kbAfter = kbFullText.replace(/^\/kb\s*/i, '').trim();
+
+        if (!kbAfter) {
+          // Sem argumento: listar documentos
+          const docs = await kbdb.listDocuments();
+          if (!docs.length) {
+            response = '## \ud83d\udcda Base de Conhecimento\n\nNenhum documento na base. Suba documentos pelo painel **Admin > Base de Conhecimento**.\n\n**Uso:** `/kb [pergunta]` \u00b7 `/kb sf [pergunta]` \u00b7 `/kb projeto`';
+          } else {
+            const lines = ['## \ud83d\udcda Base de Conhecimento\n'];
+            lines.push('**' + docs.length + ' documento(s) na base:**\n');
+            lines.push('| # | Documento | Trechos | Escopo |');
+            lines.push('|---|---|---|---|');
+            docs.forEach((d, i) => lines.push('| ' + (i + 1) + ' | ' + d.title + ' | ' + d.chunk_count + ' | ' + d.command_scope + ' |'));
+            lines.push('\n**Uso:** `/kb [pergunta]` \u00b7 `/kb sf [pergunta]` \u00b7 `/kb projeto`');
+            response = lines.join('\n');
+          }
+        } else {
+          // Parse subcomandos
+          let kbQuery = kbAfter;
+          let kbLabel = 'Base de Conhecimento';
+          if (/^(projeto|project)\b/i.test(kbAfter)) {
+            kbQuery = kbAfter.replace(/^(projeto|project)\s*/i, '').trim() || 'projeto funcionalidades componentes arquitetura endpoints';
+            kbLabel = 'Projeto';
+          } else if (/^(sf|salesforce)\b/i.test(kbAfter)) {
+            kbQuery = kbAfter.replace(/^(sf|salesforce)\s*/i, '').trim();
+            if (!kbQuery) kbQuery = 'salesforce objetos campos automacao';
+            kbLabel = 'Salesforce';
+          }
+
+          const kbChunks = await kbdb.searchChunks(kbQuery, 8);
+          if (!kbChunks.length) {
+            response = '## \ud83d\udcda ' + kbLabel + '\n\nNenhum resultado para **"' + kbQuery + '"** na base.\n\nTente termos diferentes ou suba mais documentos pelo **Admin > Base de Conhecimento**.';
+          } else {
+            const lines = ['## \ud83d\udcda ' + kbLabel + '\n'];
+            lines.push('\ud83d\udd0d **' + kbQuery + '** \u2014 ' + kbChunks.length + ' trecho(s) encontrado(s)\n');
+            kbChunks.forEach((ch) => {
+              lines.push('---');
+              lines.push('**\ud83d\udcc4 ' + ch.title + '**\n');
+              lines.push(ch.content + '\n');
+            });
+            lines.push('---\n');
+            lines.push('*Fonte: base interna (zero custo de IA)*\n');
+            lines.push('Para aprofundar: selecione **Modelo gratuito** e pergunte livremente no chat.');
+            response = lines.join('\n');
+          }
+        }
+        modelUsed = 'kb-local'; modelLabel = 'KB local';
+        break;
       }
       case 'list': {
         const listArg = messages[messages.length - 1].content.replace(/\/list\s*/i, '').trim();
