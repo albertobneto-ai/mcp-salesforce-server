@@ -47,6 +47,19 @@ router.get('/init-db', async (req, res) => {
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(100)');
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMPTZ');
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS session_version INT DEFAULT 1');
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS token_limit BIGINT DEFAULT NULL');
+    await pool.query(`CREATE TABLE IF NOT EXISTS token_usage (
+      id SERIAL PRIMARY KEY,
+      user_id INT,
+      command VARCHAR(30),
+      model VARCHAR(60),
+      input_tokens INT DEFAULT 0,
+      output_tokens INT DEFAULT 0,
+      cache_read_tokens INT DEFAULT 0,
+      cache_write_tokens INT DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT now()
+    )`);
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_token_usage_user_date ON token_usage(user_id, created_at)');
     // Adicionar coluna role se nao existir (migracao)
     await pool.query(`DO $$ BEGIN
       ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'funcional';
