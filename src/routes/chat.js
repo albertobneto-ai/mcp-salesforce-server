@@ -2198,6 +2198,9 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
             }
           }
           return;
+        } else if (selectedModel.startsWith('claude-')) {
+          response = await claude.callAny(selectedModel, hfPrompt, messages);
+          modelUsed = selectedModel; modelLabel = selectedModel === 'claude-opus-4-8' ? 'Claude Opus 4.8' : selectedModel;
         } else {
           response = await grok.call(hfPrompt, messages);
           modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
@@ -2217,6 +2220,9 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
               modelUsed = 'claude-haiku-4-5'; modelLabel = 'Claude Haiku 4.5';
             } catch { response = FREE_UNAVAILABLE; modelUsed = 'free-unavailable'; modelLabel = 'Indisponivel'; }
           }
+        } else if (selectedModel.startsWith('claude-')) {
+          response = await claude.callAny(selectedModel, ataPrompt, messages);
+          modelUsed = selectedModel; modelLabel = selectedModel === 'claude-opus-4-8' ? 'Claude Opus 4.8' : selectedModel;
         } else {
           response = await grok.call(ataPrompt, messages);
           modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
