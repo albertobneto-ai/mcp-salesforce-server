@@ -2095,11 +2095,27 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
       }
       case 'hf':
         if (usesFree) {
+          // Keep-alive: a cascata pelo pool + geracao pode passar de 30s (timeout do Heroku).
+          // Enviar bytes a cada 10s mantem a conexao viva. Frontend faz res.text().trim() -> parse.
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Transfer-Encoding', 'chunked');
+          res.write(' ');
+          const kaHf = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
           try {
             const fr = await openrouter.callWithDynamicPool(hfPrompt, messages);
-            response = '[[ALERT-FREE:' + fr.label + ']]\n\n' + fr.text;
-            modelUsed = fr.model; modelLabel = fr.label;
-          } catch { response = FREE_UNAVAILABLE; modelUsed = 'free-unavailable'; modelLabel = 'Indisponivel'; }
+            clearInterval(kaHf);
+            res.end(JSON.stringify({
+              choices: [{ message: { content: '[[ALERT-FREE:' + fr.label + ']]\n\n' + fr.text } }],
+              modelo_usado: fr.model, modelo_label: fr.label, tipo: 'hf',
+            }));
+          } catch {
+            clearInterval(kaHf);
+            res.end(JSON.stringify({
+              choices: [{ message: { content: FREE_UNAVAILABLE } }],
+              modelo_usado: 'free-unavailable', modelo_label: 'Indisponivel', tipo: 'hf',
+            }));
+          }
+          return;
         } else {
           response = await grok.call(hfPrompt, messages);
           modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
