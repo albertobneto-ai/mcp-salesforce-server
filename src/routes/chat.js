@@ -2375,6 +2375,7 @@ REGRAS:
         // RAG: busca a base de conhecimento (full-text) e injeta contexto se houver match.
         // Escopo-consciente: "Algar/projeto" -> docs do projeto cliente; "Ever i9/plataforma" -> docs do sistema.
         let basePromptKb = basePrompt;
+        let chatMsgs = messages;
         try {
           const tlow = lastMsg.toLowerCase();
           let kbScope = null; // null = busca em todos os escopos
@@ -2383,47 +2384,49 @@ REGRAS:
           const kbChunks = await kbdb.searchChunks(lastMsg, 5, kbScope);
           if (kbChunks.length) {
             basePromptKb =
-              'Voce e um assistente especialista da plataforma Ever i9. Responda em portugues do Brasil.\n\n' +
-              'IMPORTANTE: a pergunta refere-se ao CONTEXTO INTERNO abaixo (projeto do cliente, plataforma ou material proprio desta empresa). ' +
-              'Responda EXCLUSIVAMENTE com base no CONTEXTO abaixo. NAO use conhecimento externo sobre nomes parecidos ' +
-              '(por exemplo, projetos publicos homonimos a "Algar" ou "Ever i9"). ' +
-              'Se o CONTEXTO nao cobrir o que foi perguntado, diga claramente que essa informacao nao consta na base de conhecimento.\n\n' +
-              '--- CONTEXTO DA BASE DE CONHECIMENTO ---\n' +
+              'Voce e um assistente especialista da plataforma Ever i9. Responda em portugues do Brasil. ' +
+              'Use SOMENTE o contexto fornecido na mensagem; NAO use conhecimento externo sobre nomes homonimos.';
+            // Injeta o contexto na PROPRIA mensagem do usuario (modelos seguem isto com mais fidelidade que o system).
+            const ctxBlock =
+              '[CONTEXTO DA BASE DE CONHECIMENTO INTERNA - responda SOMENTE com base nisto. ' +
+              'IGNORE qualquer conhecimento externo sobre projetos/produtos publicos homonimos a "Algar" ou "Ever i9". ' +
+              'Se nao houver a informacao aqui, diga que nao consta na base.]\n\n' +
               kbChunks.map(c => '[' + c.title + ']\n' + c.content).join('\n\n') +
-              '\n--- FIM DO CONTEXTO ---';
+              '\n\n[FIM DO CONTEXTO]\n\nPergunta do usuario: ' + lastMsg;
+            chatMsgs = [...messages.slice(0, -1), { role: 'user', content: ctxBlock }];
           }
         } catch {}
         if (usesFree) {
           try {
-            const fr = await openrouter.callWithFallback(basePromptKb, messages, selectedModel);
+            const fr = await openrouter.callWithFallback(basePromptKb, chatMsgs, selectedModel);
             response = '[[ALERT-FREE:' + openrouter.labelFor(fr.model) + ']]\n\n' + fr.text;
             modelUsed = fr.model; modelLabel = openrouter.labelFor(fr.model);
           } catch {
             // Fallback 1: DeepSeek
             try {
-              const dsResp = await deepseek.call(basePromptKb, messages);
+              const dsResp = await deepseek.call(basePromptKb, chatMsgs);
               response = '[[ALERT-FALLBACK:DeepSeek Chat]]\n\n' + dsResp;
               modelUsed = 'deepseek-chat'; modelLabel = 'DeepSeek Chat';
             } catch {
               // Fallback 2: Claude Haiku 4.5
               try {
-                const haikuResp = await claude.callHaiku(basePromptKb, messages);
+                const haikuResp = await claude.callHaiku(basePromptKb, chatMsgs);
                 response = '[[ALERT-FALLBACK:Claude Haiku 4.5]]\n\n' + haikuResp;
                 modelUsed = 'claude-haiku-4-5'; modelLabel = 'Claude Haiku 4.5';
               } catch { response = FREE_UNAVAILABLE; modelUsed = 'free-unavailable'; modelLabel = 'Indisponivel'; }
             }
           }
         } else if (selectedModel.startsWith('claude-')) {
-          response = await claude.callAny(selectedModel, basePromptKb, messages);
+          response = await claude.callAny(selectedModel, basePromptKb, chatMsgs);
           modelUsed = selectedModel; modelLabel = selectedModel === 'claude-opus-4-8' ? 'Claude Opus 4.8' : selectedModel;
         } else if (selectedModel === 'deepseek-chat') {
-          response = await deepseek.call(basePromptKb, messages);
+          response = await deepseek.call(basePromptKb, chatMsgs);
           modelUsed = 'deepseek-chat'; modelLabel = 'DeepSeek Chat';
         } else if (needsKB(lastMsg)) {
-          response = await grok.call(basePromptKb + '\n\nUse tambem a base de conhecimento do projeto:\n\n' + knowledgeBase, messages, 16384, { search: true });
+          response = await grok.call(basePromptKb + '\n\nUse tambem a base de conhecimento do projeto:\n\n' + knowledgeBase, chatMsgs, 16384, { search: true });
           modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
         } else {
-          response = await grok.call(basePromptKb, messages, 16384, { search: true });
+          response = await grok.call(basePromptKb, chatMsgs, 16384, { search: true });
           modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
         }
     }
