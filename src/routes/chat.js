@@ -215,9 +215,9 @@ async function getSelectedOrg(req) {
 // ── Permissões por perfil ──
 const ROLE_PERMISSIONS = {
   admin:     ['spec', 'spec-deep', 'hf', 'ata', 'deploy', 'delete', 'describe', 'status', 'chat', 'prototipo', 'apresentacao', 'list', 'discovery', 'arch', 'kb'],
-  funcional: ['hf', 'ata', 'kb', 'apresentacao'],
-  architect: ['spec', 'spec-deep', 'ata', 'list', 'discovery', 'arch', 'kb', 'apresentacao'],
-  developer: ['deploy', 'delete', 'describe', 'ata', 'list', 'discovery', 'kb', 'apresentacao'],
+  funcional: ['hf', 'ata', 'kb', 'chat', 'apresentacao'],
+  architect: ['spec', 'spec-deep', 'ata', 'list', 'discovery', 'arch', 'kb', 'chat', 'apresentacao'],
+  developer: ['deploy', 'delete', 'describe', 'ata', 'list', 'discovery', 'kb', 'chat', 'apresentacao'],
   candidato: ['chat', 'kb', 'apresentacao'],
 };
 
@@ -2450,41 +2450,56 @@ REGRAS:
                 kbChunks.map(c => '[' + c.title + ']\n' + c.content).join('\n\n') +
                 '\n\n[FIM DO CONTEXTO]\n\nPergunta do usuario: ' + lastMsg;
               chatMsgs = [...messages.slice(0, -1), { role: 'user', content: ctxBlock }];
+            } else {
+              // KB vazia para este tema → busca na web via Grok (search) + conhecimento do modelo
+              try {
+                const webResp = await grok.call(
+                  'Voce e um especialista Salesforce. Responda em portugues do Brasil com base na documentacao oficial e seu conhecimento. Seja factual e tecnico.',
+                  chatMsgs, 16384, { search: true });
+                response = '[[ALERT-WEB]]\n\n' + webResp;
+                modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20 (web)';
+              } catch {
+                response = 'Nao foi possivel consultar a web. Tente novamente.';
+                modelUsed = 'error'; modelLabel = 'Erro';
+              }
             }
           }
         } catch {}
-        if (usesFree) {
-          try {
-            const fr = await openrouter.callWithFallback(basePromptKb, chatMsgs, selectedModel);
-            response = '[[ALERT-FREE:' + openrouter.labelFor(fr.model) + ']]\n\n' + fr.text;
-            modelUsed = fr.model; modelLabel = openrouter.labelFor(fr.model);
-          } catch {
-            // Fallback 1: DeepSeek
+        // Se já respondeu via web fallback, pula o routing de modelo
+        if (!response) {
+          // Admin/candidato: modelo selecionado. Demais perfis: DeepSeek obrigatório para chat livre.
+          const chatModel = (userRole === 'admin' || userRole === 'candidato') ? selectedModel : 'deepseek-chat';
+          if (usesFree) {
             try {
-              const dsResp = await deepseek.call(basePromptKb, chatMsgs);
-              response = '[[ALERT-FALLBACK:DeepSeek Chat]]\n\n' + dsResp;
-              modelUsed = 'deepseek-chat'; modelLabel = 'DeepSeek Chat';
+              const fr = await openrouter.callWithFallback(basePromptKb, chatMsgs, chatModel);
+              response = '[[ALERT-FREE:' + openrouter.labelFor(fr.model) + ']]\n\n' + fr.text;
+              modelUsed = fr.model; modelLabel = openrouter.labelFor(fr.model);
             } catch {
-              // Fallback 2: Claude Haiku 4.5
               try {
-                const haikuResp = await claude.callHaiku(basePromptKb, chatMsgs);
-                response = '[[ALERT-FALLBACK:Claude Haiku 4.5]]\n\n' + haikuResp;
-                modelUsed = 'claude-haiku-4-5'; modelLabel = 'Claude Haiku 4.5';
-              } catch { response = FREE_UNAVAILABLE; modelUsed = 'free-unavailable'; modelLabel = 'Indisponivel'; }
+                const dsResp = await deepseek.call(basePromptKb, chatMsgs);
+                response = '[[ALERT-FALLBACK:DeepSeek Chat]]\n\n' + dsResp;
+                modelUsed = 'deepseek-chat'; modelLabel = 'DeepSeek Chat';
+              } catch {
+                try {
+                  const haikuResp = await claude.callHaiku(basePromptKb, chatMsgs);
+                  response = '[[ALERT-FALLBACK:Claude Haiku 4.5]]\n\n' + haikuResp;
+                  modelUsed = 'claude-haiku-4-5'; modelLabel = 'Claude Haiku 4.5';
+                } catch { response = FREE_UNAVAILABLE; modelUsed = 'free-unavailable'; modelLabel = 'Indisponivel'; }
+              }
             }
+          } else if (chatModel.startsWith('claude-')) {
+            response = await claude.callAny(chatModel, basePromptKb, chatMsgs);
+            modelUsed = chatModel; modelLabel = chatModel === 'claude-opus-4-8' ? 'Claude Opus 4.8' : chatModel;
+          } else if (chatModel === 'deepseek-chat') {
+            response = await deepseek.call(basePromptKb, chatMsgs);
+            modelUsed = 'deepseek-chat'; modelLabel = 'DeepSeek Chat';
+          } else if (needsKB(lastMsg)) {
+            response = await grok.call(basePromptKb + '\n\nUse tambem a base de conhecimento do projeto:\n\n' + knowledgeBase, chatMsgs, 16384, { search: true });
+            modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
+          } else {
+            response = await grok.call(basePromptKb, chatMsgs, 16384, { search: true });
+            modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
           }
-        } else if (selectedModel.startsWith('claude-')) {
-          response = await claude.callAny(selectedModel, basePromptKb, chatMsgs);
-          modelUsed = selectedModel; modelLabel = selectedModel === 'claude-opus-4-8' ? 'Claude Opus 4.8' : selectedModel;
-        } else if (selectedModel === 'deepseek-chat') {
-          response = await deepseek.call(basePromptKb, chatMsgs);
-          modelUsed = 'deepseek-chat'; modelLabel = 'DeepSeek Chat';
-        } else if (needsKB(lastMsg)) {
-          response = await grok.call(basePromptKb + '\n\nUse tambem a base de conhecimento do projeto:\n\n' + knowledgeBase, chatMsgs, 16384, { search: true });
-          modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
-        } else {
-          response = await grok.call(basePromptKb, chatMsgs, 16384, { search: true });
-          modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
         }
     }
 
