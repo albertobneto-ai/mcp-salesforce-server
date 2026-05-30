@@ -463,8 +463,35 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Transfer-Encoding', 'chunked');
       res.write(' ');
-      const readable = await claude.stream(specPrompt, messages, 48000);
       const keepAlive = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+      // Enriquecimento: KB interna + web Salesforce (se KB insuficiente)
+      let specPromptKb = specPrompt;
+      try {
+        const reqTextSpec = (messages[messages.length - 1]?.content || '').replace(/\/spec\s*/i, '');
+        const kbChunks = await kbdb.searchChunks(reqTextSpec, 8, null);
+        let kbCtx = '';
+        if (kbChunks.length) {
+          kbCtx = '\n\n--- BASE DE CONHECIMENTO INTERNA (Salesforce + Projeto) ---\n' +
+            kbChunks.map(c => '[' + c.title + ']\n' + c.content).join('\n\n') + '\n--- FIM KB ---';
+        }
+        // Se KB tem poucos resultados (<3), busca na web documentação oficial Salesforce
+        if (kbChunks.length < 3) {
+          try {
+            const webInfo = await grok.call(
+              'Busque na documentacao oficial Salesforce sobre o assunto abaixo. Retorne um resumo tecnico factual com objetos, campos, configuracoes e boas praticas relevantes. Max 2000 chars. Responda em portugues do Brasil.',
+              [{ role: 'user', content: 'documentacao Salesforce: ' + reqTextSpec.slice(0, 300) }],
+              4096, { search: true }
+            );
+            if (webInfo) kbCtx += '\n\n--- REFERENCIA SALESFORCE (documentacao oficial web) ---\n' + webInfo + '\n--- FIM WEB ---';
+          } catch {}
+        }
+        if (kbCtx) {
+          specPromptKb = specPrompt + kbCtx +
+            '\n\nUSE o material acima como REFERENCIA FACTUAL para fundamentar a especificacao. ' +
+            'Cite objetos, campos e configuracoes da documentacao quando relevantes para o requisito.';
+        }
+      } catch {}
+      const readable = await claude.stream(specPromptKb, messages, 48000);
       response = await collectStream(readable);
       clearInterval(keepAlive);
       res.end(JSON.stringify({
@@ -486,6 +513,31 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
         const reqText = messages[messages.length - 1].content.replace(/\/spec[\s-]deep\s*/i, '').trim();
         const orgSD = await getSelectedOrg(req);
         const orgNameSD = orgSD ? orgSD.name : 'Dev Org (padrao)';
+
+        // Enriquecimento KB + web (igual ao /spec)
+        let specPromptKbSD = specPrompt;
+        try {
+          const kbChunksSD = await kbdb.searchChunks(reqText, 8, null);
+          let kbCtxSD = '';
+          if (kbChunksSD.length) {
+            kbCtxSD = '\n\n--- BASE DE CONHECIMENTO INTERNA (Salesforce + Projeto) ---\n' +
+              kbChunksSD.map(c => '[' + c.title + ']\n' + c.content).join('\n\n') + '\n--- FIM KB ---';
+          }
+          if (kbChunksSD.length < 3) {
+            try {
+              const webInfoSD = await grok.call(
+                'Busque na documentacao oficial Salesforce sobre o assunto. Resumo tecnico factual com objetos, campos, configuracoes. Max 2000 chars. Portugues.',
+                [{ role: 'user', content: 'documentacao Salesforce: ' + reqText.slice(0, 300) }],
+                4096, { search: true }
+              );
+              if (webInfoSD) kbCtxSD += '\n\n--- REFERENCIA SALESFORCE (web) ---\n' + webInfoSD + '\n--- FIM WEB ---';
+            } catch {}
+          }
+          if (kbCtxSD) {
+            specPromptKbSD = specPrompt + kbCtxSD +
+              '\n\nUSE o material acima como REFERENCIA FACTUAL. Cite objetos, campos e configuracoes quando relevantes.';
+          }
+        } catch {}
 
         // Passada 1: extrair data model proposto (objetos + campos custom)
         const extractPrompt = 'Voce e um arquiteto Salesforce. Dado um requisito, liste APENAS os objetos Salesforce e os campos customizados que precisariam ser CRIADOS para atende-lo. Responda SOMENTE com JSON valido, sem markdown nem texto extra, no formato exato: {"objects":[{"name":"Lead","fields":[{"name":"Score__c","type":"Number"}]}]}. Use API names (sufixo __c nos customizados). Use nomes de objetos padrao quando aplicavel (Lead, Opportunity, Account, Contact, Case, Quote, Order, Asset, Contract). Nao inclua campos padrao.';
@@ -547,7 +599,7 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
         const augmented = reqText + '\n\n[CONTEXTO: validado contra a org ' + orgNameSD + ' (somente leitura) - nenhum campo conflitante encontrado.]';
         res.write(' ');
         const ka2 = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
-        const readableSD = await claude.stream(specPrompt, [{ role: 'user', content: augmented }], 48000);
+        const readableSD = await claude.stream(specPromptKbSD, [{ role: 'user', content: augmented }], 48000);
         const specOut = await collectStream(readableSD);
         clearInterval(ka2);
         res.end(JSON.stringify({ choices: [{ message: { content: specOut } }], modelo_usado: 'claude-sonnet-4-6', modelo_label: 'Claude Sonnet 4.6', tipo: 'spec' }));
@@ -2242,29 +2294,28 @@ REGRAS:
         break;
       }
       case 'hf':
+        // KB: busca base de conhecimento (playbook + Salesforce + projeto) ANTES do branching de modelo.
+        // Scope null = todos os escopos (pega playbook HF, docs Salesforce, docs projeto).
+        var hfPromptKb = hfPrompt;
+        try {
+          const reqTextHf = (messages[messages.length - 1]?.content || '');
+          const kbChunks = await kbdb.searchChunks(reqTextHf, 6, null);
+          if (kbChunks.length) {
+            hfPromptKb = hfPrompt +
+              '\n\n---\nBASE DE CONHECIMENTO INTERNA (referencia):\n' +
+              kbChunks.map(c => '[' + c.title + ']\n' + c.content).join('\n\n') +
+              '\n\nUSE o material acima como guia de METODO e como fonte FACTUAL de apoio. ' +
+              'NAO copie conteudo de negocio que nao esteja na solicitacao do usuario. ' +
+              'A regra de fidelidade continua valendo: so descreva o que foi pedido.';
+          }
+        } catch {}
         if (usesFree) {
           // Keep-alive: a cascata pelo pool + geracao pode passar de 30s (timeout do Heroku).
-          // Enviar bytes a cada 10s mantem a conexao viva. Frontend faz res.text().trim() -> parse.
           res.setHeader('Content-Type', 'application/json');
           res.setHeader('Transfer-Encoding', 'chunked');
           res.write(' ');
           const kaHf = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
-          // hfPromptKb definido fora do try para estar acessivel no catch (fallback Haiku)
-          let hfPromptKb = hfPrompt;
           try {
-            // Consulta a KB (full-text, ZERO custo) e injeta como referencia de metodo/fatos.
-            try {
-              const reqTextHf = (messages[messages.length - 1]?.content || '');
-              const kbChunks = await kbdb.searchChunks(reqTextHf, 6, 'hf');
-              if (kbChunks.length) {
-                hfPromptKb = hfPrompt +
-                  '\n\n---\nBASE DE CONHECIMENTO INTERNA (referencia):\n' +
-                  kbChunks.map(c => '[' + c.title + ']\n' + c.content).join('\n\n') +
-                  '\n\nUSE o material acima como guia de METODO e como fonte FACTUAL de apoio. ' +
-                  'NAO copie conteudo de negocio que nao esteja na solicitacao do usuario. ' +
-                  'A regra de fidelidade continua valendo: so descreva o que foi pedido.';
-              }
-            } catch {}
             const fr = await openrouter.callWithDynamicPool(hfPromptKb, messages);
             clearInterval(kaHf);
             res.end(JSON.stringify({
@@ -2300,13 +2351,13 @@ REGRAS:
           }
           return;
         } else if (selectedModel.startsWith('claude-')) {
-          response = await claude.callAny(selectedModel, hfPrompt, messages);
+          response = await claude.callAny(selectedModel, hfPromptKb, messages);
           modelUsed = selectedModel; modelLabel = selectedModel === 'claude-opus-4-8' ? 'Claude Opus 4.8' : selectedModel;
         } else if (selectedModel === 'deepseek-chat') {
-          response = await deepseek.call(hfPrompt, messages);
+          response = await deepseek.call(hfPromptKb, messages);
           modelUsed = 'deepseek-chat'; modelLabel = 'DeepSeek Chat';
         } else {
-          response = await grok.call(hfPrompt, messages);
+          response = await grok.call(hfPromptKb, messages);
           modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
         }
         break;
