@@ -78,6 +78,11 @@ export async function deleteDocument(id) {
   await pool.query(`DELETE FROM kb_documents WHERE id = $1`, [id]); // cascade apaga chunks
 }
 
+export async function updateDocumentScope(id, commandScope) {
+  await ensureKbSchema();
+  await pool.query(`UPDATE kb_documents SET command_scope = $2 WHERE id = $1`, [id, commandScope]);
+}
+
 // Busca full-text: top N chunks mais relevantes. commandScope filtra docs por escopo (ex: 'hf').
 export async function searchChunks(query, limit = 6, commandScope = null) {
   await ensureKbSchema();
