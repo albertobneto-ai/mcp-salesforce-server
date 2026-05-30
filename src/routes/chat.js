@@ -2373,10 +2373,14 @@ REGRAS:
         const lastMsg = messages[messages.length - 1]?.content || '';
         const basePrompt = 'Voce e um assistente especialista. Responda em portugues do Brasil. Sempre traga informacoes atualizadas quando possivel.';
         // RAG: busca a base de conhecimento (full-text) e injeta contexto se houver match.
-        // Cobre pedidos como "projeto algar", "projeto da algar", duvidas sobre o projeto/Salesforce.
+        // Escopo-consciente: "Algar/projeto" -> docs do projeto cliente; "Ever i9/plataforma" -> docs do sistema.
         let basePromptKb = basePrompt;
         try {
-          const kbChunks = await kbdb.searchChunks(lastMsg, 5, null);
+          const tlow = lastMsg.toLowerCase();
+          let kbScope = null; // null = busca em todos os escopos
+          if (/\b(algar|projeto)\b/.test(tlow)) kbScope = 'projeto';
+          else if (/(ever\s*i9|everi9|plataforma|acelerador|a ferramenta)/.test(tlow)) kbScope = 'sistema';
+          const kbChunks = await kbdb.searchChunks(lastMsg, 5, kbScope);
           if (kbChunks.length) {
             basePromptKb = basePrompt +
               '\n\n---\nCONTEXTO DA BASE DE CONHECIMENTO INTERNA (use como fonte factual quando relevante para a pergunta):\n' +
