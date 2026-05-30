@@ -2350,12 +2350,12 @@ REGRAS:
             }
           }
           return;
+        } else if (userRole !== 'admin' || selectedModel === 'deepseek-chat') {
+          response = await deepseek.call(hfPromptKb, messages);
+          modelUsed = 'deepseek-chat'; modelLabel = 'DeepSeek Chat';
         } else if (selectedModel.startsWith('claude-')) {
           response = await claude.callAny(selectedModel, hfPromptKb, messages);
           modelUsed = selectedModel; modelLabel = selectedModel === 'claude-opus-4-8' ? 'Claude Opus 4.8' : selectedModel;
-        } else if (selectedModel === 'deepseek-chat') {
-          response = await deepseek.call(hfPromptKb, messages);
-          modelUsed = 'deepseek-chat'; modelLabel = 'DeepSeek Chat';
         } else {
           response = await grok.call(hfPromptKb, messages);
           modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
@@ -2382,12 +2382,12 @@ REGRAS:
               } catch { response = FREE_UNAVAILABLE; modelUsed = 'free-unavailable'; modelLabel = 'Indisponivel'; }
             }
           }
+        } else if (userRole !== 'admin' || selectedModel === 'deepseek-chat') {
+          response = await deepseek.call(ataPrompt, messages);
+          modelUsed = 'deepseek-chat'; modelLabel = 'DeepSeek Chat';
         } else if (selectedModel.startsWith('claude-')) {
           response = await claude.callAny(selectedModel, ataPrompt, messages);
           modelUsed = selectedModel; modelLabel = selectedModel === 'claude-opus-4-8' ? 'Claude Opus 4.8' : selectedModel;
-        } else if (selectedModel === 'deepseek-chat') {
-          response = await deepseek.call(ataPrompt, messages);
-          modelUsed = 'deepseek-chat'; modelLabel = 'DeepSeek Chat';
         } else {
           response = await grok.call(ataPrompt, messages);
           modelUsed = 'grok-4.20'; modelLabel = 'Grok 4.20';
@@ -2479,7 +2479,7 @@ REGRAS:
         // Se já respondeu via web fallback, pula o routing de modelo
         if (!response) {
           // Admin/candidato: modelo selecionado. Demais perfis: DeepSeek obrigatório para chat livre.
-          const chatModel = (userRole === 'admin' || userRole === 'candidato') ? selectedModel : 'deepseek-chat';
+          const chatModel = (userRole === 'admin') ? selectedModel : 'deepseek-chat';
           if (usesFree) {
             try {
               const fr = await openrouter.callWithFallback(basePromptKb, chatMsgs, chatModel);
