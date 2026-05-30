@@ -2429,22 +2429,28 @@ REGRAS:
         let chatMsgs = messages;
         try {
           const tlow = lastMsg.toLowerCase();
-          let kbScope = null; // null = busca em todos os escopos
-          if (/\b(algar|projeto)\b/.test(tlow)) kbScope = 'projeto';
-          else if (/(ever\s*i9|everi9|plataforma|acelerador|a ferramenta)/.test(tlow)) kbScope = 'sistema';
-          const kbChunks = await kbdb.searchChunks(lastMsg, 5, kbScope);
-          if (kbChunks.length) {
-            basePromptKb =
-              'Voce e um assistente especialista da plataforma Ever i9. Responda em portugues do Brasil. ' +
-              'Use SOMENTE o contexto fornecido na mensagem; NAO use conhecimento externo sobre nomes homonimos.';
-            // Injeta o contexto na PROPRIA mensagem do usuario (modelos seguem isto com mais fidelidade que o system).
-            const ctxBlock =
-              '[CONTEXTO DA BASE DE CONHECIMENTO INTERNA - responda SOMENTE com base nisto. ' +
-              'IGNORE qualquer conhecimento externo sobre projetos/produtos publicos homonimos a "Algar" ou "Ever i9". ' +
-              'Se nao houver a informacao aqui, diga que nao consta na base.]\n\n' +
-              kbChunks.map(c => '[' + c.title + ']\n' + c.content).join('\n\n') +
-              '\n\n[FIM DO CONTEXTO]\n\nPergunta do usuario: ' + lastMsg;
-            chatMsgs = [...messages.slice(0, -1), { role: 'user', content: ctxBlock }];
+          // Detecta se a pergunta e sobre o projeto, plataforma ou Salesforce.
+          // Perguntas GENERICAS (tempo, noticias, etc.) NAO ativam a KB — resposta livre.
+          let kbScope = null;
+          let shouldSearchKb = false;
+          if (/\b(algar|projeto|workstream)\b/.test(tlow)) { kbScope = 'projeto'; shouldSearchKb = true; }
+          else if (/(ever\s*i9|everi9|plataforma|acelerador|a ferramenta)/.test(tlow)) { kbScope = 'sistema'; shouldSearchKb = true; }
+          else if (/\b(salesforce|apex|soql|sosl|lead[s]?|opportunit|account[s]?|contact[s]?|flow[s]?|trigger[s]?|lightning|lwc|picklist|campaign|territory|maps salesforce|pipeline|forecast|einstein|permission|sharing|deploy|metadata|sandbox|cpq|billing|order management|data cloud|agentforce|service cloud|sales cloud|revenue cloud|experience cloud|custom object|validation rule|record type)\b/.test(tlow)) { shouldSearchKb = true; }
+
+          if (shouldSearchKb) {
+            const kbChunks = await kbdb.searchChunks(lastMsg, 5, kbScope);
+            if (kbChunks.length) {
+              basePromptKb =
+                'Voce e um assistente especialista da plataforma Ever i9. Responda em portugues do Brasil. ' +
+                'Use SOMENTE o contexto fornecido na mensagem; NAO use conhecimento externo sobre nomes homonimos.';
+              const ctxBlock =
+                '[CONTEXTO DA BASE DE CONHECIMENTO INTERNA - responda SOMENTE com base nisto. ' +
+                'IGNORE qualquer conhecimento externo sobre projetos/produtos publicos homonimos a "Algar" ou "Ever i9". ' +
+                'Se nao houver a informacao aqui, diga que nao consta na base.]\n\n' +
+                kbChunks.map(c => '[' + c.title + ']\n' + c.content).join('\n\n') +
+                '\n\n[FIM DO CONTEXTO]\n\nPergunta do usuario: ' + lastMsg;
+              chatMsgs = [...messages.slice(0, -1), { role: 'user', content: ctxBlock }];
+            }
           }
         } catch {}
         if (usesFree) {
