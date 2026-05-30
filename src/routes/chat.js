@@ -2440,18 +2440,29 @@ REGRAS:
           if (shouldSearchKb) {
             const kbChunks = await kbdb.searchChunks(lastMsg, 5, kbScope);
             if (kbChunks.length) {
-              basePromptKb =
-                'Voce e um assistente especialista da plataforma Ever i9. Responda em portugues do Brasil. ' +
-                'Use SOMENTE o contexto fornecido na mensagem; NAO use conhecimento externo sobre nomes homonimos.';
-              const ctxBlock =
-                '[CONTEXTO DA BASE DE CONHECIMENTO INTERNA - responda SOMENTE com base nisto. ' +
-                'IGNORE qualquer conhecimento externo sobre projetos/produtos publicos homonimos a "Algar" ou "Ever i9". ' +
-                'Se nao houver a informacao aqui, diga que nao consta na base.]\n\n' +
-                kbChunks.map(c => '[' + c.title + ']\n' + c.content).join('\n\n') +
-                '\n\n[FIM DO CONTEXTO]\n\nPergunta do usuario: ' + lastMsg;
-              chatMsgs = [...messages.slice(0, -1), { role: 'user', content: ctxBlock }];
+              const kbText = kbChunks.map(c => '[' + c.title + ']\n' + c.content).join('\n\n');
+              if (kbScope === 'projeto' || kbScope === 'sistema') {
+                // Projeto/plataforma: ESTRITO — previne alucinação com nomes homônimos
+                basePromptKb =
+                  'Voce e um assistente especialista. Responda em portugues do Brasil. ' +
+                  'Use SOMENTE o contexto fornecido. NAO use conhecimento externo sobre nomes homonimos.';
+                const ctxBlock =
+                  '[CONTEXTO INTERNO - responda SOMENTE com base nisto. IGNORE projetos/produtos publicos homonimos.]\n\n' +
+                  kbText + '\n\n[FIM DO CONTEXTO]\n\nPergunta: ' + lastMsg;
+                chatMsgs = [...messages.slice(0, -1), { role: 'user', content: ctxBlock }];
+              } else {
+                // Salesforce genérico: FLEXIVEL — KB como referência primária, complementa se necessário
+                basePromptKb =
+                  'Voce e um especialista Salesforce. Responda em portugues do Brasil. ' +
+                  'Use a base de conhecimento abaixo como referencia PRIMARIA. ' +
+                  'Se a pergunta especifica nao estiver coberta na base, complemente com seu conhecimento e documentacao oficial Salesforce.';
+                const ctxBlock =
+                  '[BASE DE CONHECIMENTO SALESFORCE (referencia primaria)]\n\n' +
+                  kbText + '\n\n[FIM]\n\nPergunta: ' + lastMsg;
+                chatMsgs = [...messages.slice(0, -1), { role: 'user', content: ctxBlock }];
+              }
             } else {
-              // KB vazia para este tema → busca na web via Grok (search) + conhecimento do modelo
+              // KB vazia → busca web via Grok (search) + conhecimento do modelo
               try {
                 const webResp = await grok.call(
                   'Voce e um especialista Salesforce. Responda em portugues do Brasil com base na documentacao oficial e seu conhecimento. Seja factual e tecnico.',
