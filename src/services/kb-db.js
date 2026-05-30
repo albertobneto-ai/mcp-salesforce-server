@@ -87,17 +87,20 @@ export async function updateDocumentScope(id, commandScope) {
 export async function searchChunks(query, limit = 6, commandScope = null) {
   await ensureKbSchema();
   if (!query || !query.trim()) return [];
+  // Converte o tsquery AND (plainto) em OR: melhor recall para frases longas,
+  // mantendo stemming/stopwords do config 'portuguese'. ts_rank prioriza quem casa mais termos.
   const params = [query, limit];
   let scopeClause = '';
   if (commandScope) {
     scopeClause = `AND (d.command_scope = 'all' OR d.command_scope = $3)`;
     params.push(commandScope);
   }
+  const orq = `NULLIF(replace(plainto_tsquery('portuguese', $1)::text, '&', '|'), '')::tsquery`;
   try {
     const r = await pool.query(
-      `SELECT c.content, d.title, ts_rank(c.tsv, plainto_tsquery('portuguese', $1)) AS rank
+      `SELECT c.content, d.title, ts_rank(c.tsv, ${orq}) AS rank
        FROM kb_chunks c JOIN kb_documents d ON d.id = c.document_id
-       WHERE c.tsv @@ plainto_tsquery('portuguese', $1) ${scopeClause}
+       WHERE c.tsv @@ ${orq} ${scopeClause}
        ORDER BY rank DESC LIMIT $2`,
       params
     );
