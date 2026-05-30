@@ -2375,18 +2375,21 @@ REGRAS:
         // RAG: busca a base de conhecimento (full-text) e injeta contexto se houver match.
         // Escopo-consciente: "Algar/projeto" -> docs do projeto cliente; "Ever i9/plataforma" -> docs do sistema.
         let basePromptKb = basePrompt;
+        let _kbDbg = 'scope=?';
         try {
           const tlow = lastMsg.toLowerCase();
           let kbScope = null; // null = busca em todos os escopos
           if (/\b(algar|projeto)\b/.test(tlow)) kbScope = 'projeto';
           else if (/(ever\s*i9|everi9|plataforma|acelerador|a ferramenta)/.test(tlow)) kbScope = 'sistema';
           const kbChunks = await kbdb.searchChunks(lastMsg, 5, kbScope);
+          _kbDbg = 'scope=' + kbScope + ' chunks=' + kbChunks.length;
           if (kbChunks.length) {
             basePromptKb = basePrompt +
               '\n\n---\nCONTEXTO DA BASE DE CONHECIMENTO INTERNA (use como fonte factual quando relevante para a pergunta):\n' +
               kbChunks.map(c => '[' + c.title + ']\n' + c.content).join('\n\n');
           }
-        } catch {}
+        } catch (e) { _kbDbg = 'ERRO: ' + e.message; }
+        try { res.setHeader('X-KB-Debug', _kbDbg); } catch {}
         if (usesFree) {
           try {
             const fr = await openrouter.callWithFallback(basePromptKb, messages, selectedModel);
