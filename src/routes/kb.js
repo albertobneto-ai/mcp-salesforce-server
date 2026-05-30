@@ -37,6 +37,14 @@ router.delete('/documents/:id', authMiddleware, async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
+router.patch('/documents/:id/scope', authMiddleware, async (req, res) => {
+  try {
+    if (req.user?.role !== 'admin') return res.status(403).json({ erro: 'Apenas admin pode gerenciar a base.' });
+    await kbdb.updateDocumentScope(Number(req.params.id), req.body.scope);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
 // Busca (debug/uso interno) — retorna chunks relevantes
 router.get('/search', authMiddleware, async (req, res) => {
   try {
