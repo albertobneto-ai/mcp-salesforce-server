@@ -562,5 +562,91 @@ ${mappingXml}
     }
   });
 
-  console.log("Routes: execute-anonymous, execute-apex-b64, soql-b64, soql-get, upsert, update-b64, composite, deploy-formula-fields, update-layout, lead-convert-mapping, field-history");
+
+
+  // =============================================
+  // DATA CLOUD API ROUTES
+  // =============================================
+
+  // --- GET: Data Cloud Overview (all config in one call) ---
+  app.get("/api/datacloud/overview", async (req, res) => {
+    try {
+      await connectToTargetOrg(req);
+      const conn = sfClient.getConnection();
+      const [streams, dlos, segments, ir, activations] = await Promise.all([
+        conn.query("SELECT Id,Name,Description,DataStreamStatus,RefreshFrequency,RefreshMode,LastRefreshDate,TotalNumberOfRowsAdded FROM DataStream ORDER BY Name LIMIT 50").catch(()=>({records:[]})),
+        conn.query("SELECT Id,Name,Description,DataLakeObjectStatus,Category,TotalRecords,Storage,TotalNumberOfFields,ExternalName FROM DataLakeObjectInstance ORDER BY Name LIMIT 50").catch(()=>({records:[]})),
+        conn.query("SELECT Id,Name,Description,SegmentStatus,LastSegmentMemberCount,PublishScheduleInterval,IncludeCriteria,ExcludeCriteria,LastPublishedEndDateTime,NextPublishDateTime FROM MarketSegment ORDER BY Name LIMIT 50").catch(()=>({records:[]})),
+        conn.query("SELECT Id,Name,Status,LastRunStatus,SourceCount,MatchedCount,UnifiedCount,ConsolidationRate,IsScheduled,LastSuccessfulRunDateTime FROM IdentityResolution LIMIT 20").catch(()=>({records:[]})),
+        conn.query("SELECT Id,Name,MarketSegmentId,LastPublishStatus,ActivationRefreshType,RecordCount,LastPublishedDate FROM MarketSegmentActivation LIMIT 50").catch(()=>({records:[]}))
+      ]);
+      sfClient.clearTargetOrg();
+      res.json({
+        status: "ok",
+        data: {
+          streams: streams.records || [],
+          dlos: dlos.records || [],
+          segments: segments.records || [],
+          identityResolution: ir.records || [],
+          activations: activations.records || []
+        }
+      });
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.status(500).json({ status: "error", message: err.message });
+    }
+  });
+
+  // --- GET: SSOT REST API proxy ---
+  app.get("/api/datacloud/ssot/*", async (req, res) => {
+    try {
+      await connectToTargetOrg(req);
+      const conn = sfClient.getConnection();
+      const path = "/services/data/v62.0/ssot/" + req.params[0];
+      console.log("[DC] GET", path);
+      const result = await conn.request({ method: "GET", url: path });
+      sfClient.clearTargetOrg();
+      res.json({ status: "ok", data: result });
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.json({ status: "error", message: err.message || String(err) });
+    }
+  });
+
+  // --- POST: SSOT REST API proxy (for creates/updates) ---
+  app.post("/api/datacloud/ssot/*", async (req, res) => {
+    try {
+      await connectToTargetOrg(req);
+      const conn = sfClient.getConnection();
+      const path = "/services/data/v62.0/ssot/" + req.params[0];
+      console.log("[DC] POST", path, JSON.stringify(req.body).substring(0, 200));
+      const result = await conn.request({ method: "POST", url: path, body: JSON.stringify(req.body), headers: { "Content-Type": "application/json" } });
+      sfClient.clearTargetOrg();
+      res.json({ status: "ok", data: result });
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.json({ status: "error", message: err.message || String(err) });
+    }
+  });
+
+  // --- GET: Data Cloud Query API (query DMOs) ---
+  app.post("/api/datacloud/query", async (req, res) => {
+    try {
+      await connectToTargetOrg(req);
+      const conn = sfClient.getConnection();
+      const result = await conn.request({
+        method: "POST",
+        url: "/services/data/v62.0/ssot/queryV2",
+        body: JSON.stringify({ sql: req.body.sql }),
+        headers: { "Content-Type": "application/json" }
+      });
+      sfClient.clearTargetOrg();
+      res.json({ status: "ok", data: result });
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.json({ status: "error", message: err.message });
+    }
+  });
+
+  console.log("Routes: execute-anonymous, datacloud-overview, datacloud-ssot-proxy, datacloud-query, execute-apex-b64, soql-b64, soql-get, upsert, update-b64, composite, deploy-formula-fields, update-layout, lead-convert-mapping, field-history");
 }
