@@ -11,5 +11,120 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+(function(){
+  // Data Cloud Sandbox injector - adds sidebar button + iframe overlay
+  // Only for admin and architect roles
+  
+  var dcOpen = false;
+  var dcOverlay = null;
+  
+  function getUserRole() {
+    try { return JSON.parse(localStorage.getItem('everi9_user')||'{}').role || ''; }
+    catch(e) { return ''; }
+  }
+  
+  function createOverlay() {
+    if (dcOverlay) return;
+    dcOverlay = document.createElement('div');
+    dcOverlay.id = 'dc-overlay';
+    dcOverlay.style.cssText = 'position:fixed;inset:0;z-index:1000;display:none;background:#1a1a2e;';
+    dcOverlay.innerHTML = '<iframe src="/datacloud.html" style="width:100%;height:100%;border:none;"></iframe>';
+    document.body.appendChild(dcOverlay);
+    
+    // Listen for close message from iframe
+    window.addEventListener('message', function(e) {
+      if (e.data === 'dc-closed') closeDC();
+    });
+  }
+  
+  function openDC() {
+    if (!dcOverlay) createOverlay();
+    dcOverlay.style.display = 'block';
+    dcOpen = true;
+    // Refresh iframe to reset state
+    var iframe = dcOverlay.querySelector('iframe');
+    iframe.src = iframe.src;
+  }
+  
+  function closeDC() {
+    if (dcOverlay) dcOverlay.style.display = 'none';
+    dcOpen = false;
+  }
+  
+  // Expose globally for the GP panel or other components
+  window.__openDataCloud = openDC;
+  window.__closeDataCloud = closeDC;
+  
+  function injectButton() {
+    var role = getUserRole();
+    if (role !== 'admin' && role !== 'architect') return;
+    
+    // Find the sidebar - look for the admin button or settings button as anchor
+    var observer = new MutationObserver(function(mutations) {
+      // Look for sidebar buttons
+      var buttons = document.querySelectorAll('button');
+      var gpBtn = null;
+      var dcBtn = document.getElementById('dc-sidebar-btn');
+      
+      if (dcBtn) return; // Already injected
+      
+      buttons.forEach(function(btn) {
+        if (btn.textContent.trim() === 'GP') gpBtn = btn;
+      });
+      
+      if (gpBtn) {
+        // Create DC button next to GP button
+        var btn = document.createElement('button');
+        btn.id = 'dc-sidebar-btn';
+        btn.title = 'Data Cloud Sandbox';
+        btn.onclick = function() { openDC(); };
+        btn.style.cssText = 'background:none;border:1px solid rgba(6,182,212,0.2);border-radius:8px;padding:6px 14px;color:#06b6d4;font-size:13px;cursor:pointer;font-family:Outfit,sans-serif;font-weight:600;transition:all 0.2s;';
+        btn.textContent = '☁️ DC';
+        btn.onmouseenter = function() { this.style.background = 'rgba(6,182,212,0.1)'; };
+        btn.onmouseleave = function() { this.style.background = 'none'; };
+        
+        // Insert before the GP button
+        gpBtn.parentNode.insertBefore(btn, gpBtn);
+      }
+    });
+    
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    // Also try immediately
+    setTimeout(function() {
+      var buttons = document.querySelectorAll('button');
+      var gpBtn = null;
+      var dcBtn = document.getElementById('dc-sidebar-btn');
+      if (dcBtn) return;
+      
+      buttons.forEach(function(btn) {
+        if (btn.textContent.trim() === 'GP') gpBtn = btn;
+      });
+      
+      if (gpBtn && !document.getElementById('dc-sidebar-btn')) {
+        var btn = document.createElement('button');
+        btn.id = 'dc-sidebar-btn';
+        btn.title = 'Data Cloud Sandbox';
+        btn.onclick = function() { openDC(); };
+        btn.style.cssText = 'background:none;border:1px solid rgba(6,182,212,0.2);border-radius:8px;padding:6px 14px;color:#06b6d4;font-size:13px;cursor:pointer;font-family:Outfit,sans-serif;font-weight:600;transition:all 0.2s;';
+        btn.textContent = '☁️ DC';
+        btn.onmouseenter = function() { this.style.background = 'rgba(6,182,212,0.1)'; };
+        btn.onmouseleave = function() { this.style.background = 'none'; };
+        gpBtn.parentNode.insertBefore(btn, gpBtn);
+      }
+    }, 2000);
+  }
+  
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectButton);
+  } else {
+    injectButton();
+  }
+  
+  createOverlay();
+})();
+</script>
   </body>
 </html>
