@@ -750,5 +750,35 @@ ${mappingXml}
     }
   });
 
+
+  // Data Cloud DELETE and PATCH proxy
+  app.delete("/api/datacloud/ssot/*", async (req, res) => {
+    try {
+      await connectToTargetOrg(req);
+      const conn = sfClient.getConnection();
+      const path = "/services/data/v62.0/ssot/" + req.params[0];
+      const result = await conn.request({ method: "DELETE", url: path });
+      sfClient.clearTargetOrg();
+      res.json({ status: "ok", data: result });
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.json({ status: "error", message: err.message });
+    }
+  });
+
+  app.patch("/api/datacloud/ssot/*", async (req, res) => {
+    try {
+      await connectToTargetOrg(req);
+      const conn = sfClient.getConnection();
+      const path = "/services/data/v62.0/ssot/" + req.params[0];
+      const result = await conn.request({ method: "PATCH", url: path, body: JSON.stringify(req.body), headers: { "Content-Type": "application/json" } });
+      sfClient.clearTargetOrg();
+      res.json({ status: "ok", data: result });
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.json({ status: "error", message: err.message });
+    }
+  });
+
   console.log("Routes: execute-anonymous, datacloud-overview, datacloud-ssot-proxy, datacloud-query, execute-apex-b64, soql-b64, soql-get, upsert, update-b64, composite, deploy-formula-fields, update-layout, lead-convert-mapping, field-history");
 }
