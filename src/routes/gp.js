@@ -190,3 +190,46 @@ router.patch('/action-items/:id', authMiddleware, gpAuth, async (req, res) => {
   try { res.json({ action: await gp.updateAction(Number(req.params.id), req.body) }); }
   catch (e) { res.status(500).json({ erro: e.message }); }
 });
+
+// ── INSIGHTS (Agente IA) ──
+router.get('/insights', authMiddleware, gpAuth, async (req, res) => {
+  try {
+    const { stories, cadences, sprints } = await gp.getReportData();
+    const allActions = await gp.getAllActions();
+    const WS = { ws1:'Lead', ws2:'Oportunidade', ws3:'Cotação', ws4:'Contas e Contatos', ws5:'Governança', ws6:'Migração de Dados', ws7:'Catálogo' };
+    // Compilar métricas
+    const metrics = {};
+    let totalDone=0, totalDoing=0, totalBlocked=0, totalTodo=0, totalCells=0;
+    stories.forEach(s => {
+      const w = s.workstream;
+      if (!metrics[w]) metrics[w] = { done:0, doing:0, blocked:0, todo:0, total:0, stories:0, points:0, pointsDone:0 };
+      metrics[w].stories++;
+      metrics[w].points += (s.story_points||0);
+      ['rf_status','hf_status','spec_status','rt_status','plan_status'].forEach(f => {
+        if (!s[f]) return;
+        metrics[w].total++; totalCells++;
+        if (s[f]==='done') { metrics[w].done++; totalDone++; metrics[w].pointsDone += (s.story_points||0)/5; }
+        else if (s[f]==='doing') { metrics[w].doing++; totalDoing++; }
+        else if (s[f]==='blocked') { metrics[w].blocked++; totalBlocked++; }
+        else if (s[f]==='todo') { metrics[w].todo++; totalTodo++; }
+      });
+    });
+    const overdue = allActions.filter(a => a.status!=='done' && a.due_date && new Date(a.due_date) < new Date());
+    const pending = allActions.filter(a => a.status==='pending');
+    const ctx = `# Dados do Projeto CRM B2B Algar Telecom\n\n## Métricas Gerais\n- Total: ${totalCells} atividades | ${totalDone} concluídas (${totalCells?Math.round(totalDone/totalCells*100):0}%) | ${totalDoing} em andamento | ${totalBlocked} bloqueadas | ${totalTodo} a fazer\n- ${stories.length} histórias | ${allActions.length} action items (${overdue.length} vencidos, ${pending.length} pendentes)\n\n## Por Workstream\n` +
+      Object.entries(metrics).map(([w,m]) => {
+        const pct = m.total ? Math.round(m.done/m.total*100) : 0;
+        const rag = m.blocked>0?'🔴':pct>=70?'🟢':pct>=30?'🟡':'⚪';
+        return `### ${rag} ${WS[w]||w} — ${pct}%\n- ${m.stories} histórias, ${m.points} pontos\n- Concluído: ${m.done} | Andamento: ${m.doing} | Bloqueado: ${m.blocked} | A fazer: ${m.todo}`;
+      }).join('\n') +
+      `\n\n## Action Items Vencidos (${overdue.length})\n` +
+      overdue.map(a => `- ${a.description} (resp: ${a.assignee||'?'}, venceu: ${a.due_date?.slice(0,10)})`).join('\n') +
+      `\n\n## Cadências Definidas: ${cadences.length}`;
+    const { call: dsCall } = await import('../services/deepseek.js');
+    const insights = await dsCall(
+      `Voce e um agente de inteligencia do projeto. Analise os dados e gere INSIGHTS ACIONAVEIS em portugues do Brasil. Formato:\n\n## 🎯 Resumo Executivo (3 linhas)\n## ⚠️ Alertas Criticos (itens bloqueados, vencidos, riscos)\n## 📊 Analise por Workstream (foque nos que precisam de atencao)\n## 💡 Recomendacoes (acoes concretas para o GP)\n## 📈 Projecao (ritmo atual vs entrega)\n\nSeja direto, factual e acionavel. Use emojis para RAG (🟢🟡🔴).`,
+      [{ role:'user', content: ctx }], 4096
+    );
+    res.json({ insights, metrics, overdue: overdue.length, pending: pending.length, totalPct: totalCells?Math.round(totalDone/totalCells*100):0 });
+  } catch (e) { res.json({ insights: 'Erro ao gerar insights: ' + e.message, metrics:{}, overdue:0, pending:0, totalPct:0 }); }
+});
