@@ -137,3 +137,90 @@ export async function getReportData() {
   const sprints = (await pool.query(`SELECT * FROM gp_sprints ORDER BY start_date`)).rows;
   return { stories, cadences, sprints };
 }
+
+// ── Reuniões ──
+export async function ensureMeetingsSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS gp_meetings (
+      id           SERIAL PRIMARY KEY,
+      type         VARCHAR(20) NOT NULL DEFAULT 'sync',
+      title        VARCHAR(300) NOT NULL,
+      meeting_date DATE,
+      workstream   VARCHAR(50) DEFAULT '',
+      participants TEXT DEFAULT '',
+      transcription TEXT DEFAULT '',
+      ata_content  TEXT DEFAULT '',
+      created_by   VARCHAR(100) DEFAULT '',
+      created_at   TIMESTAMPTZ DEFAULT NOW(),
+      updated_at   TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS gp_action_items (
+      id          SERIAL PRIMARY KEY,
+      meeting_id  INTEGER REFERENCES gp_meetings(id) ON DELETE CASCADE,
+      description TEXT NOT NULL,
+      assignee    VARCHAR(100) DEFAULT '',
+      due_date    DATE,
+      workstream  VARCHAR(50) DEFAULT '',
+      story_id    INTEGER,
+      status      VARCHAR(20) DEFAULT 'pending',
+      notes       TEXT DEFAULT '',
+      created_at  TIMESTAMPTZ DEFAULT NOW(),
+      updated_at  TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+}
+export async function getMeetings() {
+  await ensureMeetingsSchema();
+  const r = await pool.query(`SELECT m.*, COUNT(a.id) as action_count, COUNT(CASE WHEN a.status='done' THEN 1 END) as action_done FROM gp_meetings m LEFT JOIN gp_action_items a ON a.meeting_id = m.id GROUP BY m.id ORDER BY m.meeting_date DESC, m.created_at DESC`);
+  return r.rows;
+}
+export async function getMeeting(id) {
+  await ensureMeetingsSchema();
+  const m = await pool.query(`SELECT * FROM gp_meetings WHERE id = $1`, [id]);
+  const a = await pool.query(`SELECT * FROM gp_action_items WHERE meeting_id = $1 ORDER BY id`, [id]);
+  return { meeting: m.rows[0], actions: a.rows };
+}
+export async function createMeeting(data) {
+  await ensureMeetingsSchema();
+  const { type='sync', title, meeting_date=null, workstream='', participants='', transcription='', created_by='' } = data;
+  const r = await pool.query(`INSERT INTO gp_meetings (type,title,meeting_date,workstream,participants,transcription,created_by) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+    [type, title, meeting_date, workstream, participants, transcription, created_by]);
+  return r.rows[0];
+}
+export async function updateMeeting(id, fields) {
+  await ensureMeetingsSchema();
+  const allowed = ['title','type','meeting_date','workstream','participants','transcription','ata_content'];
+  const sets=[]; const vals=[];
+  Object.entries(fields).forEach(([k,v]) => { if (allowed.includes(k)) { sets.push(`${k} = $${sets.length+1}`); vals.push(v); } });
+  if (!sets.length) return null;
+  sets.push(`updated_at = NOW()`); vals.push(id);
+  const r = await pool.query(`UPDATE gp_meetings SET ${sets.join(', ')} WHERE id = $${vals.length} RETURNING *`, vals);
+  return r.rows[0];
+}
+export async function deleteMeeting(id) {
+  await ensureMeetingsSchema();
+  await pool.query(`DELETE FROM gp_meetings WHERE id = $1`, [id]);
+}
+export async function saveActions(meetingId, actions) {
+  await ensureMeetingsSchema();
+  await pool.query(`DELETE FROM gp_action_items WHERE meeting_id = $1`, [meetingId]);
+  for (const a of actions) {
+    await pool.query(`INSERT INTO gp_action_items (meeting_id,description,assignee,due_date,workstream,status) VALUES ($1,$2,$3,$4,$5,'pending')`,
+      [meetingId, a.descricao||a.description||'', a.responsavel||a.assignee||'', a.prazo||a.due_date||null, a.workstream||'']);
+  }
+}
+export async function updateAction(id, fields) {
+  await ensureMeetingsSchema();
+  const allowed = ['status','assignee','due_date','workstream','story_id','notes','description'];
+  const sets=[]; const vals=[];
+  Object.entries(fields).forEach(([k,v]) => { if (allowed.includes(k)) { sets.push(`${k} = $${sets.length+1}`); vals.push(v); } });
+  if (!sets.length) return null;
+  sets.push(`updated_at = NOW()`); vals.push(id);
+  const r = await pool.query(`UPDATE gp_action_items SET ${sets.join(', ')} WHERE id = $${vals.length} RETURNING *`, vals);
+  return r.rows[0];
+}
+export async function getAllActions() {
+  await ensureMeetingsSchema();
+  const r = await pool.query(`SELECT a.*, m.title as meeting_title, m.meeting_date FROM gp_action_items a LEFT JOIN gp_meetings m ON m.id = a.meeting_id ORDER BY a.due_date NULLS LAST, a.id`);
+  return r.rows;
+}
