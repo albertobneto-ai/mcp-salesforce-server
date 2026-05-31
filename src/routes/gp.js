@@ -443,7 +443,9 @@ router.get('/stories/:id/detail', authMiddleware, gpAuth, async (req, res) => {
     if (!story) return res.status(404).json({ erro: 'Historia nao encontrada' });
     const attachments = await gp.getAttachments(id);
     const comments = await gp.getComments(id);
-    res.json({ story, attachments, comments });
+    let tasks = [];
+    try { tasks = await gp.getTasks(id); } catch {}
+    res.json({ story, attachments, comments, tasks });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
@@ -491,4 +493,26 @@ router.get('/users', authMiddleware, gpAuth, async (req, res) => {
     const r = await pool.query(`SELECT id, name, email, role FROM users ORDER BY name`);
     res.json({ users: r.rows });
   } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── TASKS (sub-tarefas do card) ──
+router.get('/stories/:id/tasks', authMiddleware, gpAuth, async (req, res) => {
+  try { res.json({ tasks: await gp.getTasks(Number(req.params.id)) }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+router.post('/stories/:id/tasks', authMiddleware, gpAuth, async (req, res) => {
+  try { res.json({ task: await gp.createTask(Number(req.params.id), req.body.title, req.body.assignee) }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+router.patch('/tasks/:id', authMiddleware, gpAuth, async (req, res) => {
+  try { res.json({ task: await gp.updateTask(Number(req.params.id), req.body) }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+router.delete('/tasks/:id', authMiddleware, gpAuth, async (req, res) => {
+  try { await gp.deleteTask(Number(req.params.id)); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+router.get('/task-counts', authMiddleware, gpAuth, async (req, res) => {
+  try { res.json({ counts: await gp.getTaskCounts() }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
 });
