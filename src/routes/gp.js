@@ -739,3 +739,18 @@ router.get('/tasks/:id/full-detail', authMiddleware, gpAuth, async (req, res) =>
     res.json({ ...detail, subtasks });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
+
+// ── GANTT: datas por atividade ──
+router.post('/stories/:id/activity-dates', authMiddleware, gpAuth, async (req, res) => {
+  try {
+    const { activity, start, end } = req.body;
+    const r = await gp.setActivityDates(Number(req.params.id), activity, start, end);
+    res.json({ ok: true, ...r });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+router.delete('/stories/:id/activity-dates/:activity', authMiddleware, gpAuth, async (req, res) => {
+  try {
+    await gp.clearActivityDates(Number(req.params.id), req.params.activity);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
