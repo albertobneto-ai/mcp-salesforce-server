@@ -10,6 +10,7 @@ import orgRoutes from './routes/orgs.js';
 import conversationRoutes from './routes/conversations.js';
 import packageRoutes from './routes/package.js';
 import kbRoutes from './routes/kb.js';
+import gpRoutes from './routes/gp.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -22,6 +23,7 @@ export async function mountChatApp(app) {
   app.use('/api/conversations', conversationRoutes);
   app.use('/api/package', packageRoutes);
   app.use('/api/kb', kbRoutes);
+  app.use('/api/gp', gpRoutes);
 
   // Servir prototipos como HTML estatico
   const protoDir = '/tmp/prototipos';
