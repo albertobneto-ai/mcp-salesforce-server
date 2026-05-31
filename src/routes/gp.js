@@ -433,3 +433,53 @@ router.get('/report/download', authMiddleware, gpAuth, async (req, res) => {
     res.send(Buffer.from(buffer));
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
+
+// ── STORY DETAIL (Jira concept) ──
+router.get('/stories/:id/detail', authMiddleware, gpAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const stories = await gp.getStories();
+    const story = stories.find(s => s.id === id);
+    if (!story) return res.status(404).json({ erro: 'Historia nao encontrada' });
+    const attachments = await gp.getAttachments(id);
+    const comments = await gp.getComments(id);
+    res.json({ story, attachments, comments });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── ATTACHMENTS ──
+router.post('/stories/:id/attachments', authMiddleware, gpAuth, async (req, res) => {
+  try {
+    const att = await gp.addAttachment({
+      ...req.body,
+      story_id: Number(req.params.id),
+      uploaded_by: req.user?.name || req.user?.email || ''
+    });
+    res.json({ attachment: att });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+router.get('/attachments/:id/download', authMiddleware, gpAuth, async (req, res) => {
+  try {
+    const att = await gp.getAttachmentContent(Number(req.params.id));
+    if (!att) return res.status(404).json({ erro: 'Arquivo nao encontrado' });
+    if (att.link) return res.redirect(att.link);
+    const buf = Buffer.from(att.content, 'base64');
+    res.setHeader('Content-Type', att.file_type || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${att.file_name}"`);
+    res.send(buf);
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+router.delete('/attachments/:id', authMiddleware, gpAuth, async (req, res) => {
+  try { await gp.deleteAttachment(Number(req.params.id)); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── COMMENTS ──
+router.post('/stories/:id/comments', authMiddleware, gpAuth, async (req, res) => {
+  try {
+    const c = await gp.addComment(Number(req.params.id), req.user?.name || req.user?.email || '', req.body.content);
+    res.json({ comment: c });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
