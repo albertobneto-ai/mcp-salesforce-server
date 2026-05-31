@@ -376,23 +376,23 @@ export async function createNotification(data) {
   return (await pool.query(`INSERT INTO gp_notifications (user_id,user_email,user_name,type,title,body,ref_type,ref_id,story_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
     [user_id, user_email, user_name, type, title, body, ref_type, ref_id, story_id])).rows[0];
 }
-export async function getNotifications(userEmail, userName) {
+export async function getNotifications(userEmail, userName, userId) {
   await ensureTaskDetailSchema();
-  const r = await pool.query(`SELECT * FROM gp_notifications WHERE (user_email = $1 OR user_name = $2) ORDER BY created_at DESC LIMIT 30`, [userEmail||'', userName||'']);
+  const r = await pool.query(`SELECT * FROM gp_notifications WHERE user_id = $3 OR user_email = $1 OR user_name = $2 ORDER BY created_at DESC LIMIT 30`, [userEmail||'', userName||'', userId||0]);
   return r.rows;
 }
-export async function getUnreadCount(userEmail, userName) {
+export async function getUnreadCount(userEmail, userName, userId) {
   await ensureTaskDetailSchema();
-  const r = await pool.query(`SELECT COUNT(*) as cnt FROM gp_notifications WHERE (user_email = $1 OR user_name = $2) AND is_read = FALSE`, [userEmail||'', userName||'']);
+  const r = await pool.query(`SELECT COUNT(*) as cnt FROM gp_notifications WHERE (user_id = $3 OR user_email = $1 OR user_name = $2) AND is_read = FALSE`, [userEmail||'', userName||'', userId||0]);
   return Number(r.rows[0]?.cnt || 0);
 }
 export async function markRead(notifId) {
   await ensureTaskDetailSchema();
   await pool.query(`UPDATE gp_notifications SET is_read = TRUE WHERE id = $1`, [notifId]);
 }
-export async function markAllRead(userEmail, userName) {
+export async function markAllRead(userEmail, userName, userId) {
   await ensureTaskDetailSchema();
-  await pool.query(`UPDATE gp_notifications SET is_read = TRUE WHERE (user_email = $1 OR user_name = $2)`, [userEmail||'', userName||'']);
+  await pool.query(`UPDATE gp_notifications SET is_read = TRUE WHERE user_id = $3 OR user_email = $1 OR user_name = $2`, [userEmail||'', userName||'', userId||0]);
 }
 
 // ── Planning per activity (sprint individual por atividade) ──
