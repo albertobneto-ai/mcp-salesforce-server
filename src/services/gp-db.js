@@ -284,3 +284,43 @@ export async function addComment(storyId, author, content) {
   const r = await pool.query(`INSERT INTO gp_story_comments (story_id,author,content) VALUES ($1,$2,$3) RETURNING *`, [storyId, author, content]);
   return r.rows[0];
 }
+
+// ── Story Tasks (sub-tarefas / checklist Jira) ──
+export async function ensureTasksSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS gp_story_tasks (
+      id         SERIAL PRIMARY KEY,
+      story_id   INTEGER NOT NULL,
+      title      VARCHAR(300) NOT NULL,
+      assignee   VARCHAR(100) DEFAULT '',
+      status     VARCHAR(20) DEFAULT 'todo',
+      task_order INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+}
+export async function getTasks(storyId) {
+  await ensureTasksSchema();
+  return (await pool.query(`SELECT * FROM gp_story_tasks WHERE story_id = $1 ORDER BY task_order, id`, [storyId])).rows;
+}
+export async function getTaskCounts() {
+  await ensureTasksSchema();
+  return (await pool.query(`SELECT story_id, COUNT(*) as total, COUNT(CASE WHEN status='done' THEN 1 END) as done FROM gp_story_tasks GROUP BY story_id`)).rows;
+}
+export async function createTask(storyId, title, assignee) {
+  await ensureTasksSchema();
+  return (await pool.query(`INSERT INTO gp_story_tasks (story_id,title,assignee) VALUES ($1,$2,$3) RETURNING *`, [storyId, title, assignee||''])).rows[0];
+}
+export async function updateTask(id, fields) {
+  await ensureTasksSchema();
+  const allowed = ['title','assignee','status','task_order'];
+  const sets=[]; const vals=[];
+  Object.entries(fields).forEach(([k,v]) => { if (allowed.includes(k)) { sets.push(`${k} = $${sets.length+1}`); vals.push(v); } });
+  if (!sets.length) return null;
+  vals.push(id);
+  return (await pool.query(`UPDATE gp_story_tasks SET ${sets.join(', ')} WHERE id = $${vals.length} RETURNING *`, vals)).rows[0];
+}
+export async function deleteTask(id) {
+  await ensureTasksSchema();
+  await pool.query(`DELETE FROM gp_story_tasks WHERE id = $1`, [id]);
+}
