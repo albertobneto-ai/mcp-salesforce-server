@@ -82,6 +82,12 @@ export async function updateStory(id, fields) {
 }
 export async function deleteStory(id) {
   await ensureGpSchema();
+  // Cascata: tasks, attachments, comments, notifications
+  try { await pool.query(`DELETE FROM gp_story_tasks WHERE story_id = $1`, [id]); } catch {}
+  try { await pool.query(`DELETE FROM gp_story_attachments WHERE story_id = $1`, [id]); } catch {}
+  try { await pool.query(`DELETE FROM gp_story_comments WHERE story_id = $1`, [id]); } catch {}
+  try { await pool.query(`DELETE FROM gp_task_comments WHERE task_id IN (SELECT id FROM gp_story_tasks WHERE story_id = $1)`, [id]); } catch {}
+  try { await pool.query(`DELETE FROM gp_notifications WHERE story_id = $1`, [id]); } catch {}
   await pool.query(`DELETE FROM gp_stories WHERE id = $1`, [id]);
 }
 
