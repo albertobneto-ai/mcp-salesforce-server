@@ -588,3 +588,91 @@ router.post('/stories/:id/plan-cell', authMiddleware, gpAuth, async (req, res) =
     res.json({ ok: true, value: newVal });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
+
+// ── WORKSTREAMS CRUD ──
+router.get('/workstreams', authMiddleware, gpAuth, async (req, res) => {
+  try { res.json({ workstreams: await gp.getWorkstreams() }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+router.post('/workstreams', authMiddleware, gpAuth, async (req, res) => {
+  try { res.json({ workstream: await gp.createWorkstream(req.body) }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+router.patch('/workstreams/:id', authMiddleware, gpAuth, async (req, res) => {
+  try { res.json({ workstream: await gp.updateWorkstream(Number(req.params.id), req.body) }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+router.delete('/workstreams/:id', authMiddleware, gpAuth, async (req, res) => {
+  try { await gp.deleteWorkstream(Number(req.params.id)); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── TASK com level + bloqueio automático ──
+router.post('/stories/:id/tasks-with-level', authMiddleware, gpAuth, async (req, res) => {
+  try {
+    await gp.ensureTaskLevelCols();
+    const { title, assignee = '', level = 'informativo' } = req.body;
+    const storyId = Number(req.params.id);
+    const task = await gp.createTask(storyId, title, assignee);
+    // Setar o level
+    const pool2 = (await import('../config/db.js')).default;
+    await pool2.query('UPDATE gp_story_tasks SET level = $1 WHERE id = $2', [level, task.id]);
+    task.level = level;
+    // Se bloqueante: mover card para blocked e salvar prev stage
+    if (level === 'bloqueante') {
+      const story = (await pool2.query('SELECT * FROM gp_stories WHERE id = $1', [storyId])).rows[0];
+      if (story) {
+        // Determinar o estágio atual (para restore depois)
+        const stages = ['rf','hf','spec','rt','plan'];
+        const curStage = stages.reverse().find(st => story[st+'_status'] && story[st+'_status'] !== '' && story[st+'_status'] !== 'blocked') || '';
+        await pool2.query('UPDATE gp_stories SET prev_kanban_stage = $1 WHERE id = $2', [story[curStage+'_status'] ? curStage : '', storyId]);
+        // Marcar o estágio ativo como blocked
+        const activeStage = stages.find(st => story[st+'_status'] === 'doing') || stages.find(st => story[st+'_status'] === 'todo');
+        if (activeStage) {
+          await pool2.query(`UPDATE gp_stories SET ${activeStage}_status = 'blocked', updated_at = NOW() WHERE id = $1`, [storyId]);
+        }
+      }
+    }
+    // Notificar assignee
+    if (assignee) {
+      try {
+        const pool3 = (await import('../config/db.js')).default;
+        const storyRows = (await pool3.query('SELECT title FROM gp_stories WHERE id = $1', [storyId])).rows;
+        const userRow = (await pool3.query('SELECT id, email FROM users WHERE name = $1', [assignee])).rows[0];
+        const levelEmoji = level === 'bloqueante' ? '🔴' : level === 'dependente' ? '🟡' : 'ℹ️';
+        await gp.createNotification({
+          user_id: userRow?.id, user_email: userRow?.email||'', user_name: assignee,
+          type: 'task_assigned', title: `${levelEmoji} ${title}`,
+          body: `Nível: ${level.toUpperCase()}. História: "${storyRows[0]?.title||''}"`,
+          ref_type: 'task', ref_id: task.id, story_id: storyId
+        });
+      } catch {}
+    }
+    res.json({ task });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── Fechar task bloqueante → restaurar card ──
+router.post('/tasks/:id/resolve', authMiddleware, gpAuth, async (req, res) => {
+  try {
+    await gp.ensureTaskLevelCols();
+    const taskId = Number(req.params.id);
+    const pool2 = (await import('../config/db.js')).default;
+    const task = (await pool2.query('SELECT * FROM gp_story_tasks WHERE id = $1', [taskId])).rows[0];
+    if (!task) return res.status(404).json({ erro: 'Task não encontrada' });
+    // Marcar task como done
+    await pool2.query("UPDATE gp_story_tasks SET status = 'done' WHERE id = $1", [taskId]);
+    // Se era bloqueante, restaurar o card
+    if (task.level === 'bloqueante') {
+      const story = (await pool2.query('SELECT * FROM gp_stories WHERE id = $1', [task.story_id])).rows[0];
+      if (story) {
+        const stages = ['rf','hf','spec','rt','plan'];
+        const blockedStage = stages.find(st => story[st+'_status'] === 'blocked');
+        if (blockedStage) {
+          await pool2.query(`UPDATE gp_stories SET ${blockedStage}_status = 'doing', updated_at = NOW() WHERE id = $1`, [task.story_id]);
+        }
+      }
+    }
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
