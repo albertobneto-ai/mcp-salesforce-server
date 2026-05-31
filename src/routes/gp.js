@@ -1,6 +1,6 @@
 // src/routes/gp.js — API do Painel GP
 import express from 'express';
-import authMiddleware from '../middleware/auth.js';
+import { authMiddleware } from '../middleware/auth.js';
 import * as gp from '../services/gp-db.js';
 
 const router = express.Router();
