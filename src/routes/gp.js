@@ -676,3 +676,41 @@ router.post('/tasks/:id/resolve', authMiddleware, gpAuth, async (req, res) => {
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
+
+// ── SUB-TASKS ──
+router.get('/tasks/:id/subtasks', authMiddleware, gpAuth, async (req, res) => {
+  try { res.json({ subtasks: await gp.getSubtasks(Number(req.params.id)) }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+router.post('/tasks/:id/subtasks', authMiddleware, gpAuth, async (req, res) => {
+  try {
+    const { title, assignee = '', level = 'informativo' } = req.body;
+    const sub = await gp.createSubtask(Number(req.params.id), title, assignee, level);
+    // Notificar se tiver assignee
+    if (assignee && sub) {
+      try {
+        const pool2 = (await import('../config/db.js')).default;
+        const userRow = (await pool2.query('SELECT id, email FROM users WHERE name = $1', [assignee])).rows[0];
+        const levelEmoji = level === 'bloqueante' ? '🔴' : level === 'dependente' ? '🟡' : 'ℹ️';
+        await gp.createNotification({
+          user_id: userRow?.id, user_email: userRow?.email||'', user_name: assignee,
+          type: 'task_assigned', title: `${levelEmoji} Sub-tarefa: ${title}`,
+          body: `Nível: ${level.toUpperCase()}.`,
+          ref_type: 'task', ref_id: sub.id, story_id: sub.story_id
+        });
+      } catch {}
+    }
+    res.json({ subtask: sub });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// Atualizar getTaskDetail para incluir subtasks
+const _origGetTaskDetail = gp.getTaskDetail;
+// Não sobrescrever (ES module). Usar endpoint próprio.
+router.get('/tasks/:id/full-detail', authMiddleware, gpAuth, async (req, res) => {
+  try {
+    const detail = await gp.getTaskDetail(Number(req.params.id));
+    const subtasks = await gp.getSubtasks(Number(req.params.id));
+    res.json({ ...detail, subtasks });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
