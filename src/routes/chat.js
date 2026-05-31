@@ -215,6 +215,7 @@ async function getSelectedOrg(req) {
 // ── Permissões por perfil ──
 const ROLE_PERMISSIONS = {
   admin:     ['spec', 'spec-deep', 'hf', 'ata', 'deploy', 'delete', 'describe', 'status', 'chat', 'prototipo', 'apresentacao', 'list', 'discovery', 'arch', 'kb'],
+  gp:        ['ata', 'chat', 'kb', 'apresentacao', 'relatorio'],
   funcional: ['hf', 'ata', 'kb', 'chat', 'apresentacao'],
   architect: ['spec', 'spec-deep', 'ata', 'list', 'discovery', 'arch', 'kb', 'chat', 'apresentacao'],
   developer: ['deploy', 'delete', 'describe', 'ata', 'list', 'discovery', 'kb', 'chat', 'apresentacao'],
