@@ -2,8 +2,6 @@
 import express from 'express';
 import authMiddleware from '../middleware/auth.js';
 import * as gp from '../services/gp-db.js';
-import * as grok from '../services/grok.js';
-import * as deepseek from '../services/deepseek.js';
 
 const router = express.Router();
 
@@ -109,7 +107,8 @@ router.get('/report', authMiddleware, gpAuth, async (req, res) => {
     const prompt = `Voce e um especialista em gestao de projetos Agile. Gere um relatorio executivo de status do projeto abaixo, em portugues do Brasil. Inclua: resumo executivo, status por workstream (RAG), riscos e impedimentos, proximos passos criticos. Formato profissional em Markdown.`;
     let report = '';
     try {
-      report = await deepseek.call(prompt, [{ role: 'user', content: ctx }], 8192);
+      const { call: dsCall } = await import('../services/deepseek.js');
+      report = await dsCall(prompt, [{ role: 'user', content: ctx }], 8192);
     } catch {
       report = ctx; // fallback: retorna os dados brutos
     }
