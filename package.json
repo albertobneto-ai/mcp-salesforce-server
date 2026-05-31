@@ -1,7 +1,7 @@
 {
   "name": "mcp-salesforce-server",
   "version": "4.0.0",
-  "description": "MCP Server + Everi9 Spec AI — CRM B2B Algar Telecom",
+  "description": "MCP Server + Everi9 Spec AI \u2014 CRM B2B Algar Telecom",
   "type": "module",
   "scripts": {
     "start": "node src/index.js",
@@ -21,6 +21,7 @@
     "jsonwebtoken": "^9.0.2",
     "jszip": "^3.10.1",
     "pg": "^8.13.1",
-    "zod": "^3.24.2"
+    "zod": "^3.24.2",
+    "snowflake-sdk": "^1.14.0"
   }
 }
