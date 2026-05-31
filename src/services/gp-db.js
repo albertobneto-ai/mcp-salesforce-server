@@ -471,3 +471,22 @@ export async function ensureTaskLevelCols() {
   try { await pool.query(`ALTER TABLE gp_story_tasks ADD COLUMN IF NOT EXISTS level VARCHAR(20) DEFAULT 'informativo'`); } catch {}
   try { await pool.query(`ALTER TABLE gp_stories ADD COLUMN IF NOT EXISTS prev_kanban_stage VARCHAR(20) DEFAULT ''`); } catch {}
 }
+
+// ── Sub-tasks ──
+export async function ensureSubtaskCol() {
+  try { await pool.query(`ALTER TABLE gp_story_tasks ADD COLUMN IF NOT EXISTS parent_task_id INTEGER DEFAULT NULL`); } catch {}
+}
+export async function getSubtasks(taskId) {
+  await ensureSubtaskCol();
+  return (await pool.query(`SELECT * FROM gp_story_tasks WHERE parent_task_id = $1 ORDER BY id`, [taskId])).rows;
+}
+export async function createSubtask(parentTaskId, title, assignee, level) {
+  await ensureSubtaskCol();
+  const parent = (await pool.query(`SELECT story_id FROM gp_story_tasks WHERE id = $1`, [parentTaskId])).rows[0];
+  if (!parent) return null;
+  const r = await pool.query(
+    `INSERT INTO gp_story_tasks (story_id, title, assignee, level, parent_task_id) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+    [parent.story_id, title, assignee||'', level||'informativo', parentTaskId]
+  );
+  return r.rows[0];
+}
