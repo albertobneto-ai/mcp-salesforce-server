@@ -495,3 +495,31 @@ export async function createSubtask(parentTaskId, title, assignee, level) {
 export async function ensureCreatedByCol() {
   try { await pool.query(`ALTER TABLE gp_story_tasks ADD COLUMN IF NOT EXISTS created_by VARCHAR(100) DEFAULT ''`); } catch {}
 }
+
+// ── Gantt: datas por atividade ──
+export async function ensureGanttCols() {
+  const acts = ['rf','hf','spec','rt','plan'];
+  for (const a of acts) {
+    try { await pool.query(`ALTER TABLE gp_stories ADD COLUMN IF NOT EXISTS ${a}_start DATE`); } catch {}
+    try { await pool.query(`ALTER TABLE gp_stories ADD COLUMN IF NOT EXISTS ${a}_end DATE`); } catch {}
+  }
+}
+export async function setActivityDates(storyId, activity, startDate, endDate) {
+  await ensureGanttCols();
+  const allowed = ['rf','hf','spec','rt','plan'];
+  if (!allowed.includes(activity)) return null;
+  await pool.query(
+    `UPDATE gp_stories SET ${activity}_start = $1, ${activity}_end = $2, updated_at = NOW() WHERE id = $3`,
+    [startDate || null, endDate || null, storyId]
+  );
+  return { activity, start: startDate, end: endDate };
+}
+export async function clearActivityDates(storyId, activity) {
+  await ensureGanttCols();
+  const allowed = ['rf','hf','spec','rt','plan'];
+  if (!allowed.includes(activity)) return null;
+  await pool.query(
+    `UPDATE gp_stories SET ${activity}_start = NULL, ${activity}_end = NULL, updated_at = NOW() WHERE id = $1`,
+    [storyId]
+  );
+}
