@@ -15,6 +15,7 @@ const gpAuth = (req, res, next) => {
 // ── STORIES ──
 router.get('/stories', authMiddleware, gpAuth, async (req, res) => {
   try {
+    await gp.ensureGanttCols();
     const ws = req.query.workstream || null;
     res.json({ stories: await gp.getStories(ws) });
   } catch (e) { res.status(500).json({ erro: e.message }); }
