@@ -490,3 +490,8 @@ export async function createSubtask(parentTaskId, title, assignee, level) {
   );
   return r.rows[0];
 }
+
+// ── Track quem criou a task ──
+export async function ensureCreatedByCol() {
+  try { await pool.query(`ALTER TABLE gp_story_tasks ADD COLUMN IF NOT EXISTS created_by VARCHAR(100) DEFAULT ''`); } catch {}
+}
