@@ -225,3 +225,61 @@ export async function getAllActions() {
   const r = await pool.query(`SELECT a.*, m.title as meeting_title, m.meeting_date FROM gp_action_items a LEFT JOIN gp_meetings m ON m.id = a.meeting_id ORDER BY a.due_date NULLS LAST, a.id`);
   return r.rows;
 }
+
+// ── Story Attachments (Jira concept) ──
+export async function ensureAttachmentsSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS gp_story_attachments (
+      id          SERIAL PRIMARY KEY,
+      story_id    INTEGER NOT NULL,
+      stage       VARCHAR(20) NOT NULL,
+      file_name   VARCHAR(300) NOT NULL,
+      file_type   VARCHAR(100) DEFAULT '',
+      file_size   INTEGER DEFAULT 0,
+      content     TEXT DEFAULT '',
+      link        VARCHAR(500) DEFAULT '',
+      uploaded_by VARCHAR(100) DEFAULT '',
+      created_at  TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS gp_story_comments (
+      id          SERIAL PRIMARY KEY,
+      story_id    INTEGER NOT NULL,
+      author      VARCHAR(100) DEFAULT '',
+      content     TEXT NOT NULL,
+      created_at  TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+}
+export async function getAttachments(storyId) {
+  await ensureAttachmentsSchema();
+  const r = await pool.query(`SELECT id, story_id, stage, file_name, file_type, file_size, link, uploaded_by, created_at FROM gp_story_attachments WHERE story_id = $1 ORDER BY stage, created_at`, [storyId]);
+  return r.rows;
+}
+export async function getAttachmentContent(id) {
+  await ensureAttachmentsSchema();
+  const r = await pool.query(`SELECT * FROM gp_story_attachments WHERE id = $1`, [id]);
+  return r.rows[0];
+}
+export async function addAttachment(data) {
+  await ensureAttachmentsSchema();
+  const { story_id, stage, file_name, file_type='', file_size=0, content='', link='', uploaded_by='' } = data;
+  const r = await pool.query(
+    `INSERT INTO gp_story_attachments (story_id,stage,file_name,file_type,file_size,content,link,uploaded_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id,story_id,stage,file_name,file_type,file_size,link,uploaded_by,created_at`,
+    [story_id, stage, file_name, file_type, file_size, content, link, uploaded_by]
+  );
+  return r.rows[0];
+}
+export async function deleteAttachment(id) {
+  await ensureAttachmentsSchema();
+  await pool.query(`DELETE FROM gp_story_attachments WHERE id = $1`, [id]);
+}
+export async function getComments(storyId) {
+  await ensureAttachmentsSchema();
+  const r = await pool.query(`SELECT * FROM gp_story_comments WHERE story_id = $1 ORDER BY created_at`, [storyId]);
+  return r.rows;
+}
+export async function addComment(storyId, author, content) {
+  await ensureAttachmentsSchema();
+  const r = await pool.query(`INSERT INTO gp_story_comments (story_id,author,content) VALUES ($1,$2,$3) RETURNING *`, [storyId, author, content]);
+  return r.rows[0];
+}
