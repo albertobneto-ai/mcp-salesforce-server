@@ -118,3 +118,75 @@ router.get('/report', authMiddleware, gpAuth, async (req, res) => {
 });
 
 export default router;
+
+// ── REUNIÕES ──
+const ATA_SYSTEM = `Voce e um especialista em gestao de projetos Agile. Gere uma ATA (Ata de Reuniao) profissional e estruturada em portugues do Brasil com base na transcricao/notas fornecidas. Estrutura obrigatoria em Markdown:
+
+## Informacoes da Reuniao
+## Pauta
+## Pontos Discutidos
+## Decisoes Tomadas
+## Proximos Passos (com responsavel e prazo)
+## Proxima Reuniao
+
+Seja objetivo, factual e formal.`;
+
+const EXTRACT_SYSTEM = `Extraia TODOS os proximos passos e action items do texto abaixo. Retorne APENAS um JSON array valido, sem texto extra, sem markdown, sem backticks: [{"descricao":"acao concreta","responsavel":"nome ou cargo","prazo":"YYYY-MM-DD ou null","workstream":"ws1|ws2|ws3|ws4|ws5|ws6|ws7 ou null"}]. workstream: ws1=Lead ws2=Oportunidade ws3=Cotacao ws4=Contas ws5=Governanca ws6=Migracao ws7=Catalogo.`;
+
+router.get('/meetings', authMiddleware, gpAuth, async (req, res) => {
+  try { res.json({ meetings: await gp.getMeetings() }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+router.get('/meetings/:id', authMiddleware, gpAuth, async (req, res) => {
+  try { res.json(await gp.getMeeting(Number(req.params.id))); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+router.post('/meetings', authMiddleware, gpAuth, async (req, res) => {
+  try { res.json({ meeting: await gp.createMeeting({ ...req.body, created_by: req.user?.name || req.user?.email || '' }) }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+router.patch('/meetings/:id', authMiddleware, gpAuth, async (req, res) => {
+  try { res.json({ meeting: await gp.updateMeeting(Number(req.params.id), req.body) }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+router.delete('/meetings/:id', authMiddleware, gpAuth, async (req, res) => {
+  try { await gp.deleteMeeting(Number(req.params.id)); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+router.post('/meetings/:id/generate-ata', authMiddleware, gpAuth, async (req, res) => {
+  try {
+    const { meeting } = await gp.getMeeting(Number(req.params.id));
+    if (!meeting) return res.status(404).json({ erro: 'Reuniao nao encontrada' });
+    const { call: dsCall } = await import('../services/deepseek.js');
+    // 1) Gerar ATA
+    const input = `Reuniao: ${meeting.title}\nData: ${meeting.meeting_date||'nao informada'}\nParticipantes: ${meeting.participants||'nao informados'}\nWorkstream: ${meeting.workstream||'geral'}\n\nTranscricao/Notas:\n${meeting.transcription}`;
+    const ata = await dsCall(ATA_SYSTEM, [{ role:'user', content: input }], 8192);
+    await gp.updateMeeting(meeting.id, { ata_content: ata });
+    // 2) Extrair action items
+    let actions = [];
+    try {
+      const raw = await dsCall(EXTRACT_SYSTEM, [{ role:'user', content: ata }], 2048);
+      const clean = raw.replace(/```json|```/g, '').trim();
+      actions = JSON.parse(clean);
+    } catch { actions = []; }
+    await gp.saveActions(meeting.id, actions);
+    const { actions: saved } = await gp.getMeeting(meeting.id);
+    res.json({ ata, actions: saved });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── ACTION ITEMS ──
+router.get('/action-items', authMiddleware, gpAuth, async (req, res) => {
+  try { res.json({ actions: await gp.getAllActions() }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+router.patch('/action-items/:id', authMiddleware, gpAuth, async (req, res) => {
+  try { res.json({ action: await gp.updateAction(Number(req.params.id), req.body) }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
