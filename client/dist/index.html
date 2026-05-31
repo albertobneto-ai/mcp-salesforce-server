@@ -6,10 +6,88 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <title>Ever i9 — Spec AI Platform</title>
-    <script type="module" crossorigin src="/assets/index-3ePvOa0N.js"></script>
+    <script type="module" crossorigin src="/assets/index-Bra_aJGi.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-BOQReWeI.css">
   </head>
   <body>
     <div id="root"></div>
+    <script>
+(function(){
+  var injected = false;
+  
+  function getUserRole() {
+    try { return JSON.parse(localStorage.getItem('everi9_user')||'{}').role || ''; }
+    catch(e) { return ''; }
+  }
+  
+  function tryInject() {
+    var role = getUserRole();
+    if (role !== 'admin' && role !== 'architect') return;
+    if (document.getElementById('dc-sidebar-btn')) return;
+    
+    // Find ALL buttons and look for one containing exactly "GP"
+    var allBtns = document.querySelectorAll('button');
+    var gpBtn = null;
+    
+    for (var i = 0; i < allBtns.length; i++) {
+      var txt = allBtns[i].textContent.trim();
+      if (txt === 'GP') {
+        gpBtn = allBtns[i];
+        break;
+      }
+    }
+    
+    if (!gpBtn) return; // Not rendered yet
+    
+    var btn = document.createElement('button');
+    btn.id = 'dc-sidebar-btn';
+    btn.title = 'Data Cloud Sandbox';
+    btn.onclick = function(e) { 
+      e.stopPropagation();
+      openDC(); 
+    };
+    btn.style.cssText = 'background:none;border:1px solid rgba(6,182,212,0.25);border-radius:8px;padding:6px 14px;color:#06b6d4;font-size:13px;cursor:pointer;font-family:Outfit,sans-serif;font-weight:600;transition:all 0.2s;margin-right:2px;';
+    btn.innerHTML = '☁️ DC';
+    btn.onmouseenter = function() { this.style.background = 'rgba(6,182,212,0.12)'; };
+    btn.onmouseleave = function() { this.style.background = 'none'; };
+    
+    gpBtn.parentNode.insertBefore(btn, gpBtn);
+    injected = true;
+    console.log('[Ever i9] Data Cloud button injected');
+  }
+  
+  // Overlay management
+  var dcOverlay = document.createElement('div');
+  dcOverlay.id = 'dc-overlay';
+  dcOverlay.style.cssText = 'position:fixed;inset:0;z-index:1050;display:none;background:#1a1a2e;';
+  dcOverlay.innerHTML = '<iframe src="/datacloud.html" style="width:100%;height:100%;border:none;" allow="clipboard-write"></iframe>';
+  document.body.appendChild(dcOverlay);
+  
+  function openDC() {
+    dcOverlay.style.display = 'block';
+    var iframe = dcOverlay.querySelector('iframe');
+    iframe.contentWindow.location.reload();
+  }
+  
+  function closeDC() {
+    dcOverlay.style.display = 'none';
+  }
+  
+  window.__openDataCloud = openDC;
+  window.__closeDataCloud = closeDC;
+  
+  window.addEventListener('message', function(e) {
+    if (e.data === 'dc-closed') closeDC();
+  });
+  
+  // Poll every 500ms until injected, then every 3s to re-inject if React re-renders
+  var pollId = setInterval(function() {
+    if (!document.getElementById('dc-sidebar-btn')) {
+      injected = false;
+      tryInject();
+    }
+  }, injected ? 3000 : 500);
+})();
+</script>
   </body>
 </html>
