@@ -516,3 +516,55 @@ router.get('/task-counts', authMiddleware, gpAuth, async (req, res) => {
   try { res.json({ counts: await gp.getTaskCounts() }); }
   catch (e) { res.status(500).json({ erro: e.message }); }
 });
+
+// ── TASK DETAIL ──
+router.get('/tasks/:id/detail', authMiddleware, gpAuth, async (req, res) => {
+  try { res.json(await gp.getTaskDetail(Number(req.params.id))); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+router.post('/tasks/:id/comments', authMiddleware, gpAuth, async (req, res) => {
+  try { res.json({ comment: await gp.addTaskComment(Number(req.params.id), req.user?.name||req.user?.email||'', req.body.content) }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+router.patch('/tasks/:id/percentage', authMiddleware, gpAuth, async (req, res) => {
+  try { res.json({ task: await gp.updateTaskPercentage(Number(req.params.id), Number(req.body.percentage)||0) }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── NOTIFICATIONS ──
+router.get('/notifications', authMiddleware, async (req, res) => {
+  try {
+    const notifs = await gp.getNotifications(req.user?.email, req.user?.name);
+    const unread = await gp.getUnreadCount(req.user?.email, req.user?.name);
+    res.json({ notifications: notifs, unread });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+router.post('/notifications/read/:id', authMiddleware, async (req, res) => {
+  try { await gp.markRead(Number(req.params.id)); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+router.post('/notifications/read-all', authMiddleware, async (req, res) => {
+  try { await gp.markAllRead(req.user?.email, req.user?.name); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// Atualizar createTask para gerar notificação
+const _origCreateTask = gp.createTask;
+gp.createTask = async function(storyId, title, assignee) {
+  const task = await _origCreateTask(storyId, title, assignee);
+  if (assignee) {
+    try {
+      const pool = (await import('../config/db.js')).default;
+      const stories = (await pool.query('SELECT title, workstream FROM gp_stories WHERE id = $1', [storyId])).rows;
+      const storyTitle = stories[0]?.title || '';
+      const user = (await pool.query('SELECT id, email FROM users WHERE name = $1', [assignee])).rows[0];
+      await gp.createNotification({
+        user_id: user?.id, user_email: user?.email||'', user_name: assignee,
+        type: 'task_assigned', title: `Nova atividade atribuída: ${title}`,
+        body: `Você foi designado para "${title}" na história "${storyTitle}".`,
+        ref_type: 'task', ref_id: task.id, story_id: storyId
+      });
+    } catch {}
+  }
+  return task;
+};
