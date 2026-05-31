@@ -413,3 +413,61 @@ export async function setPlanningCell(storyId, activity, sprint) {
   await pool.query(`UPDATE gp_stories SET ${col} = $1, updated_at = NOW() WHERE id = $2`, [newVal, storyId]);
   return newVal;
 }
+
+// ── Workstreams dinâmicos ──
+export async function ensureWsSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS gp_workstreams (
+      id       SERIAL PRIMARY KEY,
+      ws_key   VARCHAR(20) NOT NULL UNIQUE,
+      name     VARCHAR(200) NOT NULL,
+      abbr     VARCHAR(4) NOT NULL,
+      color    VARCHAR(10) DEFAULT '#6366f1',
+      ws_order INTEGER DEFAULT 0,
+      active   BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  // Seed se vazio
+  const cnt = (await pool.query(`SELECT COUNT(*) as c FROM gp_workstreams`)).rows[0].c;
+  if (Number(cnt) === 0) {
+    const seeds = [
+      ['ws1','Lead','LD','#6366f1',1],['ws2','Oportunidade','OP','#0ea5e9',2],['ws3','Cotação','CT','#10b981',3],
+      ['ws4','Contas e Contatos','CC','#f59e0b',4],['ws5','Governança','GV','#8b5cf6',5],
+      ['ws6','Migração de Dados','MD','#ec4899',6],['ws7','Catálogo','CA','#14b8a6',7]
+    ];
+    for (const [k,n,a,c,o] of seeds) {
+      await pool.query(`INSERT INTO gp_workstreams (ws_key,name,abbr,color,ws_order) VALUES ($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`, [k,n,a,c,o]);
+    }
+  }
+}
+export async function getWorkstreams() {
+  await ensureWsSchema();
+  return (await pool.query(`SELECT * FROM gp_workstreams WHERE active = TRUE ORDER BY ws_order, id`)).rows;
+}
+export async function createWorkstream(data) {
+  await ensureWsSchema();
+  const { name, abbr, color = '#6366f1' } = data;
+  const maxOrder = (await pool.query(`SELECT COALESCE(MAX(ws_order),0)+1 as n FROM gp_workstreams`)).rows[0].n;
+  const key = 'ws' + maxOrder;
+  return (await pool.query(`INSERT INTO gp_workstreams (ws_key,name,abbr,color,ws_order) VALUES ($1,$2,$3,$4,$5) RETURNING *`, [key, name, abbr, color, maxOrder])).rows[0];
+}
+export async function updateWorkstream(id, fields) {
+  await ensureWsSchema();
+  const allowed = ['name','abbr','color','ws_order','active'];
+  const sets=[]; const vals=[];
+  Object.entries(fields).forEach(([k,v]) => { if (allowed.includes(k)) { sets.push(`${k} = $${sets.length+1}`); vals.push(v); } });
+  if (!sets.length) return null;
+  vals.push(id);
+  return (await pool.query(`UPDATE gp_workstreams SET ${sets.join(', ')} WHERE id = $${vals.length} RETURNING *`, vals)).rows[0];
+}
+export async function deleteWorkstream(id) {
+  await ensureWsSchema();
+  await pool.query(`UPDATE gp_workstreams SET active = FALSE WHERE id = $1`, [id]);
+}
+
+// ── Task levels ──
+export async function ensureTaskLevelCols() {
+  try { await pool.query(`ALTER TABLE gp_story_tasks ADD COLUMN IF NOT EXISTS level VARCHAR(20) DEFAULT 'informativo'`); } catch {}
+  try { await pool.query(`ALTER TABLE gp_stories ADD COLUMN IF NOT EXISTS prev_kanban_stage VARCHAR(20) DEFAULT ''`); } catch {}
+}
