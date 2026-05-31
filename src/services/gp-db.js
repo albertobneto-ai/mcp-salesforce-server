@@ -52,9 +52,10 @@ export async function ensureGpSchema() {
 // ── Stories ──
 export async function getStories(workstream) {
   await ensureGpSchema();
+  try { await pool.query(`SELECT 1 FROM gp_story_attachments LIMIT 0`); } catch { await ensureAttachmentsSchema(); }
   const q = workstream
-    ? `SELECT * FROM gp_stories WHERE workstream = $1 ORDER BY epic, story_order, id`
-    : `SELECT * FROM gp_stories ORDER BY workstream, epic, story_order, id`;
+    ? `SELECT s.*, COALESCE(ac.cnt,0)::int as attachment_count FROM gp_stories s LEFT JOIN (SELECT story_id, COUNT(*) as cnt FROM gp_story_attachments GROUP BY story_id) ac ON ac.story_id = s.id WHERE s.workstream = $1 ORDER BY s.epic, s.story_order, s.id`
+    : `SELECT s.*, COALESCE(ac.cnt,0)::int as attachment_count FROM gp_stories s LEFT JOIN (SELECT story_id, COUNT(*) as cnt FROM gp_story_attachments GROUP BY story_id) ac ON ac.story_id = s.id ORDER BY s.workstream, s.epic, s.story_order, s.id`;
   const r = workstream ? await pool.query(q, [workstream]) : await pool.query(q);
   return r.rows;
 }
