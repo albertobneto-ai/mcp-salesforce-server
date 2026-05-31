@@ -223,7 +223,7 @@ router.get('/insights', authMiddleware, gpAuth, async (req, res) => {
         return `### ${rag} ${WS[w]||w} — ${pct}%\n- ${m.stories} histórias, ${m.points} pontos\n- Concluído: ${m.done} | Andamento: ${m.doing} | Bloqueado: ${m.blocked} | A fazer: ${m.todo}`;
       }).join('\n') +
       `\n\n## Action Items Vencidos (${overdue.length})\n` +
-      overdue.map(a => `- ${a.description} (resp: ${a.assignee||'?'}, venceu: ${a.due_date?.slice(0,10)})`).join('\n') +
+      overdue.map(a => `- ${a.description} (resp: ${a.assignee||'?'}, venceu: ${a.due_date ? new Date(a.due_date).toISOString().slice(0,10) : '?'})`).join('\n') +
       `\n\n## Cadências Definidas: ${cadences.length}`;
     const { call: dsCall } = await import('../services/deepseek.js');
     const insights = await dsCall(
