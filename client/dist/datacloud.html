@@ -3,278 +3,320 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ever i9 — Data Cloud Sandbox</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<title>Data Cloud | Salesforce</title>
+<link rel="icon" href="https://login.salesforce.com/favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;scrollbar-width:thin;scrollbar-color:#2a2a3e transparent}
-::-webkit-scrollbar{width:6px}
+:root{
+--sf-blue:#032D60;--sf-blue-light:#0176D3;--sf-blue-lighter:#1B96FF;
+--sf-bg:#F3F3F3;--sf-white:#FFFFFF;--sf-card:#FFFFFF;
+--sf-text:#181818;--sf-text2:#706E6B;--sf-text3:#AEAEAE;
+--sf-border:#DDDBDA;--sf-border2:#E5E5E5;
+--sf-success:#2E844A;--sf-warning:#FE9339;--sf-error:#EA001E;
+--sf-purple:#7F2CFE;--sf-teal:#04867D;
+--sf-font:'Inter','Salesforce Sans',system-ui,-apple-system,sans-serif;
+--sf-radius:0.25rem;--sf-radius-lg:0.5rem;
+--sf-shadow:0 2px 4px rgba(0,0,0,0.1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--sf-font);background:var(--sf-bg);color:var(--sf-text);font-size:13px;overflow:hidden;height:100vh}
+/* Salesforce Global Header */
+.sf-header{height:48px;background:var(--sf-blue);display:flex;align-items:center;padding:0 16px;gap:12px;color:#fff;z-index:100;position:relative}
+.sf-header-left{display:flex;align-items:center;gap:12px}
+.sf-waffle{width:24px;height:24px;display:grid;grid-template-columns:repeat(3,6px);gap:2px;cursor:pointer;padding:0;background:none;border:none}
+.sf-waffle span{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.8)}
+.sf-app-name{font-size:14px;font-weight:700;letter-spacing:-0.01em;display:flex;align-items:center;gap:8px}
+.sf-app-name img{height:20px}
+.sf-search{flex:1;max-width:480px;margin:0 auto}
+.sf-search input{width:100%;height:32px;border-radius:16px;border:none;padding:0 16px 0 36px;font-size:13px;background:rgba(255,255,255,0.15);color:#fff;outline:none;font-family:var(--sf-font)}
+.sf-search input::placeholder{color:rgba(255,255,255,0.5)}
+.sf-search input:focus{background:rgba(255,255,255,0.25)}
+.sf-header-right{display:flex;align-items:center;gap:8px}
+.sf-header-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(255,255,255,0.8);font-size:16px;background:none;border:none;transition:background 0.15s}
+.sf-header-icon:hover{background:rgba(255,255,255,0.12)}
+.sf-avatar{width:28px;height:28px;border-radius:50%;background:#FF6B2B;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;cursor:pointer}
+/* Navigation Tabs */
+.sf-nav{height:40px;background:var(--sf-white);border-bottom:1px solid var(--sf-border);display:flex;align-items:stretch;padding:0 16px;overflow-x:auto;box-shadow:0 1px 2px rgba(0,0,0,0.05)}
+.sf-tab{padding:0 16px;font-size:13px;font-weight:500;color:var(--sf-text2);cursor:pointer;border:none;background:none;display:flex;align-items:center;gap:6px;white-space:nowrap;position:relative;font-family:var(--sf-font);transition:color 0.15s}
+.sf-tab:hover{color:var(--sf-text)}
+.sf-tab.active{color:var(--sf-blue-light);font-weight:600}
+.sf-tab.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--sf-blue-light);border-radius:3px 3px 0 0}
+/* Main Layout */
+.sf-main{display:flex;height:calc(100vh - 88px);overflow:hidden}
+.sf-sidebar{width:240px;background:var(--sf-white);border-right:1px solid var(--sf-border);overflow-y:auto;padding:12px 0;flex-shrink:0}
+.sf-side-section{padding:4px 0}
+.sf-side-title{padding:8px 16px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--sf-text3)}
+.sf-side-item{padding:8px 16px 8px 24px;font-size:13px;color:var(--sf-text2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.1s;border-left:3px solid transparent}
+.sf-side-item:hover{background:#F0F3F5;color:var(--sf-text)}
+.sf-side-item.active{background:#EEF4FF;color:var(--sf-blue-light);font-weight:600;border-left-color:var(--sf-blue-light)}
+.sf-content{flex:1;overflow-y:auto;padding:24px;background:var(--sf-bg)}
+/* Cards */
+.sf-card{background:var(--sf-card);border:1px solid var(--sf-border2);border-radius:var(--sf-radius-lg);padding:20px;margin-bottom:16px;box-shadow:var(--sf-shadow)}
+.sf-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--sf-border2)}
+.sf-card-title{font-size:16px;font-weight:700;color:var(--sf-text)}
+/* Buttons */
+.sf-btn{height:32px;padding:0 16px;border-radius:var(--sf-radius);font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sf-font);display:inline-flex;align-items:center;gap:6px;transition:all 0.15s;border:1px solid}
+.sf-btn-primary{background:var(--sf-blue-light);color:#fff;border-color:var(--sf-blue-light)}
+.sf-btn-primary:hover{background:#015EA1}
+.sf-btn-neutral{background:var(--sf-white);color:var(--sf-text);border-color:var(--sf-border)}
+.sf-btn-neutral:hover{background:#F3F3F3}
+.sf-btn-success{background:var(--sf-success);color:#fff;border-color:var(--sf-success)}
+/* Badges */
+.sf-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap}
+.sf-badge-blue{background:#EEF4FF;color:var(--sf-blue-light)}
+.sf-badge-green{background:#E6F7ED;color:var(--sf-success)}
+.sf-badge-orange{background:#FFF5E6;color:#A56A00}
+.sf-badge-red{background:#FFECEC;color:var(--sf-error)}
+.sf-badge-purple{background:#F3ECFF;color:var(--sf-purple)}
+.sf-badge-gray{background:#F3F3F3;color:var(--sf-text2)}
+.sf-badge-teal{background:#E6F5F4;color:var(--sf-teal)}
+/* Table */
+.sf-table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--sf-border2);border-radius:var(--sf-radius-lg);overflow:hidden}
+.sf-table th{background:#FAFAF9;padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--sf-text2);text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid var(--sf-border)}
+.sf-table td{padding:10px 12px;border-bottom:1px solid var(--sf-border2);font-size:13px;color:var(--sf-text)}
+.sf-table tr:last-child td{border-bottom:none}
+.sf-table tr:hover td{background:#F3F3F3}
+/* Stats */
+.sf-stat{text-align:center;padding:16px}
+.sf-stat-num{font-size:32px;font-weight:700;color:var(--sf-blue-light);line-height:1}
+.sf-stat-label{font-size:11px;color:var(--sf-text2);margin-top:4px;text-transform:uppercase;letter-spacing:0.5px}
+/* Simulation banner */
+.sf-sim-banner{background:#FFF8E1;border:1px solid #FFE082;border-radius:var(--sf-radius-lg);padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;font-size:13px;color:#795548}
+.sf-sim-banner .dot{width:8px;height:8px;border-radius:50%;background:var(--sf-warning);flex-shrink:0}
+/* Pipeline */
+.sf-pipeline{display:flex;align-items:center;gap:4px;overflow-x:auto;padding:8px 0}
+.sf-pipe-node{padding:12px 16px;border-radius:var(--sf-radius-lg);border:2px solid var(--sf-border2);background:var(--sf-white);cursor:pointer;text-align:center;min-width:110px;transition:all 0.2s}
+.sf-pipe-node:hover{border-color:var(--sf-blue-light);box-shadow:0 0 0 2px rgba(1,118,211,0.15)}
+.sf-pipe-node.active{border-color:var(--sf-blue-light);background:#EEF4FF}
+.sf-pipe-arrow{color:var(--sf-border);font-size:20px;flex-shrink:0}
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:#C0C0C0;border-radius:3px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:#2a2a3e;border-radius:3px}
-body{font-family:'Outfit',system-ui,sans-serif;background:#1a1a2e;color:#e2e8f0;overflow:hidden}
-@keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
-.sidebar-item{transition:all .15s;cursor:pointer;padding:8px 16px 8px 20px;display:flex;align-items:center;gap:8px;font-size:13px;border-left:3px solid transparent}
-.sidebar-item:hover{background:rgba(99,102,241,.08)}
-.sidebar-item.active{background:linear-gradient(90deg,rgba(99,102,241,.15),transparent);border-left-color:#6366f1;color:#e2e8f0}
-.sidebar-item:not(.active){color:#94a3b8}
-.card{background:#222238;border:1px solid #2a2a3e;border-radius:12px;padding:20px;margin-bottom:16px;animation:slideUp .3s ease both}
-.btn{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .15s;border:1px solid}
-.btn-solid{border:none;color:#fff;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif}
-.tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
-.chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:500}
-.mono{font-family:'JetBrains Mono',monospace;font-size:12px}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th{text-align:left;padding:8px 10px;border-bottom:2px solid #2a2a3e;color:#6366f1;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
-td{padding:7px 10px;border-bottom:1px solid #2a2a3e;color:#cbd5e1}
-.pipe-node{padding:12px 16px;border-radius:10px;text-align:center;min-width:100px;transition:all .2s;cursor:pointer;border:2px solid}
-.stat-box{padding:16px 20px;border-radius:10px;flex:1;min-width:140px}
-.back-btn{position:fixed;top:12px;left:12px;z-index:100;padding:8px 16px;border-radius:8px;border:none;background:#2a2a3e;color:#e2e8f0;font-size:13px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;text-decoration:none;display:flex;align-items:center;gap:6px}
-.back-btn:hover{background:#3a3a50}
-select,input,textarea{font-family:'Outfit',sans-serif}
+/* Close overlay button */
+.sf-close-overlay{position:fixed;top:8px;right:16px;z-index:200;height:32px;padding:0 16px;border-radius:var(--sf-radius);background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.9);border:1px solid rgba(255,255,255,0.2);font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sf-font);display:flex;align-items:center;gap:6px;transition:all .15s}
+.sf-close-overlay:hover{background:rgba(255,255,255,0.25)}
 </style>
 </head>
 <body>
-
-<div id="root"></div>
-
 <script>
 (function(){
   var token = localStorage.getItem('everi9_token');
   var user = null;
   try { user = JSON.parse(localStorage.getItem('everi9_user')||'{}'); } catch(e){}
-  
-  if(!token || !user || !user.role) {
-    document.getElementById('root').innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;font-family:Outfit,sans-serif;color:#e2e8f0"><div style="font-size:48px;margin-bottom:16px">🔒</div><div style="font-size:20px;font-weight:700;margin-bottom:8px">Acesso Restrito</div><div style="color:#94a3b8;margin-bottom:24px">Faça login no Ever i9 primeiro.</div><a href="/" style="padding:10px 24px;border-radius:10px;background:#6366f1;color:#fff;text-decoration:none;font-weight:600;font-size:14px">Ir para Login</a></div>';
-    document.querySelectorAll('script[type="text/babel"]').forEach(function(s){s.remove()});
-    return;
-  }
-  
-  if(user.role !== 'admin' && user.role !== 'architect') {
-    document.getElementById('root').innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;font-family:Outfit,sans-serif;color:#e2e8f0"><div style="font-size:48px;margin-bottom:16px">⛔</div><div style="font-size:20px;font-weight:700;margin-bottom:8px">Acesso Não Autorizado</div><div style="color:#94a3b8;margin-bottom:8px">O Data Cloud Sandbox é restrito aos perfis:</div><div style="display:flex;gap:8px;margin-bottom:24px"><span style="padding:4px 12px;border-radius:6px;background:#7c3aed22;color:#7c3aed;font-weight:600;border:1px solid #7c3aed44">Admin</span><span style="padding:4px 12px;border-radius:6px;background:#3b82f622;color:#3b82f6;font-weight:600;border:1px solid #3b82f644">Arquiteto</span></div><div style="color:#64748b;font-size:13px;margin-bottom:24px">Seu perfil atual: <strong style="color:#f59e0b">'+user.role+'</strong></div><a href="/" style="padding:10px 24px;border-radius:10px;background:#6366f1;color:#fff;text-decoration:none;font-weight:600;font-size:14px">Voltar ao Ever i9</a></div>';
-    document.querySelectorAll('script[type="text/babel"]').forEach(function(s){s.remove()});
-    return;
-  }
-  
-  // Validate token server-side
-  fetch('/api/chat/usage', {headers:{Authorization:'Bearer '+token}})
-    .then(function(r){if(r.status===401){localStorage.removeItem('everi9_token');localStorage.removeItem('everi9_user');location.href='/';}})
-    .catch(function(){});
-  
-  window.__dcUser = user;
+  if(!token||!user||!user.role){document.body.innerHTML='<div style="height:100vh;display:flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;color:#181818;flex-direction:column"><div style="font-size:48px;margin-bottom:16px">🔒</div><div style="font-size:20px;font-weight:700">Faça login no Ever i9</div><a href="/" style="margin-top:16px;color:#0176D3">Ir para Login</a></div>';return;}
+  if(user.role!=='admin'&&user.role!=='architect'){document.body.innerHTML='<div style="height:100vh;display:flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;color:#181818;flex-direction:column"><div style="font-size:48px;margin-bottom:16px">⛔</div><div style="font-size:20px;font-weight:700">Acesso restrito a Admin e Architect</div><div style="color:#706E6B;margin-top:8px">Seu perfil: '+user.role+'</div><a href="/" style="margin-top:16px;color:#0176D3">Voltar</a></div>';return;}
+  window.__dcUser=user;
+  fetch('/api/chat/usage',{headers:{Authorization:'Bearer '+token}}).then(function(r){if(r.status===401){location.href='/';}}).catch(function(){});
 })();
 </script>
-
+<div id="root"></div>
 <script type="text/babel">
-const {useState,useMemo,useCallback,useEffect}=React;
+const {useState,useMemo}=React;
 
-// ═══ SNOWFLAKE CONFIG ═══
-const SF_CFG={account:"algar-telecom.us-east-1",warehouse:"ALGAR_DW_PROD",database:"ALGAR_CRM_LAKE",schema:"PUBLIC",tables:["LEADS","ACCOUNTS","CONTACTS","OPPORTUNITIES","CONTRACTS"]};
-
-// ═══ ALGAR DATA ═══
+// ═══ DATA ═══
+const SF={account:"algar-telecom.us-east-1",wh:"ALGAR_DW_PROD",db:"ALGAR_CRM_LAKE"};
 const D={
 accounts:[
-{id:"ACC-001",name:"Grupo Algar S.A.",industry:"Telecomunicações",type:"Enterprise",city:"Uberlândia",state:"MG",revenue:12500000,segment:"Large",owner:"Carlos Mendes"},
-{id:"ACC-002",name:"Algar Tecnologia",industry:"TI & Serviços",type:"Enterprise",city:"Uberlândia",state:"MG",revenue:8900000,segment:"Large",owner:"Ana Rocha"},
-{id:"ACC-003",name:"Ctbc Telecom",industry:"Telecomunicações",type:"Mid-Market",city:"Uberlândia",state:"MG",revenue:4200000,segment:"Medium",owner:"Roberto Lima"},
-{id:"ACC-004",name:"Engeset Engenharia",industry:"Engenharia",type:"SMB",city:"Campinas",state:"SP",revenue:1800000,segment:"Small",owner:"Fernanda Costa"},
-{id:"ACC-005",name:"UniAlgar Educação",industry:"Educação",type:"Mid-Market",city:"Uberlândia",state:"MG",revenue:3100000,segment:"Medium",owner:"Paulo Vieira"},
-{id:"ACC-006",name:"Algar Agro",industry:"Agronegócio",type:"Enterprise",city:"Uberlândia",state:"MG",revenue:6700000,segment:"Large",owner:"Carlos Mendes"},
-{id:"ACC-007",name:"Smart Soluções TI",industry:"TI & Serviços",type:"SMB",city:"São Paulo",state:"SP",revenue:950000,segment:"Small",owner:"Ana Rocha"},
-{id:"ACC-008",name:"Rio Quente Resorts",industry:"Turismo & Hotelaria",type:"Mid-Market",city:"Rio Quente",state:"GO",revenue:5400000,segment:"Medium",owner:"Roberto Lima"}
+{id:"ACC-001",name:"Grupo Algar S.A.",industry:"Telecomunicações",type:"Enterprise",city:"Uberlândia",state:"MG",revenue:12500000,segment:"Large"},
+{id:"ACC-002",name:"Algar Tecnologia",industry:"TI & Serviços",type:"Enterprise",city:"Uberlândia",state:"MG",revenue:8900000,segment:"Large"},
+{id:"ACC-003",name:"Ctbc Telecom",industry:"Telecomunicações",type:"Mid-Market",city:"Uberlândia",state:"MG",revenue:4200000,segment:"Medium"},
+{id:"ACC-004",name:"Engeset Engenharia",industry:"Engenharia",type:"SMB",city:"Campinas",state:"SP",revenue:1800000,segment:"Small"},
+{id:"ACC-005",name:"UniAlgar Educação",industry:"Educação",type:"Mid-Market",city:"Uberlândia",state:"MG",revenue:3100000,segment:"Medium"},
+{id:"ACC-006",name:"Algar Agro",industry:"Agronegócio",type:"Enterprise",city:"Uberlândia",state:"MG",revenue:6700000,segment:"Large"},
+{id:"ACC-007",name:"Smart Soluções TI",industry:"TI & Serviços",type:"SMB",city:"São Paulo",state:"SP",revenue:950000,segment:"Small"},
+{id:"ACC-008",name:"Rio Quente Resorts",industry:"Turismo",type:"Mid-Market",city:"Rio Quente",state:"GO",revenue:5400000,segment:"Medium"}
 ],
 contacts:[
-{id:"CON-001",firstName:"João",lastName:"Silva",email:"joao.silva@algar.com.br",phone:"(34) 99912-3456",title:"Diretor de TI",accountId:"ACC-001",source:"CRM"},
-{id:"CON-002",firstName:"João",lastName:"S. Silva",email:"j.silva@algar.com.br",phone:"(34) 99912-3456",title:"Dir. Tecnologia",accountId:"ACC-001",source:"Snowflake"},
-{id:"CON-003",firstName:"Maria",lastName:"Santos",email:"maria.santos@algartecnologia.com.br",phone:"(34) 98876-5432",title:"Gerente Comercial",accountId:"ACC-002",source:"CRM"},
-{id:"CON-004",firstName:"Maria",lastName:"A. Santos",email:"m.santos@algartec.com.br",phone:"(34) 98876-5432",title:"Ger. Comercial",accountId:"ACC-002",source:"Snowflake"},
-{id:"CON-005",firstName:"Pedro",lastName:"Oliveira",email:"pedro.oliveira@ctbc.com.br",phone:"(34) 97765-4321",title:"CTO",accountId:"ACC-003",source:"CRM"},
-{id:"CON-006",firstName:"Ana",lastName:"Ferreira",email:"ana.ferreira@engeset.com.br",phone:"(19) 99654-3210",title:"Coord. Projetos",accountId:"ACC-004",source:"CRM"},
-{id:"CON-007",firstName:"Lucas",lastName:"Mendes",email:"lucas.mendes@unialgar.com.br",phone:"(34) 99543-2109",title:"Dir. Acadêmico",accountId:"ACC-005",source:"CRM"},
-{id:"CON-008",firstName:"Carla",lastName:"Rodrigues",email:"carla.rodrigues@algaragro.com.br",phone:"(34) 98432-1098",title:"Ger. Operações",accountId:"ACC-006",source:"Snowflake"},
-{id:"CON-009",firstName:"Rafael",lastName:"Costa",email:"rafael.costa@smartsolucoes.com.br",phone:"(11) 97321-0987",title:"CEO",accountId:"ACC-007",source:"CRM"},
-{id:"CON-010",firstName:"Juliana",lastName:"Almeida",email:"juliana.almeida@rioquente.com.br",phone:"(64) 99210-9876",title:"Dir. Marketing",accountId:"ACC-008",source:"CRM"},
-{id:"CON-011",firstName:"Pedro",lastName:"H. Oliveira",email:"p.oliveira@ctbc.com.br",phone:"34977654321",title:"Chief Technology Officer",accountId:"ACC-003",source:"Snowflake"},
-{id:"CON-012",firstName:"Juliana",lastName:"de Almeida",email:"ju.almeida@rioquenteresorts.com.br",phone:"(64) 99210-9876",title:"Diretora de Mkt",accountId:"ACC-008",source:"CSV"}
+{id:"CON-001",firstName:"João",lastName:"Silva",email:"joao.silva@algar.com.br",phone:"(34)99912-3456",title:"Diretor de TI",accountId:"ACC-001",src:"CRM"},
+{id:"CON-002",firstName:"João",lastName:"S. Silva",email:"j.silva@algar.com.br",phone:"(34)99912-3456",title:"Dir. Tecnologia",accountId:"ACC-001",src:"Snowflake"},
+{id:"CON-003",firstName:"Maria",lastName:"Santos",email:"maria.santos@algartecnologia.com.br",phone:"(34)98876-5432",title:"Gerente Comercial",accountId:"ACC-002",src:"CRM"},
+{id:"CON-004",firstName:"Maria",lastName:"A. Santos",email:"m.santos@algartec.com.br",phone:"(34)98876-5432",title:"Ger. Comercial",accountId:"ACC-002",src:"Snowflake"},
+{id:"CON-005",firstName:"Pedro",lastName:"Oliveira",email:"pedro.oliveira@ctbc.com.br",phone:"(34)97765-4321",title:"CTO",accountId:"ACC-003",src:"CRM"},
+{id:"CON-006",firstName:"Ana",lastName:"Ferreira",email:"ana.ferreira@engeset.com.br",phone:"(19)99654-3210",title:"Coord. Projetos",accountId:"ACC-004",src:"CRM"},
+{id:"CON-007",firstName:"Lucas",lastName:"Mendes",email:"lucas.mendes@unialgar.com.br",phone:"(34)99543-2109",title:"Dir. Acadêmico",accountId:"ACC-005",src:"CRM"},
+{id:"CON-008",firstName:"Carla",lastName:"Rodrigues",email:"carla.rodrigues@algaragro.com.br",phone:"(34)98432-1098",title:"Ger. Operações",accountId:"ACC-006",src:"Snowflake"},
+{id:"CON-009",firstName:"Rafael",lastName:"Costa",email:"rafael.costa@smartsolucoes.com.br",phone:"(11)97321-0987",title:"CEO",accountId:"ACC-007",src:"CRM"},
+{id:"CON-010",firstName:"Juliana",lastName:"Almeida",email:"juliana.almeida@rioquente.com.br",phone:"(64)99210-9876",title:"Dir. Marketing",accountId:"ACC-008",src:"CRM"},
+{id:"CON-011",firstName:"Pedro",lastName:"H. Oliveira",email:"p.oliveira@ctbc.com.br",phone:"34977654321",title:"CTO",accountId:"ACC-003",src:"Snowflake"},
+{id:"CON-012",firstName:"Juliana",lastName:"de Almeida",email:"ju.almeida@rioquenteresorts.com.br",phone:"(64)99210-9876",title:"Diretora de Mkt",accountId:"ACC-008",src:"CSV"}
 ],
 leads:[
-{id:"LED-001",firstName:"Bruno",lastName:"Nascimento",company:"TelecomX Brasil",title:"VP Infraestrutura",status:"Open",rating:"Hot",score:92},
-{id:"LED-002",firstName:"Camila",lastName:"Duarte",company:"Rede Conecta",title:"Gerente Compras",status:"Working",rating:"Warm",score:74},
-{id:"LED-003",firstName:"Thiago",lastName:"Barros",company:"DataLink Soluções",title:"Dir. Comercial",status:"Open",rating:"Hot",score:88},
-{id:"LED-004",firstName:"Fernanda",lastName:"Moreira",company:"Logística Pro",title:"COO",status:"Nurturing",rating:"Cold",score:35},
-{id:"LED-005",firstName:"Diego",lastName:"Campos",company:"AgroInova",title:"CTO",status:"Working",rating:"Hot",score:95},
-{id:"LED-006",firstName:"Patricia",lastName:"Lopes",company:"EducaTech",title:"Head Inovação",status:"Open",rating:"Warm",score:67}
+{id:"LED-001",firstName:"Bruno",lastName:"Nascimento",company:"TelecomX Brasil",status:"Open",rating:"Hot",score:92},
+{id:"LED-002",firstName:"Camila",lastName:"Duarte",company:"Rede Conecta",status:"Working",rating:"Warm",score:74},
+{id:"LED-003",firstName:"Thiago",lastName:"Barros",company:"DataLink",status:"Open",rating:"Hot",score:88},
+{id:"LED-004",firstName:"Fernanda",lastName:"Moreira",company:"Logística Pro",status:"Nurturing",rating:"Cold",score:35},
+{id:"LED-005",firstName:"Diego",lastName:"Campos",company:"AgroInova",status:"Working",rating:"Hot",score:95},
+{id:"LED-006",firstName:"Patricia",lastName:"Lopes",company:"EducaTech",status:"Open",rating:"Warm",score:67}
 ],
 opportunities:[
-{id:"OPP-001",name:"MPLS Dedicado - Grupo Algar",accountId:"ACC-001",stage:"Negotiation",amount:2400000,probability:75,product:"MPLS Dedicado"},
-{id:"OPP-002",name:"Cloud Hosting - Algar Tec",accountId:"ACC-002",stage:"Proposal",amount:890000,probability:50,product:"Cloud Hosting"},
-{id:"OPP-003",name:"SD-WAN Migration - CTBC",accountId:"ACC-003",stage:"Qualification",amount:1500000,probability:25,product:"SD-WAN"},
-{id:"OPP-004",name:"Cyber Security - Engeset",accountId:"ACC-004",stage:"Closed Won",amount:340000,probability:100,product:"Cybersecurity"},
-{id:"OPP-005",name:"UCaaS - UniAlgar",accountId:"ACC-005",stage:"Negotiation",amount:780000,probability:65,product:"UCaaS"},
-{id:"OPP-006",name:"IoT Agro - Algar Agro",accountId:"ACC-006",stage:"Closed Won",amount:1200000,probability:100,product:"IoT Platform"},
-{id:"OPP-007",name:"Data Center - Smart",accountId:"ACC-007",stage:"Proposal",amount:450000,probability:40,product:"Colocation"},
-{id:"OPP-008",name:"Fiber Backbone - Rio Quente",accountId:"ACC-008",stage:"Closed Won",amount:1800000,probability:100,product:"Fiber Backbone"},
-{id:"OPP-009",name:"Renewal MPLS - Algar 2027",accountId:"ACC-001",stage:"Prospecting",amount:2600000,probability:15,product:"MPLS Dedicado"}
+{id:"OPP-001",name:"MPLS Dedicado - Grupo Algar",accountId:"ACC-001",stage:"Negotiation",amount:2400000,product:"MPLS"},
+{id:"OPP-002",name:"Cloud Hosting - Algar Tec",accountId:"ACC-002",stage:"Proposal",amount:890000,product:"Cloud"},
+{id:"OPP-003",name:"SD-WAN Migration - CTBC",accountId:"ACC-003",stage:"Qualification",amount:1500000,product:"SD-WAN"},
+{id:"OPP-004",name:"Cyber Security - Engeset",accountId:"ACC-004",stage:"Closed Won",amount:340000,product:"Cyber"},
+{id:"OPP-005",name:"UCaaS - UniAlgar",accountId:"ACC-005",stage:"Negotiation",amount:780000,product:"UCaaS"},
+{id:"OPP-006",name:"IoT Agro Platform",accountId:"ACC-006",stage:"Closed Won",amount:1200000,product:"IoT"},
+{id:"OPP-007",name:"Fiber Backbone - Rio Quente",accountId:"ACC-008",stage:"Closed Won",amount:1800000,product:"Fiber"}
 ],
 contracts:[
-{id:"CTR-001",accountId:"ACC-001",name:"MPLS Dedicado 2024-2026",status:"Active",value:4800000,product:"MPLS Dedicado"},
-{id:"CTR-002",accountId:"ACC-004",name:"Cyber Security Suite 2026",status:"Active",value:340000,product:"Cybersecurity"},
-{id:"CTR-003",accountId:"ACC-006",name:"IoT Agro Platform 2026-2028",status:"Active",value:2400000,product:"IoT Platform"},
-{id:"CTR-004",accountId:"ACC-008",name:"Fiber Backbone 2026-2029",status:"Active",value:5400000,product:"Fiber Backbone"},
-{id:"CTR-005",accountId:"ACC-002",name:"Support Premium 2025-2026",status:"Expiring",value:180000,product:"Premium Support"},
-{id:"CTR-006",accountId:"ACC-003",name:"Internet Dedicada 2023-2026",status:"Active",value:720000,product:"Internet Dedicada"}
+{id:"CTR-001",accountId:"ACC-001",name:"MPLS 2024-2026",status:"Active",value:4800000},
+{id:"CTR-002",accountId:"ACC-004",name:"Cyber Suite 2026",status:"Active",value:340000},
+{id:"CTR-003",accountId:"ACC-006",name:"IoT Platform 2026-2028",status:"Active",value:2400000},
+{id:"CTR-004",accountId:"ACC-008",name:"Fiber 2026-2029",status:"Active",value:5400000},
+{id:"CTR-005",accountId:"ACC-002",name:"Support Premium",status:"Expiring",value:180000},
+{id:"CTR-006",accountId:"ACC-003",name:"Internet Dedicada",status:"Active",value:720000}
 ]
 };
 
-const C360={
-"Unified Individual":{color:"#6366f1",fields:["FirstName","LastName","Email","Phone","City","State","Title","Department"]},
-"Account":{color:"#0ea5e9",fields:["Name","Industry","Type","CNPJ","City","State","Revenue","Segment"]},
-"Sales Order":{color:"#f59e0b",fields:["Name","Stage","Amount","Probability","CloseDate","Product","Type"]},
-"Contract":{color:"#10b981",fields:["Name","Status","StartDate","EndDate","Value","Type","AutoRenew"]},
-"Lead":{color:"#ec4899",fields:["FirstName","LastName","Email","Company","Title","Status","Score","Rating"]}
-};
+const TABS=["Home","Data Streams","Data Model","Data Transforms","Identity Resolution","Segmentation","Calculated Insights","Data Actions","Activation Targets","Data Shares","Profile Explorer","Data Graphs"];
 
-const IR_RULES=[
-{id:1,name:"Email Exact",type:"Exact",fields:["Email"],priority:1,active:true},
-{id:2,name:"Phone Normalized",type:"Normalized",fields:["Phone"],priority:2,active:true},
-{id:3,name:"Name Fuzzy + City",type:"Compound",fields:["FirstName","LastName","City"],priority:3,active:true,threshold:.85}
-];
+const Badge=({children,type="blue"})=><span className={`sf-badge sf-badge-${type}`}>{children}</span>;
 
-const MENU=[
-{group:"Visão Geral",items:[{key:"dashboard",icon:"📊",label:"Pipeline Overview"}]},
-{group:"Ingestão",items:[{key:"spaces",icon:"📦",label:"Data Spaces"},{key:"sources",icon:"🔌",label:"Data Sources"},{key:"dlos",icon:"🗄️",label:"Data Lake Objects"}]},
-{group:"Transformação",items:[{key:"transforms",icon:"⚙️",label:"Data Transforms"},{key:"dmos",icon:"🧩",label:"Data Model Objects"}]},
-{group:"Unificação",items:[{key:"identity",icon:"🔗",label:"Identity Resolution"},{key:"profiles",icon:"👤",label:"Profile Explorer"}]},
-{group:"Análise",items:[{key:"insights",icon:"📈",label:"Calculated Insights"},{key:"segments",icon:"🎯",label:"Segments"},{key:"explorer",icon:"🔍",label:"Data Explorer"}]},
-{group:"Ativação",items:[{key:"actions",icon:"⚡",label:"Data Actions"},{key:"enrichments",icon:"💎",label:"Enrichments"},{key:"activations",icon:"📡",label:"Activation Targets"},{key:"shares",icon:"🔄",label:"Data Shares"}]},
-{group:"IA & Grafos",items:[{key:"graphs",icon:"🕸️",label:"Data Graphs"},{key:"einstein",icon:"🧠",label:"Einstein Studio"}]},
-{group:"Governança",items:[{key:"consent",icon:"🛡️",label:"Consent Mgmt"},{key:"governance",icon:"🔐",label:"Permissions"}]}
-];
-
-const Tag=({children,color})=><span className="tag" style={{background:color+"22",color,border:`1px solid ${color}44`}}>{children}</span>;
-const Chip=({children,color})=><span className="chip" style={{background:color+"18",color}}>{children}</span>;
-const Stat=({num,label,color})=><div className="stat-box" style={{border:`1px solid ${color}33`,background:`linear-gradient(135deg,${color}08,${color}15)`}}><div style={{fontSize:28,fontWeight:700,color,lineHeight:1.1}}>{num}</div><div style={{fontSize:11,color:"#94a3b8",marginTop:4}}>{label}</div></div>;
-
-const DataTable=({data,columns})=><div style={{overflowX:"auto"}}><table><thead><tr>{columns.map(c=><th key={c.key}>{c.label}</th>)}</tr></thead><tbody>{data.map((row,i)=><tr key={i}>{columns.map(c=><td key={c.key}>{c.render?c.render(row[c.key],row):row[c.key]}</td>)}</tr>)}</tbody></table></div>;
+const Table=({data,cols})=><table className="sf-table"><thead><tr>{cols.map(c=><th key={c.key}>{c.label}</th>)}</tr></thead><tbody>{data.map((r,i)=><tr key={i}>{cols.map(c=><td key={c.key}>{c.render?c.render(r[c.key],r):(r[c.key]??"—")}</td>)}</tr>)}</tbody></table>;
 
 // ═══ VIEWS ═══
-const Dashboard=({onNav})=>{
-const total=D.contacts.length+D.accounts.length+D.leads.length+D.opportunities.length+D.contracts.length;
-const nodes=[
-{label:"Sources",sub:"SF CRM + Snowflake + CSV",color:"#6366f1",key:"sources"},
-{label:"DLOs",sub:"5 objetos raw",color:"#0ea5e9",key:"dlos"},
-{label:"Transforms",sub:"Streaming + Batch",color:"#8b5cf6",key:"transforms"},
-{label:"DMOs",sub:"5 C360 Model",color:"#10b981",key:"dmos"},
-{label:"Identity Res.",sub:`${D.contacts.length} → unificar`,color:"#f59e0b",key:"identity"},
-{label:"Segments",sub:"Critérios",color:"#ec4899",key:"segments"},
-{label:"Activations",sub:"CRM + Externo",color:"#ef4444",key:"activations"}
-];
+const HomeView=({onNav})=>{
+const total=D.accounts.length+D.contacts.length+D.leads.length+D.opportunities.length+D.contracts.length;
 return <div>
-<h2 style={{fontSize:22,fontWeight:700,marginBottom:20,display:"flex",alignItems:"center",gap:10}}>📊 Pipeline Overview <Tag color="#6366f1">Offline Mode</Tag></h2>
-<div style={{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap"}}>
-<Stat num="3" label="Data Sources" color="#6366f1"/>
-<Stat num="5" label="Data Lake Objects" color="#0ea5e9"/>
-<Stat num="5" label="Data Model Objects" color="#10b981"/>
-<Stat num={total} label="Total Records" color="#f59e0b"/>
+<div className="sf-sim-banner"><div className="dot"/>Modo Simulação — Dados fictícios Algar Telecom. Nenhuma alteração será aplicada à org.</div>
+<div className="sf-card">
+<div className="sf-card-header"><div className="sf-card-title">Data Cloud Overview</div><Badge type="orange">Offline</Badge></div>
+<div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:16,marginBottom:24}}>
+{[{n:"3",l:"Data Sources",c:"--sf-blue-light"},{n:"5",l:"Data Lake Objects",c:"--sf-teal"},{n:"5",l:"Data Model Objects",c:"--sf-purple"},{n:String(D.contacts.length),l:"Contact Records",c:"--sf-blue-light"},{n:String(total),l:"Total Records",c:"--sf-success"}].map(s=><div key={s.l} className="sf-stat"><div className="sf-stat-num" style={{color:`var(${s.c})`}}>{s.n}</div><div className="sf-stat-label">{s.l}</div></div>)}
 </div>
-<div className="card">
-<div style={{fontWeight:700,fontSize:16,marginBottom:12,display:"flex",alignItems:"center",gap:8}}>🔀 Data Pipeline — Algar Telecom</div>
-<div style={{display:"flex",alignItems:"center",gap:8,overflowX:"auto",padding:"10px 0",justifyContent:"center",flexWrap:"wrap"}}>
-{nodes.map((n,i,a)=><div key={n.key} style={{display:"flex",alignItems:"center",gap:8}}>
-<div className="pipe-node" style={{borderColor:n.color,background:n.color+"15"}} onClick={()=>onNav(n.key)}>
-<div style={{fontWeight:700,fontSize:13,color:n.color}}>{n.label}</div>
-<div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>{n.sub}</div>
 </div>
-{i<a.length-1&&<div style={{color:"#2a2a3e",fontSize:20}}>→</div>}
+<div className="sf-card">
+<div className="sf-card-header"><div className="sf-card-title">Data Pipeline</div></div>
+<div className="sf-pipeline" style={{justifyContent:"center"}}>
+{[{l:"Data Sources",s:"3 connected",c:"#0176D3",k:"Data Streams"},{l:"Data Lake",s:"5 DLOs",c:"#04867D",k:"Data Model"},{l:"Transforms",s:"2 configured",c:"#7F2CFE",k:"Data Transforms"},{l:"Data Model",s:"5 DMOs",c:"#0176D3",k:"Data Model"},{l:"Identity",s:"3 rules",c:"#FE9339",k:"Identity Resolution"},{l:"Segments",s:"4 active",c:"#EA001E",k:"Segmentation"},{l:"Activations",s:"4 targets",c:"#2E844A",k:"Activation Targets"}].map((n,i,a)=><React.Fragment key={n.l}>
+<div className="sf-pipe-node" onClick={()=>onNav(n.k)}>
+<div style={{fontSize:13,fontWeight:600,color:n.c}}>{n.l}</div>
+<div style={{fontSize:11,color:"var(--sf-text2)",marginTop:2}}>{n.s}</div>
+</div>
+{i<a.length-1&&<div className="sf-pipe-arrow">→</div>}
+</React.Fragment>)}
+</div>
+</div>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+<div className="sf-card">
+<div className="sf-card-header"><div className="sf-card-title">Data Sources</div></div>
+{[{n:"Salesforce CRM Connector",t:"CRM",d:"Org: 00DgK00000PUJwTUAX",i:"☁️",b:"blue"},{n:"Snowflake — Algar DW",t:"Zero Copy",d:`${SF.account}`,i:"❄️",b:"teal"},{n:"CSV Upload",t:"File",d:"Contacts_External.csv",i:"📄",b:"green"}].map(s=><div key={s.n} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderBottom:"1px solid var(--sf-border2)"}}>
+<span style={{fontSize:20}}>{s.i}</span>
+<div style={{flex:1}}><div style={{fontWeight:600}}>{s.n}</div><div style={{fontSize:12,color:"var(--sf-text2)"}}>{s.d}</div></div>
+<Badge type={s.b}>{s.t}</Badge>
 </div>)}
 </div>
-</div>
-<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-<div className="card">
-<div style={{fontWeight:700,marginBottom:12}}>📦 Volume por Objeto</div>
-{[{n:"Accounts",c:D.accounts.length,cl:"#0ea5e9"},{n:"Contacts",c:D.contacts.length,cl:"#6366f1"},{n:"Leads",c:D.leads.length,cl:"#ec4899"},{n:"Opportunities",c:D.opportunities.length,cl:"#f59e0b"},{n:"Contracts",c:D.contracts.length,cl:"#10b981"}].map(x=>
-<div key={x.n} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-<div style={{width:10,height:10,borderRadius:"50%",background:x.cl}}/>
-<div style={{flex:1,fontSize:13}}>{x.n}</div>
-<div className="mono" style={{fontWeight:700,color:x.cl}}>{x.c}</div>
-<div style={{width:120,height:6,background:"#2a2a3e",borderRadius:3,overflow:"hidden"}}><div style={{width:`${(x.c/total)*100*3}%`,height:"100%",background:x.cl,borderRadius:3}}/></div>
-</div>)}
-</div>
-<div className="card">
-<div style={{fontWeight:700,marginBottom:12}}>❄️ Snowflake Connection</div>
-<div className="mono" style={{lineHeight:1.8}}>
-<div><span style={{color:"#64748b"}}>Account:</span> {SF_CFG.account}</div>
-<div><span style={{color:"#64748b"}}>Warehouse:</span> {SF_CFG.warehouse}</div>
-<div><span style={{color:"#64748b"}}>Database:</span> {SF_CFG.database}</div>
-<div><span style={{color:"#64748b"}}>Tables:</span> {SF_CFG.tables.join(", ")}</div>
-<div style={{marginTop:8}}><Tag color="#f59e0b">Offline — Dados Simulados</Tag></div>
+<div className="sf-card">
+<div className="sf-card-header"><div className="sf-card-title">Snowflake Connection</div></div>
+<div style={{fontFamily:"'Courier New',monospace",fontSize:12,lineHeight:2,color:"var(--sf-text2)"}}>
+<div><strong style={{color:"var(--sf-text)"}}>Account:</strong> {SF.account}</div>
+<div><strong style={{color:"var(--sf-text)"}}>Warehouse:</strong> {SF.wh}</div>
+<div><strong style={{color:"var(--sf-text)"}}>Database:</strong> {SF.db}</div>
+<div><strong style={{color:"var(--sf-text)"}}>Tables:</strong> LEADS, ACCOUNTS, CONTACTS, OPPORTUNITIES, CONTRACTS</div>
+<div style={{marginTop:8}}><Badge type="orange">Simulado — Zero Copy</Badge> <span style={{fontSize:11,color:"var(--sf-text3)",marginLeft:8}}>70 créditos/M vs 2.000/M (ETL)</span></div>
 </div>
 </div>
 </div>
 </div>;
 };
 
-const Sources=()=>{
-const sources=[
-{name:"Salesforce CRM (Dev Org)",type:"CRM Connector",detail:"Org ID: 00DgK00000PUJwTUAX",objects:["Account","Contact","Lead","Opportunity"],icon:"☁️",color:"#0ea5e9"},
-{name:"Snowflake — Algar DW",type:"Zero Copy Federation",detail:`Account: ${SF_CFG.account} | DB: ${SF_CFG.database}`,objects:SF_CFG.tables,icon:"❄️",color:"#06b6d4"},
-{name:"CSV Upload",type:"File Upload",detail:"Ready",objects:["Contacts_External.csv"],icon:"📄",color:"#10b981"}
+const DataStreamsView=()=>{
+const streams=[
+{name:"Account_CRM_Stream",source:"Salesforce CRM",object:"Account",freq:"Real-Time",records:D.accounts.length,status:"Active"},
+{name:"Contact_CRM_Stream",source:"Salesforce CRM",object:"Contact",freq:"Real-Time",records:8,status:"Active"},
+{name:"Contact_SF_Stream",source:"Snowflake",object:"CONTACTS",freq:"Batch (1h)",records:4,status:"Active"},
+{name:"Lead_CRM_Stream",source:"Salesforce CRM",object:"Lead",freq:"Real-Time",records:D.leads.length,status:"Active"},
+{name:"Opportunity_CRM_Stream",source:"Salesforce CRM",object:"Opportunity",freq:"Real-Time",records:D.opportunities.length,status:"Active"},
+{name:"Contract_SF_Stream",source:"Snowflake",object:"CONTRACTS",freq:"Batch (6h)",records:D.contracts.length,status:"Active"},
+{name:"Contact_CSV_Stream",source:"CSV Upload",object:"Contacts_Ext",freq:"Manual",records:2,status:"Active"}
 ];
 return <div>
-<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🔌 Data Sources</h2>
-{sources.map(s=><div key={s.name} className="card" style={{borderLeft:`4px solid ${s.color}`}}>
-<div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
-<span style={{fontSize:24}}>{s.icon}</span>
-<div style={{flex:1}}><div style={{fontWeight:700,fontSize:15}}>{s.name}</div><div style={{fontSize:12,color:"#94a3b8"}}>{s.type}</div></div>
-<Tag color="#f59e0b">Offline</Tag>
+<div className="sf-card">
+<div className="sf-card-header"><div className="sf-card-title">Data Streams</div><button className="sf-btn sf-btn-primary">+ New Data Stream</button></div>
+<Table data={streams} cols={[
+{key:"name",label:"Stream Name",render:v=><span style={{fontWeight:600,color:"var(--sf-blue-light)"}}>{v}</span>},
+{key:"source",label:"Source",render:(v,r)=><Badge type={v==="Salesforce CRM"?"blue":v==="Snowflake"?"teal":"green"}>{v}</Badge>},
+{key:"object",label:"Source Object"},
+{key:"freq",label:"Frequency",render:v=><Badge type={v==="Real-Time"?"green":"gray"}>{v}</Badge>},
+{key:"records",label:"Records",render:v=><span style={{fontWeight:600}}>{v.toLocaleString()}</span>},
+{key:"status",label:"Status",render:v=><Badge type="green">● {v}</Badge>}
+]}/>
 </div>
-<div className="mono" style={{fontSize:11,color:"#64748b",marginBottom:8}}>{s.detail}</div>
-<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{s.objects.map(o=><Chip key={o} color={s.color}>{o}</Chip>)}</div>
-</div>)}
 </div>;
 };
 
-const DLOs=()=>{
+const DataModelView=()=>{
 const[sel,setSel]=useState(null);
+const dmos=[
+{name:"Individual",category:"Profile",fields:8,sources:["CRM","Snowflake","CSV"],color:"#0176D3"},
+{name:"Account",category:"Organization",fields:8,sources:["CRM","Snowflake"],color:"#04867D"},
+{name:"Sales Order",category:"Commerce",fields:7,sources:["CRM","Snowflake"],color:"#FE9339"},
+{name:"Lead",category:"Engagement",fields:8,sources:["CRM"],color:"#EA001E"},
+{name:"Contract",category:"Commerce",fields:7,sources:["Snowflake"],color:"#2E844A"}
+];
 const dlos=[
-{name:"Account_DLO",source:"CRM + Snowflake",records:D.accounts.length,key:"accounts"},
-{name:"Contact_DLO",source:"CRM + Snowflake + CSV",records:D.contacts.length,key:"contacts"},
-{name:"Lead_DLO",source:"CRM",records:D.leads.length,key:"leads"},
-{name:"Opportunity_DLO",source:"CRM + Snowflake",records:D.opportunities.length,key:"opportunities"},
-{name:"Contract_DLO",source:"Snowflake",records:D.contracts.length,key:"contracts"}
+{name:"Account_DLO",records:D.accounts.length,key:"accounts"},
+{name:"Contact_DLO",records:D.contacts.length,key:"contacts"},
+{name:"Lead_DLO",records:D.leads.length,key:"leads"},
+{name:"Opportunity_DLO",records:D.opportunities.length,key:"opportunities"},
+{name:"Contract_DLO",records:D.contracts.length,key:"contracts"}
 ];
 const cols={
-accounts:[{key:"id",label:"ID"},{key:"name",label:"Name"},{key:"industry",label:"Industry"},{key:"type",label:"Type",render:v=><Tag color="#0ea5e9">{v}</Tag>},{key:"city",label:"City"},{key:"revenue",label:"Revenue",render:v=>`R$ ${(v/1e6).toFixed(1)}M`}],
-contacts:[{key:"id",label:"ID"},{key:"firstName",label:"First"},{key:"lastName",label:"Last"},{key:"email",label:"Email"},{key:"title",label:"Title"},{key:"source",label:"Source",render:v=><Tag color={v==="CRM"?"#0ea5e9":v==="Snowflake"?"#06b6d4":"#10b981"}>{v}</Tag>}],
-leads:[{key:"id",label:"ID"},{key:"firstName",label:"First"},{key:"lastName",label:"Last"},{key:"company",label:"Company"},{key:"rating",label:"Rating",render:v=><Tag color={v==="Hot"?"#ef4444":v==="Warm"?"#f59e0b":"#64748b"}>{v}</Tag>},{key:"score",label:"Score"}],
-opportunities:[{key:"id",label:"ID"},{key:"name",label:"Name"},{key:"stage",label:"Stage",render:v=><Tag color={v==="Closed Won"?"#10b981":"#f59e0b"}>{v}</Tag>},{key:"amount",label:"Amount",render:v=>`R$ ${(v/1e3).toFixed(0)}K`},{key:"product",label:"Product"}],
-contracts:[{key:"id",label:"ID"},{key:"name",label:"Name"},{key:"status",label:"Status",render:v=><Tag color={v==="Active"?"#10b981":"#f59e0b"}>{v}</Tag>},{key:"value",label:"Value",render:v=>`R$ ${(v/1e6).toFixed(1)}M`}]
+accounts:[{key:"id",label:"ID"},{key:"name",label:"Name"},{key:"industry",label:"Industry"},{key:"type",label:"Type",render:v=><Badge type="blue">{v}</Badge>},{key:"revenue",label:"Revenue",render:v=>`R$ ${(v/1e6).toFixed(1)}M`}],
+contacts:[{key:"id",label:"ID"},{key:"firstName",label:"First"},{key:"lastName",label:"Last"},{key:"email",label:"Email"},{key:"title",label:"Title"},{key:"src",label:"Source",render:v=><Badge type={v==="CRM"?"blue":v==="Snowflake"?"teal":"green"}>{v}</Badge>}],
+leads:[{key:"id",label:"ID"},{key:"firstName",label:"First"},{key:"lastName",label:"Last"},{key:"company",label:"Company"},{key:"rating",label:"Rating",render:v=><Badge type={v==="Hot"?"red":v==="Warm"?"orange":"gray"}>{v}</Badge>},{key:"score",label:"Score"}],
+opportunities:[{key:"id",label:"ID"},{key:"name",label:"Name"},{key:"stage",label:"Stage",render:v=><Badge type={v==="Closed Won"?"green":"orange"}>{v}</Badge>},{key:"amount",label:"Amount",render:v=>`R$ ${(v/1e3).toFixed(0)}K`}],
+contracts:[{key:"id",label:"ID"},{key:"name",label:"Name"},{key:"status",label:"Status",render:v=><Badge type={v==="Active"?"green":"orange"}>{v}</Badge>},{key:"value",label:"Value",render:v=>`R$ ${(v/1e6).toFixed(1)}M`}]
 };
 return <div>
-<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🗄️ Data Lake Objects</h2>
-<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:12,marginBottom:16}}>
-{dlos.map(d=><div key={d.name} className="card" style={{cursor:"pointer",borderColor:sel===d.key?"#6366f1":"#2a2a3e",marginBottom:0}} onClick={()=>setSel(sel===d.key?null:d.key)}>
-<div style={{fontWeight:700,fontSize:14,marginBottom:4}}>🗄️ {d.name}</div>
-<div style={{fontSize:11,color:"#94a3b8",marginBottom:8}}>Source: {d.source}</div>
-<div style={{display:"flex",gap:6}}><Chip color="#6366f1">{d.records} records</Chip></div>
+<div className="sf-card">
+<div className="sf-card-header"><div className="sf-card-title">Data Model Objects (DMOs)</div></div>
+<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:12}}>
+{dmos.map(d=><div key={d.name} style={{border:`2px solid ${d.color}20`,borderRadius:8,padding:16,cursor:"pointer",background:sel===d.name?`${d.color}08`:"#fff",borderColor:sel===d.name?d.color:`${d.color}20`,transition:"all .15s"}} onClick={()=>setSel(sel===d.name?null:d.name)}>
+<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+<div style={{width:10,height:10,borderRadius:"50%",background:d.color}}/>
+<div style={{fontWeight:700,fontSize:14}}>{d.name}</div>
+</div>
+<div style={{fontSize:11,color:"var(--sf-text2)",marginBottom:4}}>{d.category} · {d.fields} fields</div>
+<div style={{display:"flex",gap:4}}>{d.sources.map(s=><Badge key={s} type={s==="CRM"?"blue":s==="Snowflake"?"teal":"green"}>{s}</Badge>)}</div>
 </div>)}
 </div>
-{sel&&<div className="card"><div style={{fontWeight:700,marginBottom:12}}>📋 Preview — {sel}</div><DataTable data={D[sel]} columns={cols[sel]}/></div>}
+</div>
+<div className="sf-card">
+<div className="sf-card-header"><div className="sf-card-title">Data Lake Objects (DLOs)</div></div>
+<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:12,marginBottom:sel?16:0}}>
+{dlos.map(d=><div key={d.name} style={{border:"1px solid var(--sf-border2)",borderRadius:8,padding:12,cursor:"pointer",background:sel===d.key?"#EEF4FF":"#fff",borderColor:sel===d.key?"var(--sf-blue-light)":"var(--sf-border2)"}} onClick={()=>setSel(sel===d.key?null:d.key)}>
+<div style={{fontWeight:600,fontSize:13}}>🗄️ {d.name}</div>
+<div style={{fontSize:12,color:"var(--sf-text2)",marginTop:4}}>{d.records} records</div>
+</div>)}
+</div>
+{sel&&cols[sel]&&<div style={{marginTop:16}}><Table data={D[sel]} cols={cols[sel]}/></div>}
+</div>
 </div>;
 };
 
-const Transforms=()=>{
+const TransformsView=()=>{
 const[tab,setTab]=useState("streaming");
-const sql=`-- Streaming Transform: Contact Normalization
-SELECT
+return <div>
+<div className="sf-card">
+<div className="sf-card-header">
+<div className="sf-card-title">Data Transforms</div>
+<div style={{display:"flex",gap:8}}>
+<button className={`sf-btn ${tab==="streaming"?"sf-btn-primary":"sf-btn-neutral"}`} onClick={()=>setTab("streaming")}>Streaming</button>
+<button className={`sf-btn ${tab==="batch"?"sf-btn-primary":"sf-btn-neutral"}`} onClick={()=>setTab("batch")}>Batch</button>
+</div>
+</div>
+{tab==="streaming"?<div>
+<div style={{marginBottom:12}}><Badge type="green">● Active</Badge> <span style={{marginLeft:8,fontWeight:600}}>Contact Normalization (Streaming)</span></div>
+<div style={{fontSize:12,color:"var(--sf-text2)",marginBottom:12}}>Processa cada registro em near real-time. SQL simples, sem JOINs.</div>
+<pre style={{background:"#1E1E1E",color:"#D4D4D4",padding:16,borderRadius:8,fontSize:12,lineHeight:1.6,overflow:"auto",fontFamily:"'Courier New',monospace"}}>
+{`SELECT
   id,
-  UPPER(TRIM(firstName)) AS firstName_Clean,
-  LOWER(email) AS email_Normalized,
+  UPPER(TRIM(firstName))    AS firstName_Clean,
+  LOWER(email)              AS email_Normalized,
   REGEXP_REPLACE(phone, '[^0-9]', '') AS phone_Normalized,
   CASE
     WHEN state = 'MG' THEN 'Minas Gerais'
@@ -282,95 +324,75 @@ SELECT
     ELSE state
   END AS state_Full
 FROM Contact_DLO
-WHERE email IS NOT NULL`;
-return <div>
-<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>⚙️ Data Transforms</h2>
-<div style={{display:"flex",gap:8,marginBottom:16}}>
-{["streaming","batch"].map(t=><button key={t} className="btn" style={{borderColor:tab===t?"#6366f1":"#2a2a3e",background:tab===t?"#6366f122":"transparent",color:tab===t?"#6366f1":"#94a3b8"}} onClick={()=>setTab(t)}>{t==="streaming"?"⚡ Streaming":"📦 Batch"}</button>)}
+WHERE email IS NOT NULL`}
+</pre>
 </div>
-{tab==="streaming"?<div className="card">
-<div style={{fontWeight:700,marginBottom:8}}>⚡ Streaming Transform — Contact Normalization</div>
-<p style={{color:"#94a3b8",fontSize:12,marginBottom:12}}>Near real-time. SQL simples, sem JOINs.</p>
-<pre className="mono" style={{background:"#16162a",padding:16,borderRadius:8,border:"1px solid #2a2a3e",overflowX:"auto",lineHeight:1.6,color:"#a5b4fc"}}>{sql}</pre>
-<div style={{marginTop:12}}><button className="btn-solid" style={{background:"linear-gradient(135deg,#6366f1,#6366f1cc)"}}>▶ Simular Execução</button></div>
-</div>
-:<div className="card">
-<div style={{fontWeight:700,marginBottom:8}}>📦 Batch Transform — Contact LTV Calculation</div>
-<p style={{color:"#94a3b8",fontSize:12,marginBottom:16}}>Editor visual. Execução agendada. JOINs, agregações, fórmulas.</p>
-<div style={{display:"flex",alignItems:"center",gap:10,overflowX:"auto",padding:"12px 0",justifyContent:"center",flexWrap:"wrap"}}>
-{[{t:"Source",n:"Contact_DLO",c:"#0ea5e9"},{t:"Source",n:"Opportunity_DLO",c:"#0ea5e9"},{t:"Join",n:"ON accountId",c:"#8b5cf6"},{t:"Aggregate",n:"SUM(amount)",c:"#f59e0b"},{t:"Formula",n:"LTV calc",c:"#ec4899"},{t:"Target",n:"Contact_LTV_DLO",c:"#10b981"}].map((x,i,a)=><div key={i} style={{display:"flex",alignItems:"center",gap:10}}>
-<div style={{padding:"10px 16px",borderRadius:8,border:`2px solid ${x.c}`,background:x.c+"12",textAlign:"center"}}>
-<div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",fontWeight:700}}>{x.t}</div>
+:<div>
+<div style={{marginBottom:12}}><Badge type="purple">Scheduled</Badge> <span style={{marginLeft:8,fontWeight:600}}>Contact LTV Calculation (Batch)</span></div>
+<div className="sf-pipeline" style={{justifyContent:"center",margin:"16px 0"}}>
+{[{t:"Source",n:"Contact_DLO",c:"#04867D"},{t:"Source",n:"Opp_DLO",c:"#04867D"},{t:"Join",n:"ON accountId",c:"#7F2CFE"},{t:"Aggregate",n:"SUM(amount)",c:"#FE9339"},{t:"Formula",n:"LTV calc",c:"#EA001E"},{t:"Target",n:"LTV_DLO",c:"#2E844A"}].map((x,i,a)=><React.Fragment key={i}>
+<div style={{padding:"8px 14px",borderRadius:8,border:`2px solid ${x.c}`,background:x.c+"08",textAlign:"center"}}>
+<div style={{fontSize:10,color:"var(--sf-text2)",fontWeight:700,textTransform:"uppercase"}}>{x.t}</div>
 <div style={{fontSize:12,fontWeight:600,color:x.c,marginTop:2}}>{x.n}</div>
 </div>
-{i<a.length-1&&<span style={{color:"#2a2a3e",fontSize:18}}>→</span>}
-</div>)}
+{i<a.length-1&&<span style={{color:"var(--sf-border)"}}>→</span>}
+</React.Fragment>)}
 </div>
 </div>}
+</div>
 </div>;
 };
 
-const DMOs=()=>{
-const[sel,setSel]=useState(null);
-return <div>
-<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🧩 Data Model Objects — C360</h2>
-<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:12,marginBottom:16}}>
-{Object.entries(C360).map(([name,cfg])=><div key={name} className="card" style={{cursor:"pointer",borderColor:sel===name?cfg.color:"#2a2a3e",marginBottom:0}} onClick={()=>setSel(sel===name?null:name)}>
-<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-<div style={{width:12,height:12,borderRadius:"50%",background:cfg.color}}/><div style={{fontWeight:700,fontSize:14}}>{name}</div>
-</div>
-<div style={{display:"flex",flexWrap:"wrap",gap:4}}>{cfg.fields.slice(0,4).map(f=><Chip key={f} color={cfg.color}>{f}</Chip>)}{cfg.fields.length>4&&<Chip color="#64748b">+{cfg.fields.length-4}</Chip>}</div>
-</div>)}
-</div>
-{sel&&<div className="card"><div style={{fontWeight:700,marginBottom:12}}>Mapping: DLO → {sel} DMO</div>
-<table><thead><tr><th>Campo DLO (Raw)</th><th>→</th><th>Campo DMO (C360)</th></tr></thead>
-<tbody>{C360[sel].fields.map(f=><tr key={f}><td className="mono">{f.toLowerCase()}_raw</td><td style={{textAlign:"center",color:"#6366f1"}}>→</td><td className="mono" style={{color:C360[sel].color}}>{f}</td></tr>)}</tbody></table>
-</div>}
-</div>;
-};
-
-const Identity=()=>{
-const[hasRun,setRun]=useState(false);
+const IdentityView=()=>{
+const[ran,setRan]=useState(false);
 const clusters=[
-{uid:"UI-001",recs:["CON-001","CON-002"],rule:"Phone Normalized",names:["João Silva","João S. Silva"],emails:["joao.silva@algar.com.br","j.silva@algar.com.br"],conf:.97},
-{uid:"UI-002",recs:["CON-003","CON-004"],rule:"Phone Normalized",names:["Maria Santos","Maria A. Santos"],emails:["maria.santos@algartecnologia.com.br","m.santos@algartec.com.br"],conf:.95},
-{uid:"UI-003",recs:["CON-005","CON-011"],rule:"Name Fuzzy + City",names:["Pedro Oliveira","Pedro H. Oliveira"],emails:["pedro.oliveira@ctbc.com.br","p.oliveira@ctbc.com.br"],conf:.91},
-{uid:"UI-004",recs:["CON-010","CON-012"],rule:"Phone Normalized",names:["Juliana Almeida","Juliana de Almeida"],emails:["juliana.almeida@rioquente.com.br","ju.almeida@rioquenteresorts.com.br"],conf:.93}
+{uid:"UI-001",r:"Phone Normalized",n:["João Silva","João S. Silva"],e:["joao.silva@algar.com.br","j.silva@algar.com.br"],c:.97},
+{uid:"UI-002",r:"Phone Normalized",n:["Maria Santos","Maria A. Santos"],e:["maria.santos@algartecnologia.com.br","m.santos@algartec.com.br"],c:.95},
+{uid:"UI-003",r:"Name Fuzzy + City",n:["Pedro Oliveira","Pedro H. Oliveira"],e:["pedro.oliveira@ctbc.com.br","p.oliveira@ctbc.com.br"],c:.91},
+{uid:"UI-004",r:"Phone Normalized",n:["Juliana Almeida","Juliana de Almeida"],e:["juliana.almeida@rioquente.com.br","ju.almeida@rioquenteresorts.com.br"],c:.93}
 ];
 return <div>
-<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🔗 Identity Resolution</h2>
-<div className="card">
-<div style={{fontWeight:700,marginBottom:12}}>📋 Match Rules</div>
-<table><thead><tr><th>#</th><th>Nome</th><th>Tipo</th><th>Campos</th><th>Status</th></tr></thead>
-<tbody>{IR_RULES.map(r=><tr key={r.id}><td>{r.priority}</td><td style={{fontWeight:600}}>{r.name}</td><td><Tag color={r.type==="Exact"?"#10b981":r.type==="Normalized"?"#0ea5e9":"#f59e0b"}>{r.type}</Tag></td><td>{r.fields.join(", ")}{r.threshold?` (≥${r.threshold})`:""}</td><td><Tag color="#10b981">Active</Tag></td></tr>)}</tbody></table>
+<div className="sf-card">
+<div className="sf-card-header"><div className="sf-card-title">Match Rules</div><button className="sf-btn sf-btn-primary">+ New Rule</button></div>
+<Table data={[
+{p:1,name:"Email Exact Match",type:"Exact",fields:"Email",status:"Active"},
+{p:2,name:"Phone Normalized",type:"Normalized",fields:"Phone",status:"Active"},
+{p:3,name:"Name Fuzzy + City",type:"Compound",fields:"FirstName, LastName, City (≥0.85)",status:"Active"}
+]} cols={[
+{key:"p",label:"#",render:v=><span style={{fontWeight:700}}>{v}</span>},
+{key:"name",label:"Rule Name",render:v=><span style={{fontWeight:600,color:"var(--sf-blue-light)"}}>{v}</span>},
+{key:"type",label:"Match Type",render:v=><Badge type={v==="Exact"?"green":v==="Normalized"?"blue":"orange"}>{v}</Badge>},
+{key:"fields",label:"Fields"},
+{key:"status",label:"Status",render:v=><Badge type="green">● {v}</Badge>}
+]}/>
 </div>
-<div className="card" style={{textAlign:"center"}}>
-<button className="btn-solid" style={{background:hasRun?"linear-gradient(135deg,#10b981,#10b981cc)":"linear-gradient(135deg,#6366f1,#6366f1cc)"}} onClick={()=>setRun(true)}>
-{hasRun?"✅ Re-executar":"▶ Executar Identity Resolution"}
+<div className="sf-card" style={{textAlign:"center",padding:24}}>
+<button className={`sf-btn ${ran?"sf-btn-success":"sf-btn-primary"}`} style={{height:40,fontSize:14}} onClick={()=>setRan(true)}>
+{ran?"✓ Re-run Identity Resolution":"▶ Run Identity Resolution"}
 </button>
-{hasRun&&<div style={{display:"flex",gap:12,justifyContent:"center",marginTop:16,flexWrap:"wrap"}}>
-<Stat num={D.contacts.length} label="Records Input" color="#0ea5e9"/>
-<Stat num={D.contacts.length-clusters.length} label="Unified Profiles" color="#10b981"/>
-<Stat num={clusters.length} label="Merges" color="#f59e0b"/>
-<Stat num="94%" label="Avg. Confidence" color="#6366f1"/>
+{ran&&<div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginTop:20}}>
+{[{n:D.contacts.length,l:"Input Records",c:"var(--sf-blue-light)"},{n:D.contacts.length-clusters.length,l:"Unified Profiles",c:"var(--sf-success)"},{n:clusters.length,l:"Merges Found",c:"var(--sf-warning)"},{n:"94%",l:"Avg Confidence",c:"var(--sf-purple)"}].map(s=><div key={s.l} className="sf-stat"><div className="sf-stat-num" style={{color:s.c}}>{s.n}</div><div className="sf-stat-label">{s.l}</div></div>)}
 </div>}
 </div>
-{hasRun&&<div className="card">
-<div style={{fontWeight:700,marginBottom:12}}>🔀 Clusters de Merge</div>
-{clusters.map(c=><div key={c.uid} style={{padding:14,border:"1px solid #2a2a3e",borderRadius:10,marginBottom:10,background:"#16162a"}}>
-<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-<Tag color="#10b981">{c.uid}</Tag><Tag color="#f59e0b">{c.rule}</Tag>
-<span style={{marginLeft:"auto",fontSize:12,color:"#94a3b8"}}>Confidence: <span style={{color:"#10b981",fontWeight:700}}>{(c.conf*100).toFixed(0)}%</span></span>
+{ran&&<div className="sf-card">
+<div className="sf-card-header"><div className="sf-card-title">Merge Clusters</div></div>
+{clusters.map(c=><div key={c.uid} style={{border:"1px solid var(--sf-border2)",borderRadius:8,padding:16,marginBottom:12,background:"#FAFAF9"}}>
+<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+<Badge type="green">{c.uid}</Badge><Badge type="orange">{c.r}</Badge>
+<span style={{marginLeft:"auto",fontSize:12,color:"var(--sf-text2)"}}>Confidence: <strong style={{color:"var(--sf-success)"}}>{(c.c*100).toFixed(0)}%</strong></span>
 </div>
-<div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-{c.recs.map((r,i)=><div key={r} style={{flex:1,padding:10,border:"1px solid #2a2a3e",borderRadius:8,fontSize:12,minWidth:160}}>
-<div className="mono" style={{color:"#6366f1",marginBottom:4}}>{r}</div>
-<div>{c.names[i]}</div><div style={{color:"#94a3b8",fontSize:11}}>{c.emails[i]}</div>
-</div>)}
-<div style={{display:"flex",alignItems:"center",fontSize:20,color:"#10b981"}}>→</div>
-<div style={{flex:1,padding:10,border:"2px solid #10b981",borderRadius:8,fontSize:12,background:"#10b98112",minWidth:160}}>
-<div className="mono" style={{color:"#10b981",marginBottom:4,fontWeight:700}}>UNIFIED</div>
-<div>{c.names[0]}</div><div style={{color:"#94a3b8",fontSize:11}}>{c.emails[0]}</div>
+<div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr auto 1fr",gap:8,alignItems:"center"}}>
+<div style={{padding:12,border:"1px solid var(--sf-border)",borderRadius:8,background:"#fff"}}>
+<div style={{fontWeight:600,fontSize:12}}>{c.n[0]}</div><div style={{fontSize:11,color:"var(--sf-text2)"}}>{c.e[0]}</div>
+</div>
+<span style={{color:"var(--sf-border)",fontSize:14}}>+</span>
+<div style={{padding:12,border:"1px solid var(--sf-border)",borderRadius:8,background:"#fff"}}>
+<div style={{fontWeight:600,fontSize:12}}>{c.n[1]}</div><div style={{fontSize:11,color:"var(--sf-text2)"}}>{c.e[1]}</div>
+</div>
+<span style={{color:"var(--sf-success)",fontSize:16}}>→</span>
+<div style={{padding:12,border:"2px solid var(--sf-success)",borderRadius:8,background:"#E6F7ED"}}>
+<div style={{fontWeight:700,fontSize:12,color:"var(--sf-success)"}}>UNIFIED</div>
+<div style={{fontWeight:600,fontSize:12}}>{c.n[0]}</div><div style={{fontSize:11,color:"var(--sf-text2)"}}>{c.e[0]}</div>
 </div>
 </div>
 </div>)}
@@ -378,282 +400,207 @@ return <div>
 </div>;
 };
 
-const Profiles=()=>{
-const[sel,setSel]=useState("CON-001");
+const SegmentView=()=>{
+const segs=[
+{name:"Enterprise VIP",criteria:"Segment = Large AND LTV > R$5M AND Churn < 15%",count:3,status:"Published"},
+{name:"Churn Risk",criteria:"Churn_Score > 30% OR Contract Status = Expiring",count:2,status:"Published"},
+{name:"Hot Leads MG",criteria:"Rating = Hot AND State = MG",count:2,status:"Published"},
+{name:"Cross-Sell Cloud",criteria:"Has Active Contract AND No Cloud Product",count:4,status:"Draft"}
+];
+return <div>
+<div className="sf-card">
+<div className="sf-card-header"><div className="sf-card-title">Segments</div><button className="sf-btn sf-btn-primary">+ New Segment</button></div>
+<Table data={segs} cols={[
+{key:"name",label:"Segment Name",render:v=><span style={{fontWeight:600,color:"var(--sf-blue-light)"}}>{v}</span>},
+{key:"criteria",label:"Criteria",render:v=><span style={{fontFamily:"'Courier New',monospace",fontSize:11,color:"var(--sf-text2)"}}>{v}</span>},
+{key:"count",label:"Est. Size",render:v=><span style={{fontWeight:700,fontSize:16}}>{v}</span>},
+{key:"status",label:"Status",render:v=><Badge type={v==="Published"?"green":"gray"}>{v}</Badge>}
+]}/>
+</div>
+</div>;
+};
+
+const InsightsView=()=>{
+const data=D.accounts.map(a=>{
+const o=D.opportunities.filter(x=>x.accountId===a.id);
+const c=D.contracts.filter(x=>x.accountId===a.id);
+const won=o.filter(x=>x.stage==="Closed Won").reduce((s,x)=>s+x.amount,0);
+const ltv=won+c.reduce((s,x)=>s+x.value,0);
+const churn=c.some(x=>x.status==="Expiring")?.35:c.length===0?.7:.1;
+return{account:a.name,segment:a.segment,ltv,churn,opps:o.length,contracts:c.filter(x=>x.status==="Active").length};
+});
+return <div>
+<div className="sf-card">
+<div className="sf-card-header"><div className="sf-card-title">Calculated Insights — LTV & Churn</div></div>
+<Table data={data} cols={[
+{key:"account",label:"Account",render:v=><span style={{fontWeight:600}}>{v}</span>},
+{key:"segment",label:"Segment",render:v=><Badge type={v==="Large"?"blue":v==="Medium"?"purple":"gray"}>{v}</Badge>},
+{key:"ltv",label:"LTV (R$)",render:v=><span style={{fontWeight:700,color:"var(--sf-success)"}}>R$ {(v/1e6).toFixed(2)}M</span>},
+{key:"churn",label:"Churn Risk",render:v=><Badge type={v>.3?"red":v>.15?"orange":"green"}>{(v*100).toFixed(0)}%</Badge>},
+{key:"opps",label:"Opportunities"},{key:"contracts",label:"Active Contracts"}
+]}/>
+</div>
+</div>;
+};
+
+const ActionsView=()=><div>
+<div className="sf-card">
+<div className="sf-card-header"><div className="sf-card-title">Data Actions</div><button className="sf-btn sf-btn-primary">+ New Action</button></div>
+<Table data={[
+{name:"VIP Notification",target:"Salesforce Flow",trigger:"LTV > R$5M",scope:"Same Org",status:"Active"},
+{name:"Churn Alert",target:"Platform Event",trigger:"Churn > 30%",scope:"Cross Org",status:"Active"},
+{name:"Segment Sync",target:"Marketing Cloud",trigger:"Enterprise VIP updated",scope:"External",status:"Active"},
+{name:"Lead Score Webhook",target:"Webhook (HTTP POST)",trigger:"Lead_Score > 90",scope:"External",status:"Draft"}
+]} cols={[
+{key:"name",label:"Action Name",render:v=><span style={{fontWeight:600,color:"var(--sf-blue-light)"}}>{v}</span>},
+{key:"target",label:"Target",render:v=><Badge type="blue">{v}</Badge>},
+{key:"trigger",label:"Trigger Condition",render:v=><span style={{fontFamily:"'Courier New',monospace",fontSize:11}}>{v}</span>},
+{key:"scope",label:"Scope",render:v=><Badge type={v==="Same Org"?"green":v==="Cross Org"?"orange":"purple"}>{v}</Badge>},
+{key:"status",label:"Status",render:v=><Badge type={v==="Active"?"green":"gray"}>● {v}</Badge>}
+]}/>
+</div>
+</div>;
+
+const ActivationsView=()=><div>
+<div className="sf-card">
+<div className="sf-card-header"><div className="sf-card-title">Activation Targets</div><button className="sf-btn sf-btn-primary">+ New Target</button></div>
+<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}}>
+{[{n:"Marketing Cloud",t:"Journey Builder",i:"📧",s:["Enterprise VIP","Churn Risk"]},{n:"Google Ads",t:"Customer Match",i:"🔍",s:["Cross-Sell Cloud"]},{n:"Meta Ads",t:"Custom Audiences",i:"📱",s:["Hot Leads MG"]},{n:"LinkedIn",t:"Matched Audiences",i:"💼",s:[]}].map(x=><div key={x.n} style={{border:"1px solid var(--sf-border2)",borderRadius:8,padding:16}}>
+<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+<span style={{fontSize:24}}>{x.i}</span><div><div style={{fontWeight:600}}>{x.n}</div><div style={{fontSize:11,color:"var(--sf-text2)"}}>{x.t}</div></div>
+</div>
+{x.s.length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{x.s.map(s=><Badge key={s} type="blue">{s}</Badge>)}</div>}
+{x.s.length===0&&<div style={{fontSize:11,color:"var(--sf-text3)",fontStyle:"italic"}}>No segments assigned</div>}
+</div>)}
+</div>
+</div>
+</div>;
+
+const SharesView=()=><div>
+<div className="sf-card">
+<div className="sf-card-header"><div className="sf-card-title">Data Shares — Zero Copy OUT</div></div>
+<div style={{marginBottom:16}}>
+<div style={{fontWeight:600,marginBottom:4}}>❄️ Share Target: Snowflake ({SF.account})</div>
+<div style={{fontSize:12,color:"var(--sf-text2)"}}>Database: {SF.db} · <Badge type="orange">Offline</Badge></div>
+</div>
+<Table data={[
+{dmo:"Unified Individual DMO",view:"DC_UNIFIED_INDIVIDUAL",refresh:"Near Real-Time",est:8},
+{dmo:"Account DMO",view:"DC_ACCOUNT",refresh:"Batch (1h)",est:8},
+{dmo:"Segment: Enterprise VIP",view:"DC_SEG_ENTERPRISE_VIP",refresh:"On Publish",est:3},
+{dmo:"Calculated Insight: LTV",view:"DC_INSIGHT_LTV",refresh:"Batch (6h)",est:8}
+]} cols={[
+{key:"dmo",label:"Source DMO/Segment"},{key:"view",label:"Snowflake View",render:v=><span style={{fontFamily:"'Courier New',monospace",fontSize:12,color:"var(--sf-teal)"}}>{v}</span>},
+{key:"refresh",label:"Refresh",render:v=><Badge type="blue">{v}</Badge>},{key:"est",label:"Records"}
+]}/>
+<div style={{marginTop:12,padding:12,background:"#FFF8E1",borderRadius:8,fontSize:12,color:"#795548"}}>💡 Zero Copy: <strong>70 créditos/M</strong> vs ETL tradicional: <strong>2.000/M</strong> — economia de <strong>28.5x</strong></div>
+</div>
+</div>;
+
+const ProfileView=()=>{
 const skip=["CON-002","CON-004","CON-011","CON-012"];
+const[sel,setSel]=useState("CON-001");
 const con=D.contacts.find(c=>c.id===sel);
 const acc=con?D.accounts.find(a=>a.id===con.accountId):null;
 const opps=acc?D.opportunities.filter(o=>o.accountId===acc.id):[];
 const ctrs=acc?D.contracts.filter(c=>c.accountId===acc.id):[];
 return <div>
-<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>👤 Profile Explorer</h2>
-<select value={sel} onChange={e=>setSel(e.target.value)} style={{marginBottom:16,padding:"7px 12px",borderRadius:8,border:"1px solid #2a2a3e",background:"#222238",color:"#e2e8f0",fontSize:13}}>
+<div className="sf-card">
+<div className="sf-card-header"><div className="sf-card-title">Profile Explorer — Unified Individual</div></div>
+<select value={sel} onChange={e=>setSel(e.target.value)} style={{padding:"8px 12px",borderRadius:4,border:"1px solid var(--sf-border)",fontSize:13,marginBottom:16,width:"100%",maxWidth:400,fontFamily:"var(--sf-font)"}}>
 {D.contacts.filter(c=>!skip.includes(c.id)).map(c=><option key={c.id} value={c.id}>{c.firstName} {c.lastName} — {c.email}</option>)}
 </select>
-{con&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-<div className="card">
-<div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16}}>
-<div style={{width:56,height:56,borderRadius:"50%",background:"linear-gradient(135deg,#6366f1,#8b5cf6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,color:"#fff",fontWeight:700}}>{con.firstName[0]}{con.lastName[0]}</div>
-<div><div style={{fontSize:18,fontWeight:700}}>{con.firstName} {con.lastName}</div><div style={{color:"#94a3b8",fontSize:13}}>{con.title}</div></div>
+{con&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+<div style={{border:"1px solid var(--sf-border2)",borderRadius:8,padding:20}}>
+<div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+<div style={{width:56,height:56,borderRadius:"50%",background:"linear-gradient(135deg,#0176D3,#7F2CFE)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,color:"#fff",fontWeight:700}}>{con.firstName[0]}{con.lastName[0]}</div>
+<div><div style={{fontSize:18,fontWeight:700}}>{con.firstName} {con.lastName}</div><div style={{color:"var(--sf-text2)"}}>{con.title}</div></div>
 </div>
-<div className="mono" style={{lineHeight:2}}>
-<div>📧 {con.email}</div><div>📱 {con.phone}</div><div>🏢 {acc?.name||"—"}</div>
+<div style={{fontSize:13,lineHeight:2.2}}>
+<div>📧 {con.email}</div><div>📱 {con.phone}</div><div>🏢 {acc?.name}</div><div><Badge type="blue">Source: {con.src}</Badge></div>
 </div>
-<div style={{marginTop:12}}><Tag color="#6366f1">Source: {con.source}</Tag></div>
 </div>
-<div className="card">
-{acc&&<div><div style={{fontWeight:700,marginBottom:8}}>🏢 Account</div><div className="mono" style={{lineHeight:2,marginBottom:12}}><strong>{acc.name}</strong><br/>Revenue: R$ {(acc.revenue/1e6).toFixed(1)}M · <Tag color="#0ea5e9">{acc.segment}</Tag></div></div>}
-<div style={{fontWeight:700,marginBottom:8}}>📈 Opportunities ({opps.length})</div>
-{opps.map(o=><div key={o.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,fontSize:12}}><Tag color={o.stage==="Closed Won"?"#10b981":"#f59e0b"}>{o.stage}</Tag><span>{o.name}</span><span style={{marginLeft:"auto",fontWeight:600}}>R$ {(o.amount/1e3).toFixed(0)}K</span></div>)}
-<div style={{fontWeight:700,marginTop:12,marginBottom:8}}>📋 Contracts ({ctrs.length})</div>
-{ctrs.map(c=><div key={c.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,fontSize:12}}><Tag color={c.status==="Active"?"#10b981":"#f59e0b"}>{c.status}</Tag><span>{c.name}</span><span style={{marginLeft:"auto",fontWeight:600}}>R$ {(c.value/1e6).toFixed(1)}M</span></div>)}
+<div style={{border:"1px solid var(--sf-border2)",borderRadius:8,padding:20}}>
+{acc&&<div style={{marginBottom:16}}><div style={{fontWeight:700,marginBottom:4}}>Account</div><div style={{fontWeight:600,fontSize:15}}>{acc.name}</div><div style={{fontSize:12,color:"var(--sf-text2)"}}>{acc.industry} · R$ {(acc.revenue/1e6).toFixed(1)}M · <Badge type="blue">{acc.segment}</Badge></div></div>}
+<div style={{fontWeight:700,marginBottom:8}}>Opportunities ({opps.length})</div>
+{opps.map(o=><div key={o.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,fontSize:12}}><Badge type={o.stage==="Closed Won"?"green":"orange"}>{o.stage}</Badge><span style={{flex:1}}>{o.name}</span><strong>R$ {(o.amount/1e3).toFixed(0)}K</strong></div>)}
+<div style={{fontWeight:700,marginTop:12,marginBottom:8}}>Contracts ({ctrs.length})</div>
+{ctrs.map(c=><div key={c.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,fontSize:12}}><Badge type={c.status==="Active"?"green":"orange"}>{c.status}</Badge><span style={{flex:1}}>{c.name}</span><strong>R$ {(c.value/1e6).toFixed(1)}M</strong></div>)}
 </div>
 </div>}
+</div>
 </div>;
 };
 
-const Insights=()=>{
-const data=D.accounts.map(a=>{
-const o=D.opportunities.filter(o=>o.accountId===a.id);
-const c=D.contracts.filter(c=>c.accountId===a.id);
-const won=o.filter(x=>x.stage==="Closed Won").reduce((s,x)=>s+x.amount,0);
-const cv=c.reduce((s,x)=>s+x.value,0);
-const churn=c.some(x=>x.status==="Expiring")?.35:c.length===0?.7:.1;
-return{account:a.name,segment:a.segment,ltv:won+cv,churn,opps:o.length,contracts:c.filter(x=>x.status==="Active").length};
-});
-return <div>
-<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>📈 Calculated Insights</h2>
-<div className="card"><div style={{fontWeight:700,marginBottom:12}}>💰 LTV & Churn por Account</div>
-<DataTable data={data} columns={[
-{key:"account",label:"Account"},
-{key:"segment",label:"Segment",render:v=><Tag color={v==="Large"?"#6366f1":v==="Medium"?"#0ea5e9":"#64748b"}>{v}</Tag>},
-{key:"ltv",label:"LTV (R$)",render:v=><span style={{color:"#10b981",fontWeight:700}}>R$ {(v/1e6).toFixed(2)}M</span>},
-{key:"churn",label:"Churn",render:v=><Tag color={v>.3?"#ef4444":v>.15?"#f59e0b":"#10b981"}>{(v*100).toFixed(0)}%</Tag>},
-{key:"opps",label:"Opps"},{key:"contracts",label:"Contracts"}
-]}/>
-</div></div>;
-};
-
-const Segments=()=>{
-const segs=[
-{name:"Enterprise VIP",criteria:"Segment=Large AND LTV>5M AND Churn<15%",count:3,color:"#6366f1"},
-{name:"Churn Risk",criteria:"Churn>30% OR Contract=Expiring",count:2,color:"#ef4444"},
-{name:"Hot Leads MG",criteria:"Rating=Hot AND State=MG",count:2,color:"#f59e0b"},
-{name:"Cross-Sell Cloud",criteria:"Has Contract AND No Cloud Product",count:4,color:"#0ea5e9"}
-];
-return <div>
-<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🎯 Segments</h2>
-<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-{segs.map(s=><div key={s.name} className="card" style={{borderLeft:`4px solid ${s.color}`,marginBottom:0}}>
-<div style={{display:"flex",alignItems:"center",gap:10}}>
-<div style={{flex:1}}><div style={{fontWeight:700,fontSize:15}}>{s.name}</div><div className="mono" style={{fontSize:11,color:"#94a3b8",marginTop:2}}>{s.criteria}</div></div>
-<div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:700,color:s.color}}>{s.count}</div><div style={{fontSize:10,color:"#94a3b8"}}>records</div></div>
-</div>
-</div>)}
-</div></div>;
-};
-
-const Enrichments=()=>{
-const items=[
-{name:"LTV Score → Contact",type:"Copy Field",source:"Individual DMO → LTV_Score",target:"Contact.LTV__c",color:"#6366f1"},
-{name:"Churn Score → Account",type:"Copy Field",source:"Account DMO → Churn_Score",target:"Account.Churn_Risk__c",color:"#f59e0b"},
-{name:"Email Engage → Contact",type:"Related List",source:"Email_Engagement_DMO",target:"Contact Record Page",color:"#0ea5e9"},
-{name:"VIP Auto-Flag",type:"DC-Triggered Flow",source:"WHEN LTV > 5M",target:"Contact.VIP__c = true",color:"#10b981"}
-];
-return <div>
-<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>💎 Enrichments — DC → CRM</h2>
-{items.map(e=><div key={e.name} className="card" style={{borderLeft:`4px solid ${e.color}`}}>
-<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}><Tag color={e.color}>{e.type}</Tag><div style={{fontWeight:700,fontSize:14}}>{e.name}</div></div>
-<div style={{display:"flex",alignItems:"center",gap:10,fontSize:12}}>
-<div className="mono" style={{padding:"6px 12px",background:"#16162a",borderRadius:6,border:"1px solid #2a2a3e"}}>{e.source}</div>
-<span style={{color:"#6366f1",fontSize:18}}>→</span>
-<div className="mono" style={{padding:"6px 12px",background:"#16162a",borderRadius:6,border:"1px solid #2a2a3e"}}>{e.target}</div>
-</div>
-</div>)}
-</div>;
-};
-
-const DataActions=()=>{
-const items=[
-{name:"VIP Notification",target:"Salesforce Flow",trigger:"LTV_Score > 5M",type:"Same Org"},
-{name:"Churn Alert",target:"Platform Event",trigger:"Churn_Score > 30%",type:"Cross Org"},
-{name:"Segment Sync → Mkt",target:"Marketing Cloud",trigger:"Enterprise VIP updated",type:"External"},
-{name:"Lead Score Webhook",target:"Webhook (HTTP POST)",trigger:"Lead_Score > 90",type:"External"}
-];
-return <div>
-<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>⚡ Data Actions</h2>
-{items.map(a=><div key={a.name} className="card">
-<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-<span style={{fontSize:18}}>⚡</span><div style={{fontWeight:700,fontSize:15,flex:1}}>{a.name}</div>
-<Tag color={a.type==="Same Org"?"#10b981":a.type==="Cross Org"?"#f59e0b":"#6366f1"}>{a.type}</Tag>
-</div>
-<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-<div style={{padding:10,background:"#16162a",borderRadius:8,border:"1px solid #2a2a3e"}}><div style={{fontSize:10,color:"#64748b",fontWeight:700,marginBottom:4}}>TARGET</div><div style={{fontSize:13,fontWeight:600}}>{a.target}</div></div>
-<div style={{padding:10,background:"#16162a",borderRadius:8,border:"1px solid #2a2a3e"}}><div style={{fontSize:10,color:"#64748b",fontWeight:700,marginBottom:4}}>TRIGGER</div><div className="mono">{a.trigger}</div></div>
-</div>
-</div>)}
-</div>;
-};
-
-const Activations=()=>{
-const items=[{name:"Marketing Cloud",type:"Journey Builder",icon:"📧",segs:["Enterprise VIP"]},{name:"Google Ads",type:"Customer Match",icon:"🔍",segs:["Cross-Sell"]},{name:"Meta Ads",type:"Custom Audiences",icon:"📱",segs:["Hot Leads MG"]},{name:"LinkedIn",type:"Matched Audiences",icon:"💼",segs:[]}];
-return <div>
-<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>📡 Activation Targets</h2>
-<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-{items.map(t=><div key={t.name} className="card" style={{marginBottom:0}}>
-<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-<span style={{fontSize:24}}>{t.icon}</span><div style={{flex:1}}><div style={{fontWeight:700,fontSize:15}}>{t.name}</div><div style={{fontSize:12,color:"#94a3b8"}}>{t.type}</div></div>
-</div>
-{t.segs.length>0&&<div style={{display:"flex",gap:6}}>{t.segs.map(s=><Chip key={s} color="#6366f1">{s}</Chip>)}</div>}
-</div>)}
-</div></div>;
-};
-
-const DataShares=()=><div>
-<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🔄 Data Shares — Zero Copy OUT</h2>
-<div className="card">
-<div style={{fontWeight:700,marginBottom:12}}>❄️ Share Target: Snowflake (Algar DW)</div>
-<div className="mono" style={{lineHeight:2,marginBottom:16}}>Account: {SF_CFG.account}<br/>Database: {SF_CFG.database}<br/><Tag color="#f59e0b">Offline</Tag></div>
-<table><thead><tr><th>DMO / Segment</th><th>View no Snowflake</th><th>Refresh</th><th>Est.</th></tr></thead>
-<tbody>
-{[{d:"Unified Individual DMO",v:"DC_UNIFIED_INDIVIDUAL",r:"Near Real-Time",n:8},{d:"Account DMO",v:"DC_ACCOUNT",r:"Batch (1h)",n:8},{d:"Segment: Enterprise VIP",v:"DC_SEG_ENTERPRISE_VIP",r:"On Publish",n:3},{d:"Insight: LTV",v:"DC_INSIGHT_LTV",r:"Batch (6h)",n:8}].map(x=><tr key={x.d}><td>{x.d}</td><td className="mono" style={{color:"#06b6d4"}}>{x.v}</td><td><Tag color="#0ea5e9">{x.r}</Tag></td><td style={{fontWeight:600}}>{x.n}</td></tr>)}
-</tbody></table>
-<div style={{marginTop:12,padding:12,background:"#16162a",borderRadius:8,border:"1px solid #2a2a3e",fontSize:12,color:"#94a3b8"}}>💡 Custo: <span style={{color:"#10b981",fontWeight:700}}>70 créditos/M</span> (Zero Copy) vs <span style={{color:"#ef4444"}}>2.000/M</span> (ETL) — economia <span style={{color:"#10b981",fontWeight:700}}>28.5x</span></div>
-</div></div>;
-
-const DataGraphs=()=><div>
-<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🕸️ Data Graphs — Agentforce</h2>
-<div className="card">
-<div style={{fontWeight:700,marginBottom:12}}>📊 Customer 360 Graph</div>
-<div style={{display:"flex",justifyContent:"center",padding:20}}>
+const GraphsView=()=><div>
+<div className="sf-card">
+<div className="sf-card-header"><div className="sf-card-title">Data Graphs — Agentforce Grounding</div></div>
+<div style={{display:"flex",justifyContent:"center",padding:24}}>
 <div style={{textAlign:"center"}}>
-<div style={{padding:"10px 20px",borderRadius:8,border:"2px solid #6366f1",background:"#6366f115",display:"inline-block",fontWeight:700,color:"#6366f1"}}>👤 Unified Individual (root)</div>
-<div style={{display:"flex",justifyContent:"center",gap:24,marginTop:12,flexWrap:"wrap"}}>
-{[{n:"Account DMO",c:"#0ea5e9",i:"🏢"},{n:"Sales Order DMO",c:"#f59e0b",i:"📈"},{n:"Contract DMO",c:"#10b981",i:"📋"},{n:"Calc. Insights",c:"#ec4899",i:"🧮"}].map(x=><div key={x.n} style={{textAlign:"center"}}><div style={{color:"#2a2a3e",margin:"4px 0"}}>│</div><div style={{padding:"8px 14px",borderRadius:8,border:`1px solid ${x.c}`,background:x.c+"12",fontSize:12,fontWeight:600,color:x.c}}>{x.i} {x.n}</div></div>)}
+<div style={{display:"inline-block",padding:"12px 24px",borderRadius:8,border:"2px solid var(--sf-blue-light)",background:"#EEF4FF",fontWeight:700,color:"var(--sf-blue-light)"}}>👤 Unified Individual (root)</div>
+<div style={{display:"flex",justifyContent:"center",gap:20,marginTop:16,flexWrap:"wrap"}}>
+{[{n:"Account",c:"#04867D"},{n:"Sales Order",c:"#FE9339"},{n:"Contract",c:"#2E844A"},{n:"Calc. Insights",c:"#7F2CFE"}].map(x=><div key={x.n} style={{textAlign:"center"}}><div style={{color:"var(--sf-border)",margin:"4px 0"}}>│</div><div style={{padding:"8px 16px",borderRadius:8,border:`2px solid ${x.c}`,background:x.c+"08",fontWeight:600,fontSize:12,color:x.c}}>{x.n}</div></div>)}
 </div>
 </div>
 </div>
-<div style={{fontWeight:700,marginTop:16,marginBottom:8}}>📋 Preview JSON (João Silva)</div>
-<pre className="mono" style={{background:"#16162a",padding:14,borderRadius:8,border:"1px solid #2a2a3e",color:"#a5b4fc",fontSize:11,lineHeight:1.5,maxHeight:250,overflow:"auto"}}>{JSON.stringify({individual:{name:"João Silva",email:"joao.silva@algar.com.br",title:"Diretor de TI"},account:{name:"Grupo Algar S.A.",revenue:12500000,segment:"Large"},salesOrders:[{name:"MPLS Dedicado",amount:2400000,stage:"Negotiation"}],contracts:[{name:"MPLS 2024-2026",value:4800000,status:"Active"}],insights:{ltv:7200000,churnRisk:.10}},null,2)}</pre>
-</div></div>;
-
-const Einstein=()=><div>
-<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🧠 Einstein Studio</h2>
-<div className="card">
-<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-{[{name:"Churn Prediction",type:"Classification",acc:"87%"},{name:"Lead Scoring",type:"Regression",acc:"—"}].map(m=><div key={m.name} style={{padding:16,border:"1px solid #2a2a3e",borderRadius:10,background:"#16162a"}}>
-<div style={{fontWeight:700,fontSize:15,marginBottom:4}}>🧠 {m.name}</div>
-<div style={{fontSize:12,color:"#94a3b8",marginBottom:8}}>{m.type}</div>
-<div style={{display:"flex",gap:6}}><Tag color="#f59e0b">Draft</Tag>{m.acc!=="—"&&<Tag color="#10b981">Accuracy: {m.acc}</Tag>}</div>
-</div>)}
+<div style={{marginTop:16}}>
+<div style={{fontWeight:700,marginBottom:8}}>JSON Preview — João Silva</div>
+<pre style={{background:"#1E1E1E",color:"#D4D4D4",padding:16,borderRadius:8,fontSize:11,lineHeight:1.5,overflow:"auto",maxHeight:220,fontFamily:"'Courier New',monospace"}}>{JSON.stringify({individual:{name:"João Silva",email:"joao.silva@algar.com.br"},account:{name:"Grupo Algar S.A.",revenue:12500000},salesOrders:[{name:"MPLS Dedicado",amount:2400000}],contracts:[{name:"MPLS 2024-2026",value:4800000}],insights:{ltv:7200000,churn:.10}},null,2)}</pre>
 </div>
-</div></div>;
-
-const Consent=()=><div>
-<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🛡️ Consent Management — LGPD</h2>
-<div className="card">
-<table><thead><tr><th>Categoria</th><th>Propósito</th><th>Canal</th><th>Base Legal</th><th>Default</th></tr></thead>
-<tbody>
-{[{c:"Marketing",p:"Email Marketing",ch:"Email",l:"Consentimento (Art. 7, I)",d:"Opt-In"},{c:"Marketing",p:"SMS Campaigns",ch:"SMS",l:"Consentimento (Art. 7, I)",d:"Opt-In"},{c:"Profiling",p:"Segmentação",ch:"All",l:"Legítimo Interesse (Art. 7, IX)",d:"Opt-Out"},{c:"Service",p:"Comunicação Transacional",ch:"Email+SMS",l:"Execução Contrato (Art. 7, V)",d:"Required"}].map((x,i)=><tr key={i}><td><Tag color="#6366f1">{x.c}</Tag></td><td>{x.p}</td><td>{x.ch}</td><td style={{fontSize:11}}>{x.l}</td><td><Tag color={x.d==="Opt-In"?"#f59e0b":x.d==="Required"?"#10b981":"#64748b"}>{x.d}</Tag></td></tr>)}
-</tbody></table>
-</div></div>;
-
-const Governance=()=><div>
-<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🔐 Permissions</h2>
-<div className="card">
-<table><thead><tr><th>Permission Set</th><th>Escopo</th><th>Acesso</th></tr></thead>
-<tbody>
-{[{n:"Data Cloud Admin",s:"Full",a:"CRUD total, setup, governance"},{n:"Data Cloud User",s:"Read",a:"Profile/Data Explorer, Segments read"},{n:"Marketing Admin",s:"Activation",a:"Segments, Activations, Consent"},{n:"Mkt Data Aware",s:"Data+Mkt",a:"DLOs, DMOs, Transforms, Segments"}].map(x=><tr key={x.n}><td style={{fontWeight:600}}>{x.n}</td><td><Tag color="#6366f1">{x.s}</Tag></td><td style={{fontSize:12}}>{x.a}</td></tr>)}
-</tbody></table>
-</div></div>;
-
-const DataExplorer=()=>{
-const[q,setQ]=useState("SELECT Name, Industry, Revenue FROM Account_DMO WHERE Segment = 'Large'");
-return <div>
-<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🔍 Data Explorer</h2>
-<div className="card">
-<div style={{fontWeight:700,marginBottom:8}}>📝 Query Editor</div>
-<textarea value={q} onChange={e=>setQ(e.target.value)} className="mono" style={{width:"100%",minHeight:80,padding:"7px 12px",borderRadius:8,border:"1px solid #2a2a3e",background:"#16162a",color:"#a5b4fc",resize:"vertical",boxSizing:"border-box"}}/>
-<div style={{marginTop:10}}><button className="btn-solid" style={{background:"linear-gradient(135deg,#6366f1,#6366f1cc)"}}>▶ Executar</button></div>
-<div style={{marginTop:16}}><DataTable data={D.accounts.filter(a=>a.segment==="Large")} columns={[{key:"name",label:"Name"},{key:"industry",label:"Industry"},{key:"revenue",label:"Revenue",render:v=>`R$ ${(v/1e6).toFixed(1)}M`}]}/></div>
-</div></div>;
-};
-
-const Placeholder=({title})=><div>
-<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>{title}</h2>
-<div className="card" style={{textAlign:"center",padding:40}}><div style={{fontSize:48,marginBottom:12}}>🚧</div><div style={{fontSize:16,color:"#94a3b8"}}>Módulo em construção</div></div>
+</div>
 </div>;
 
-// ═══ MAIN APP ═══
+const Placeholder=({name})=><div className="sf-card" style={{textAlign:"center",padding:40}}><div style={{fontSize:40,marginBottom:12}}>🚧</div><div style={{fontSize:16,color:"var(--sf-text2)"}}>{name} — Em construção</div></div>;
+
+// ═══ MAIN ═══
 function App(){
-const[view,setView]=useState("dashboard");
-const[mode,setMode]=useState("offline");
+const[tab,setTab]=useState("Home");
+const user=window.__dcUser||{name:"User",role:"admin"};
 
 const renderView=()=>{
-switch(view){
-case"dashboard":return <Dashboard onNav={setView}/>;
-case"spaces":return <Placeholder title="📦 Data Spaces"/>;
-case"sources":return <Sources/>;
-case"dlos":return <DLOs/>;
-case"transforms":return <Transforms/>;
-case"dmos":return <DMOs/>;
-case"identity":return <Identity/>;
-case"profiles":return <Profiles/>;
-case"insights":return <Insights/>;
-case"segments":return <Segments/>;
-case"explorer":return <DataExplorer/>;
-case"actions":return <DataActions/>;
-case"enrichments":return <Enrichments/>;
-case"activations":return <Activations/>;
-case"shares":return <DataShares/>;
-case"graphs":return <DataGraphs/>;
-case"einstein":return <Einstein/>;
-case"consent":return <Consent/>;
-case"governance":return <Governance/>;
-default:return <Placeholder title={view}/>;
+switch(tab){
+case"Home":return <HomeView onNav={setTab}/>;
+case"Data Streams":return <DataStreamsView/>;
+case"Data Model":return <DataModelView/>;
+case"Data Transforms":return <TransformsView/>;
+case"Identity Resolution":return <IdentityView/>;
+case"Segmentation":return <SegmentView/>;
+case"Calculated Insights":return <InsightsView/>;
+case"Data Actions":return <ActionsView/>;
+case"Activation Targets":return <ActivationsView/>;
+case"Data Shares":return <SharesView/>;
+case"Profile Explorer":return <ProfileView/>;
+case"Data Graphs":return <GraphsView/>;
+default:return <Placeholder name={tab}/>;
 }};
 
-return <div style={{display:"flex",flexDirection:"column",height:"100vh"}}>
-{/* TOP BAR */}
-<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",background:"linear-gradient(135deg,#1a1a2e,#222238)",borderBottom:"1px solid #2a2a3e",gap:12,flexWrap:"wrap"}}>
-<div style={{display:"flex",alignItems:"center",gap:10}}>
-<span style={{fontSize:22}}>☁️</span>
-<span style={{fontSize:18,fontWeight:700,background:"linear-gradient(135deg,#6366f1,#06b6d4)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Data Cloud Sandbox</span>
-<span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"#2a2a3e",color:"#94a3b8",border:"1px solid #3a3a50"}}>EVER i9</span>
-<span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:window.__dcUser?.role==="admin"?"#7c3aed22":"#3b82f622",color:window.__dcUser?.role==="admin"?"#7c3aed":"#3b82f6",border:"1px solid "+(window.__dcUser?.role==="admin"?"#7c3aed44":"#3b82f644")}}>{window.__dcUser?.name||"Usuário"} ({window.__dcUser?.role})</span>
-</div>
-<div style={{display:"flex",alignItems:"center",gap:12}}>
-<div style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"#2a2a3e",color:"#94a3b8",border:"1px solid #3a3a50"}}>
-{mode==="offline"?"🔴 Offline — Dados Simulados":"🟢 Live — Org 00DgK00000PUJwTUAX"}
-</div>
-<select value={mode} onChange={e=>setMode(e.target.value)} style={{padding:"7px 12px",borderRadius:8,border:"1px solid #2a2a3e",background:"#222238",color:"#e2e8f0",fontSize:11}}>
-<option value="offline">Offline (Simulado)</option>
-<option value="live">Live (Org Real)</option>
-</select>
-<button onClick={()=>window.parent.postMessage("dc-closed","*")} style={{padding:"6px 14px",borderRadius:8,border:"1px solid #3a3a50",background:"transparent",color:"#94a3b8",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>✕ Fechar</button>
+return <div style={{height:"100vh",display:"flex",flexDirection:"column"}}>
+{/* Salesforce Global Header */}
+<div className="sf-header">
+<div className="sf-header-left">
+<button className="sf-waffle">{[...Array(9)].map((_,i)=><span key={i}/>)}</button>
+<div className="sf-app-name">
+<svg width="20" height="14" viewBox="0 0 20 14"><path d="M10 0C7.1 0 4.6 1.3 3 3.4 1.2 3.8 0 5.3 0 7s1.2 3.2 3 3.6C4.6 12.7 7.1 14 10 14s5.4-1.3 7-3.4c1.8-.4 3-1.9 3-3.6s-1.2-3.2-3-3.6C15.4 1.3 12.9 0 10 0z" fill="#fff"/></svg>
+Data Cloud
 </div>
 </div>
-<div style={{display:"flex",flex:1,overflow:"hidden"}}>
-{/* SIDEBAR */}
-<div style={{width:220,minWidth:220,background:"#1a1a2e",borderRight:"1px solid #2a2a3e",overflowY:"auto",padding:"12px 0"}}>
-{MENU.map(g=><div key={g.group}>
-<div style={{padding:"8px 16px 4px",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,color:"#475569"}}>{g.group}</div>
-{g.items.map(item=><div key={item.key} className={`sidebar-item ${view===item.key?"active":""}`} onClick={()=>setView(item.key)}>
-<span>{item.icon}</span><span>{item.label}</span>
-</div>)}
-</div>)}
+<div className="sf-search"><input placeholder="Search Data Cloud..." /></div>
+<div className="sf-header-right">
+<button className="sf-header-icon" title="Setup">⚙</button>
+<button className="sf-header-icon" title="Notifications">🔔</button>
+<div className="sf-avatar" title={user.name}>{(user.name||"U").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}</div>
 </div>
-{/* MAIN */}
-<div style={{flex:1,overflow:"auto",padding:24}}>{renderView()}</div>
+<button className="sf-close-overlay" onClick={()=>window.parent.postMessage("dc-closed","*")}>✕ Voltar ao i9</button>
+</div>
+{/* Navigation Tabs */}
+<div className="sf-nav">
+{TABS.map(t=><button key={t} className={`sf-tab ${tab===t?"active":""}`} onClick={()=>setTab(t)}>{t}</button>)}
+</div>
+{/* Content */}
+<div style={{flex:1,overflow:"auto",padding:24,background:"var(--sf-bg)"}}>
+{renderView()}
 </div>
 </div>;
 }
-
-
-// Listen for messages from parent
-window.addEventListener('message', function(e) {
-  if (e.data === 'close-dc') window.parent.postMessage('dc-closed', '*');
-});
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
