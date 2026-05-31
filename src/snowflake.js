@@ -59,6 +59,33 @@ export function registerSnowflakeRoutes(app) {
       const rows = await querySnowflake("SELECT CURRENT_ACCOUNT() AS ACCOUNT, CURRENT_DATABASE() AS DB, CURRENT_WAREHOUSE() AS WH, CURRENT_USER() AS USR");
       res.json({ status: "ok", data: rows[0] });
     } catch (err) {
+      res.json({ status: "error", message: err.message, account: process.env.SNOWFLAKE_ACCOUNT || "rajlbkg-yk87012", user: process.env.SNOWFLAKE_USERNAME });
+    }
+  });
+  
+  // Test with specific account format
+  app.get("/api/snowflake/test-account/:account", async (req, res) => {
+    try {
+      const account = req.params.account;
+      const username = process.env.SNOWFLAKE_USERNAME;
+      const password = process.env.SNOWFLAKE_PASSWORD;
+      const connection = snowflake.createConnection({
+        account, username, password, 
+        warehouse: "COMPUTE_WH", 
+        database: "ALGAR_CRM_LAKE", 
+        schema: "PUBLIC"
+      });
+      connection.connect((err, conn) => {
+        if (err) return res.json({ status: "error", message: err.message, tried: account });
+        conn.execute({
+          sqlText: "SELECT CURRENT_ACCOUNT() AS A, CURRENT_USER() AS U",
+          complete: (e, s, rows) => {
+            if (e) return res.json({ status: "error", message: e.message });
+            res.json({ status: "ok", tried: account, data: rows[0] });
+          }
+        });
+      });
+    } catch (err) {
       res.json({ status: "error", message: err.message });
     }
   });
