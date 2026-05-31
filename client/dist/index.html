@@ -11,5 +11,34 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+(function(){
+  function getUserRole(){try{return JSON.parse(localStorage.getItem('everi9_user')||'{}').role||'';}catch(e){return'';}}
+  var dcOverlay=document.createElement('div');
+  dcOverlay.id='dc-overlay';
+  dcOverlay.style.cssText='position:fixed;inset:0;z-index:1050;display:none;';
+  dcOverlay.innerHTML='<iframe src="/datacloud.html" style="width:100%;height:100%;border:none;" allow="clipboard-write"></iframe>';
+  document.body.appendChild(dcOverlay);
+  window.addEventListener('message',function(e){if(e.data==='dc-closed')dcOverlay.style.display='none';});
+  setInterval(function(){
+    var role=getUserRole();
+    if(role!=='admin'&&role!=='architect')return;
+    if(document.getElementById('dc-sidebar-btn'))return;
+    var allBtns=document.querySelectorAll('button');
+    var gpBtn=null;
+    for(var i=0;i<allBtns.length;i++){if(allBtns[i].textContent.trim()==='GP'){gpBtn=allBtns[i];break;}}
+    if(!gpBtn)return;
+    var btn=document.createElement('button');
+    btn.id='dc-sidebar-btn';
+    btn.title='Data Cloud Sandbox';
+    btn.onclick=function(e){e.stopPropagation();dcOverlay.style.display='block';dcOverlay.querySelector('iframe').contentWindow.location.reload();};
+    btn.style.cssText='background:none;border:1px solid rgba(6,182,212,0.25);border-radius:8px;padding:6px 14px;color:#06b6d4;font-size:13px;cursor:pointer;font-family:Outfit,sans-serif;font-weight:600;transition:all 0.2s;';
+    btn.innerHTML='☁️ DC';
+    btn.onmouseenter=function(){this.style.background='rgba(6,182,212,0.12)';};
+    btn.onmouseleave=function(){this.style.background='none';};
+    gpBtn.parentNode.insertBefore(btn,gpBtn);
+  },800);
+})();
+</script>
   </body>
 </html>
