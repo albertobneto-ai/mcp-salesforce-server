@@ -95,6 +95,7 @@ body{font-family:var(--sf-f);background:var(--sf-bg);color:var(--sf-t);font-size
 })();
 </script>
 <div id="root"></div>
+
 <script type="text/babel">
 const {useState,useEffect,useCallback}=React;
 
@@ -174,12 +175,14 @@ Home:{title:'Bem-vindo ao Data Cloud',msgs:[
 '💡 **Dica:** O Data Cloud segue um fluxo linear: Sources → DLOs → Transforms → DMOs → Identity Resolution → Segments → Activations.'
 ]},
 'Data Streams':{title:'Configurar Data Streams',msgs:[
-'**Data Streams** são os canais de ingestão de dados. Cada stream conecta uma fonte externa a um Data Lake Object (DLO).',
-'Para adicionar um stream, clique **+ New Stream** e configure:',
-'• **Source:** De onde vêm os dados (Salesforce CRM, Snowflake, CSV, REST API)',
-'• **Object:** Qual objeto/tabela será ingerido (Account, Contact, Lead...)',
-'• **Frequency:** Real-Time (streaming contínuo) ou Batch (agendado)',
-'💡 **Boas práticas:** Use Real-Time para objetos críticos (Contact, Lead). Use Batch para dados volumosos (transações, logs).'
+'**Data Streams** são os canais de ingestão. Cada stream conecta uma fonte a um DLO.',
+'Ao clicar **+ New Stream**, selecione o **Source Type** primeiro — os campos mudam conforme a origem:',
+'• **Salesforce CRM:** Selecione a org e o objeto. Campos detectados automaticamente. Use Real-Time para objetos críticos.',
+'• **Snowflake (Zero Copy):** Configure Account, Warehouse, Database, Schema e Table. Dados NÃO são copiados — leitura direta via query pushdown. Custo: 70 créditos/milhão.',
+'• **CSV Upload:** Defina delimitador, encoding e mapeamento de colunas. Frequência geralmente Manual ou Batch (24h).',
+'• **REST API:** Configure endpoint, autenticação e schema do payload JSON. Suporta Real-Time.',
+'• **MuleSoft:** Conecta a uma API publicada no Anypoint Platform.',
+'💡 **Dica:** Para cada Source Type, o agente mostra um banner explicando o que é e como funciona.'
 ]},
 'Data Model':{title:'Modelo de Dados C360',msgs:[
 'O **Data Model** tem duas camadas:',
@@ -259,11 +262,15 @@ Enrichments:{title:'Enrichments (DC → CRM)',msgs:[
 'Após a Identity Resolution, registros de múltiplas fontes são merged em um perfil único.',
 '💡 Este é o perfil que o **Agentforce** usa para grounding — quanto mais completo, melhor as respostas da IA.'
 ]},
-'Data Graphs':{title:'Data Graphs',msgs:[
-'**Data Graphs** criam visões hierárquicas dos DMOs para consumo via API ou Agentforce.',
-'O grafo define: qual é o root (Individual), quais DMOs estão conectados, e como.',
-'O output é um JSON estruturado por indivíduo com todos os dados relacionados.',
-'💡 O Agentforce usa Data Graphs para entender o contexto completo do cliente ao responder perguntas.'
+'Data Graphs':{title:'Data Graphs — Editável',msgs:[
+'**Data Graphs** são configuráveis — você define a estrutura livremente:',
+'• **Root DMO:** O DMO raiz do grafo (geralmente Unified Individual)',
+'• **Related DMOs:** Clique **+ DMO** no diagrama para adicionar. Defina o nome, o campo de relacionamento (FK), e quais campos incluir.',
+'• **Relationship Field:** O campo que liga o DMO filho ao root (ex: `AccountId`, `IndividualId`)',
+'• **Fields:** Selecione quais campos de cada DMO entram no JSON de saída',
+'Você pode criar **múltiplos grafos** para diferentes use cases (ex: um para Agentforce, outro para API externa).',
+'O **JSON Preview** atualiza em tempo real conforme você adiciona/remove DMOs e campos.',
+'💡 **Agentforce** usa o Data Graph para grounding — quanto mais campos relevantes, melhor a qualidade das respostas da IA.'
 ]}
 };
 
@@ -316,13 +323,111 @@ if(!modal)return null;
 const e=modal.entity;
 const title=modal.type==='add'?`New ${e.slice(0,-1)}`:`Edit ${e.slice(0,-1)}`;
 
-if(e==='streams')return <Modal title={title} onClose={()=>setModal(null)} onSave={handleSave}>
+if(e==='streams'){
+const src=form.source||'';
+return <Modal title={title} onClose={()=>setModal(null)} onSave={handleSave}>
 <Field label="Stream Name"><input value={form.name||''} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Ex: Account_CRM_Stream"/></Field>
-<Field label="Source"><select value={form.source||''} onChange={e=>setForm(f=>({...f,source:e.target.value}))}><option value="">Selecione...</option><option>Salesforce CRM</option><option>Snowflake</option><option>CSV Upload</option><option>REST API</option></select></Field>
-<Field label="Source Object"><input value={form.object||''} onChange={e=>setForm(f=>({...f,object:e.target.value}))} placeholder="Ex: Account, CONTACTS"/></Field>
-<Field label="Frequency"><select value={form.freq||''} onChange={e=>setForm(f=>({...f,freq:e.target.value}))}><option value="">Selecione...</option><option>Real-Time</option><option>Batch (1h)</option><option>Batch (6h)</option><option>Batch (24h)</option><option>Manual</option></select></Field>
+<Field label="Source Type"><select value={src} onChange={e=>{const v=e.target.value;setForm(f=>({...f,source:v,object:'',freq:v==='Salesforce CRM'?'Real-Time':v==='CSV Upload'?'Manual':'Batch (1h)',sf_object:'',sf_org:'',sf_fields:'auto',snow_account:'',snow_warehouse:'',snow_database:'',snow_schema:'',snow_table:'',csv_delimiter:',',csv_encoding:'UTF-8',api_url:'',api_auth:'',api_method:'GET'}))}}>
+<option value="">Selecione o tipo de source...</option><option>Salesforce CRM</option><option>Snowflake</option><option>CSV Upload</option><option>REST API</option><option>MuleSoft</option>
+</select></Field>
+
+{src==='Salesforce CRM'&&<>
+<div style={{background:'#EEF4FF',border:'1px solid #B3D4FF',borderRadius:8,padding:12,marginBottom:14,fontSize:12,color:'#032D60'}}>
+☁️ <strong>Salesforce CRM Connector</strong> — Conecta na org e ingere objetos standard ou custom. Campos detectados automaticamente.
+</div>
+<Field label="Org (Instance URL)"><select value={form.sf_org||''} onChange={e=>setForm(f=>({...f,sf_org:e.target.value}))}>
+<option value="">Selecione a org...</option>
+<option value="00DgK00000PUJwTUAX">Dev Org — orgfarm (00DgK00000PUJwTUAX)</option>
+<option value="sandbox">Sandbox</option>
+<option value="prod">Production</option>
+</select></Field>
+<Field label="Salesforce Object"><select value={form.object||''} onChange={e=>setForm(f=>({...f,object:e.target.value}))}>
+<option value="">Selecione o objeto...</option>
+<option>Account</option><option>Contact</option><option>Lead</option><option>Opportunity</option><option>Case</option><option>Order</option><option>Contract</option><option>Campaign</option><option>CampaignMember</option><option>Task</option><option>Event</option>
+<option value="__custom">Custom Object...</option>
+</select></Field>
+{form.object==='__custom'&&<Field label="Custom Object API Name"><input value={form.customObj||''} onChange={e=>setForm(f=>({...f,customObj:e.target.value}))} placeholder="Ex: Invoice__c"/></Field>}
+<Field label="Field Detection"><select value={form.sf_fields||'auto'} onChange={e=>setForm(f=>({...f,sf_fields:e.target.value}))}>
+<option value="auto">Automático — todos os campos</option><option value="select">Selecionar campos específicos</option>
+</select></Field>
+<Field label="Frequency"><select value={form.freq||'Real-Time'} onChange={e=>setForm(f=>({...f,freq:e.target.value}))}>
+<option>Real-Time</option><option>Batch (1h)</option><option>Batch (6h)</option><option>Batch (24h)</option>
+</select></Field>
+</>}
+
+{src==='Snowflake'&&<>
+<div style={{background:'#E6F5F4',border:'1px solid #B3E6E1',borderRadius:8,padding:12,marginBottom:14,fontSize:12,color:'#04867D'}}>
+❄️ <strong>Snowflake Zero Copy Federation</strong> — Lê dados diretamente do Snowflake sem copiar. Query pushdown. 70 créditos/milhão de registros.
+</div>
+<Field label="Snowflake Account"><input value={form.snow_account||''} onChange={e=>setForm(f=>({...f,snow_account:e.target.value}))} placeholder="Ex: algar-telecom.us-east-1"/></Field>
+<Field label="Warehouse"><input value={form.snow_warehouse||''} onChange={e=>setForm(f=>({...f,snow_warehouse:e.target.value}))} placeholder="Ex: ALGAR_DW_PROD"/></Field>
+<Field label="Database"><input value={form.snow_database||''} onChange={e=>setForm(f=>({...f,snow_database:e.target.value}))} placeholder="Ex: ALGAR_CRM_LAKE"/></Field>
+<Field label="Schema"><input value={form.snow_schema||'PUBLIC'} onChange={e=>setForm(f=>({...f,snow_schema:e.target.value}))} placeholder="PUBLIC"/></Field>
+<Field label="Table/View"><input value={form.object||''} onChange={e=>setForm(f=>({...f,object:e.target.value}))} placeholder="Ex: CONTACTS, ACCOUNTS"/></Field>
+<Field label="Authentication"><select value={form.snow_auth||'keypair'} onChange={e=>setForm(f=>({...f,snow_auth:e.target.value}))}>
+<option value="keypair">RSA Key Pair</option><option value="oauth">OAuth 2.0</option>
+</select></Field>
+<Field label="Refresh Frequency"><select value={form.freq||'Batch (1h)'} onChange={e=>setForm(f=>({...f,freq:e.target.value}))}>
+<option>Batch (1h)</option><option>Batch (6h)</option><option>Batch (24h)</option><option>Near Real-Time</option>
+</select></Field>
+</>}
+
+{src==='CSV Upload'&&<>
+<div style={{background:'#E6F7ED',border:'1px solid #B3E6C9',borderRadius:8,padding:12,marginBottom:14,fontSize:12,color:'#2E844A'}}>
+📄 <strong>CSV / File Upload</strong> — Upload manual de arquivo. Mapeamento de colunas e definição de tipos.
+</div>
+<Field label="File Name / Object Name"><input value={form.object||''} onChange={e=>setForm(f=>({...f,object:e.target.value}))} placeholder="Ex: Contacts_External"/></Field>
+<Field label="Delimiter"><select value={form.csv_delimiter||','} onChange={e=>setForm(f=>({...f,csv_delimiter:e.target.value}))}>
+<option value=",">, (vírgula)</option><option value=";">; (ponto e vírgula)</option><option value="\t">Tab</option><option value="|">| (pipe)</option>
+</select></Field>
+<Field label="Encoding"><select value={form.csv_encoding||'UTF-8'} onChange={e=>setForm(f=>({...f,csv_encoding:e.target.value}))}>
+<option>UTF-8</option><option>ISO-8859-1 (Latin1)</option><option>Windows-1252</option>
+</select></Field>
+<Field label="Columns (comma-separated)"><input value={form.csv_columns||''} onChange={e=>setForm(f=>({...f,csv_columns:e.target.value}))} placeholder="Ex: Id, FirstName, LastName, Email, Phone"/></Field>
+<Field label="Frequency"><select value={form.freq||'Manual'} onChange={e=>setForm(f=>({...f,freq:e.target.value}))}>
+<option>Manual</option><option>Batch (24h)</option>
+</select></Field>
+</>}
+
+{src==='REST API'&&<>
+<div style={{background:'#F3ECFF',border:'1px solid #D4B8FF',borderRadius:8,padding:12,marginBottom:14,fontSize:12,color:'#7F2CFE'}}>
+🔌 <strong>REST API Ingestion</strong> — Recebe dados via API REST. Configure endpoint, auth e schema do payload.
+</div>
+<Field label="Object Name"><input value={form.object||''} onChange={e=>setForm(f=>({...f,object:e.target.value}))} placeholder="Ex: WebEvents"/></Field>
+<Field label="API Endpoint URL"><input value={form.api_url||''} onChange={e=>setForm(f=>({...f,api_url:e.target.value}))} placeholder="https://api.example.com/events"/></Field>
+<Field label="HTTP Method"><select value={form.api_method||'GET'} onChange={e=>setForm(f=>({...f,api_method:e.target.value}))}>
+<option>GET</option><option>POST</option>
+</select></Field>
+<Field label="Authentication"><select value={form.api_auth||''} onChange={e=>setForm(f=>({...f,api_auth:e.target.value}))}>
+<option value="">Selecione...</option><option>OAuth 2.0</option><option>API Key (Header)</option><option>Bearer Token</option><option>None</option>
+</select></Field>
+<Field label="Payload Schema (JSON)"><textarea rows={3} value={form.api_schema||''} onChange={e=>setForm(f=>({...f,api_schema:e.target.value}))} style={{fontFamily:"'Courier New',monospace",fontSize:11}} placeholder='{"fields": ["eventId","userId","action","timestamp"]}'/></Field>
+<Field label="Frequency"><select value={form.freq||'Real-Time'} onChange={e=>setForm(f=>({...f,freq:e.target.value}))}>
+<option>Real-Time</option><option>Batch (1h)</option><option>Batch (6h)</option>
+</select></Field>
+</>}
+
+{src==='MuleSoft'&&<>
+<div style={{background:'#FFF5E6',border:'1px solid #FFE0B2',borderRadius:8,padding:12,marginBottom:14,fontSize:12,color:'#A56A00'}}>
+🔗 <strong>MuleSoft Connector</strong> — Conecta a uma API publicada no Anypoint Platform.
+</div>
+<Field label="Object Name"><input value={form.object||''} onChange={e=>setForm(f=>({...f,object:e.target.value}))} placeholder="Ex: ERP_Orders"/></Field>
+<Field label="Anypoint API Name"><input value={form.mule_api||''} onChange={e=>setForm(f=>({...f,mule_api:e.target.value}))} placeholder="Ex: algar-erp-api"/></Field>
+<Field label="API Version"><input value={form.mule_version||''} onChange={e=>setForm(f=>({...f,mule_version:e.target.value}))} placeholder="Ex: v2.1"/></Field>
+<Field label="Environment"><select value={form.mule_env||''} onChange={e=>setForm(f=>({...f,mule_env:e.target.value}))}>
+<option value="">Selecione...</option><option>Sandbox</option><option>Production</option>
+</select></Field>
+<Field label="Frequency"><select value={form.freq||'Batch (1h)'} onChange={e=>setForm(f=>({...f,freq:e.target.value}))}>
+<option>Real-Time</option><option>Batch (1h)</option><option>Batch (6h)</option>
+</select></Field>
+</>}
+
+{!src&&<div style={{padding:24,textAlign:'center',color:'var(--sf-t3)',fontSize:13}}>
+Selecione um tipo de Source acima para ver os campos de configuração específicos.
+</div>}
+
 <Field label="Status"><select value={form.status||'Active'} onChange={e=>setForm(f=>({...f,status:e.target.value}))}><option>Active</option><option>Paused</option></select></Field>
-</Modal>;
+</Modal>;}
 
 if(e==='dmos')return <Modal title={title} onClose={()=>setModal(null)} onSave={handleSave}>
 <Field label="DMO Name"><input value={form.name||''} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Ex: Individual, Account"/></Field>
@@ -572,18 +677,110 @@ return <div className="sfc">
 </div>;
 };
 
-const GraphsView=()=><div className="sfc">
-<div className="sfc-h"><div className="sfc-t">Data Graphs — Agentforce Grounding</div></div>
-<div style={{display:'flex',justifyContent:'center',padding:24}}>
+const GraphsView=()=>{
+const[graphs,setGraphs]=useState(()=>{try{return JSON.parse(localStorage.getItem('dc_graphs'))||[{id:'g1',name:'Customer 360 View',root:'Individual',nodes:[{dmo:'Account',rel:'AccountId',fields:['Name','Industry','Revenue','Segment']},{dmo:'Sales Order',rel:'AccountId',fields:['Name','Stage','Amount','Product']},{dmo:'Contract',rel:'AccountId',fields:['Name','Status','Value']},{dmo:'Calculated Insights',rel:'IndividualId',fields:['LTV','Churn_Score','Product_Affinity']}]}]}catch{return[{id:'g1',name:'Customer 360 View',root:'Individual',nodes:[{dmo:'Account',rel:'AccountId',fields:['Name','Industry','Revenue']},{dmo:'Sales Order',rel:'AccountId',fields:['Name','Amount']},{dmo:'Contract',rel:'AccountId',fields:['Name','Value']}]}]}});
+const[sel,setSel]=useState('g1');
+const[adding,setAdding]=useState(false);
+const[newNode,setNewNode]=useState({dmo:'',rel:'',fields:''});
+const[editName,setEditName]=useState(false);
+
+const save=(g)=>{setGraphs(g);try{localStorage.setItem('dc_graphs',JSON.stringify(g))}catch{}};
+const graph=graphs.find(g=>g.id===sel)||graphs[0];
+const colors=['#0176D3','#04867D','#FE9339','#2E844A','#7F2CFE','#EA001E','#1B96FF','#FF6B2B'];
+
+const addNode=()=>{if(!newNode.dmo)return;const updated=graphs.map(g=>g.id===sel?{...g,nodes:[...g.nodes,{dmo:newNode.dmo,rel:newNode.rel,fields:newNode.fields.split(',').map(s=>s.trim()).filter(Boolean)}]}:g);save(updated);setNewNode({dmo:'',rel:'',fields:''});setAdding(false)};
+const removeNode=(idx)=>{const updated=graphs.map(g=>g.id===sel?{...g,nodes:g.nodes.filter((_,i)=>i!==idx)}:g);save(updated)};
+const addGraph=()=>{const id='g_'+Math.random().toString(36).slice(2,7);const ng=[...graphs,{id,name:'New Graph',root:'Individual',nodes:[]}];save(ng);setSel(id)};
+const delGraph=(id)=>{if(graphs.length<=1)return alert('Mantenha pelo menos 1 grafo.');const ng=graphs.filter(g=>g.id!==id);save(ng);setSel(ng[0].id)};
+const updateRoot=(v)=>{save(graphs.map(g=>g.id===sel?{...g,root:v}:g))};
+const updateName=(v)=>{save(graphs.map(g=>g.id===sel?{...g,name:v}:g));setEditName(false)};
+
+const jsonPreview=graph?{[graph.root.toLowerCase()]:{name:'João Silva',email:'joao.silva@algar.com.br',title:'Diretor de TI'},...Object.fromEntries(graph.nodes.map(n=>[n.dmo.toLowerCase().replace(/ /g,'_'),n.fields.length?Object.fromEntries(n.fields.map(f=>[f,`<${f}_value>`])):`<${n.dmo} data>`]))}:{};
+
+return <div>
+<div className="sfc">
+<div className="sfc-h">
+<div className="sfc-t">Data Graphs ({graphs.length})</div>
+<button className="btn btn-p" onClick={addGraph}>+ New Graph</button>
+</div>
+<div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
+{graphs.map(g=><button key={g.id} className={`btn ${sel===g.id?'btn-p':'btn-n'}`} onClick={()=>setSel(g.id)}>
+{g.name} <span style={{opacity:.6,marginLeft:4}}>({g.nodes.length} DMOs)</span>
+</button>)}
+</div>
+</div>
+
+{graph&&<div className="sfc">
+<div className="sfc-h">
+<div style={{display:'flex',alignItems:'center',gap:8}}>
+{editName?<input autoFocus value={graph.name} onChange={e=>save(graphs.map(g=>g.id===sel?{...g,name:e.target.value}:g))} onBlur={()=>setEditName(false)} onKeyDown={e=>e.key==='Enter'&&setEditName(false)} style={{fontSize:16,fontWeight:700,border:'1px solid var(--sf-bl)',borderRadius:4,padding:'2px 8px'}}/>
+:<div className="sfc-t" style={{cursor:'pointer'}} onClick={()=>setEditName(true)}>{graph.name} <span style={{fontSize:11,color:'var(--sf-t3)',fontWeight:400}}>✎ clique para renomear</span></div>}
+</div>
+<div className="act-row"><button className="act-btn del" onClick={()=>delGraph(graph.id)} title="Excluir grafo">✕</button></div>
+</div>
+
+<Field label="Root DMO (raiz do grafo)">
+<select value={graph.root} onChange={e=>updateRoot(e.target.value)} style={{maxWidth:300}}>
+<option>Individual</option><option>Account</option><option>Lead</option><option>Custom...</option>
+</select>
+</Field>
+
+{/* Visual Graph */}
+<div style={{display:'flex',justifyContent:'center',padding:24,background:'#FAFAF9',borderRadius:8,margin:'16px 0'}}>
 <div style={{textAlign:'center'}}>
-<div style={{display:'inline-block',padding:'12px 24px',borderRadius:8,border:'2px solid var(--sf-bl)',background:'#EEF4FF',fontWeight:700,color:'var(--sf-bl)'}}>👤 Unified Individual</div>
-<div style={{display:'flex',justifyContent:'center',gap:20,marginTop:16,flexWrap:'wrap'}}>
-{[{n:'Account',c:'#04867D'},{n:'Sales Order',c:'#FE9339'},{n:'Contract',c:'#2E844A'},{n:'Insights',c:'#7F2CFE'}].map(x=><div key={x.n} style={{textAlign:'center'}}><div style={{color:'var(--sf-b)',margin:'4px 0'}}>│</div><div style={{padding:'8px 16px',borderRadius:8,border:`2px solid ${x.c}`,background:x.c+'08',fontWeight:600,fontSize:12,color:x.c}}>{x.n}</div></div>)}
+<div style={{display:'inline-block',padding:'12px 24px',borderRadius:8,border:'2px solid var(--sf-bl)',background:'#EEF4FF',fontWeight:700,color:'var(--sf-bl)',fontSize:14}}>
+👤 {graph.root} (root)
+</div>
+<div style={{display:'flex',justifyContent:'center',gap:16,marginTop:16,flexWrap:'wrap'}}>
+{graph.nodes.map((n,i)=>{const c=colors[i%colors.length];return <div key={i} style={{textAlign:'center',position:'relative'}}>
+<div style={{color:'var(--sf-b)',margin:'4px 0',fontSize:12}}>│<br/><span style={{fontSize:9,color:'var(--sf-t3)'}}>{n.rel||'FK'}</span></div>
+<div style={{padding:'10px 16px',borderRadius:8,border:`2px solid ${c}`,background:c+'08',fontWeight:600,fontSize:12,color:c,position:'relative',minWidth:100}}>
+{n.dmo}
+<button onClick={()=>removeNode(i)} style={{position:'absolute',top:-8,right:-8,width:18,height:18,borderRadius:'50%',border:'1px solid #ddd',background:'#fff',color:'var(--sf-err)',fontSize:10,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
+</div>
+<div style={{fontSize:9,color:'var(--sf-t3)',marginTop:4}}>{n.fields.length} fields</div>
+</div>})}
+<div style={{textAlign:'center'}}>
+<div style={{color:'var(--sf-b)',margin:'4px 0'}}>│</div>
+<button onClick={()=>setAdding(true)} style={{padding:'10px 16px',borderRadius:8,border:'2px dashed var(--sf-b)',background:'transparent',fontWeight:600,fontSize:12,color:'var(--sf-t3)',cursor:'pointer',minWidth:100}}>+ DMO</button>
 </div>
 </div>
 </div>
-<pre style={{background:'#1E1E1E',color:'#D4D4D4',padding:16,borderRadius:8,fontSize:11,lineHeight:1.5,overflow:'auto',maxHeight:200,fontFamily:"'Courier New',monospace",marginTop:16}}>{JSON.stringify({individual:{name:'João Silva',email:'joao.silva@algar.com.br'},account:{name:'Grupo Algar S.A.',revenue:12500000},salesOrders:[{name:'MPLS Dedicado',amount:2400000}],contracts:[{name:'MPLS 2024-2026',value:4800000}],insights:{ltv:7200000,churn:.10}},null,2)}</pre>
+</div>
+
+{adding&&<div style={{background:'#EEF4FF',border:'1px solid #B3D4FF',borderRadius:8,padding:16,marginBottom:16}}>
+<div style={{fontWeight:700,marginBottom:12,color:'var(--sf-bl)'}}>Adicionar DMO ao Grafo</div>
+<div style={{display:'grid',gridTemplateColumns:'1fr 1fr 2fr',gap:12}}>
+<Field label="DMO Name"><input value={newNode.dmo} onChange={e=>setNewNode(n=>({...n,dmo:e.target.value}))} placeholder="Ex: Campaign"/></Field>
+<Field label="Relationship Field"><input value={newNode.rel} onChange={e=>setNewNode(n=>({...n,rel:e.target.value}))} placeholder="Ex: AccountId"/></Field>
+<Field label="Fields (comma-separated)"><input value={newNode.fields} onChange={e=>setNewNode(n=>({...n,fields:e.target.value}))} placeholder="Ex: Name, Status, StartDate"/></Field>
+</div>
+<div style={{display:'flex',gap:8,marginTop:8}}>
+<button className="btn btn-p" onClick={addNode}>Adicionar</button>
+<button className="btn btn-n" onClick={()=>setAdding(false)}>Cancelar</button>
+</div>
+</div>}
+
+{/* Nodes detail table */}
+<div style={{marginTop:8}}>
+<table className="stbl"><thead><tr><th>DMO</th><th>Relationship</th><th>Fields Included</th><th style={{width:50}}></th></tr></thead>
+<tbody>{graph.nodes.map((n,i)=><tr key={i}>
+<td style={{fontWeight:600,color:colors[i%colors.length]}}>{n.dmo}</td>
+<td><span style={{fontFamily:"'Courier New',monospace",fontSize:11}}>{n.rel||'—'}</span></td>
+<td><span style={{fontSize:11,color:'var(--sf-t2)'}}>{n.fields.join(', ')||'All fields'}</span></td>
+<td><button className="act-btn del" onClick={()=>removeNode(i)}>✕</button></td>
+</tr>)}</tbody></table>
+</div>
+
+{/* JSON Preview */}
+<div style={{marginTop:16}}>
+<div style={{fontWeight:700,marginBottom:8}}>JSON Output Preview</div>
+<pre style={{background:'#1E1E1E',color:'#D4D4D4',padding:16,borderRadius:8,fontSize:11,lineHeight:1.5,overflow:'auto',maxHeight:250,fontFamily:"'Courier New',monospace"}}>{JSON.stringify(jsonPreview,null,2)}</pre>
+</div>
+</div>}
 </div>;
+};
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+
 </script></body></html>
