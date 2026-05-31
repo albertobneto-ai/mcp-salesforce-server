@@ -10,7 +10,6 @@ import orgRoutes from './routes/orgs.js';
 import conversationRoutes from './routes/conversations.js';
 import packageRoutes from './routes/package.js';
 import kbRoutes from './routes/kb.js';
-import gpRoutes from './routes/gp.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -23,7 +22,11 @@ export async function mountChatApp(app) {
   app.use('/api/conversations', conversationRoutes);
   app.use('/api/package', packageRoutes);
   app.use('/api/kb', kbRoutes);
-  app.use('/api/gp', gpRoutes);
+  // GP: import dinâmico para isolar falhas de startup
+  try {
+    const { default: gpRoutes } = await import('./routes/gp.js');
+    app.use('/api/gp', gpRoutes);
+  } catch (e) { console.error('[GP] Rota nao carregada:', e.message); }
 
   // Servir prototipos como HTML estatico
   const protoDir = '/tmp/prototipos';
