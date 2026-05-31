@@ -7,7 +7,8 @@ const router = express.Router();
 
 // Apenas admin e gp acessam o painel
 const gpAuth = (req, res, next) => {
-  if (!['admin', 'gp'].includes(req.user?.role)) return res.status(403).json({ erro: 'Acesso restrito ao perfil GP ou Admin.' });
+  // Board acessível a todos os perfis autenticados
+  if (!req.user?.role) return res.status(403).json({ erro: 'Autenticação necessária.' });
   next();
 };
 
