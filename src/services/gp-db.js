@@ -324,3 +324,73 @@ export async function deleteTask(id) {
   await ensureTasksSchema();
   await pool.query(`DELETE FROM gp_story_tasks WHERE id = $1`, [id]);
 }
+
+// ── Task Detail (comentários + % manual + notificações) ──
+export async function ensureTaskDetailSchema() {
+  await pool.query(`
+    DO $$ BEGIN
+      ALTER TABLE gp_story_tasks ADD COLUMN IF NOT EXISTS percentage INTEGER DEFAULT 0;
+      ALTER TABLE gp_story_tasks ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+    EXCEPTION WHEN others THEN NULL;
+    END $$;
+    CREATE TABLE IF NOT EXISTS gp_task_comments (
+      id         SERIAL PRIMARY KEY,
+      task_id    INTEGER NOT NULL,
+      author     VARCHAR(100) DEFAULT '',
+      content    TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS gp_notifications (
+      id         SERIAL PRIMARY KEY,
+      user_id    INTEGER,
+      user_email VARCHAR(200) DEFAULT '',
+      user_name  VARCHAR(200) DEFAULT '',
+      type       VARCHAR(50) DEFAULT 'task_assigned',
+      title      VARCHAR(300) NOT NULL,
+      body       TEXT DEFAULT '',
+      ref_type   VARCHAR(50) DEFAULT '',
+      ref_id     INTEGER,
+      story_id   INTEGER,
+      is_read    BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+}
+export async function getTaskDetail(taskId) {
+  await ensureTaskDetailSchema();
+  const task = (await pool.query(`SELECT t.*, s.title as story_title, s.workstream, s.epic FROM gp_story_tasks t LEFT JOIN gp_stories s ON s.id = t.story_id WHERE t.id = $1`, [taskId])).rows[0];
+  const comments = (await pool.query(`SELECT * FROM gp_task_comments WHERE task_id = $1 ORDER BY created_at`, [taskId])).rows;
+  return { task, comments };
+}
+export async function addTaskComment(taskId, author, content) {
+  await ensureTaskDetailSchema();
+  return (await pool.query(`INSERT INTO gp_task_comments (task_id,author,content) VALUES ($1,$2,$3) RETURNING *`, [taskId, author, content])).rows[0];
+}
+export async function updateTaskPercentage(taskId, percentage) {
+  await ensureTaskDetailSchema();
+  return (await pool.query(`UPDATE gp_story_tasks SET percentage = $1 WHERE id = $2 RETURNING *`, [percentage, taskId])).rows[0];
+}
+export async function createNotification(data) {
+  await ensureTaskDetailSchema();
+  const { user_id=null, user_email='', user_name='', type='task_assigned', title, body='', ref_type='', ref_id=null, story_id=null } = data;
+  return (await pool.query(`INSERT INTO gp_notifications (user_id,user_email,user_name,type,title,body,ref_type,ref_id,story_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+    [user_id, user_email, user_name, type, title, body, ref_type, ref_id, story_id])).rows[0];
+}
+export async function getNotifications(userEmail, userName) {
+  await ensureTaskDetailSchema();
+  const r = await pool.query(`SELECT * FROM gp_notifications WHERE (user_email = $1 OR user_name = $2) ORDER BY created_at DESC LIMIT 30`, [userEmail||'', userName||'']);
+  return r.rows;
+}
+export async function getUnreadCount(userEmail, userName) {
+  await ensureTaskDetailSchema();
+  const r = await pool.query(`SELECT COUNT(*) as cnt FROM gp_notifications WHERE (user_email = $1 OR user_name = $2) AND is_read = FALSE`, [userEmail||'', userName||'']);
+  return Number(r.rows[0]?.cnt || 0);
+}
+export async function markRead(notifId) {
+  await ensureTaskDetailSchema();
+  await pool.query(`UPDATE gp_notifications SET is_read = TRUE WHERE id = $1`, [notifId]);
+}
+export async function markAllRead(userEmail, userName) {
+  await ensureTaskDetailSchema();
+  await pool.query(`UPDATE gp_notifications SET is_read = TRUE WHERE (user_email = $1 OR user_name = $2)`, [userEmail||'', userName||'']);
+}
