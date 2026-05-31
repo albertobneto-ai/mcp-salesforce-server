@@ -211,13 +211,19 @@ Home:{title:'Bem-vindo ao Data Cloud',msgs:[
 '• **Compound:** Combinação de campos (Nome fuzzy + Cidade exact)',
 '💡 **Dica:** Comece com regras Exact (alta confiança), depois Normalized, depois Fuzzy. A ordem importa!'
 ]},
-Segmentation:{title:'Segmentação',msgs:[
-'**Segments** definem públicos-alvo baseados em critérios sobre os dados unificados.',
-'Para criar um segmento:',
-'• **Nome:** Identificador claro (ex: "Enterprise VIP")',
-'• **Criteria:** Condições lógicas (ex: `Segment = Large AND LTV > 5M`)',
-'• **Status:** Draft (rascunho) ou Published (ativo para ativação)',
-'💡 Segmentos Published podem ser enviados para Activation Targets (Google Ads, Meta, Marketing Cloud).'
+Segmentation:{title:'Segmentação — Ciclo Completo',msgs:[
+'**Segments** definem públicos-alvo com critérios visuais sobre os perfis unificados.',
+'**Ciclo de vida:** Draft → Published → Activated → Monitored',
+'**Criteria Builder:** Ao criar, use o builder visual:',
+'• Selecione o **Attribute** (campo do DMO: Account.Segment, LTV, Lead.Rating...)',
+'• Escolha o **Operator** (equals, greater than, contains, in...)',
+'• Defina o **Value** (para picklists, um dropdown aparece automaticamente)',
+'• Adicione múltiplas regras — todas conectadas por **AND**',
+'**Preview Members:** Antes de publicar, clique em 👁 Preview para simular quais registros entram no segmento.',
+'**Publish:** Ao publicar, o Data Cloud calcula a membership e cria um **Segment Membership DMO**.',
+'**Activation Targets:** Selecione para onde enviar (Google Ads, Meta, Marketing Cloud, etc.).',
+'**Refresh:** Configure se o segmento atualiza em **Near Real-Time** (Rapid) ou **Scheduled** (batch, a cada X horas).',
+'💡 **Dica:** Comece com critérios simples, faça preview, ajuste, e só então publique.'
 ]},
 'Calculated Insights':{title:'Insights Calculados',msgs:[
 '**Calculated Insights** são métricas derivadas dos DMOs usando SQL.',
@@ -443,12 +449,7 @@ if(e==='rules')return <Modal title={title} onClose={()=>setModal(null)} onSave={
 <Field label="Priority"><input type="number" min="1" value={form.priority||state.rules.length+1} onChange={e=>setForm(f=>({...f,priority:parseInt(e.target.value)}))}/></Field>
 </Modal>;
 
-if(e==='segments')return <Modal title={title} onClose={()=>setModal(null)} onSave={handleSave}>
-<Field label="Segment Name"><input value={form.name||''} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Ex: Enterprise VIP"/></Field>
-<Field label="Criteria"><textarea rows={3} value={form.criteria||''} onChange={e=>setForm(f=>({...f,criteria:e.target.value}))} placeholder="Ex: Segment = Large AND LTV > R$5M"/></Field>
-<Field label="Status"><select value={form.status||'Draft'} onChange={e=>setForm(f=>({...f,status:e.target.value}))}><option>Draft</option><option>Published</option></select></Field>
-<Field label="Estimated Size"><input type="number" value={form.estSize||0} onChange={e=>setForm(f=>({...f,estSize:parseInt(e.target.value)}))}/></Field>
-</Modal>;
+if(e==='segments')return null;
 
 if(e==='actions')return <Modal title={title} onClose={()=>setModal(null)} onSave={handleSave}>
 <Field label="Action Name"><input value={form.name||''} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/></Field>
@@ -565,15 +566,7 @@ case 'Identity Resolution':return <div className="sfc">
 ]}/>
 </div>;
 
-case 'Segmentation':return <div className="sfc">
-<div className="sfc-h"><div className="sfc-t">Segments ({state.segments.length})</div><button className="btn btn-p" onClick={()=>openAdd('segments',{status:'Draft',estSize:0})}>+ New Segment</button></div>
-<Table data={state.segments} onEdit={r=>openEdit('segments',r)} onDel={r=>del('segments',r.id)} cols={[
-{key:'name',label:'Name',render:v=><span style={{fontWeight:600,color:'var(--sf-bl)'}}>{v}</span>},
-{key:'criteria',label:'Criteria',render:v=><span style={{fontFamily:"'Courier New',monospace",fontSize:11,color:'var(--sf-t2)'}}>{v}</span>},
-{key:'estSize',label:'Est. Size',render:v=><span style={{fontWeight:700,fontSize:16}}>{v}</span>},
-{key:'status',label:'Status',render:v=><Badge type={v==='Published'?'g':'gr'}>{v}</Badge>}
-]}/>
-</div>;
+case 'Segmentation':return <SegmentationView state={state} setState={setState} uid={uid}/>;
 
 case 'Calculated Insights':return <div className="sfc">
 <div className="sfc-h"><div className="sfc-t">Calculated Insights — LTV & Churn</div></div>
@@ -659,6 +652,343 @@ return <div style={{height:'100vh',display:'flex',flexDirection:'column'}}>
 {renderModal()}
 </div>;
 }
+
+
+// ═══ FULL SEGMENTATION MODULE ═══
+const SEG_ATTRS=[
+  {group:'Individual',fields:[{name:'FirstName',type:'text'},{name:'LastName',type:'text'},{name:'Email',type:'text'},{name:'Phone',type:'text'},{name:'City',type:'text'},{name:'State',type:'picklist',values:['MG','SP','GO','RJ','PR','BA']},{name:'Title',type:'text'}]},
+  {group:'Account',fields:[{name:'Account.Name',type:'text'},{name:'Account.Industry',type:'text'},{name:'Account.Segment',type:'picklist',values:['Large','Medium','Small']},{name:'Account.Revenue',type:'number'},{name:'Account.Type',type:'picklist',values:['Enterprise','Mid-Market','SMB']}]},
+  {group:'Sales Order',fields:[{name:'Opportunity.Stage',type:'picklist',values:['Prospecting','Qualification','Proposal','Negotiation','Closed Won','Closed Lost']},{name:'Opportunity.Amount',type:'number'},{name:'Opportunity.Product',type:'text'}]},
+  {group:'Contract',fields:[{name:'Contract.Status',type:'picklist',values:['Active','Expiring','Expired','Terminated']},{name:'Contract.Value',type:'number'}]},
+  {group:'Lead',fields:[{name:'Lead.Rating',type:'picklist',values:['Hot','Warm','Cold']},{name:'Lead.Score',type:'number'},{name:'Lead.Status',type:'picklist',values:['Open','Working','Nurturing','Qualified','Converted']}]},
+  {group:'Insights',fields:[{name:'LTV',type:'number'},{name:'Churn_Score',type:'number'},{name:'Product_Affinity',type:'text'}]}
+];
+
+const SEG_OPS={text:['equals','not equals','contains','starts with','is not blank','is blank'],number:['equals','greater than','less than','greater or equal','less or equal','between'],picklist:['equals','not equals','in','not in']};
+
+const MOCK_MEMBERS=[
+  {id:'UI-001',name:'João Silva',email:'joao.silva@algar.com.br',account:'Grupo Algar S.A.',segment:'Large',ltv:7200000,churn:.10,state:'MG'},
+  {id:'UI-002',name:'Maria Santos',email:'maria.santos@algartecnologia.com.br',account:'Algar Tecnologia',segment:'Large',ltv:180000,churn:.35,state:'MG'},
+  {id:'UI-003',name:'Pedro Oliveira',email:'pedro.oliveira@ctbc.com.br',account:'Ctbc Telecom',segment:'Medium',ltv:720000,churn:.10,state:'MG'},
+  {id:'UI-004',name:'Ana Ferreira',email:'ana.ferreira@engeset.com.br',account:'Engeset',segment:'Small',ltv:340000,churn:.10,state:'SP'},
+  {id:'UI-005',name:'Lucas Mendes',email:'lucas.mendes@unialgar.com.br',account:'UniAlgar',segment:'Medium',ltv:0,churn:.70,state:'MG'},
+  {id:'UI-006',name:'Carla Rodrigues',email:'carla.rodrigues@algaragro.com.br',account:'Algar Agro',segment:'Large',ltv:2400000,churn:.10,state:'MG'},
+  {id:'UI-007',name:'Rafael Costa',email:'rafael.costa@smartsolucoes.com.br',account:'Smart Soluções',segment:'Small',ltv:0,churn:.70,state:'SP'},
+  {id:'UI-008',name:'Juliana Almeida',email:'juliana.almeida@rioquente.com.br',account:'Rio Quente',segment:'Medium',ltv:5400000,churn:.10,state:'GO'}
+];
+
+function evalCriteria(member, rules) {
+  if (!rules || rules.length === 0) return true;
+  return rules.every(r => {
+    const val = member[r.field] ?? member[r.field.split('.').pop()?.toLowerCase()] ?? '';
+    const target = r.value;
+    switch(r.operator) {
+      case 'equals': return String(val).toLowerCase() === String(target).toLowerCase();
+      case 'not equals': return String(val).toLowerCase() !== String(target).toLowerCase();
+      case 'contains': return String(val).toLowerCase().includes(String(target).toLowerCase());
+      case 'starts with': return String(val).toLowerCase().startsWith(String(target).toLowerCase());
+      case 'greater than': return Number(val) > Number(target);
+      case 'less than': return Number(val) < Number(target);
+      case 'greater or equal': return Number(val) >= Number(target);
+      case 'less or equal': return Number(val) <= Number(target);
+      case 'in': return target.split(',').map(s=>s.trim().toLowerCase()).includes(String(val).toLowerCase());
+      case 'is not blank': return val !== '' && val !== null && val !== undefined;
+      case 'is blank': return val === '' || val === null || val === undefined;
+      default: return true;
+    }
+  });
+}
+
+const SegmentationView = ({state, setState, uid}) => {
+  const [view, setView] = useState('list'); // list, detail, create
+  const [selSeg, setSelSeg] = useState(null);
+  const [newSeg, setNewSeg] = useState({name:'',rules:[],status:'Draft',refresh:'Scheduled',refreshFreq:'6h',activations:[],estSize:0,members:[],publishedAt:null,lastRefresh:null});
+  const [previewMembers, setPreviewMembers] = useState([]);
+  const [showPreview, setShowPreview] = useState(false);
+
+  const segments = state.segments || [];
+  const save = (segs) => setState(s => ({...s, segments: segs}));
+
+  const addRule = () => {
+    const r = {id: '_r'+Math.random().toString(36).slice(2,6), field:'', operator:'equals', value:''};
+    setNewSeg(s => ({...s, rules: [...(s.rules||[]), r]}));
+  };
+  const updateRule = (id, key, val) => {
+    setNewSeg(s => ({...s, rules: (s.rules||[]).map(r => r.id===id ? {...r, [key]: val} : r)}));
+  };
+  const removeRule = (id) => {
+    setNewSeg(s => ({...s, rules: (s.rules||[]).filter(r => r.id !== id)}));
+  };
+
+  const runPreview = () => {
+    const matched = MOCK_MEMBERS.filter(m => evalCriteria(m, newSeg.rules||[]));
+    setPreviewMembers(matched);
+    setNewSeg(s => ({...s, estSize: matched.length}));
+    setShowPreview(true);
+  };
+
+  const saveSeg = () => {
+    if (!newSeg.name) return alert('Informe o nome do segmento');
+    const criteriaStr = (newSeg.rules||[]).map(r => `${r.field} ${r.operator} ${r.value}`).join(' AND ');
+    if (selSeg) {
+      save(segments.map(s => s.id===selSeg ? {...s, ...newSeg, criteria: criteriaStr} : s));
+    } else {
+      save([...segments, {...newSeg, id: uid(), criteria: criteriaStr}]);
+    }
+    setView('list'); setSelSeg(null);
+  };
+
+  const publishSeg = (id) => {
+    const seg = segments.find(s => s.id === id);
+    if (!seg) return;
+    const matched = MOCK_MEMBERS.filter(m => evalCriteria(m, seg.rules||[]));
+    save(segments.map(s => s.id===id ? {...s, status:'Published', estSize: matched.length, members: matched.map(m=>m.id), publishedAt: new Date().toISOString(), lastRefresh: new Date().toISOString()} : s));
+  };
+
+  const unpublishSeg = (id) => {
+    save(segments.map(s => s.id===id ? {...s, status:'Draft', publishedAt:null, members:[]} : s));
+  };
+
+  const deleteSeg = (id) => {
+    if (confirm('Excluir este segmento?')) save(segments.filter(s => s.id !== id));
+  };
+
+  const openEdit = (seg) => {
+    setNewSeg({...seg, rules: seg.rules||[]});
+    setSelSeg(seg.id);
+    setShowPreview(false);
+    setPreviewMembers([]);
+    setView('create');
+  };
+
+  const openDetail = (seg) => {
+    setSelSeg(seg.id);
+    setView('detail');
+  };
+
+  const allFields = SEG_ATTRS.flatMap(g => g.fields);
+  const getFieldType = (name) => allFields.find(f => f.name === name)?.type || 'text';
+  const getFieldValues = (name) => allFields.find(f => f.name === name)?.values || [];
+
+  // ─── LIST VIEW ───
+  if (view === 'list') return <div>
+    <div className="sfc">
+      <div className="sfc-h">
+        <div className="sfc-t">Segments ({segments.length})</div>
+        <button className="btn btn-p" onClick={() => {setNewSeg({name:'',rules:[],status:'Draft',refresh:'Scheduled',refreshFreq:'6h',activations:[],estSize:0,members:[],publishedAt:null});setSelSeg(null);setShowPreview(false);setPreviewMembers([]);setView('create')}}>+ New Segment</button>
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:20}}>
+        {[{n:segments.length,l:'Total Segments',c:'var(--sf-bl)'},{n:segments.filter(s=>s.status==='Published').length,l:'Published',c:'var(--sf-ok)'},{n:segments.filter(s=>s.status==='Draft').length,l:'Draft',c:'var(--sf-t2)'},{n:segments.reduce((s,x)=>s+(x.estSize||0),0),l:'Total Members',c:'var(--sf-purp)'}].map(s=><div key={s.l} style={{textAlign:'center',padding:12}}><div className="stat-n" style={{color:s.c}}>{s.n}</div><div className="stat-l">{s.l}</div></div>)}
+      </div>
+
+      {segments.length === 0 && <div style={{textAlign:'center',padding:40,color:'var(--sf-t3)'}}>Nenhum segmento criado. Clique em "+ New Segment" para começar.</div>}
+
+      {segments.map(seg => <div key={seg.id} style={{border:'1px solid var(--sf-b2)',borderRadius:8,padding:16,marginBottom:12,background:'#fff',cursor:'pointer',transition:'border-color .15s'}} onClick={()=>openDetail(seg)} onMouseEnter={e=>e.currentTarget.style.borderColor='var(--sf-bl)'} onMouseLeave={e=>e.currentTarget.style.borderColor='var(--sf-b2)'}>
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          <div style={{width:40,height:40,borderRadius:8,background:seg.status==='Published'?'#E6F7ED':'#F3F3F3',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>{seg.status==='Published'?'🟢':'⚪'}</div>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:700,fontSize:14}}>{seg.name}</div>
+            <div style={{fontSize:11,color:'var(--sf-t2)',marginTop:2,fontFamily:"'Courier New',monospace"}}>{seg.criteria||'No criteria defined'}</div>
+          </div>
+          <div style={{textAlign:'center',minWidth:60}}>
+            <div style={{fontSize:24,fontWeight:700,color:seg.status==='Published'?'var(--sf-ok)':'var(--sf-t2)'}}>{seg.estSize||0}</div>
+            <div style={{fontSize:10,color:'var(--sf-t3)'}}>members</div>
+          </div>
+          <Badge type={seg.status==='Published'?'g':'gr'}>{seg.status}</Badge>
+          <div className="act-row" onClick={e=>e.stopPropagation()}>
+            <button className="act-btn" onClick={()=>openEdit(seg)} title="Edit">✎</button>
+            {seg.status==='Draft'&&<button className="act-btn" style={{color:'var(--sf-ok)'}} onClick={()=>publishSeg(seg.id)} title="Publish">▶</button>}
+            {seg.status==='Published'&&<button className="act-btn" style={{color:'var(--sf-warn)'}} onClick={()=>unpublishSeg(seg.id)} title="Unpublish">⏸</button>}
+            <button className="act-btn del" onClick={()=>deleteSeg(seg.id)} title="Delete">✕</button>
+          </div>
+        </div>
+        {seg.status==='Published'&&seg.publishedAt&&<div style={{display:'flex',gap:16,marginTop:8,paddingTop:8,borderTop:'1px solid var(--sf-b2)',fontSize:11,color:'var(--sf-t2)'}}>
+          <span>Published: {new Date(seg.publishedAt).toLocaleString('pt-BR')}</span>
+          <span>Refresh: {seg.refresh||'Scheduled'} ({seg.refreshFreq||'6h'})</span>
+          {seg.activations?.length>0&&<span>Activations: {seg.activations.join(', ')}</span>}
+        </div>}
+      </div>)}
+    </div>
+  </div>;
+
+  // ─── DETAIL VIEW ───
+  if (view === 'detail') {
+    const seg = segments.find(s => s.id === selSeg);
+    if (!seg) return <div>Segmento não encontrado</div>;
+    const members = MOCK_MEMBERS.filter(m => evalCriteria(m, seg.rules||[]));
+
+    return <div>
+      <button className="btn btn-n" onClick={()=>setView('list')} style={{marginBottom:16}}>← Voltar aos Segments</button>
+
+      <div className="sfc">
+        <div className="sfc-h">
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            <div className="sfc-t">{seg.name}</div>
+            <Badge type={seg.status==='Published'?'g':'gr'}>{seg.status}</Badge>
+          </div>
+          <div style={{display:'flex',gap:8}}>
+            <button className="btn btn-n" onClick={()=>openEdit(seg)}>✎ Edit</button>
+            {seg.status==='Draft'&&<button className="btn btn-s" onClick={()=>publishSeg(seg.id)}>▶ Publish</button>}
+            {seg.status==='Published'&&<button className="btn btn-n" onClick={()=>unpublishSeg(seg.id)}>⏸ Unpublish</button>}
+          </div>
+        </div>
+
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:20}}>
+          <div style={{textAlign:'center',padding:12}}><div className="stat-n" style={{color:'var(--sf-bl)'}}>{members.length}</div><div className="stat-l">Total Members</div></div>
+          <div style={{textAlign:'center',padding:12}}><div className="stat-n" style={{color:'var(--sf-ok)'}}>{seg.status==='Published'?'Active':'—'}</div><div className="stat-l">Status</div></div>
+          <div style={{textAlign:'center',padding:12}}><div className="stat-n" style={{color:'var(--sf-warn)'}}>{(seg.rules||[]).length}</div><div className="stat-l">Criteria Rules</div></div>
+          <div style={{textAlign:'center',padding:12}}><div className="stat-n" style={{color:'var(--sf-purp)'}}>{seg.activations?.length||0}</div><div className="stat-l">Activations</div></div>
+        </div>
+      </div>
+
+      {/* Criteria */}
+      <div className="sfc">
+        <div className="sfc-h"><div className="sfc-t">Criteria</div></div>
+        {(seg.rules||[]).length===0?<div style={{color:'var(--sf-t3)',fontStyle:'italic'}}>Nenhum critério definido (texto livre: {seg.criteria})</div>
+        :(seg.rules||[]).map((r,i)=><div key={r.id||i} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',background:'#FAFAF9',borderRadius:6,marginBottom:6,fontSize:13}}>
+          {i>0&&<Badge type="b">AND</Badge>}
+          <span style={{fontWeight:600,color:'var(--sf-bl)'}}>{r.field}</span>
+          <Badge type="gr">{r.operator}</Badge>
+          <span style={{fontWeight:600}}>{r.value}</span>
+        </div>)}
+      </div>
+
+      {/* Members */}
+      <div className="sfc">
+        <div className="sfc-h"><div className="sfc-t">Members ({members.length})</div></div>
+        {members.length===0?<div style={{textAlign:'center',padding:20,color:'var(--sf-t3)'}}>Nenhum membro encontrado com os critérios atuais.</div>
+        :<table className="stbl"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Account</th><th>Segment</th><th>LTV</th></tr></thead>
+        <tbody>{members.map(m=><tr key={m.id}><td style={{fontFamily:"'Courier New',monospace",fontSize:11}}>{m.id}</td><td style={{fontWeight:600}}>{m.name}</td><td>{m.email}</td><td>{m.account}</td><td><Badge type={m.segment==='Large'?'b':m.segment==='Medium'?'p':'gr'}>{m.segment}</Badge></td><td style={{fontWeight:600,color:'var(--sf-ok)'}}>R$ {(m.ltv/1e6).toFixed(2)}M</td></tr>)}</tbody></table>}
+      </div>
+
+      {/* Activations */}
+      <div className="sfc">
+        <div className="sfc-h"><div className="sfc-t">Activations — Onde este segmento é enviado</div></div>
+        {seg.status!=='Published'?<div style={{padding:16,textAlign:'center',color:'var(--sf-t3)',background:'#FAFAF9',borderRadius:8}}>⚠️ Publique o segmento para ativar destinos.</div>
+        :<div>
+          {(seg.activations||[]).length===0&&<div style={{color:'var(--sf-t3)',fontStyle:'italic',marginBottom:12}}>Nenhuma ativação configurada.</div>}
+          {(seg.activations||[]).map(a=><div key={a} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 12px',border:'1px solid var(--sf-b2)',borderRadius:8,marginRight:8,marginBottom:8}}><Badge type="g">● Active</Badge><span style={{fontWeight:600}}>{a}</span></div>)}
+          <div style={{marginTop:8}}><span style={{fontSize:12,color:'var(--sf-t2)'}}>Configure ativações na aba "Activation Targets".</span></div>
+        </div>}
+      </div>
+
+      {/* Refresh */}
+      <div className="sfc">
+        <div className="sfc-h"><div className="sfc-t">Refresh Configuration</div></div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:16}}>
+          <div style={{padding:12,background:'#FAFAF9',borderRadius:8}}><div style={{fontSize:11,color:'var(--sf-t2)',fontWeight:600,marginBottom:4}}>Refresh Type</div><div style={{fontWeight:600}}>{seg.refresh||'Scheduled'}</div></div>
+          <div style={{padding:12,background:'#FAFAF9',borderRadius:8}}><div style={{fontSize:11,color:'var(--sf-t2)',fontWeight:600,marginBottom:4}}>Frequency</div><div style={{fontWeight:600}}>Every {seg.refreshFreq||'6h'}</div></div>
+          <div style={{padding:12,background:'#FAFAF9',borderRadius:8}}><div style={{fontSize:11,color:'var(--sf-t2)',fontWeight:600,marginBottom:4}}>Last Refresh</div><div style={{fontWeight:600}}>{seg.lastRefresh?new Date(seg.lastRefresh).toLocaleString('pt-BR'):'Never'}</div></div>
+        </div>
+      </div>
+    </div>;
+  }
+
+  // ─── CREATE/EDIT VIEW ───
+  return <div>
+    <button className="btn btn-n" onClick={()=>{setView('list');setSelSeg(null)}} style={{marginBottom:16}}>← Voltar</button>
+
+    <div className="sfc">
+      <div className="sfc-h"><div className="sfc-t">{selSeg?'Edit Segment':'New Segment'}</div></div>
+
+      <Field label="Segment Name"><input value={newSeg.name} onChange={e=>setNewSeg(s=>({...s,name:e.target.value}))} placeholder="Ex: Enterprise VIP" style={{maxWidth:400}}/></Field>
+
+      {/* Criteria Builder */}
+      <div style={{marginBottom:16}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+          <label style={{fontSize:12,fontWeight:600,color:'var(--sf-t2)'}}>Criteria Rules</label>
+          <button className="btn btn-n" onClick={addRule} style={{height:28,fontSize:12}}>+ Add Rule</button>
+        </div>
+
+        {(newSeg.rules||[]).length===0&&<div style={{padding:20,textAlign:'center',border:'2px dashed var(--sf-b)',borderRadius:8,color:'var(--sf-t3)',fontSize:13}}>Clique em "+ Add Rule" para adicionar critérios de segmentação.<br/>Cada regra filtra os perfis unificados.</div>}
+
+        {(newSeg.rules||[]).map((rule,idx) => {
+          const ftype = getFieldType(rule.field);
+          const fvals = getFieldValues(rule.field);
+          const ops = SEG_OPS[ftype] || SEG_OPS.text;
+          return <div key={rule.id} style={{display:'flex',gap:8,alignItems:'flex-start',padding:12,background:'#FAFAF9',borderRadius:8,marginBottom:8,border:'1px solid var(--sf-b2)',flexWrap:'wrap'}}>
+            {idx > 0 && <div style={{width:'100%',marginBottom:4}}><Badge type="b">AND</Badge></div>}
+            <div style={{flex:2,minWidth:180}}>
+              <label style={{fontSize:10,fontWeight:600,color:'var(--sf-t3)',display:'block',marginBottom:2}}>Attribute</label>
+              <select value={rule.field} onChange={e=>updateRule(rule.id,'field',e.target.value)} style={{width:'100%',padding:'6px 8px',border:'1px solid var(--sf-b)',borderRadius:4,fontSize:12,fontFamily:'var(--sf-f)'}}>
+                <option value="">Select attribute...</option>
+                {SEG_ATTRS.map(g=><optgroup key={g.group} label={g.group}>{g.fields.map(f=><option key={f.name} value={f.name}>{f.name}</option>)}</optgroup>)}
+              </select>
+            </div>
+            <div style={{flex:1,minWidth:120}}>
+              <label style={{fontSize:10,fontWeight:600,color:'var(--sf-t3)',display:'block',marginBottom:2}}>Operator</label>
+              <select value={rule.operator} onChange={e=>updateRule(rule.id,'operator',e.target.value)} style={{width:'100%',padding:'6px 8px',border:'1px solid var(--sf-b)',borderRadius:4,fontSize:12,fontFamily:'var(--sf-f)'}}>
+                {ops.map(o=><option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+            <div style={{flex:2,minWidth:150}}>
+              <label style={{fontSize:10,fontWeight:600,color:'var(--sf-t3)',display:'block',marginBottom:2}}>Value</label>
+              {ftype==='picklist'&&fvals.length>0?
+                <select value={rule.value} onChange={e=>updateRule(rule.id,'value',e.target.value)} style={{width:'100%',padding:'6px 8px',border:'1px solid var(--sf-b)',borderRadius:4,fontSize:12,fontFamily:'var(--sf-f)'}}>
+                  <option value="">Select...</option>{fvals.map(v=><option key={v} value={v}>{v}</option>)}
+                </select>
+              :<input value={rule.value} onChange={e=>updateRule(rule.id,'value',e.target.value)} placeholder={ftype==='number'?'Ex: 5000000':'Ex: value'} style={{width:'100%',padding:'6px 8px',border:'1px solid var(--sf-b)',borderRadius:4,fontSize:12,fontFamily:'var(--sf-f)'}}/>}
+            </div>
+            <div style={{paddingTop:16}}><button className="act-btn del" onClick={()=>removeRule(rule.id)} title="Remove rule">✕</button></div>
+          </div>
+        })}
+      </div>
+
+      {/* Preview */}
+      <div style={{display:'flex',gap:8,marginBottom:16}}>
+        <button className="btn btn-p" onClick={runPreview} style={{background:'var(--sf-purp)',borderColor:'var(--sf-purp)'}}>👁 Preview Members</button>
+        <span style={{fontSize:12,color:'var(--sf-t2)',alignSelf:'center'}}>Simula quais registros entram no segmento com os critérios atuais.</span>
+      </div>
+
+      {showPreview&&<div style={{border:'1px solid var(--sf-b2)',borderRadius:8,marginBottom:16,overflow:'hidden'}}>
+        <div style={{padding:'10px 16px',background:previewMembers.length>0?'#E6F7ED':'#FFF5E6',display:'flex',alignItems:'center',gap:8}}>
+          <span style={{fontSize:16}}>{previewMembers.length>0?'✅':'⚠️'}</span>
+          <span style={{fontWeight:600}}>{previewMembers.length} {previewMembers.length===1?'membro encontrado':'membros encontrados'}</span>
+        </div>
+        {previewMembers.length>0&&<table className="stbl" style={{border:'none',borderRadius:0}}>
+          <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Account</th><th>Segment</th><th>LTV</th><th>Churn</th></tr></thead>
+          <tbody>{previewMembers.map(m=><tr key={m.id}>
+            <td style={{fontFamily:"'Courier New',monospace",fontSize:11}}>{m.id}</td>
+            <td style={{fontWeight:600}}>{m.name}</td><td>{m.email}</td><td>{m.account}</td>
+            <td><Badge type={m.segment==='Large'?'b':'p'}>{m.segment}</Badge></td>
+            <td style={{fontWeight:600,color:'var(--sf-ok)'}}>R$ {(m.ltv/1e6).toFixed(2)}M</td>
+            <td><Badge type={m.churn>.3?'r':m.churn>.15?'o':'g'}>{(m.churn*100).toFixed(0)}%</Badge></td>
+          </tr>)}</tbody>
+        </table>}
+      </div>}
+
+      {/* Refresh Config */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
+        <Field label="Refresh Type"><select value={newSeg.refresh||'Scheduled'} onChange={e=>setNewSeg(s=>({...s,refresh:e.target.value}))}>
+          <option value="Scheduled">Scheduled (Batch)</option><option value="Rapid">Rapid Refresh (Near Real-Time)</option>
+        </select></Field>
+        <Field label="Refresh Frequency"><select value={newSeg.refreshFreq||'6h'} onChange={e=>setNewSeg(s=>({...s,refreshFreq:e.target.value}))}>
+          <option value="1h">Every 1 hour</option><option value="6h">Every 6 hours</option><option value="12h">Every 12 hours</option><option value="24h">Every 24 hours</option>
+        </select></Field>
+      </div>
+
+      {/* Activation Targets */}
+      <Field label="Activation Targets (para onde enviar ao publicar)">
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:4}}>
+          {['Marketing Cloud','Google Ads','Meta Ads','LinkedIn','Webhook'].map(t=>{
+            const active=(newSeg.activations||[]).includes(t);
+            return <button key={t} className={`btn ${active?'btn-p':'btn-n'}`} style={{height:28,fontSize:11}} onClick={()=>setNewSeg(s=>({...s,activations:active?(s.activations||[]).filter(a=>a!==t):[...(s.activations||[]),t]}))}>
+              {active?'✓ ':''}{t}
+            </button>
+          })}
+        </div>
+      </Field>
+
+      {/* Save buttons */}
+      <div style={{display:'flex',gap:8,marginTop:20,paddingTop:16,borderTop:'1px solid var(--sf-b2)'}}>
+        <button className="btn btn-p" onClick={saveSeg}>💾 {selSeg?'Save Changes':'Create Segment'}</button>
+        <button className="btn btn-s" onClick={()=>{saveSeg();setTimeout(()=>{const s=segments.find(x=>x.name===newSeg.name);if(s)publishSeg(s.id)},100)}}>💾 Save & Publish</button>
+        <button className="btn btn-n" onClick={()=>{setView('list');setSelSeg(null)}}>Cancel</button>
+      </div>
+    </div>
+  </div>;
+};
 
 // Simple Profile Explorer
 const ProfileExplorer=()=>{
