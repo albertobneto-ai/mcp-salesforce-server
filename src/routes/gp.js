@@ -117,7 +117,7 @@ router.get('/report', authMiddleware, gpAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-export default router;
+
 
 // ── REUNIÕES ──
 const ATA_SYSTEM = `Voce e um especialista em gestao de projetos Agile. Gere uma ATA (Ata de Reuniao) profissional e estruturada em portugues do Brasil com base na transcricao/notas fornecidas. Estrutura obrigatoria em Markdown:
@@ -501,7 +501,25 @@ router.get('/stories/:id/tasks', authMiddleware, gpAuth, async (req, res) => {
   catch (e) { res.status(500).json({ erro: e.message }); }
 });
 router.post('/stories/:id/tasks', authMiddleware, gpAuth, async (req, res) => {
-  try { res.json({ task: await gp.createTask(Number(req.params.id), req.body.title, req.body.assignee) }); }
+  try {
+    const task = await gp.createTask(Number(req.params.id), req.body.title, req.body.assignee);
+    // Notificar o assignee
+    if (req.body.assignee) {
+      try {
+        const pool = (await import('../config/db.js')).default;
+        const storyRows = (await pool.query('SELECT title, workstream FROM gp_stories WHERE id = $1', [Number(req.params.id)])).rows;
+        const storyTitle = storyRows[0]?.title || '';
+        const userRow = (await pool.query('SELECT id, email FROM users WHERE name = $1', [req.body.assignee])).rows[0];
+        await gp.createNotification({
+          user_id: userRow?.id, user_email: userRow?.email||'', user_name: req.body.assignee,
+          type: 'task_assigned', title: 'Nova atividade: ' + req.body.title,
+          body: 'Atribuída para você na história "' + storyTitle + '".',
+          ref_type: 'task', ref_id: task.id, story_id: Number(req.params.id)
+        });
+      } catch {}
+    }
+    res.json({ task });
+  }
   catch (e) { res.status(500).json({ erro: e.message }); }
 });
 router.patch('/tasks/:id', authMiddleware, gpAuth, async (req, res) => {
@@ -548,23 +566,4 @@ router.post('/notifications/read-all', authMiddleware, async (req, res) => {
   catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// Atualizar createTask para gerar notificação
-const _origCreateTask = gp.createTask;
-gp.createTask = async function(storyId, title, assignee) {
-  const task = await _origCreateTask(storyId, title, assignee);
-  if (assignee) {
-    try {
-      const pool = (await import('../config/db.js')).default;
-      const stories = (await pool.query('SELECT title, workstream FROM gp_stories WHERE id = $1', [storyId])).rows;
-      const storyTitle = stories[0]?.title || '';
-      const user = (await pool.query('SELECT id, email FROM users WHERE name = $1', [assignee])).rows[0];
-      await gp.createNotification({
-        user_id: user?.id, user_email: user?.email||'', user_name: assignee,
-        type: 'task_assigned', title: `Nova atividade atribuída: ${title}`,
-        body: `Você foi designado para "${title}" na história "${storyTitle}".`,
-        ref_type: 'task', ref_id: task.id, story_id: storyId
-      });
-    } catch {}
-  }
-  return task;
-};
+export default router;
