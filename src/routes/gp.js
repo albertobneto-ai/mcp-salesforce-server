@@ -16,6 +16,7 @@ const gpAuth = (req, res, next) => {
 router.get('/stories', authMiddleware, gpAuth, async (req, res) => {
   try {
     await gp.ensureGanttCols();
+    await gp.ensureDevQaCols();
     const ws = req.query.workstream || null;
     res.json({ stories: await gp.getStories(ws) });
   } catch (e) { res.status(500).json({ erro: e.message }); }
@@ -754,5 +755,15 @@ router.delete('/stories/:id/activity-dates/:activity', authMiddleware, gpAuth, a
   try {
     await gp.clearActivityDates(Number(req.params.id), req.params.activity);
     res.json({ ok: true });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── DEV/QA points + dates ──
+router.post('/stories/:id/dev-qa-points', authMiddleware, gpAuth, async (req, res) => {
+  try {
+    await gp.ensureDevQaCols();
+    const { activity, points, start } = req.body;
+    const r = await gp.setDevQaPoints(Number(req.params.id), activity, Number(points), start);
+    res.json({ ok: true, ...r });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
