@@ -483,3 +483,12 @@ router.post('/stories/:id/comments', authMiddleware, gpAuth, async (req, res) =>
     res.json({ comment: c });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
+
+// ── USERS (para atribuição) ──
+router.get('/users', authMiddleware, gpAuth, async (req, res) => {
+  try {
+    const pool = (await import('../config/db.js')).default;
+    const r = await pool.query(`SELECT id, name, email, role FROM users ORDER BY name`);
+    res.json({ users: r.rows });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
