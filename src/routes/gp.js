@@ -567,3 +567,15 @@ router.post('/notifications/read-all', authMiddleware, async (req, res) => {
 });
 
 export default router;
+
+// ── ALL TASKS (bulk load) ──
+router.get('/all-tasks', authMiddleware, gpAuth, async (req, res) => {
+  try {
+    const pool = (await import('../config/db.js')).default;
+    await gp.ensureTasksSchema();
+    const r = await pool.query(`SELECT * FROM gp_story_tasks ORDER BY story_id, task_order, id`);
+    const grouped = {};
+    r.rows.forEach(t => { if (!grouped[t.story_id]) grouped[t.story_id] = []; grouped[t.story_id].push(t); });
+    res.json({ tasks: grouped });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
