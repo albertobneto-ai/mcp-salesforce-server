@@ -326,15 +326,21 @@ const syncFromOrg=useCallback(async()=>{
       setOrgData(d.data);
       setMode('live');
       const hasData=Object.values(d.data).some(arr=>arr.length>0);
-      if(hasData){
-        // Merge real data into state
-        const newState={...state};
-        if(d.data.streams.length) newState.streams=d.data.streams.map(s=>({id:s.Id,name:s.Name,source:s.Description||'Salesforce CRM',object:s.Name,freq:s.RefreshFrequency||'Real-Time',status:s.DataStreamStatus||'Active',orgId:s.Id}));
-        if(d.data.dlos.length) newState.dlos=d.data.dlos.map(s=>({id:s.Id,name:s.Name,stream:'',fields:[],category:s.Category,totalRecords:s.TotalRecords,status:s.DataLakeObjectStatus,orgId:s.Id}));
-        if(d.data.segments.length) newState.segments=d.data.segments.map(s=>({id:s.Id,name:s.Name,criteria:s.IncludeCriteria||'',status:s.SegmentStatus==='Activated'?'Published':'Draft',estSize:s.LastSegmentMemberCount||0,rules:[],orgId:s.Id}));
-        if(d.data.identityResolution.length) newState.rules=d.data.identityResolution.map(s=>({id:s.Id,name:s.Name,type:'Compound',fields:[],threshold:1,priority:1,active:s.Status==='Active',orgId:s.Id,sourceCount:s.SourceCount,matchedCount:s.MatchedCount,unifiedCount:s.UnifiedCount,consolidationRate:s.ConsolidationRate}));
-        setState(newState);
-      }
+      // Replace ALL state with org data (empty if org is empty)
+      const newState={
+        streams: d.data.streams.map(s=>({id:s.Id,name:s.Name,source:s.Description||'Salesforce CRM',object:s.Name,freq:s.RefreshFrequency||'Real-Time',status:s.DataStreamStatus||'Active',orgId:s.Id})),
+        dlos: d.data.dlos.map(s=>({id:s.Id,name:s.Name,stream:'',fields:[],category:s.Category,totalRecords:s.TotalRecords,status:s.DataLakeObjectStatus,orgId:s.Id,externalName:s.ExternalName,totalFields:s.TotalNumberOfFields})),
+        segments: d.data.segments.map(s=>({id:s.Id,name:s.Name,criteria:s.IncludeCriteria||'',status:s.SegmentStatus==='Activated'?'Published':'Draft',estSize:s.LastSegmentMemberCount||0,rules:[],orgId:s.Id})),
+        rules: d.data.identityResolution.map(s=>({id:s.Id,name:s.Name,type:'Compound',fields:[],threshold:1,priority:1,active:s.Status==='Active',orgId:s.Id,sourceCount:s.SourceCount,matchedCount:s.MatchedCount,unifiedCount:s.UnifiedCount,consolidationRate:s.ConsolidationRate})),
+        activations: d.data.activations.map(s=>({id:s.Id,name:s.Name,type:'',segments:[],orgId:s.Id,lastStatus:s.LastPublishStatus,recordCount:s.RecordCount})),
+        // Keep these from simulated since SOQL doesn't cover them directly
+        actions: [],
+        enrichments: [],
+        transforms: [],
+        shares: [],
+        dmos: []
+      };
+      setState(newState);
     }else{
       setOrgError(d.message);
     }
@@ -525,7 +531,7 @@ case 'Home':return <div>
 <div style={{background:'#E6F7ED',border:'1px solid #A5D6A7',borderRadius:'var(--sf-rl)',padding:'10px 16px',marginBottom:16,display:'flex',alignItems:'center',gap:10,fontSize:13,color:'#2E844A'}}>
 <span style={{width:8,height:8,borderRadius:'50%',background:'#2E844A',flexShrink:0}}/>
 <strong>Conectado à Org</strong> — orgfarm-6450ce60e0-dev-ed (00DgK00000PUJwTUAX)
-{orgData&&!Object.values(orgData).some(a=>a.length>0)&&<span style={{marginLeft:8,color:'var(--sf-t2)',fontWeight:400}}>| Org vazia — configure no simulador e faça deploy</span>}
+{orgData&&!Object.values(orgData).some(a=>a.length>0)&&<span style={{marginLeft:8,color:'var(--sf-t2)',fontWeight:400}}>| Org ainda não configurada — use o Setup do Salesforce para criar Data Streams</span>}
 <button className="btn btn-n" onClick={syncFromOrg} style={{marginLeft:'auto',height:28,fontSize:11}}>{syncing?'Sincronizando...':'🔄 Refresh'}</button>
 </div>
 :<div className="sim-b"><div style={{width:8,height:8,borderRadius:'50%',background:'var(--sf-warn)',flexShrink:0}}/>Modo Simulação — Dados fictícios Algar Telecom. Configure livremente, nada será aplicado à org. <button className="btn btn-p" onClick={syncFromOrg} style={{marginLeft:'auto',height:28,fontSize:11}}>🔗 Conectar à Org</button></div>}
@@ -684,7 +690,7 @@ Org: 00DgK...JwTUAX
 ⚪ Offline — Simulado
 </div>}
 <button className="sfh-i" onClick={syncFromOrg} title="Sync from Org" style={{opacity:syncing?.5:1}}>{syncing?'⏳':'🔄'}</button>
-<button className="sfh-i" onClick={()=>setMode(mode==='live'?'offline':'live')} title="Toggle Mode">⚙</button>
+<button className="sfh-i" onClick={()=>{if(mode==='live'){setMode('offline');setState(loadState()||INIT);setOrgData(null)}else{syncFromOrg()}}} title={mode==='live'?'Voltar ao modo Simulação':'Conectar à Org'}>{mode==='live'?'🔌':'🔗'}</button>
 <button className="sfh-i">🔔</button>
 <div className="sfh-av">{(user.name||'U').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
 </div>
