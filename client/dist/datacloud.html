@@ -42,6 +42,34 @@ select,input,textarea{font-family:'Outfit',sans-serif}
 <body>
 <a href="/" class="back-btn">← Ever i9</a>
 <div id="root"></div>
+
+<script>
+(function(){
+  var token = localStorage.getItem('everi9_token');
+  var user = null;
+  try { user = JSON.parse(localStorage.getItem('everi9_user')||'{}'); } catch(e){}
+  
+  if(!token || !user || !user.role) {
+    document.getElementById('root').innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;font-family:Outfit,sans-serif;color:#e2e8f0"><div style="font-size:48px;margin-bottom:16px">🔒</div><div style="font-size:20px;font-weight:700;margin-bottom:8px">Acesso Restrito</div><div style="color:#94a3b8;margin-bottom:24px">Faça login no Ever i9 primeiro.</div><a href="/" style="padding:10px 24px;border-radius:10px;background:#6366f1;color:#fff;text-decoration:none;font-weight:600;font-size:14px">Ir para Login</a></div>';
+    document.querySelectorAll('script[type="text/babel"]').forEach(function(s){s.remove()});
+    return;
+  }
+  
+  if(user.role !== 'admin' && user.role !== 'architect') {
+    document.getElementById('root').innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;font-family:Outfit,sans-serif;color:#e2e8f0"><div style="font-size:48px;margin-bottom:16px">⛔</div><div style="font-size:20px;font-weight:700;margin-bottom:8px">Acesso Não Autorizado</div><div style="color:#94a3b8;margin-bottom:8px">O Data Cloud Sandbox é restrito aos perfis:</div><div style="display:flex;gap:8px;margin-bottom:24px"><span style="padding:4px 12px;border-radius:6px;background:#7c3aed22;color:#7c3aed;font-weight:600;border:1px solid #7c3aed44">Admin</span><span style="padding:4px 12px;border-radius:6px;background:#3b82f622;color:#3b82f6;font-weight:600;border:1px solid #3b82f644">Arquiteto</span></div><div style="color:#64748b;font-size:13px;margin-bottom:24px">Seu perfil atual: <strong style="color:#f59e0b">'+user.role+'</strong></div><a href="/" style="padding:10px 24px;border-radius:10px;background:#6366f1;color:#fff;text-decoration:none;font-weight:600;font-size:14px">Voltar ao Ever i9</a></div>';
+    document.querySelectorAll('script[type="text/babel"]').forEach(function(s){s.remove()});
+    return;
+  }
+  
+  // Validate token server-side
+  fetch('/api/chat/usage', {headers:{Authorization:'Bearer '+token}})
+    .then(function(r){if(r.status===401){localStorage.removeItem('everi9_token');localStorage.removeItem('everi9_user');location.href='/';}})
+    .catch(function(){});
+  
+  window.__dcUser = user;
+})();
+</script>
+
 <script type="text/babel">
 const {useState,useMemo,useCallback,useEffect}=React;
 
@@ -592,6 +620,7 @@ return <div style={{display:"flex",flexDirection:"column",height:"100vh"}}>
 <span style={{fontSize:22}}>☁️</span>
 <span style={{fontSize:18,fontWeight:700,background:"linear-gradient(135deg,#6366f1,#06b6d4)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Data Cloud Sandbox</span>
 <span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"#1e3a5f",color:"#94a3b8",border:"1px solid #2a4a70"}}>EVER i9</span>
+<span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:window.__dcUser?.role==="admin"?"#7c3aed22":"#3b82f622",color:window.__dcUser?.role==="admin"?"#7c3aed":"#3b82f6",border:"1px solid "+(window.__dcUser?.role==="admin"?"#7c3aed44":"#3b82f644")}}>{window.__dcUser?.name||"Usuário"} ({window.__dcUser?.role})</span>
 </div>
 <div style={{display:"flex",alignItems:"center",gap:12}}>
 <div style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"#1e3a5f",color:"#94a3b8",border:"1px solid #2a4a70"}}>
