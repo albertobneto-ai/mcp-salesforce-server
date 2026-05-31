@@ -148,5 +148,18 @@ export function registerSnowflakeRoutes(app) {
     }
   });
   
+
+  // Admin: execute any SQL (DDL/DML)
+  app.post("/api/snowflake/execute", async (req, res) => {
+    try {
+      const { sql } = req.body;
+      if (!sql) return res.status(400).json({ status: "error", message: "sql required" });
+      const rows = await querySnowflake(sql);
+      res.json({ status: "ok", count: Array.isArray(rows) ? rows.length : 0, data: rows });
+    } catch (err) {
+      res.json({ status: "error", message: err.message });
+    }
+  });
+
   console.log("Routes: snowflake/test, snowflake/tables, snowflake/query, snowflake/sql, snowflake/overview");
 }
