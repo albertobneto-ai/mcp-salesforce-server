@@ -11,11 +11,11 @@
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;scrollbar-width:thin;scrollbar-color:#1e3a5f transparent}
+*{margin:0;padding:0;box-sizing:border-box;scrollbar-width:thin;scrollbar-color:#2a2a3e transparent}
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:#1e3a5f;border-radius:3px}
-body{font-family:'Outfit',system-ui,sans-serif;background:#0a1628;color:#e2e8f0;overflow:hidden}
+::-webkit-scrollbar-thumb{background:#2a2a3e;border-radius:3px}
+body{font-family:'Outfit',system-ui,sans-serif;background:#1a1a2e;color:#e2e8f0;overflow:hidden}
 @keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
@@ -23,24 +23,24 @@ body{font-family:'Outfit',system-ui,sans-serif;background:#0a1628;color:#e2e8f0;
 .sidebar-item:hover{background:rgba(99,102,241,.08)}
 .sidebar-item.active{background:linear-gradient(90deg,rgba(99,102,241,.15),transparent);border-left-color:#6366f1;color:#e2e8f0}
 .sidebar-item:not(.active){color:#94a3b8}
-.card{background:#0f1d32;border:1px solid #1e3a5f;border-radius:12px;padding:20px;margin-bottom:16px;animation:slideUp .3s ease both}
+.card{background:#222238;border:1px solid #2a2a3e;border-radius:12px;padding:20px;margin-bottom:16px;animation:slideUp .3s ease both}
 .btn{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .15s;border:1px solid}
 .btn-solid{border:none;color:#fff;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif}
 .tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
 .chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:500}
 .mono{font-family:'JetBrains Mono',monospace;font-size:12px}
 table{width:100%;border-collapse:collapse;font-size:12px}
-th{text-align:left;padding:8px 10px;border-bottom:2px solid #1e3a5f;color:#6366f1;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
-td{padding:7px 10px;border-bottom:1px solid #1e3a5f;color:#cbd5e1}
+th{text-align:left;padding:8px 10px;border-bottom:2px solid #2a2a3e;color:#6366f1;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+td{padding:7px 10px;border-bottom:1px solid #2a2a3e;color:#cbd5e1}
 .pipe-node{padding:12px 16px;border-radius:10px;text-align:center;min-width:100px;transition:all .2s;cursor:pointer;border:2px solid}
 .stat-box{padding:16px 20px;border-radius:10px;flex:1;min-width:140px}
-.back-btn{position:fixed;top:12px;left:12px;z-index:100;padding:8px 16px;border-radius:8px;border:none;background:#1e3a5f;color:#e2e8f0;font-size:13px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;text-decoration:none;display:flex;align-items:center;gap:6px}
-.back-btn:hover{background:#2a4a70}
+.back-btn{position:fixed;top:12px;left:12px;z-index:100;padding:8px 16px;border-radius:8px;border:none;background:#2a2a3e;color:#e2e8f0;font-size:13px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;text-decoration:none;display:flex;align-items:center;gap:6px}
+.back-btn:hover{background:#3a3a50}
 select,input,textarea{font-family:'Outfit',sans-serif}
 </style>
 </head>
 <body>
-<a href="/" class="back-btn">← Ever i9</a>
+
 <div id="root"></div>
 
 <script>
@@ -190,7 +190,7 @@ return <div>
 <div style={{fontWeight:700,fontSize:13,color:n.color}}>{n.label}</div>
 <div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>{n.sub}</div>
 </div>
-{i<a.length-1&&<div style={{color:"#1e3a5f",fontSize:20}}>→</div>}
+{i<a.length-1&&<div style={{color:"#2a2a3e",fontSize:20}}>→</div>}
 </div>)}
 </div>
 </div>
@@ -202,7 +202,7 @@ return <div>
 <div style={{width:10,height:10,borderRadius:"50%",background:x.cl}}/>
 <div style={{flex:1,fontSize:13}}>{x.n}</div>
 <div className="mono" style={{fontWeight:700,color:x.cl}}>{x.c}</div>
-<div style={{width:120,height:6,background:"#1e3a5f",borderRadius:3,overflow:"hidden"}}><div style={{width:`${(x.c/total)*100*3}%`,height:"100%",background:x.cl,borderRadius:3}}/></div>
+<div style={{width:120,height:6,background:"#2a2a3e",borderRadius:3,overflow:"hidden"}}><div style={{width:`${(x.c/total)*100*3}%`,height:"100%",background:x.cl,borderRadius:3}}/></div>
 </div>)}
 </div>
 <div className="card">
@@ -258,7 +258,7 @@ contracts:[{key:"id",label:"ID"},{key:"name",label:"Name"},{key:"status",label:"
 return <div>
 <h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🗄️ Data Lake Objects</h2>
 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:12,marginBottom:16}}>
-{dlos.map(d=><div key={d.name} className="card" style={{cursor:"pointer",borderColor:sel===d.key?"#6366f1":"#1e3a5f",marginBottom:0}} onClick={()=>setSel(sel===d.key?null:d.key)}>
+{dlos.map(d=><div key={d.name} className="card" style={{cursor:"pointer",borderColor:sel===d.key?"#6366f1":"#2a2a3e",marginBottom:0}} onClick={()=>setSel(sel===d.key?null:d.key)}>
 <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>🗄️ {d.name}</div>
 <div style={{fontSize:11,color:"#94a3b8",marginBottom:8}}>Source: {d.source}</div>
 <div style={{display:"flex",gap:6}}><Chip color="#6366f1">{d.records} records</Chip></div>
@@ -286,12 +286,12 @@ WHERE email IS NOT NULL`;
 return <div>
 <h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>⚙️ Data Transforms</h2>
 <div style={{display:"flex",gap:8,marginBottom:16}}>
-{["streaming","batch"].map(t=><button key={t} className="btn" style={{borderColor:tab===t?"#6366f1":"#1e3a5f",background:tab===t?"#6366f122":"transparent",color:tab===t?"#6366f1":"#94a3b8"}} onClick={()=>setTab(t)}>{t==="streaming"?"⚡ Streaming":"📦 Batch"}</button>)}
+{["streaming","batch"].map(t=><button key={t} className="btn" style={{borderColor:tab===t?"#6366f1":"#2a2a3e",background:tab===t?"#6366f122":"transparent",color:tab===t?"#6366f1":"#94a3b8"}} onClick={()=>setTab(t)}>{t==="streaming"?"⚡ Streaming":"📦 Batch"}</button>)}
 </div>
 {tab==="streaming"?<div className="card">
 <div style={{fontWeight:700,marginBottom:8}}>⚡ Streaming Transform — Contact Normalization</div>
 <p style={{color:"#94a3b8",fontSize:12,marginBottom:12}}>Near real-time. SQL simples, sem JOINs.</p>
-<pre className="mono" style={{background:"#081020",padding:16,borderRadius:8,border:"1px solid #1e3a5f",overflowX:"auto",lineHeight:1.6,color:"#a5b4fc"}}>{sql}</pre>
+<pre className="mono" style={{background:"#16162a",padding:16,borderRadius:8,border:"1px solid #2a2a3e",overflowX:"auto",lineHeight:1.6,color:"#a5b4fc"}}>{sql}</pre>
 <div style={{marginTop:12}}><button className="btn-solid" style={{background:"linear-gradient(135deg,#6366f1,#6366f1cc)"}}>▶ Simular Execução</button></div>
 </div>
 :<div className="card">
@@ -303,7 +303,7 @@ return <div>
 <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",fontWeight:700}}>{x.t}</div>
 <div style={{fontSize:12,fontWeight:600,color:x.c,marginTop:2}}>{x.n}</div>
 </div>
-{i<a.length-1&&<span style={{color:"#1e3a5f",fontSize:18}}>→</span>}
+{i<a.length-1&&<span style={{color:"#2a2a3e",fontSize:18}}>→</span>}
 </div>)}
 </div>
 </div>}
@@ -315,7 +315,7 @@ const[sel,setSel]=useState(null);
 return <div>
 <h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🧩 Data Model Objects — C360</h2>
 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:12,marginBottom:16}}>
-{Object.entries(C360).map(([name,cfg])=><div key={name} className="card" style={{cursor:"pointer",borderColor:sel===name?cfg.color:"#1e3a5f",marginBottom:0}} onClick={()=>setSel(sel===name?null:name)}>
+{Object.entries(C360).map(([name,cfg])=><div key={name} className="card" style={{cursor:"pointer",borderColor:sel===name?cfg.color:"#2a2a3e",marginBottom:0}} onClick={()=>setSel(sel===name?null:name)}>
 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
 <div style={{width:12,height:12,borderRadius:"50%",background:cfg.color}}/><div style={{fontWeight:700,fontSize:14}}>{name}</div>
 </div>
@@ -357,13 +357,13 @@ return <div>
 </div>
 {hasRun&&<div className="card">
 <div style={{fontWeight:700,marginBottom:12}}>🔀 Clusters de Merge</div>
-{clusters.map(c=><div key={c.uid} style={{padding:14,border:"1px solid #1e3a5f",borderRadius:10,marginBottom:10,background:"#081020"}}>
+{clusters.map(c=><div key={c.uid} style={{padding:14,border:"1px solid #2a2a3e",borderRadius:10,marginBottom:10,background:"#16162a"}}>
 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
 <Tag color="#10b981">{c.uid}</Tag><Tag color="#f59e0b">{c.rule}</Tag>
 <span style={{marginLeft:"auto",fontSize:12,color:"#94a3b8"}}>Confidence: <span style={{color:"#10b981",fontWeight:700}}>{(c.conf*100).toFixed(0)}%</span></span>
 </div>
 <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-{c.recs.map((r,i)=><div key={r} style={{flex:1,padding:10,border:"1px solid #1e3a5f",borderRadius:8,fontSize:12,minWidth:160}}>
+{c.recs.map((r,i)=><div key={r} style={{flex:1,padding:10,border:"1px solid #2a2a3e",borderRadius:8,fontSize:12,minWidth:160}}>
 <div className="mono" style={{color:"#6366f1",marginBottom:4}}>{r}</div>
 <div>{c.names[i]}</div><div style={{color:"#94a3b8",fontSize:11}}>{c.emails[i]}</div>
 </div>)}
@@ -387,7 +387,7 @@ const opps=acc?D.opportunities.filter(o=>o.accountId===acc.id):[];
 const ctrs=acc?D.contracts.filter(c=>c.accountId===acc.id):[];
 return <div>
 <h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>👤 Profile Explorer</h2>
-<select value={sel} onChange={e=>setSel(e.target.value)} style={{marginBottom:16,padding:"7px 12px",borderRadius:8,border:"1px solid #1e3a5f",background:"#0f1d32",color:"#e2e8f0",fontSize:13}}>
+<select value={sel} onChange={e=>setSel(e.target.value)} style={{marginBottom:16,padding:"7px 12px",borderRadius:8,border:"1px solid #2a2a3e",background:"#222238",color:"#e2e8f0",fontSize:13}}>
 {D.contacts.filter(c=>!skip.includes(c.id)).map(c=><option key={c.id} value={c.id}>{c.firstName} {c.lastName} — {c.email}</option>)}
 </select>
 {con&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
@@ -465,9 +465,9 @@ return <div>
 {items.map(e=><div key={e.name} className="card" style={{borderLeft:`4px solid ${e.color}`}}>
 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}><Tag color={e.color}>{e.type}</Tag><div style={{fontWeight:700,fontSize:14}}>{e.name}</div></div>
 <div style={{display:"flex",alignItems:"center",gap:10,fontSize:12}}>
-<div className="mono" style={{padding:"6px 12px",background:"#081020",borderRadius:6,border:"1px solid #1e3a5f"}}>{e.source}</div>
+<div className="mono" style={{padding:"6px 12px",background:"#16162a",borderRadius:6,border:"1px solid #2a2a3e"}}>{e.source}</div>
 <span style={{color:"#6366f1",fontSize:18}}>→</span>
-<div className="mono" style={{padding:"6px 12px",background:"#081020",borderRadius:6,border:"1px solid #1e3a5f"}}>{e.target}</div>
+<div className="mono" style={{padding:"6px 12px",background:"#16162a",borderRadius:6,border:"1px solid #2a2a3e"}}>{e.target}</div>
 </div>
 </div>)}
 </div>;
@@ -488,8 +488,8 @@ return <div>
 <Tag color={a.type==="Same Org"?"#10b981":a.type==="Cross Org"?"#f59e0b":"#6366f1"}>{a.type}</Tag>
 </div>
 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-<div style={{padding:10,background:"#081020",borderRadius:8,border:"1px solid #1e3a5f"}}><div style={{fontSize:10,color:"#64748b",fontWeight:700,marginBottom:4}}>TARGET</div><div style={{fontSize:13,fontWeight:600}}>{a.target}</div></div>
-<div style={{padding:10,background:"#081020",borderRadius:8,border:"1px solid #1e3a5f"}}><div style={{fontSize:10,color:"#64748b",fontWeight:700,marginBottom:4}}>TRIGGER</div><div className="mono">{a.trigger}</div></div>
+<div style={{padding:10,background:"#16162a",borderRadius:8,border:"1px solid #2a2a3e"}}><div style={{fontSize:10,color:"#64748b",fontWeight:700,marginBottom:4}}>TARGET</div><div style={{fontSize:13,fontWeight:600}}>{a.target}</div></div>
+<div style={{padding:10,background:"#16162a",borderRadius:8,border:"1px solid #2a2a3e"}}><div style={{fontSize:10,color:"#64748b",fontWeight:700,marginBottom:4}}>TRIGGER</div><div className="mono">{a.trigger}</div></div>
 </div>
 </div>)}
 </div>;
@@ -518,7 +518,7 @@ const DataShares=()=><div>
 <tbody>
 {[{d:"Unified Individual DMO",v:"DC_UNIFIED_INDIVIDUAL",r:"Near Real-Time",n:8},{d:"Account DMO",v:"DC_ACCOUNT",r:"Batch (1h)",n:8},{d:"Segment: Enterprise VIP",v:"DC_SEG_ENTERPRISE_VIP",r:"On Publish",n:3},{d:"Insight: LTV",v:"DC_INSIGHT_LTV",r:"Batch (6h)",n:8}].map(x=><tr key={x.d}><td>{x.d}</td><td className="mono" style={{color:"#06b6d4"}}>{x.v}</td><td><Tag color="#0ea5e9">{x.r}</Tag></td><td style={{fontWeight:600}}>{x.n}</td></tr>)}
 </tbody></table>
-<div style={{marginTop:12,padding:12,background:"#081020",borderRadius:8,border:"1px solid #1e3a5f",fontSize:12,color:"#94a3b8"}}>💡 Custo: <span style={{color:"#10b981",fontWeight:700}}>70 créditos/M</span> (Zero Copy) vs <span style={{color:"#ef4444"}}>2.000/M</span> (ETL) — economia <span style={{color:"#10b981",fontWeight:700}}>28.5x</span></div>
+<div style={{marginTop:12,padding:12,background:"#16162a",borderRadius:8,border:"1px solid #2a2a3e",fontSize:12,color:"#94a3b8"}}>💡 Custo: <span style={{color:"#10b981",fontWeight:700}}>70 créditos/M</span> (Zero Copy) vs <span style={{color:"#ef4444"}}>2.000/M</span> (ETL) — economia <span style={{color:"#10b981",fontWeight:700}}>28.5x</span></div>
 </div></div>;
 
 const DataGraphs=()=><div>
@@ -529,19 +529,19 @@ const DataGraphs=()=><div>
 <div style={{textAlign:"center"}}>
 <div style={{padding:"10px 20px",borderRadius:8,border:"2px solid #6366f1",background:"#6366f115",display:"inline-block",fontWeight:700,color:"#6366f1"}}>👤 Unified Individual (root)</div>
 <div style={{display:"flex",justifyContent:"center",gap:24,marginTop:12,flexWrap:"wrap"}}>
-{[{n:"Account DMO",c:"#0ea5e9",i:"🏢"},{n:"Sales Order DMO",c:"#f59e0b",i:"📈"},{n:"Contract DMO",c:"#10b981",i:"📋"},{n:"Calc. Insights",c:"#ec4899",i:"🧮"}].map(x=><div key={x.n} style={{textAlign:"center"}}><div style={{color:"#1e3a5f",margin:"4px 0"}}>│</div><div style={{padding:"8px 14px",borderRadius:8,border:`1px solid ${x.c}`,background:x.c+"12",fontSize:12,fontWeight:600,color:x.c}}>{x.i} {x.n}</div></div>)}
+{[{n:"Account DMO",c:"#0ea5e9",i:"🏢"},{n:"Sales Order DMO",c:"#f59e0b",i:"📈"},{n:"Contract DMO",c:"#10b981",i:"📋"},{n:"Calc. Insights",c:"#ec4899",i:"🧮"}].map(x=><div key={x.n} style={{textAlign:"center"}}><div style={{color:"#2a2a3e",margin:"4px 0"}}>│</div><div style={{padding:"8px 14px",borderRadius:8,border:`1px solid ${x.c}`,background:x.c+"12",fontSize:12,fontWeight:600,color:x.c}}>{x.i} {x.n}</div></div>)}
 </div>
 </div>
 </div>
 <div style={{fontWeight:700,marginTop:16,marginBottom:8}}>📋 Preview JSON (João Silva)</div>
-<pre className="mono" style={{background:"#081020",padding:14,borderRadius:8,border:"1px solid #1e3a5f",color:"#a5b4fc",fontSize:11,lineHeight:1.5,maxHeight:250,overflow:"auto"}}>{JSON.stringify({individual:{name:"João Silva",email:"joao.silva@algar.com.br",title:"Diretor de TI"},account:{name:"Grupo Algar S.A.",revenue:12500000,segment:"Large"},salesOrders:[{name:"MPLS Dedicado",amount:2400000,stage:"Negotiation"}],contracts:[{name:"MPLS 2024-2026",value:4800000,status:"Active"}],insights:{ltv:7200000,churnRisk:.10}},null,2)}</pre>
+<pre className="mono" style={{background:"#16162a",padding:14,borderRadius:8,border:"1px solid #2a2a3e",color:"#a5b4fc",fontSize:11,lineHeight:1.5,maxHeight:250,overflow:"auto"}}>{JSON.stringify({individual:{name:"João Silva",email:"joao.silva@algar.com.br",title:"Diretor de TI"},account:{name:"Grupo Algar S.A.",revenue:12500000,segment:"Large"},salesOrders:[{name:"MPLS Dedicado",amount:2400000,stage:"Negotiation"}],contracts:[{name:"MPLS 2024-2026",value:4800000,status:"Active"}],insights:{ltv:7200000,churnRisk:.10}},null,2)}</pre>
 </div></div>;
 
 const Einstein=()=><div>
 <h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🧠 Einstein Studio</h2>
 <div className="card">
 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-{[{name:"Churn Prediction",type:"Classification",acc:"87%"},{name:"Lead Scoring",type:"Regression",acc:"—"}].map(m=><div key={m.name} style={{padding:16,border:"1px solid #1e3a5f",borderRadius:10,background:"#081020"}}>
+{[{name:"Churn Prediction",type:"Classification",acc:"87%"},{name:"Lead Scoring",type:"Regression",acc:"—"}].map(m=><div key={m.name} style={{padding:16,border:"1px solid #2a2a3e",borderRadius:10,background:"#16162a"}}>
 <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>🧠 {m.name}</div>
 <div style={{fontSize:12,color:"#94a3b8",marginBottom:8}}>{m.type}</div>
 <div style={{display:"flex",gap:6}}><Tag color="#f59e0b">Draft</Tag>{m.acc!=="—"&&<Tag color="#10b981">Accuracy: {m.acc}</Tag>}</div>
@@ -573,7 +573,7 @@ return <div>
 <h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🔍 Data Explorer</h2>
 <div className="card">
 <div style={{fontWeight:700,marginBottom:8}}>📝 Query Editor</div>
-<textarea value={q} onChange={e=>setQ(e.target.value)} className="mono" style={{width:"100%",minHeight:80,padding:"7px 12px",borderRadius:8,border:"1px solid #1e3a5f",background:"#081020",color:"#a5b4fc",resize:"vertical",boxSizing:"border-box"}}/>
+<textarea value={q} onChange={e=>setQ(e.target.value)} className="mono" style={{width:"100%",minHeight:80,padding:"7px 12px",borderRadius:8,border:"1px solid #2a2a3e",background:"#16162a",color:"#a5b4fc",resize:"vertical",boxSizing:"border-box"}}/>
 <div style={{marginTop:10}}><button className="btn-solid" style={{background:"linear-gradient(135deg,#6366f1,#6366f1cc)"}}>▶ Executar</button></div>
 <div style={{marginTop:16}}><DataTable data={D.accounts.filter(a=>a.segment==="Large")} columns={[{key:"name",label:"Name"},{key:"industry",label:"Industry"},{key:"revenue",label:"Revenue",render:v=>`R$ ${(v/1e6).toFixed(1)}M`}]}/></div>
 </div></div>;
@@ -615,26 +615,27 @@ default:return <Placeholder title={view}/>;
 
 return <div style={{display:"flex",flexDirection:"column",height:"100vh"}}>
 {/* TOP BAR */}
-<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",background:"linear-gradient(135deg,#0a1628,#0f1d32)",borderBottom:"1px solid #1e3a5f",gap:12,flexWrap:"wrap"}}>
+<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",background:"linear-gradient(135deg,#1a1a2e,#222238)",borderBottom:"1px solid #2a2a3e",gap:12,flexWrap:"wrap"}}>
 <div style={{display:"flex",alignItems:"center",gap:10}}>
 <span style={{fontSize:22}}>☁️</span>
 <span style={{fontSize:18,fontWeight:700,background:"linear-gradient(135deg,#6366f1,#06b6d4)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Data Cloud Sandbox</span>
-<span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"#1e3a5f",color:"#94a3b8",border:"1px solid #2a4a70"}}>EVER i9</span>
+<span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"#2a2a3e",color:"#94a3b8",border:"1px solid #3a3a50"}}>EVER i9</span>
 <span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:window.__dcUser?.role==="admin"?"#7c3aed22":"#3b82f622",color:window.__dcUser?.role==="admin"?"#7c3aed":"#3b82f6",border:"1px solid "+(window.__dcUser?.role==="admin"?"#7c3aed44":"#3b82f644")}}>{window.__dcUser?.name||"Usuário"} ({window.__dcUser?.role})</span>
 </div>
 <div style={{display:"flex",alignItems:"center",gap:12}}>
-<div style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"#1e3a5f",color:"#94a3b8",border:"1px solid #2a4a70"}}>
+<div style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"#2a2a3e",color:"#94a3b8",border:"1px solid #3a3a50"}}>
 {mode==="offline"?"🔴 Offline — Dados Simulados":"🟢 Live — Org 00DgK00000PUJwTUAX"}
 </div>
-<select value={mode} onChange={e=>setMode(e.target.value)} style={{padding:"7px 12px",borderRadius:8,border:"1px solid #1e3a5f",background:"#0f1d32",color:"#e2e8f0",fontSize:11}}>
+<select value={mode} onChange={e=>setMode(e.target.value)} style={{padding:"7px 12px",borderRadius:8,border:"1px solid #2a2a3e",background:"#222238",color:"#e2e8f0",fontSize:11}}>
 <option value="offline">Offline (Simulado)</option>
 <option value="live">Live (Org Real)</option>
 </select>
+<button onClick={()=>window.parent.postMessage("dc-closed","*")} style={{padding:"6px 14px",borderRadius:8,border:"1px solid #3a3a50",background:"transparent",color:"#94a3b8",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>✕ Fechar</button>
 </div>
 </div>
 <div style={{display:"flex",flex:1,overflow:"hidden"}}>
 {/* SIDEBAR */}
-<div style={{width:220,minWidth:220,background:"#0a1628",borderRight:"1px solid #1e3a5f",overflowY:"auto",padding:"12px 0"}}>
+<div style={{width:220,minWidth:220,background:"#1a1a2e",borderRight:"1px solid #2a2a3e",overflowY:"auto",padding:"12px 0"}}>
 {MENU.map(g=><div key={g.group}>
 <div style={{padding:"8px 16px 4px",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,color:"#475569"}}>{g.group}</div>
 {g.items.map(item=><div key={item.key} className={`sidebar-item ${view===item.key?"active":""}`} onClick={()=>setView(item.key)}>
@@ -647,6 +648,12 @@ return <div style={{display:"flex",flexDirection:"column",height:"100vh"}}>
 </div>
 </div>;
 }
+
+
+// Listen for messages from parent
+window.addEventListener('message', function(e) {
+  if (e.data === 'close-dc') window.parent.postMessage('dc-closed', '*');
+});
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
