@@ -554,8 +554,8 @@ router.patch('/tasks/:id/percentage', authMiddleware, gpAuth, async (req, res) =
 // ── NOTIFICATIONS ──
 router.get('/notifications', authMiddleware, async (req, res) => {
   try {
-    const notifs = await gp.getNotifications(req.user?.email, req.user?.name);
-    const unread = await gp.getUnreadCount(req.user?.email, req.user?.name);
+    const notifs = await gp.getNotifications(req.user?.email, req.user?.name, req.user?.id);
+    const unread = await gp.getUnreadCount(req.user?.email, req.user?.name, req.user?.id);
     res.json({ notifications: notifs, unread });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
@@ -564,7 +564,7 @@ router.post('/notifications/read/:id', authMiddleware, async (req, res) => {
   catch (e) { res.status(500).json({ erro: e.message }); }
 });
 router.post('/notifications/read-all', authMiddleware, async (req, res) => {
-  try { await gp.markAllRead(req.user?.email, req.user?.name); res.json({ ok: true }); }
+  try { await gp.markAllRead(req.user?.email, req.user?.name, req.user?.id); res.json({ ok: true }); }
   catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
