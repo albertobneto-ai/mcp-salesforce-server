@@ -315,6 +315,8 @@ const[mode,setMode]=useState('offline'); // offline | live
 const[orgData,setOrgData]=useState(null);
 const[syncing,setSyncing]=useState(false);
 const[orgError,setOrgError]=useState(null);
+const[sfData,setSfData]=useState(null); // Snowflake real data
+const[sfConnected,setSfConnected]=useState(false);
 const user=window.__dcUser||{name:'User'};
 
 const syncFromOrg=useCallback(async()=>{
@@ -345,8 +347,26 @@ const syncFromOrg=useCallback(async()=>{
       setOrgError(d.message);
     }
   }catch(e){setOrgError(e.message)}
+  // Also fetch Snowflake data
+  try{
+    const sfr=await fetch('/api/snowflake/overview');
+    const sfd=await sfr.json();
+    if(sfd.status==='ok'){
+      setSfData(sfd.data);
+      setSfConnected(true);
+    }
+  }catch(e){console.log('Snowflake not available:',e.message)}
   setSyncing(false);
 },[state]);
+
+// Fetch Snowflake on mount
+useEffect(()=>{
+  fetch('/api/snowflake/test').then(r=>r.json()).then(d=>{
+    if(d.status==='ok'){setSfConnected(true);
+      fetch('/api/snowflake/overview').then(r=>r.json()).then(sd=>{if(sd.status==='ok')setSfData(sd.data)}).catch(()=>{});
+    }
+  }).catch(()=>{});
+},[]);
 
 useEffect(()=>{saveState(state)},[state]);
 
@@ -538,9 +558,24 @@ case 'Home':return <div>
 <div className="sfc">
 <div className="sfc-h"><div className="sfc-t">Data Cloud Overview</div><Badge type="o">Sandbox</Badge></div>
 <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:16}}>
-{[{n:state.streams.length,l:'Data Streams',c:'var(--sf-bl)'},{n:state.dlos.length,l:'DLOs',c:'var(--sf-teal)'},{n:state.dmos.length,l:'DMOs',c:'var(--sf-purp)'},{n:state.rules.length,l:'Match Rules',c:'var(--sf-warn)'},{n:state.segments.length,l:'Segments',c:'var(--sf-err)'}].map(s=><div key={s.l} style={{textAlign:'center',padding:16}}><div className="stat-n" style={{color:s.c}}>{s.n}</div><div className="stat-l">{s.l}</div></div>)}
+{[{n:state.streams.length+(sfConnected?5:0),l:'Data Streams',c:'var(--sf-bl)'},{n:state.dlos.length+(sfConnected?5:0),l:'DLOs',c:'var(--sf-teal)'},{n:state.dmos.length,l:'DMOs',c:'var(--sf-purp)'},{n:sfData?Object.values(sfData).reduce((s,a)=>s+a.length,0):0,l:'Snowflake Records',c:'var(--sf-teal)'},{n:state.segments.length,l:'Segments',c:'var(--sf-err)'}].map(s=><div key={s.l} style={{textAlign:'center',padding:16}}><div className="stat-n" style={{color:s.c}}>{s.n}</div><div className="stat-l">{s.l}</div></div>)}
 </div>
 </div>
+{sfConnected&&<div className="sfc" style={{borderLeft:'4px solid var(--sf-teal)'}}>
+<div className="sfc-h">
+<div style={{display:'flex',alignItems:'center',gap:10}}><span style={{fontSize:20}}>❄️</span><div className="sfc-t">Snowflake — Zero Copy Federation</div></div>
+<Badge type="g">● Connected</Badge>
+</div>
+<div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12}}>
+{sfData&&Object.entries(sfData).map(([table,rows])=><div key={table} style={{textAlign:'center',padding:12,border:'1px solid var(--sf-b2)',borderRadius:8,background:'#FAFAF9'}}>
+<div style={{fontSize:24,fontWeight:700,color:'var(--sf-teal)'}}>{rows.length}</div>
+<div style={{fontSize:11,color:'var(--sf-t2)',textTransform:'uppercase',fontWeight:600,marginTop:2}}>{table}</div>
+</div>)}
+</div>
+<div style={{marginTop:12,fontSize:12,color:'var(--sf-t2)',fontFamily:"'Courier New',monospace"}}>
+Account: rajlbkg-yk87012 (AWS São Paulo) · DB: ALGAR_CRM_LAKE · WH: COMPUTE_WH
+</div>
+</div>}
 <div className="sfc">
 <div className="sfc-h"><div className="sfc-t">Data Pipeline</div></div>
 <div className="pipe">
@@ -552,35 +587,48 @@ case 'Home':return <div>
 </div>
 </div>;
 
-case 'Data Streams':return <div className="sfc">
-<div className="sfc-h"><div className="sfc-t">Data Streams ({state.streams.length})</div><button className="btn btn-p" onClick={()=>openAdd('streams',{status:'Active'})}>+ New Stream</button></div>
-<Table data={state.streams} onEdit={r=>openEdit('streams',r)} onDel={r=>del('streams',r.id)} cols={[
-{key:'name',label:'Stream Name',render:v=><span style={{fontWeight:600,color:'var(--sf-bl)'}}>{v}</span>},
+case 'Data Streams':
+const sfStreams=sfConnected&&sfData?Object.keys(sfData).map(t=>({id:'sf_'+t,name:t+'_SF_Stream',source:'Snowflake',object:t,freq:'Zero Copy',status:'Active',isSnowflake:true})):[];
+const allStreams=[...state.streams,...sfStreams];
+return <div>
+{sfConnected&&<div style={{background:'#E6F5F4',border:'1px solid #B3E6E1',borderRadius:'var(--sf-rl)',padding:'10px 16px',marginBottom:16,display:'flex',alignItems:'center',gap:10,fontSize:13,color:'var(--sf-teal)'}}>
+❄️ <strong>Snowflake conectado</strong> — {Object.keys(sfData||{}).length} tabelas detectadas automaticamente via Zero Copy Federation
+</div>}
+<div className="sfc">
+<div className="sfc-h"><div className="sfc-t">Data Streams ({allStreams.length})</div><button className="btn btn-p" onClick={()=>openAdd('streams',{status:'Active'})}>+ New Stream</button></div>
+<Table data={allStreams} onEdit={r=>r.isSnowflake?null:openEdit('streams',r)} onDel={r=>r.isSnowflake?null:del('streams',r.id)} cols={[
+{key:'name',label:'Stream Name',render:(v,r)=><span style={{fontWeight:600,color:r.isSnowflake?'var(--sf-teal)':'var(--sf-bl)'}}>{r.isSnowflake?'❄️ ':''}{v}</span>},
 {key:'source',label:'Source',render:v=><Badge type={v==='Salesforce CRM'?'b':v==='Snowflake'?'t':'g'}>{v}</Badge>},
 {key:'object',label:'Object'},
-{key:'freq',label:'Frequency',render:v=><Badge type={v==='Real-Time'?'g':'gr'}>{v}</Badge>},
+{key:'freq',label:'Frequency',render:v=><Badge type={v==='Real-Time'?'g':v==='Zero Copy'?'t':'gr'}>{v}</Badge>},
 {key:'status',label:'Status',render:v=><Badge type={v==='Active'?'g':'o'}>● {v}</Badge>}
 ]}/>
+</div>
 </div>;
 
-case 'Data Model':return <div>
+case 'Data Model':
+const sfDlos=sfConnected&&sfData?Object.entries(sfData).map(([t,rows])=>({id:'sfdlo_'+t,name:t+'_DLO',source:'Snowflake',records:rows.length,table:t,isSnowflake:true})):[];
+const allDlos=[...state.dlos,...sfDlos];
+return <div>
 <div className="sfc">
 <div className="sfc-h"><div className="sfc-t">Data Model Objects ({state.dmos.length})</div><button className="btn btn-p" onClick={()=>openAdd('dmos',{category:'Profile',mappings:[]})}>+ New DMO</button></div>
 <Table data={state.dmos} onEdit={r=>openEdit('dmos',r)} onDel={r=>del('dmos',r.id)} cols={[
 {key:'name',label:'DMO Name',render:v=><span style={{fontWeight:600,color:'var(--sf-bl)'}}>{v}</span>},
 {key:'category',label:'Category',render:v=><Badge type={v==='Profile'?'b':v==='Organization'?'t':v==='Commerce'?'o':'r'}>{v}</Badge>},
-{key:'dloId',label:'Source DLO',render:(v)=>{const d=state.dlos.find(x=>x.id===v);return d?.name||'—'}},
+{key:'dloId',label:'Source DLO',render:(v)=>{const d=allDlos.find(x=>x.id===v);return d?.name||'—'}},
 {key:'mappings',label:'Mappings',render:v=><Badge type="gr">{(v||[]).length} fields</Badge>}
 ]}/>
 </div>
 <div className="sfc">
-<div className="sfc-h"><div className="sfc-t">Data Lake Objects ({state.dlos.length})</div></div>
-<Table data={state.dlos} cols={[
-{key:'name',label:'DLO Name',render:v=><span style={{fontWeight:600}}>{v}</span>},
-{key:'stream',label:'Stream',render:v=>{const s=state.streams.find(x=>x.id===v);return s?.name||'—'}},
-{key:'fields',label:'Fields',render:v=><span style={{fontSize:11,color:'var(--sf-t2)'}}>{(v||[]).join(', ')}</span>}
+<div className="sfc-h"><div className="sfc-t">Data Lake Objects ({allDlos.length})</div></div>
+<Table data={allDlos} cols={[
+{key:'name',label:'DLO Name',render:(v,r)=><span style={{fontWeight:600,color:r.isSnowflake?'var(--sf-teal)':'inherit'}}>{r.isSnowflake?'❄️ ':''}{v}</span>},
+{key:'source',label:'Source',render:(v,r)=>r.isSnowflake?<Badge type="t">Snowflake</Badge>:<Badge type="b">Config</Badge>},
+{key:'records',label:'Records',render:(v,r)=>r.isSnowflake?<span style={{fontWeight:700,color:'var(--sf-teal)'}}>{v}</span>:(r.fields||[]).length+' fields'},
+{key:'table',label:'Table',render:v=>v?<span style={{fontFamily:"'Courier New',monospace",fontSize:11,color:'var(--sf-teal)'}}>{v}</span>:'—'}
 ]}/>
 </div>
+{sfConnected&&sfData&&<SnowflakeExplorer sfData={sfData}/>}
 </div>;
 
 case 'Data Transforms':return <div className="sfc">
@@ -705,6 +753,24 @@ Org: 00DgK...JwTUAX
 </div>;
 }
 
+
+// ═══ SNOWFLAKE DATA EXPLORER ═══
+const SnowflakeExplorer=({sfData})=>{
+const[selTable,setSelTable]=useState(null);
+if(!sfData)return null;
+const tables=Object.entries(sfData);
+return <div className="sfc" style={{borderLeft:'4px solid var(--sf-teal)'}}>
+<div className="sfc-h">
+<div style={{display:'flex',alignItems:'center',gap:8}}><span>❄️</span><div className="sfc-t">Snowflake Data Preview</div></div>
+<div style={{display:'flex',gap:6}}>{tables.map(([t])=><button key={t} className={`btn ${selTable===t?'btn-p':'btn-n'}`} style={{height:28,fontSize:11}} onClick={()=>setSelTable(selTable===t?null:t)}>{t}</button>)}</div>
+</div>
+{selTable&&sfData[selTable]&&sfData[selTable].length>0&&<div style={{overflowX:'auto'}}>
+<table className="stbl"><thead><tr>{Object.keys(sfData[selTable][0]).map(k=><th key={k}>{k}</th>)}</tr></thead>
+<tbody>{sfData[selTable].map((row,i)=><tr key={i}>{Object.values(row).map((v,j)=><td key={j} style={{fontSize:12}}>{v===null?'—':typeof v==='number'&&v>10000?'R$ '+(v/1e6).toFixed(2)+'M':String(v)}</td>)}</tr>)}</tbody></table>
+</div>}
+{!selTable&&<div style={{padding:16,textAlign:'center',color:'var(--sf-t3)',fontSize:13}}>Selecione uma tabela acima para ver os dados reais do Snowflake</div>}
+</div>;
+};
 
 // ═══ FULL SEGMENTATION MODULE ═══
 const SEG_ATTRS=[
