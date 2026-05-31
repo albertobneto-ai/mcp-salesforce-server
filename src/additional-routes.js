@@ -648,5 +648,48 @@ ${mappingXml}
     }
   });
 
+
+
+  // Data Cloud diagnostic - try multiple API paths
+  app.get("/api/datacloud/diag", async (req, res) => {
+    try {
+      await connectToTargetOrg(req);
+      const conn = sfClient.getConnection();
+      const results = {};
+      
+      const paths = [
+        "/services/data/v62.0/sobjects/DataStream/describe",
+        "/services/data/v62.0/connect/cdp",
+        "/services/data/v62.0/ssot/data-connector-types",
+        "/services/data/v62.0/ssot/data-streams",
+        "/services/data/v62.0/ssot/data-spaces",
+        "/services/data/v62.0/connect/data-connector-types"
+      ];
+      
+      for (const path of paths) {
+        try {
+          const r = await conn.request({ method: "GET", url: path });
+          results[path] = { status: "ok", data: JSON.stringify(r).substring(0, 300) };
+        } catch (e) {
+          results[path] = { status: "error", message: e.message || String(e) };
+        }
+      }
+      
+      // Also try to get user permissions
+      try {
+        const perms = await conn.query("SELECT Id, PermissionSet.Name FROM PermissionSetAssignment WHERE AssigneeId = '" + conn.userInfo.id + "' LIMIT 30");
+        results["permissions"] = perms.records.map(r => r.PermissionSet?.Name).filter(Boolean);
+      } catch(e) {
+        results["permissions"] = e.message;
+      }
+      
+      sfClient.clearTargetOrg();
+      res.json({ status: "ok", results });
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.json({ status: "error", message: err.message });
+    }
+  });
+
   console.log("Routes: execute-anonymous, datacloud-overview, datacloud-ssot-proxy, datacloud-query, execute-apex-b64, soql-b64, soql-get, upsert, update-b64, composite, deploy-formula-fields, update-layout, lead-convert-mapping, field-history");
 }
