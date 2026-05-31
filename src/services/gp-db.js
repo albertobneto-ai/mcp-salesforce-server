@@ -529,3 +529,36 @@ export async function clearActivityDates(storyId, activity) {
     [storyId]
   );
 }
+
+// ── Dev + QA: status + dates + points ──
+export async function ensureDevQaCols() {
+  const cols = [
+    ['dev_status','VARCHAR(20)',''],['qa_status','VARCHAR(20)',''],
+    ['dev_start','DATE',null],['dev_end','DATE',null],['qa_start','DATE',null],['qa_end','DATE',null],
+    ['dev_points','INTEGER','0'],['qa_points','INTEGER','0']
+  ];
+  for (const [name, type, def] of cols) {
+    try {
+      const defSql = def === null ? '' : ` DEFAULT '${def}'`;
+      await pool.query(`ALTER TABLE gp_stories ADD COLUMN IF NOT EXISTS ${name} ${type}${defSql}`);
+    } catch {}
+  }
+}
+export async function setDevQaPoints(storyId, activity, points, startDate) {
+  await ensureDevQaCols();
+  if (!['dev','qa'].includes(activity)) return null;
+  const days = Math.ceil((points * 4) / 8); // 1pt=4h, 8h/dia
+  // Calcular end date (só dias úteis)
+  let d = new Date(startDate);
+  let remaining = days - 1;
+  while (remaining > 0) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() !== 0 && d.getDay() !== 6) remaining--;
+  }
+  const endDate = d.toISOString().slice(0,10);
+  await pool.query(
+    `UPDATE gp_stories SET ${activity}_points = $1, ${activity}_start = $2, ${activity}_end = $3, updated_at = NOW() WHERE id = $4`,
+    [points, startDate, endDate, storyId]
+  );
+  return { points, start: startDate, end: endDate, days };
+}
