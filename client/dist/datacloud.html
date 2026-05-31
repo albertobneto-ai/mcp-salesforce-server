@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ever i9 — Data Cloud Sandbox</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;scrollbar-width:thin;scrollbar-color:#1e3a5f transparent}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#1e3a5f;border-radius:3px}
+body{font-family:'Outfit',system-ui,sans-serif;background:#0a1628;color:#e2e8f0;overflow:hidden}
+@keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.sidebar-item{transition:all .15s;cursor:pointer;padding:8px 16px 8px 20px;display:flex;align-items:center;gap:8px;font-size:13px;border-left:3px solid transparent}
+.sidebar-item:hover{background:rgba(99,102,241,.08)}
+.sidebar-item.active{background:linear-gradient(90deg,rgba(99,102,241,.15),transparent);border-left-color:#6366f1;color:#e2e8f0}
+.sidebar-item:not(.active){color:#94a3b8}
+.card{background:#0f1d32;border:1px solid #1e3a5f;border-radius:12px;padding:20px;margin-bottom:16px;animation:slideUp .3s ease both}
+.btn{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .15s;border:1px solid}
+.btn-solid{border:none;color:#fff;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif}
+.tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:500}
+.mono{font-family:'JetBrains Mono',monospace;font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 10px;border-bottom:2px solid #1e3a5f;color:#6366f1;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+td{padding:7px 10px;border-bottom:1px solid #1e3a5f;color:#cbd5e1}
+.pipe-node{padding:12px 16px;border-radius:10px;text-align:center;min-width:100px;transition:all .2s;cursor:pointer;border:2px solid}
+.stat-box{padding:16px 20px;border-radius:10px;flex:1;min-width:140px}
+.back-btn{position:fixed;top:12px;left:12px;z-index:100;padding:8px 16px;border-radius:8px;border:none;background:#1e3a5f;color:#e2e8f0;font-size:13px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;text-decoration:none;display:flex;align-items:center;gap:6px}
+.back-btn:hover{background:#2a4a70}
+select,input,textarea{font-family:'Outfit',sans-serif}
+</style>
+</head>
+<body>
+<a href="/" class="back-btn">← Ever i9</a>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useMemo,useCallback,useEffect}=React;
+
+// ═══ SNOWFLAKE CONFIG ═══
+const SF_CFG={account:"algar-telecom.us-east-1",warehouse:"ALGAR_DW_PROD",database:"ALGAR_CRM_LAKE",schema:"PUBLIC",tables:["LEADS","ACCOUNTS","CONTACTS","OPPORTUNITIES","CONTRACTS"]};
+
+// ═══ ALGAR DATA ═══
+const D={
+accounts:[
+{id:"ACC-001",name:"Grupo Algar S.A.",industry:"Telecomunicações",type:"Enterprise",city:"Uberlândia",state:"MG",revenue:12500000,segment:"Large",owner:"Carlos Mendes"},
+{id:"ACC-002",name:"Algar Tecnologia",industry:"TI & Serviços",type:"Enterprise",city:"Uberlândia",state:"MG",revenue:8900000,segment:"Large",owner:"Ana Rocha"},
+{id:"ACC-003",name:"Ctbc Telecom",industry:"Telecomunicações",type:"Mid-Market",city:"Uberlândia",state:"MG",revenue:4200000,segment:"Medium",owner:"Roberto Lima"},
+{id:"ACC-004",name:"Engeset Engenharia",industry:"Engenharia",type:"SMB",city:"Campinas",state:"SP",revenue:1800000,segment:"Small",owner:"Fernanda Costa"},
+{id:"ACC-005",name:"UniAlgar Educação",industry:"Educação",type:"Mid-Market",city:"Uberlândia",state:"MG",revenue:3100000,segment:"Medium",owner:"Paulo Vieira"},
+{id:"ACC-006",name:"Algar Agro",industry:"Agronegócio",type:"Enterprise",city:"Uberlândia",state:"MG",revenue:6700000,segment:"Large",owner:"Carlos Mendes"},
+{id:"ACC-007",name:"Smart Soluções TI",industry:"TI & Serviços",type:"SMB",city:"São Paulo",state:"SP",revenue:950000,segment:"Small",owner:"Ana Rocha"},
+{id:"ACC-008",name:"Rio Quente Resorts",industry:"Turismo & Hotelaria",type:"Mid-Market",city:"Rio Quente",state:"GO",revenue:5400000,segment:"Medium",owner:"Roberto Lima"}
+],
+contacts:[
+{id:"CON-001",firstName:"João",lastName:"Silva",email:"joao.silva@algar.com.br",phone:"(34) 99912-3456",title:"Diretor de TI",accountId:"ACC-001",source:"CRM"},
+{id:"CON-002",firstName:"João",lastName:"S. Silva",email:"j.silva@algar.com.br",phone:"(34) 99912-3456",title:"Dir. Tecnologia",accountId:"ACC-001",source:"Snowflake"},
+{id:"CON-003",firstName:"Maria",lastName:"Santos",email:"maria.santos@algartecnologia.com.br",phone:"(34) 98876-5432",title:"Gerente Comercial",accountId:"ACC-002",source:"CRM"},
+{id:"CON-004",firstName:"Maria",lastName:"A. Santos",email:"m.santos@algartec.com.br",phone:"(34) 98876-5432",title:"Ger. Comercial",accountId:"ACC-002",source:"Snowflake"},
+{id:"CON-005",firstName:"Pedro",lastName:"Oliveira",email:"pedro.oliveira@ctbc.com.br",phone:"(34) 97765-4321",title:"CTO",accountId:"ACC-003",source:"CRM"},
+{id:"CON-006",firstName:"Ana",lastName:"Ferreira",email:"ana.ferreira@engeset.com.br",phone:"(19) 99654-3210",title:"Coord. Projetos",accountId:"ACC-004",source:"CRM"},
+{id:"CON-007",firstName:"Lucas",lastName:"Mendes",email:"lucas.mendes@unialgar.com.br",phone:"(34) 99543-2109",title:"Dir. Acadêmico",accountId:"ACC-005",source:"CRM"},
+{id:"CON-008",firstName:"Carla",lastName:"Rodrigues",email:"carla.rodrigues@algaragro.com.br",phone:"(34) 98432-1098",title:"Ger. Operações",accountId:"ACC-006",source:"Snowflake"},
+{id:"CON-009",firstName:"Rafael",lastName:"Costa",email:"rafael.costa@smartsolucoes.com.br",phone:"(11) 97321-0987",title:"CEO",accountId:"ACC-007",source:"CRM"},
+{id:"CON-010",firstName:"Juliana",lastName:"Almeida",email:"juliana.almeida@rioquente.com.br",phone:"(64) 99210-9876",title:"Dir. Marketing",accountId:"ACC-008",source:"CRM"},
+{id:"CON-011",firstName:"Pedro",lastName:"H. Oliveira",email:"p.oliveira@ctbc.com.br",phone:"34977654321",title:"Chief Technology Officer",accountId:"ACC-003",source:"Snowflake"},
+{id:"CON-012",firstName:"Juliana",lastName:"de Almeida",email:"ju.almeida@rioquenteresorts.com.br",phone:"(64) 99210-9876",title:"Diretora de Mkt",accountId:"ACC-008",source:"CSV"}
+],
+leads:[
+{id:"LED-001",firstName:"Bruno",lastName:"Nascimento",company:"TelecomX Brasil",title:"VP Infraestrutura",status:"Open",rating:"Hot",score:92},
+{id:"LED-002",firstName:"Camila",lastName:"Duarte",company:"Rede Conecta",title:"Gerente Compras",status:"Working",rating:"Warm",score:74},
+{id:"LED-003",firstName:"Thiago",lastName:"Barros",company:"DataLink Soluções",title:"Dir. Comercial",status:"Open",rating:"Hot",score:88},
+{id:"LED-004",firstName:"Fernanda",lastName:"Moreira",company:"Logística Pro",title:"COO",status:"Nurturing",rating:"Cold",score:35},
+{id:"LED-005",firstName:"Diego",lastName:"Campos",company:"AgroInova",title:"CTO",status:"Working",rating:"Hot",score:95},
+{id:"LED-006",firstName:"Patricia",lastName:"Lopes",company:"EducaTech",title:"Head Inovação",status:"Open",rating:"Warm",score:67}
+],
+opportunities:[
+{id:"OPP-001",name:"MPLS Dedicado - Grupo Algar",accountId:"ACC-001",stage:"Negotiation",amount:2400000,probability:75,product:"MPLS Dedicado"},
+{id:"OPP-002",name:"Cloud Hosting - Algar Tec",accountId:"ACC-002",stage:"Proposal",amount:890000,probability:50,product:"Cloud Hosting"},
+{id:"OPP-003",name:"SD-WAN Migration - CTBC",accountId:"ACC-003",stage:"Qualification",amount:1500000,probability:25,product:"SD-WAN"},
+{id:"OPP-004",name:"Cyber Security - Engeset",accountId:"ACC-004",stage:"Closed Won",amount:340000,probability:100,product:"Cybersecurity"},
+{id:"OPP-005",name:"UCaaS - UniAlgar",accountId:"ACC-005",stage:"Negotiation",amount:780000,probability:65,product:"UCaaS"},
+{id:"OPP-006",name:"IoT Agro - Algar Agro",accountId:"ACC-006",stage:"Closed Won",amount:1200000,probability:100,product:"IoT Platform"},
+{id:"OPP-007",name:"Data Center - Smart",accountId:"ACC-007",stage:"Proposal",amount:450000,probability:40,product:"Colocation"},
+{id:"OPP-008",name:"Fiber Backbone - Rio Quente",accountId:"ACC-008",stage:"Closed Won",amount:1800000,probability:100,product:"Fiber Backbone"},
+{id:"OPP-009",name:"Renewal MPLS - Algar 2027",accountId:"ACC-001",stage:"Prospecting",amount:2600000,probability:15,product:"MPLS Dedicado"}
+],
+contracts:[
+{id:"CTR-001",accountId:"ACC-001",name:"MPLS Dedicado 2024-2026",status:"Active",value:4800000,product:"MPLS Dedicado"},
+{id:"CTR-002",accountId:"ACC-004",name:"Cyber Security Suite 2026",status:"Active",value:340000,product:"Cybersecurity"},
+{id:"CTR-003",accountId:"ACC-006",name:"IoT Agro Platform 2026-2028",status:"Active",value:2400000,product:"IoT Platform"},
+{id:"CTR-004",accountId:"ACC-008",name:"Fiber Backbone 2026-2029",status:"Active",value:5400000,product:"Fiber Backbone"},
+{id:"CTR-005",accountId:"ACC-002",name:"Support Premium 2025-2026",status:"Expiring",value:180000,product:"Premium Support"},
+{id:"CTR-006",accountId:"ACC-003",name:"Internet Dedicada 2023-2026",status:"Active",value:720000,product:"Internet Dedicada"}
+]
+};
+
+const C360={
+"Unified Individual":{color:"#6366f1",fields:["FirstName","LastName","Email","Phone","City","State","Title","Department"]},
+"Account":{color:"#0ea5e9",fields:["Name","Industry","Type","CNPJ","City","State","Revenue","Segment"]},
+"Sales Order":{color:"#f59e0b",fields:["Name","Stage","Amount","Probability","CloseDate","Product","Type"]},
+"Contract":{color:"#10b981",fields:["Name","Status","StartDate","EndDate","Value","Type","AutoRenew"]},
+"Lead":{color:"#ec4899",fields:["FirstName","LastName","Email","Company","Title","Status","Score","Rating"]}
+};
+
+const IR_RULES=[
+{id:1,name:"Email Exact",type:"Exact",fields:["Email"],priority:1,active:true},
+{id:2,name:"Phone Normalized",type:"Normalized",fields:["Phone"],priority:2,active:true},
+{id:3,name:"Name Fuzzy + City",type:"Compound",fields:["FirstName","LastName","City"],priority:3,active:true,threshold:.85}
+];
+
+const MENU=[
+{group:"Visão Geral",items:[{key:"dashboard",icon:"📊",label:"Pipeline Overview"}]},
+{group:"Ingestão",items:[{key:"spaces",icon:"📦",label:"Data Spaces"},{key:"sources",icon:"🔌",label:"Data Sources"},{key:"dlos",icon:"🗄️",label:"Data Lake Objects"}]},
+{group:"Transformação",items:[{key:"transforms",icon:"⚙️",label:"Data Transforms"},{key:"dmos",icon:"🧩",label:"Data Model Objects"}]},
+{group:"Unificação",items:[{key:"identity",icon:"🔗",label:"Identity Resolution"},{key:"profiles",icon:"👤",label:"Profile Explorer"}]},
+{group:"Análise",items:[{key:"insights",icon:"📈",label:"Calculated Insights"},{key:"segments",icon:"🎯",label:"Segments"},{key:"explorer",icon:"🔍",label:"Data Explorer"}]},
+{group:"Ativação",items:[{key:"actions",icon:"⚡",label:"Data Actions"},{key:"enrichments",icon:"💎",label:"Enrichments"},{key:"activations",icon:"📡",label:"Activation Targets"},{key:"shares",icon:"🔄",label:"Data Shares"}]},
+{group:"IA & Grafos",items:[{key:"graphs",icon:"🕸️",label:"Data Graphs"},{key:"einstein",icon:"🧠",label:"Einstein Studio"}]},
+{group:"Governança",items:[{key:"consent",icon:"🛡️",label:"Consent Mgmt"},{key:"governance",icon:"🔐",label:"Permissions"}]}
+];
+
+const Tag=({children,color})=><span className="tag" style={{background:color+"22",color,border:`1px solid ${color}44`}}>{children}</span>;
+const Chip=({children,color})=><span className="chip" style={{background:color+"18",color}}>{children}</span>;
+const Stat=({num,label,color})=><div className="stat-box" style={{border:`1px solid ${color}33`,background:`linear-gradient(135deg,${color}08,${color}15)`}}><div style={{fontSize:28,fontWeight:700,color,lineHeight:1.1}}>{num}</div><div style={{fontSize:11,color:"#94a3b8",marginTop:4}}>{label}</div></div>;
+
+const DataTable=({data,columns})=><div style={{overflowX:"auto"}}><table><thead><tr>{columns.map(c=><th key={c.key}>{c.label}</th>)}</tr></thead><tbody>{data.map((row,i)=><tr key={i}>{columns.map(c=><td key={c.key}>{c.render?c.render(row[c.key],row):row[c.key]}</td>)}</tr>)}</tbody></table></div>;
+
+// ═══ VIEWS ═══
+const Dashboard=({onNav})=>{
+const total=D.contacts.length+D.accounts.length+D.leads.length+D.opportunities.length+D.contracts.length;
+const nodes=[
+{label:"Sources",sub:"SF CRM + Snowflake + CSV",color:"#6366f1",key:"sources"},
+{label:"DLOs",sub:"5 objetos raw",color:"#0ea5e9",key:"dlos"},
+{label:"Transforms",sub:"Streaming + Batch",color:"#8b5cf6",key:"transforms"},
+{label:"DMOs",sub:"5 C360 Model",color:"#10b981",key:"dmos"},
+{label:"Identity Res.",sub:`${D.contacts.length} → unificar`,color:"#f59e0b",key:"identity"},
+{label:"Segments",sub:"Critérios",color:"#ec4899",key:"segments"},
+{label:"Activations",sub:"CRM + Externo",color:"#ef4444",key:"activations"}
+];
+return <div>
+<h2 style={{fontSize:22,fontWeight:700,marginBottom:20,display:"flex",alignItems:"center",gap:10}}>📊 Pipeline Overview <Tag color="#6366f1">Offline Mode</Tag></h2>
+<div style={{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap"}}>
+<Stat num="3" label="Data Sources" color="#6366f1"/>
+<Stat num="5" label="Data Lake Objects" color="#0ea5e9"/>
+<Stat num="5" label="Data Model Objects" color="#10b981"/>
+<Stat num={total} label="Total Records" color="#f59e0b"/>
+</div>
+<div className="card">
+<div style={{fontWeight:700,fontSize:16,marginBottom:12,display:"flex",alignItems:"center",gap:8}}>🔀 Data Pipeline — Algar Telecom</div>
+<div style={{display:"flex",alignItems:"center",gap:8,overflowX:"auto",padding:"10px 0",justifyContent:"center",flexWrap:"wrap"}}>
+{nodes.map((n,i,a)=><div key={n.key} style={{display:"flex",alignItems:"center",gap:8}}>
+<div className="pipe-node" style={{borderColor:n.color,background:n.color+"15"}} onClick={()=>onNav(n.key)}>
+<div style={{fontWeight:700,fontSize:13,color:n.color}}>{n.label}</div>
+<div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>{n.sub}</div>
+</div>
+{i<a.length-1&&<div style={{color:"#1e3a5f",fontSize:20}}>→</div>}
+</div>)}
+</div>
+</div>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+<div className="card">
+<div style={{fontWeight:700,marginBottom:12}}>📦 Volume por Objeto</div>
+{[{n:"Accounts",c:D.accounts.length,cl:"#0ea5e9"},{n:"Contacts",c:D.contacts.length,cl:"#6366f1"},{n:"Leads",c:D.leads.length,cl:"#ec4899"},{n:"Opportunities",c:D.opportunities.length,cl:"#f59e0b"},{n:"Contracts",c:D.contracts.length,cl:"#10b981"}].map(x=>
+<div key={x.n} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+<div style={{width:10,height:10,borderRadius:"50%",background:x.cl}}/>
+<div style={{flex:1,fontSize:13}}>{x.n}</div>
+<div className="mono" style={{fontWeight:700,color:x.cl}}>{x.c}</div>
+<div style={{width:120,height:6,background:"#1e3a5f",borderRadius:3,overflow:"hidden"}}><div style={{width:`${(x.c/total)*100*3}%`,height:"100%",background:x.cl,borderRadius:3}}/></div>
+</div>)}
+</div>
+<div className="card">
+<div style={{fontWeight:700,marginBottom:12}}>❄️ Snowflake Connection</div>
+<div className="mono" style={{lineHeight:1.8}}>
+<div><span style={{color:"#64748b"}}>Account:</span> {SF_CFG.account}</div>
+<div><span style={{color:"#64748b"}}>Warehouse:</span> {SF_CFG.warehouse}</div>
+<div><span style={{color:"#64748b"}}>Database:</span> {SF_CFG.database}</div>
+<div><span style={{color:"#64748b"}}>Tables:</span> {SF_CFG.tables.join(", ")}</div>
+<div style={{marginTop:8}}><Tag color="#f59e0b">Offline — Dados Simulados</Tag></div>
+</div>
+</div>
+</div>
+</div>;
+};
+
+const Sources=()=>{
+const sources=[
+{name:"Salesforce CRM (Dev Org)",type:"CRM Connector",detail:"Org ID: 00DgK00000PUJwTUAX",objects:["Account","Contact","Lead","Opportunity"],icon:"☁️",color:"#0ea5e9"},
+{name:"Snowflake — Algar DW",type:"Zero Copy Federation",detail:`Account: ${SF_CFG.account} | DB: ${SF_CFG.database}`,objects:SF_CFG.tables,icon:"❄️",color:"#06b6d4"},
+{name:"CSV Upload",type:"File Upload",detail:"Ready",objects:["Contacts_External.csv"],icon:"📄",color:"#10b981"}
+];
+return <div>
+<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🔌 Data Sources</h2>
+{sources.map(s=><div key={s.name} className="card" style={{borderLeft:`4px solid ${s.color}`}}>
+<div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
+<span style={{fontSize:24}}>{s.icon}</span>
+<div style={{flex:1}}><div style={{fontWeight:700,fontSize:15}}>{s.name}</div><div style={{fontSize:12,color:"#94a3b8"}}>{s.type}</div></div>
+<Tag color="#f59e0b">Offline</Tag>
+</div>
+<div className="mono" style={{fontSize:11,color:"#64748b",marginBottom:8}}>{s.detail}</div>
+<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{s.objects.map(o=><Chip key={o} color={s.color}>{o}</Chip>)}</div>
+</div>)}
+</div>;
+};
+
+const DLOs=()=>{
+const[sel,setSel]=useState(null);
+const dlos=[
+{name:"Account_DLO",source:"CRM + Snowflake",records:D.accounts.length,key:"accounts"},
+{name:"Contact_DLO",source:"CRM + Snowflake + CSV",records:D.contacts.length,key:"contacts"},
+{name:"Lead_DLO",source:"CRM",records:D.leads.length,key:"leads"},
+{name:"Opportunity_DLO",source:"CRM + Snowflake",records:D.opportunities.length,key:"opportunities"},
+{name:"Contract_DLO",source:"Snowflake",records:D.contracts.length,key:"contracts"}
+];
+const cols={
+accounts:[{key:"id",label:"ID"},{key:"name",label:"Name"},{key:"industry",label:"Industry"},{key:"type",label:"Type",render:v=><Tag color="#0ea5e9">{v}</Tag>},{key:"city",label:"City"},{key:"revenue",label:"Revenue",render:v=>`R$ ${(v/1e6).toFixed(1)}M`}],
+contacts:[{key:"id",label:"ID"},{key:"firstName",label:"First"},{key:"lastName",label:"Last"},{key:"email",label:"Email"},{key:"title",label:"Title"},{key:"source",label:"Source",render:v=><Tag color={v==="CRM"?"#0ea5e9":v==="Snowflake"?"#06b6d4":"#10b981"}>{v}</Tag>}],
+leads:[{key:"id",label:"ID"},{key:"firstName",label:"First"},{key:"lastName",label:"Last"},{key:"company",label:"Company"},{key:"rating",label:"Rating",render:v=><Tag color={v==="Hot"?"#ef4444":v==="Warm"?"#f59e0b":"#64748b"}>{v}</Tag>},{key:"score",label:"Score"}],
+opportunities:[{key:"id",label:"ID"},{key:"name",label:"Name"},{key:"stage",label:"Stage",render:v=><Tag color={v==="Closed Won"?"#10b981":"#f59e0b"}>{v}</Tag>},{key:"amount",label:"Amount",render:v=>`R$ ${(v/1e3).toFixed(0)}K`},{key:"product",label:"Product"}],
+contracts:[{key:"id",label:"ID"},{key:"name",label:"Name"},{key:"status",label:"Status",render:v=><Tag color={v==="Active"?"#10b981":"#f59e0b"}>{v}</Tag>},{key:"value",label:"Value",render:v=>`R$ ${(v/1e6).toFixed(1)}M`}]
+};
+return <div>
+<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🗄️ Data Lake Objects</h2>
+<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:12,marginBottom:16}}>
+{dlos.map(d=><div key={d.name} className="card" style={{cursor:"pointer",borderColor:sel===d.key?"#6366f1":"#1e3a5f",marginBottom:0}} onClick={()=>setSel(sel===d.key?null:d.key)}>
+<div style={{fontWeight:700,fontSize:14,marginBottom:4}}>🗄️ {d.name}</div>
+<div style={{fontSize:11,color:"#94a3b8",marginBottom:8}}>Source: {d.source}</div>
+<div style={{display:"flex",gap:6}}><Chip color="#6366f1">{d.records} records</Chip></div>
+</div>)}
+</div>
+{sel&&<div className="card"><div style={{fontWeight:700,marginBottom:12}}>📋 Preview — {sel}</div><DataTable data={D[sel]} columns={cols[sel]}/></div>}
+</div>;
+};
+
+const Transforms=()=>{
+const[tab,setTab]=useState("streaming");
+const sql=`-- Streaming Transform: Contact Normalization
+SELECT
+  id,
+  UPPER(TRIM(firstName)) AS firstName_Clean,
+  LOWER(email) AS email_Normalized,
+  REGEXP_REPLACE(phone, '[^0-9]', '') AS phone_Normalized,
+  CASE
+    WHEN state = 'MG' THEN 'Minas Gerais'
+    WHEN state = 'SP' THEN 'São Paulo'
+    ELSE state
+  END AS state_Full
+FROM Contact_DLO
+WHERE email IS NOT NULL`;
+return <div>
+<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>⚙️ Data Transforms</h2>
+<div style={{display:"flex",gap:8,marginBottom:16}}>
+{["streaming","batch"].map(t=><button key={t} className="btn" style={{borderColor:tab===t?"#6366f1":"#1e3a5f",background:tab===t?"#6366f122":"transparent",color:tab===t?"#6366f1":"#94a3b8"}} onClick={()=>setTab(t)}>{t==="streaming"?"⚡ Streaming":"📦 Batch"}</button>)}
+</div>
+{tab==="streaming"?<div className="card">
+<div style={{fontWeight:700,marginBottom:8}}>⚡ Streaming Transform — Contact Normalization</div>
+<p style={{color:"#94a3b8",fontSize:12,marginBottom:12}}>Near real-time. SQL simples, sem JOINs.</p>
+<pre className="mono" style={{background:"#081020",padding:16,borderRadius:8,border:"1px solid #1e3a5f",overflowX:"auto",lineHeight:1.6,color:"#a5b4fc"}}>{sql}</pre>
+<div style={{marginTop:12}}><button className="btn-solid" style={{background:"linear-gradient(135deg,#6366f1,#6366f1cc)"}}>▶ Simular Execução</button></div>
+</div>
+:<div className="card">
+<div style={{fontWeight:700,marginBottom:8}}>📦 Batch Transform — Contact LTV Calculation</div>
+<p style={{color:"#94a3b8",fontSize:12,marginBottom:16}}>Editor visual. Execução agendada. JOINs, agregações, fórmulas.</p>
+<div style={{display:"flex",alignItems:"center",gap:10,overflowX:"auto",padding:"12px 0",justifyContent:"center",flexWrap:"wrap"}}>
+{[{t:"Source",n:"Contact_DLO",c:"#0ea5e9"},{t:"Source",n:"Opportunity_DLO",c:"#0ea5e9"},{t:"Join",n:"ON accountId",c:"#8b5cf6"},{t:"Aggregate",n:"SUM(amount)",c:"#f59e0b"},{t:"Formula",n:"LTV calc",c:"#ec4899"},{t:"Target",n:"Contact_LTV_DLO",c:"#10b981"}].map((x,i,a)=><div key={i} style={{display:"flex",alignItems:"center",gap:10}}>
+<div style={{padding:"10px 16px",borderRadius:8,border:`2px solid ${x.c}`,background:x.c+"12",textAlign:"center"}}>
+<div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",fontWeight:700}}>{x.t}</div>
+<div style={{fontSize:12,fontWeight:600,color:x.c,marginTop:2}}>{x.n}</div>
+</div>
+{i<a.length-1&&<span style={{color:"#1e3a5f",fontSize:18}}>→</span>}
+</div>)}
+</div>
+</div>}
+</div>;
+};
+
+const DMOs=()=>{
+const[sel,setSel]=useState(null);
+return <div>
+<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🧩 Data Model Objects — C360</h2>
+<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:12,marginBottom:16}}>
+{Object.entries(C360).map(([name,cfg])=><div key={name} className="card" style={{cursor:"pointer",borderColor:sel===name?cfg.color:"#1e3a5f",marginBottom:0}} onClick={()=>setSel(sel===name?null:name)}>
+<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+<div style={{width:12,height:12,borderRadius:"50%",background:cfg.color}}/><div style={{fontWeight:700,fontSize:14}}>{name}</div>
+</div>
+<div style={{display:"flex",flexWrap:"wrap",gap:4}}>{cfg.fields.slice(0,4).map(f=><Chip key={f} color={cfg.color}>{f}</Chip>)}{cfg.fields.length>4&&<Chip color="#64748b">+{cfg.fields.length-4}</Chip>}</div>
+</div>)}
+</div>
+{sel&&<div className="card"><div style={{fontWeight:700,marginBottom:12}}>Mapping: DLO → {sel} DMO</div>
+<table><thead><tr><th>Campo DLO (Raw)</th><th>→</th><th>Campo DMO (C360)</th></tr></thead>
+<tbody>{C360[sel].fields.map(f=><tr key={f}><td className="mono">{f.toLowerCase()}_raw</td><td style={{textAlign:"center",color:"#6366f1"}}>→</td><td className="mono" style={{color:C360[sel].color}}>{f}</td></tr>)}</tbody></table>
+</div>}
+</div>;
+};
+
+const Identity=()=>{
+const[hasRun,setRun]=useState(false);
+const clusters=[
+{uid:"UI-001",recs:["CON-001","CON-002"],rule:"Phone Normalized",names:["João Silva","João S. Silva"],emails:["joao.silva@algar.com.br","j.silva@algar.com.br"],conf:.97},
+{uid:"UI-002",recs:["CON-003","CON-004"],rule:"Phone Normalized",names:["Maria Santos","Maria A. Santos"],emails:["maria.santos@algartecnologia.com.br","m.santos@algartec.com.br"],conf:.95},
+{uid:"UI-003",recs:["CON-005","CON-011"],rule:"Name Fuzzy + City",names:["Pedro Oliveira","Pedro H. Oliveira"],emails:["pedro.oliveira@ctbc.com.br","p.oliveira@ctbc.com.br"],conf:.91},
+{uid:"UI-004",recs:["CON-010","CON-012"],rule:"Phone Normalized",names:["Juliana Almeida","Juliana de Almeida"],emails:["juliana.almeida@rioquente.com.br","ju.almeida@rioquenteresorts.com.br"],conf:.93}
+];
+return <div>
+<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🔗 Identity Resolution</h2>
+<div className="card">
+<div style={{fontWeight:700,marginBottom:12}}>📋 Match Rules</div>
+<table><thead><tr><th>#</th><th>Nome</th><th>Tipo</th><th>Campos</th><th>Status</th></tr></thead>
+<tbody>{IR_RULES.map(r=><tr key={r.id}><td>{r.priority}</td><td style={{fontWeight:600}}>{r.name}</td><td><Tag color={r.type==="Exact"?"#10b981":r.type==="Normalized"?"#0ea5e9":"#f59e0b"}>{r.type}</Tag></td><td>{r.fields.join(", ")}{r.threshold?` (≥${r.threshold})`:""}</td><td><Tag color="#10b981">Active</Tag></td></tr>)}</tbody></table>
+</div>
+<div className="card" style={{textAlign:"center"}}>
+<button className="btn-solid" style={{background:hasRun?"linear-gradient(135deg,#10b981,#10b981cc)":"linear-gradient(135deg,#6366f1,#6366f1cc)"}} onClick={()=>setRun(true)}>
+{hasRun?"✅ Re-executar":"▶ Executar Identity Resolution"}
+</button>
+{hasRun&&<div style={{display:"flex",gap:12,justifyContent:"center",marginTop:16,flexWrap:"wrap"}}>
+<Stat num={D.contacts.length} label="Records Input" color="#0ea5e9"/>
+<Stat num={D.contacts.length-clusters.length} label="Unified Profiles" color="#10b981"/>
+<Stat num={clusters.length} label="Merges" color="#f59e0b"/>
+<Stat num="94%" label="Avg. Confidence" color="#6366f1"/>
+</div>}
+</div>
+{hasRun&&<div className="card">
+<div style={{fontWeight:700,marginBottom:12}}>🔀 Clusters de Merge</div>
+{clusters.map(c=><div key={c.uid} style={{padding:14,border:"1px solid #1e3a5f",borderRadius:10,marginBottom:10,background:"#081020"}}>
+<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+<Tag color="#10b981">{c.uid}</Tag><Tag color="#f59e0b">{c.rule}</Tag>
+<span style={{marginLeft:"auto",fontSize:12,color:"#94a3b8"}}>Confidence: <span style={{color:"#10b981",fontWeight:700}}>{(c.conf*100).toFixed(0)}%</span></span>
+</div>
+<div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+{c.recs.map((r,i)=><div key={r} style={{flex:1,padding:10,border:"1px solid #1e3a5f",borderRadius:8,fontSize:12,minWidth:160}}>
+<div className="mono" style={{color:"#6366f1",marginBottom:4}}>{r}</div>
+<div>{c.names[i]}</div><div style={{color:"#94a3b8",fontSize:11}}>{c.emails[i]}</div>
+</div>)}
+<div style={{display:"flex",alignItems:"center",fontSize:20,color:"#10b981"}}>→</div>
+<div style={{flex:1,padding:10,border:"2px solid #10b981",borderRadius:8,fontSize:12,background:"#10b98112",minWidth:160}}>
+<div className="mono" style={{color:"#10b981",marginBottom:4,fontWeight:700}}>UNIFIED</div>
+<div>{c.names[0]}</div><div style={{color:"#94a3b8",fontSize:11}}>{c.emails[0]}</div>
+</div>
+</div>
+</div>)}
+</div>}
+</div>;
+};
+
+const Profiles=()=>{
+const[sel,setSel]=useState("CON-001");
+const skip=["CON-002","CON-004","CON-011","CON-012"];
+const con=D.contacts.find(c=>c.id===sel);
+const acc=con?D.accounts.find(a=>a.id===con.accountId):null;
+const opps=acc?D.opportunities.filter(o=>o.accountId===acc.id):[];
+const ctrs=acc?D.contracts.filter(c=>c.accountId===acc.id):[];
+return <div>
+<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>👤 Profile Explorer</h2>
+<select value={sel} onChange={e=>setSel(e.target.value)} style={{marginBottom:16,padding:"7px 12px",borderRadius:8,border:"1px solid #1e3a5f",background:"#0f1d32",color:"#e2e8f0",fontSize:13}}>
+{D.contacts.filter(c=>!skip.includes(c.id)).map(c=><option key={c.id} value={c.id}>{c.firstName} {c.lastName} — {c.email}</option>)}
+</select>
+{con&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+<div className="card">
+<div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16}}>
+<div style={{width:56,height:56,borderRadius:"50%",background:"linear-gradient(135deg,#6366f1,#8b5cf6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,color:"#fff",fontWeight:700}}>{con.firstName[0]}{con.lastName[0]}</div>
+<div><div style={{fontSize:18,fontWeight:700}}>{con.firstName} {con.lastName}</div><div style={{color:"#94a3b8",fontSize:13}}>{con.title}</div></div>
+</div>
+<div className="mono" style={{lineHeight:2}}>
+<div>📧 {con.email}</div><div>📱 {con.phone}</div><div>🏢 {acc?.name||"—"}</div>
+</div>
+<div style={{marginTop:12}}><Tag color="#6366f1">Source: {con.source}</Tag></div>
+</div>
+<div className="card">
+{acc&&<div><div style={{fontWeight:700,marginBottom:8}}>🏢 Account</div><div className="mono" style={{lineHeight:2,marginBottom:12}}><strong>{acc.name}</strong><br/>Revenue: R$ {(acc.revenue/1e6).toFixed(1)}M · <Tag color="#0ea5e9">{acc.segment}</Tag></div></div>}
+<div style={{fontWeight:700,marginBottom:8}}>📈 Opportunities ({opps.length})</div>
+{opps.map(o=><div key={o.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,fontSize:12}}><Tag color={o.stage==="Closed Won"?"#10b981":"#f59e0b"}>{o.stage}</Tag><span>{o.name}</span><span style={{marginLeft:"auto",fontWeight:600}}>R$ {(o.amount/1e3).toFixed(0)}K</span></div>)}
+<div style={{fontWeight:700,marginTop:12,marginBottom:8}}>📋 Contracts ({ctrs.length})</div>
+{ctrs.map(c=><div key={c.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,fontSize:12}}><Tag color={c.status==="Active"?"#10b981":"#f59e0b"}>{c.status}</Tag><span>{c.name}</span><span style={{marginLeft:"auto",fontWeight:600}}>R$ {(c.value/1e6).toFixed(1)}M</span></div>)}
+</div>
+</div>}
+</div>;
+};
+
+const Insights=()=>{
+const data=D.accounts.map(a=>{
+const o=D.opportunities.filter(o=>o.accountId===a.id);
+const c=D.contracts.filter(c=>c.accountId===a.id);
+const won=o.filter(x=>x.stage==="Closed Won").reduce((s,x)=>s+x.amount,0);
+const cv=c.reduce((s,x)=>s+x.value,0);
+const churn=c.some(x=>x.status==="Expiring")?.35:c.length===0?.7:.1;
+return{account:a.name,segment:a.segment,ltv:won+cv,churn,opps:o.length,contracts:c.filter(x=>x.status==="Active").length};
+});
+return <div>
+<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>📈 Calculated Insights</h2>
+<div className="card"><div style={{fontWeight:700,marginBottom:12}}>💰 LTV & Churn por Account</div>
+<DataTable data={data} columns={[
+{key:"account",label:"Account"},
+{key:"segment",label:"Segment",render:v=><Tag color={v==="Large"?"#6366f1":v==="Medium"?"#0ea5e9":"#64748b"}>{v}</Tag>},
+{key:"ltv",label:"LTV (R$)",render:v=><span style={{color:"#10b981",fontWeight:700}}>R$ {(v/1e6).toFixed(2)}M</span>},
+{key:"churn",label:"Churn",render:v=><Tag color={v>.3?"#ef4444":v>.15?"#f59e0b":"#10b981"}>{(v*100).toFixed(0)}%</Tag>},
+{key:"opps",label:"Opps"},{key:"contracts",label:"Contracts"}
+]}/>
+</div></div>;
+};
+
+const Segments=()=>{
+const segs=[
+{name:"Enterprise VIP",criteria:"Segment=Large AND LTV>5M AND Churn<15%",count:3,color:"#6366f1"},
+{name:"Churn Risk",criteria:"Churn>30% OR Contract=Expiring",count:2,color:"#ef4444"},
+{name:"Hot Leads MG",criteria:"Rating=Hot AND State=MG",count:2,color:"#f59e0b"},
+{name:"Cross-Sell Cloud",criteria:"Has Contract AND No Cloud Product",count:4,color:"#0ea5e9"}
+];
+return <div>
+<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🎯 Segments</h2>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+{segs.map(s=><div key={s.name} className="card" style={{borderLeft:`4px solid ${s.color}`,marginBottom:0}}>
+<div style={{display:"flex",alignItems:"center",gap:10}}>
+<div style={{flex:1}}><div style={{fontWeight:700,fontSize:15}}>{s.name}</div><div className="mono" style={{fontSize:11,color:"#94a3b8",marginTop:2}}>{s.criteria}</div></div>
+<div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:700,color:s.color}}>{s.count}</div><div style={{fontSize:10,color:"#94a3b8"}}>records</div></div>
+</div>
+</div>)}
+</div></div>;
+};
+
+const Enrichments=()=>{
+const items=[
+{name:"LTV Score → Contact",type:"Copy Field",source:"Individual DMO → LTV_Score",target:"Contact.LTV__c",color:"#6366f1"},
+{name:"Churn Score → Account",type:"Copy Field",source:"Account DMO → Churn_Score",target:"Account.Churn_Risk__c",color:"#f59e0b"},
+{name:"Email Engage → Contact",type:"Related List",source:"Email_Engagement_DMO",target:"Contact Record Page",color:"#0ea5e9"},
+{name:"VIP Auto-Flag",type:"DC-Triggered Flow",source:"WHEN LTV > 5M",target:"Contact.VIP__c = true",color:"#10b981"}
+];
+return <div>
+<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>💎 Enrichments — DC → CRM</h2>
+{items.map(e=><div key={e.name} className="card" style={{borderLeft:`4px solid ${e.color}`}}>
+<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}><Tag color={e.color}>{e.type}</Tag><div style={{fontWeight:700,fontSize:14}}>{e.name}</div></div>
+<div style={{display:"flex",alignItems:"center",gap:10,fontSize:12}}>
+<div className="mono" style={{padding:"6px 12px",background:"#081020",borderRadius:6,border:"1px solid #1e3a5f"}}>{e.source}</div>
+<span style={{color:"#6366f1",fontSize:18}}>→</span>
+<div className="mono" style={{padding:"6px 12px",background:"#081020",borderRadius:6,border:"1px solid #1e3a5f"}}>{e.target}</div>
+</div>
+</div>)}
+</div>;
+};
+
+const DataActions=()=>{
+const items=[
+{name:"VIP Notification",target:"Salesforce Flow",trigger:"LTV_Score > 5M",type:"Same Org"},
+{name:"Churn Alert",target:"Platform Event",trigger:"Churn_Score > 30%",type:"Cross Org"},
+{name:"Segment Sync → Mkt",target:"Marketing Cloud",trigger:"Enterprise VIP updated",type:"External"},
+{name:"Lead Score Webhook",target:"Webhook (HTTP POST)",trigger:"Lead_Score > 90",type:"External"}
+];
+return <div>
+<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>⚡ Data Actions</h2>
+{items.map(a=><div key={a.name} className="card">
+<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+<span style={{fontSize:18}}>⚡</span><div style={{fontWeight:700,fontSize:15,flex:1}}>{a.name}</div>
+<Tag color={a.type==="Same Org"?"#10b981":a.type==="Cross Org"?"#f59e0b":"#6366f1"}>{a.type}</Tag>
+</div>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+<div style={{padding:10,background:"#081020",borderRadius:8,border:"1px solid #1e3a5f"}}><div style={{fontSize:10,color:"#64748b",fontWeight:700,marginBottom:4}}>TARGET</div><div style={{fontSize:13,fontWeight:600}}>{a.target}</div></div>
+<div style={{padding:10,background:"#081020",borderRadius:8,border:"1px solid #1e3a5f"}}><div style={{fontSize:10,color:"#64748b",fontWeight:700,marginBottom:4}}>TRIGGER</div><div className="mono">{a.trigger}</div></div>
+</div>
+</div>)}
+</div>;
+};
+
+const Activations=()=>{
+const items=[{name:"Marketing Cloud",type:"Journey Builder",icon:"📧",segs:["Enterprise VIP"]},{name:"Google Ads",type:"Customer Match",icon:"🔍",segs:["Cross-Sell"]},{name:"Meta Ads",type:"Custom Audiences",icon:"📱",segs:["Hot Leads MG"]},{name:"LinkedIn",type:"Matched Audiences",icon:"💼",segs:[]}];
+return <div>
+<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>📡 Activation Targets</h2>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+{items.map(t=><div key={t.name} className="card" style={{marginBottom:0}}>
+<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+<span style={{fontSize:24}}>{t.icon}</span><div style={{flex:1}}><div style={{fontWeight:700,fontSize:15}}>{t.name}</div><div style={{fontSize:12,color:"#94a3b8"}}>{t.type}</div></div>
+</div>
+{t.segs.length>0&&<div style={{display:"flex",gap:6}}>{t.segs.map(s=><Chip key={s} color="#6366f1">{s}</Chip>)}</div>}
+</div>)}
+</div></div>;
+};
+
+const DataShares=()=><div>
+<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🔄 Data Shares — Zero Copy OUT</h2>
+<div className="card">
+<div style={{fontWeight:700,marginBottom:12}}>❄️ Share Target: Snowflake (Algar DW)</div>
+<div className="mono" style={{lineHeight:2,marginBottom:16}}>Account: {SF_CFG.account}<br/>Database: {SF_CFG.database}<br/><Tag color="#f59e0b">Offline</Tag></div>
+<table><thead><tr><th>DMO / Segment</th><th>View no Snowflake</th><th>Refresh</th><th>Est.</th></tr></thead>
+<tbody>
+{[{d:"Unified Individual DMO",v:"DC_UNIFIED_INDIVIDUAL",r:"Near Real-Time",n:8},{d:"Account DMO",v:"DC_ACCOUNT",r:"Batch (1h)",n:8},{d:"Segment: Enterprise VIP",v:"DC_SEG_ENTERPRISE_VIP",r:"On Publish",n:3},{d:"Insight: LTV",v:"DC_INSIGHT_LTV",r:"Batch (6h)",n:8}].map(x=><tr key={x.d}><td>{x.d}</td><td className="mono" style={{color:"#06b6d4"}}>{x.v}</td><td><Tag color="#0ea5e9">{x.r}</Tag></td><td style={{fontWeight:600}}>{x.n}</td></tr>)}
+</tbody></table>
+<div style={{marginTop:12,padding:12,background:"#081020",borderRadius:8,border:"1px solid #1e3a5f",fontSize:12,color:"#94a3b8"}}>💡 Custo: <span style={{color:"#10b981",fontWeight:700}}>70 créditos/M</span> (Zero Copy) vs <span style={{color:"#ef4444"}}>2.000/M</span> (ETL) — economia <span style={{color:"#10b981",fontWeight:700}}>28.5x</span></div>
+</div></div>;
+
+const DataGraphs=()=><div>
+<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🕸️ Data Graphs — Agentforce</h2>
+<div className="card">
+<div style={{fontWeight:700,marginBottom:12}}>📊 Customer 360 Graph</div>
+<div style={{display:"flex",justifyContent:"center",padding:20}}>
+<div style={{textAlign:"center"}}>
+<div style={{padding:"10px 20px",borderRadius:8,border:"2px solid #6366f1",background:"#6366f115",display:"inline-block",fontWeight:700,color:"#6366f1"}}>👤 Unified Individual (root)</div>
+<div style={{display:"flex",justifyContent:"center",gap:24,marginTop:12,flexWrap:"wrap"}}>
+{[{n:"Account DMO",c:"#0ea5e9",i:"🏢"},{n:"Sales Order DMO",c:"#f59e0b",i:"📈"},{n:"Contract DMO",c:"#10b981",i:"📋"},{n:"Calc. Insights",c:"#ec4899",i:"🧮"}].map(x=><div key={x.n} style={{textAlign:"center"}}><div style={{color:"#1e3a5f",margin:"4px 0"}}>│</div><div style={{padding:"8px 14px",borderRadius:8,border:`1px solid ${x.c}`,background:x.c+"12",fontSize:12,fontWeight:600,color:x.c}}>{x.i} {x.n}</div></div>)}
+</div>
+</div>
+</div>
+<div style={{fontWeight:700,marginTop:16,marginBottom:8}}>📋 Preview JSON (João Silva)</div>
+<pre className="mono" style={{background:"#081020",padding:14,borderRadius:8,border:"1px solid #1e3a5f",color:"#a5b4fc",fontSize:11,lineHeight:1.5,maxHeight:250,overflow:"auto"}}>{JSON.stringify({individual:{name:"João Silva",email:"joao.silva@algar.com.br",title:"Diretor de TI"},account:{name:"Grupo Algar S.A.",revenue:12500000,segment:"Large"},salesOrders:[{name:"MPLS Dedicado",amount:2400000,stage:"Negotiation"}],contracts:[{name:"MPLS 2024-2026",value:4800000,status:"Active"}],insights:{ltv:7200000,churnRisk:.10}},null,2)}</pre>
+</div></div>;
+
+const Einstein=()=><div>
+<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🧠 Einstein Studio</h2>
+<div className="card">
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+{[{name:"Churn Prediction",type:"Classification",acc:"87%"},{name:"Lead Scoring",type:"Regression",acc:"—"}].map(m=><div key={m.name} style={{padding:16,border:"1px solid #1e3a5f",borderRadius:10,background:"#081020"}}>
+<div style={{fontWeight:700,fontSize:15,marginBottom:4}}>🧠 {m.name}</div>
+<div style={{fontSize:12,color:"#94a3b8",marginBottom:8}}>{m.type}</div>
+<div style={{display:"flex",gap:6}}><Tag color="#f59e0b">Draft</Tag>{m.acc!=="—"&&<Tag color="#10b981">Accuracy: {m.acc}</Tag>}</div>
+</div>)}
+</div>
+</div></div>;
+
+const Consent=()=><div>
+<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🛡️ Consent Management — LGPD</h2>
+<div className="card">
+<table><thead><tr><th>Categoria</th><th>Propósito</th><th>Canal</th><th>Base Legal</th><th>Default</th></tr></thead>
+<tbody>
+{[{c:"Marketing",p:"Email Marketing",ch:"Email",l:"Consentimento (Art. 7, I)",d:"Opt-In"},{c:"Marketing",p:"SMS Campaigns",ch:"SMS",l:"Consentimento (Art. 7, I)",d:"Opt-In"},{c:"Profiling",p:"Segmentação",ch:"All",l:"Legítimo Interesse (Art. 7, IX)",d:"Opt-Out"},{c:"Service",p:"Comunicação Transacional",ch:"Email+SMS",l:"Execução Contrato (Art. 7, V)",d:"Required"}].map((x,i)=><tr key={i}><td><Tag color="#6366f1">{x.c}</Tag></td><td>{x.p}</td><td>{x.ch}</td><td style={{fontSize:11}}>{x.l}</td><td><Tag color={x.d==="Opt-In"?"#f59e0b":x.d==="Required"?"#10b981":"#64748b"}>{x.d}</Tag></td></tr>)}
+</tbody></table>
+</div></div>;
+
+const Governance=()=><div>
+<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🔐 Permissions</h2>
+<div className="card">
+<table><thead><tr><th>Permission Set</th><th>Escopo</th><th>Acesso</th></tr></thead>
+<tbody>
+{[{n:"Data Cloud Admin",s:"Full",a:"CRUD total, setup, governance"},{n:"Data Cloud User",s:"Read",a:"Profile/Data Explorer, Segments read"},{n:"Marketing Admin",s:"Activation",a:"Segments, Activations, Consent"},{n:"Mkt Data Aware",s:"Data+Mkt",a:"DLOs, DMOs, Transforms, Segments"}].map(x=><tr key={x.n}><td style={{fontWeight:600}}>{x.n}</td><td><Tag color="#6366f1">{x.s}</Tag></td><td style={{fontSize:12}}>{x.a}</td></tr>)}
+</tbody></table>
+</div></div>;
+
+const DataExplorer=()=>{
+const[q,setQ]=useState("SELECT Name, Industry, Revenue FROM Account_DMO WHERE Segment = 'Large'");
+return <div>
+<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>🔍 Data Explorer</h2>
+<div className="card">
+<div style={{fontWeight:700,marginBottom:8}}>📝 Query Editor</div>
+<textarea value={q} onChange={e=>setQ(e.target.value)} className="mono" style={{width:"100%",minHeight:80,padding:"7px 12px",borderRadius:8,border:"1px solid #1e3a5f",background:"#081020",color:"#a5b4fc",resize:"vertical",boxSizing:"border-box"}}/>
+<div style={{marginTop:10}}><button className="btn-solid" style={{background:"linear-gradient(135deg,#6366f1,#6366f1cc)"}}>▶ Executar</button></div>
+<div style={{marginTop:16}}><DataTable data={D.accounts.filter(a=>a.segment==="Large")} columns={[{key:"name",label:"Name"},{key:"industry",label:"Industry"},{key:"revenue",label:"Revenue",render:v=>`R$ ${(v/1e6).toFixed(1)}M`}]}/></div>
+</div></div>;
+};
+
+const Placeholder=({title})=><div>
+<h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>{title}</h2>
+<div className="card" style={{textAlign:"center",padding:40}}><div style={{fontSize:48,marginBottom:12}}>🚧</div><div style={{fontSize:16,color:"#94a3b8"}}>Módulo em construção</div></div>
+</div>;
+
+// ═══ MAIN APP ═══
+function App(){
+const[view,setView]=useState("dashboard");
+const[mode,setMode]=useState("offline");
+
+const renderView=()=>{
+switch(view){
+case"dashboard":return <Dashboard onNav={setView}/>;
+case"spaces":return <Placeholder title="📦 Data Spaces"/>;
+case"sources":return <Sources/>;
+case"dlos":return <DLOs/>;
+case"transforms":return <Transforms/>;
+case"dmos":return <DMOs/>;
+case"identity":return <Identity/>;
+case"profiles":return <Profiles/>;
+case"insights":return <Insights/>;
+case"segments":return <Segments/>;
+case"explorer":return <DataExplorer/>;
+case"actions":return <DataActions/>;
+case"enrichments":return <Enrichments/>;
+case"activations":return <Activations/>;
+case"shares":return <DataShares/>;
+case"graphs":return <DataGraphs/>;
+case"einstein":return <Einstein/>;
+case"consent":return <Consent/>;
+case"governance":return <Governance/>;
+default:return <Placeholder title={view}/>;
+}};
+
+return <div style={{display:"flex",flexDirection:"column",height:"100vh"}}>
+{/* TOP BAR */}
+<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",background:"linear-gradient(135deg,#0a1628,#0f1d32)",borderBottom:"1px solid #1e3a5f",gap:12,flexWrap:"wrap"}}>
+<div style={{display:"flex",alignItems:"center",gap:10}}>
+<span style={{fontSize:22}}>☁️</span>
+<span style={{fontSize:18,fontWeight:700,background:"linear-gradient(135deg,#6366f1,#06b6d4)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Data Cloud Sandbox</span>
+<span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"#1e3a5f",color:"#94a3b8",border:"1px solid #2a4a70"}}>EVER i9</span>
+</div>
+<div style={{display:"flex",alignItems:"center",gap:12}}>
+<div style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"#1e3a5f",color:"#94a3b8",border:"1px solid #2a4a70"}}>
+{mode==="offline"?"🔴 Offline — Dados Simulados":"🟢 Live — Org 00DgK00000PUJwTUAX"}
+</div>
+<select value={mode} onChange={e=>setMode(e.target.value)} style={{padding:"7px 12px",borderRadius:8,border:"1px solid #1e3a5f",background:"#0f1d32",color:"#e2e8f0",fontSize:11}}>
+<option value="offline">Offline (Simulado)</option>
+<option value="live">Live (Org Real)</option>
+</select>
+</div>
+</div>
+<div style={{display:"flex",flex:1,overflow:"hidden"}}>
+{/* SIDEBAR */}
+<div style={{width:220,minWidth:220,background:"#0a1628",borderRight:"1px solid #1e3a5f",overflowY:"auto",padding:"12px 0"}}>
+{MENU.map(g=><div key={g.group}>
+<div style={{padding:"8px 16px 4px",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,color:"#475569"}}>{g.group}</div>
+{g.items.map(item=><div key={item.key} className={`sidebar-item ${view===item.key?"active":""}`} onClick={()=>setView(item.key)}>
+<span>{item.icon}</span><span>{item.label}</span>
+</div>)}
+</div>)}
+</div>
+{/* MAIN */}
+<div style={{flex:1,overflow:"auto",padding:24}}>{renderView()}</div>
+</div>
+</div>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
