@@ -6,6 +6,7 @@ import { SalesforceClient } from "./salesforce-client.js";
 import { GitHubClient } from "./github-client.js";
 import { ManifestManager } from "./manifest-manager.js";
 import { registerAdditionalRoutes } from "./additional-routes.js";
+import { registerSnowflakeRoutes } from "./snowflake.js";
 import { registerGitHubMultiRepoRoutes } from "./github-multi-repo.js";
 import { mountChatApp } from "./chat-app.js";
 
@@ -2127,7 +2128,8 @@ app.get("/api/assign-record-types/:objectName", async (req, res) => {
 });
 
 // --- Additional Routes ---
-registerAdditionalRoutes(app, sfClient, connectToTargetOrg);
+registerSnowflakeRoutes(app);
+  registerAdditionalRoutes(app, sfClient, connectToTargetOrg);
 
 // --- Everi9 Chat App ---
 mountChatApp(app);
