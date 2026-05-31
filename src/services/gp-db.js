@@ -60,10 +60,11 @@ export async function getStories(workstream) {
 }
 export async function createStory(data) {
   await ensureGpSchema();
-  const { workstream, epic, title, sprint = '', dev_assignee = '', story_points = 0, deadline = null, notes = '' } = data;
+  const { workstream, epic, title, sprint = '', dev_assignee = '', story_points = 0, deadline = null, notes = '',
+          rf_status = '', hf_status = '', spec_status = '', rt_status = '', plan_status = '' } = data;
   const r = await pool.query(
-    `INSERT INTO gp_stories (workstream,epic,title,sprint,dev_assignee,story_points,deadline,notes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-    [workstream, epic, title, sprint, dev_assignee, story_points, deadline, notes]
+    `INSERT INTO gp_stories (workstream,epic,title,sprint,dev_assignee,story_points,deadline,notes,rf_status,hf_status,spec_status,rt_status,plan_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+    [workstream, epic, title, sprint, dev_assignee, story_points, deadline, notes, rf_status, hf_status, spec_status, rt_status, plan_status]
   );
   return r.rows[0];
 }
