@@ -579,3 +579,12 @@ router.get('/all-tasks', authMiddleware, gpAuth, async (req, res) => {
     res.json({ tasks: grouped });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
+
+// ── PLANNING CELL ──
+router.post('/stories/:id/plan-cell', authMiddleware, gpAuth, async (req, res) => {
+  try {
+    const { activity, sprint } = req.body;
+    const newVal = await gp.setPlanningCell(Number(req.params.id), activity, sprint);
+    res.json({ ok: true, value: newVal });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
