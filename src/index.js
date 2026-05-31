@@ -2140,3 +2140,4 @@ app.listen(PORT, () => {
   console.log(`MCP Salesforce Server v3.4.0 running on port ${PORT}`);
   console.log(`Features: ScratchOrgs=true, MultiOrg=true, MockData=true, GitHub=${!!ghClient}, DeployViaUrl=true`);
 });
+// DC-RESTART 2026-05-31T22:19:43.731459
