@@ -614,6 +614,13 @@ router.post('/stories/:id/tasks-with-level', authMiddleware, gpAuth, async (req,
     const { title, assignee = '', level = 'informativo' } = req.body;
     const storyId = Number(req.params.id);
     const task = await gp.createTask(storyId, title, assignee);
+    // Salvar quem criou
+    try {
+      await gp.ensureCreatedByCol();
+      const pool2b = (await import('../config/db.js')).default;
+      await pool2b.query('UPDATE gp_story_tasks SET created_by = $1 WHERE id = $2', [req.user?.name||req.user?.email||'', task.id]);
+      task.created_by = req.user?.name||req.user?.email||'';
+    } catch {}
     // Setar o level
     const pool2 = (await import('../config/db.js')).default;
     await pool2.query('UPDATE gp_story_tasks SET level = $1 WHERE id = $2', [level, task.id]);
@@ -673,6 +680,24 @@ router.post('/tasks/:id/resolve', authMiddleware, gpAuth, async (req, res) => {
         }
       }
     }
+    // Notificar o criador da task
+    try {
+      await gp.ensureCreatedByCol();
+      const taskFull = (await pool2.query('SELECT * FROM gp_story_tasks WHERE id = $1', [taskId])).rows[0];
+      const createdBy = taskFull?.created_by || '';
+      if (createdBy) {
+        const storyRows = (await pool2.query('SELECT title FROM gp_stories WHERE id = $1', [task.story_id])).rows;
+        const userRow = (await pool2.query('SELECT id, email FROM users WHERE name = $1', [createdBy])).rows[0];
+        const resolvedBy = req.user?.name || req.user?.email || '';
+        await gp.createNotification({
+          user_id: userRow?.id, user_email: userRow?.email||'', user_name: createdBy,
+          type: 'task_resolved',
+          title: '✅ Tarefa resolvida: ' + (task.title || taskFull?.title || ''),
+          body: resolvedBy + ' concluiu a tarefa na história "' + (storyRows[0]?.title||'') + '".' + (task.level==='bloqueante' ? ' O card foi desbloqueado.' : ''),
+          ref_type: 'task', ref_id: taskId, story_id: task.story_id
+        });
+      }
+    } catch {}
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
