@@ -233,3 +233,203 @@ router.get('/insights', authMiddleware, gpAuth, async (req, res) => {
     res.json({ insights, metrics, overdue: overdue.length, pending: pending.length, totalPct: totalCells?Math.round(totalDone/totalCells*100):0 });
   } catch (e) { res.json({ insights: 'Erro ao gerar insights: ' + e.message, metrics:{}, overdue:0, pending:0, totalPct:0 }); }
 });
+
+// ── DOWNLOAD WORD (dark template) ──
+router.get('/report/download', authMiddleware, gpAuth, async (req, res) => {
+  try {
+    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+      Header, Footer, AlignmentType, LevelFormat, BorderStyle, WidthType,
+      ShadingType, PageBreak, TabStopType, TabStopPosition, SimpleField,
+      BookmarkStart, BookmarkEnd, InternalHyperlink } = await import('docx');
+
+    const { stories, cadences } = await gp.getReportData();
+    const allActions = await gp.getAllActions();
+    const WS = { ws1:'Lead', ws2:'Oportunidade', ws3:'Cotação', ws4:'Contas e Contatos', ws5:'Governança', ws6:'Migração de Dados', ws7:'Catálogo' };
+
+    // Métricas
+    const metrics = {};
+    let totalDone=0, totalCells=0;
+    stories.forEach(s => {
+      const w = s.workstream;
+      if (!metrics[w]) metrics[w] = { done:0, doing:0, blocked:0, todo:0, total:0, stories:0, points:0 };
+      metrics[w].stories++;
+      metrics[w].points += (s.story_points||0);
+      ['rf_status','hf_status','spec_status','rt_status','plan_status'].forEach(f => {
+        if (!s[f]) return;
+        metrics[w].total++; totalCells++;
+        if (s[f]==='done') { metrics[w].done++; totalDone++; }
+        else if (s[f]==='doing') metrics[w].doing++;
+        else if (s[f]==='blocked') metrics[w].blocked++;
+        else if (s[f]==='todo') metrics[w].todo++;
+      });
+    });
+    const totalPct = totalCells ? Math.round(totalDone/totalCells*100) : 0;
+    const overdue = allActions.filter(a => a.status!=='done' && a.due_date && new Date(a.due_date) < new Date());
+    const pending = allActions.filter(a => a.status==='pending');
+
+    // Gerar insights via IA
+    let insightsText = '';
+    try {
+      const ctx = Object.entries(metrics).map(([w,m]) => {
+        const pct = m.total?Math.round(m.done/m.total*100):0;
+        return `${WS[w]||w}: ${pct}% (${m.done}/${m.total}) ${m.blocked?'BLOQUEADO':''}`;
+      }).join('; ');
+      const { call: dsCall } = await import('../services/deepseek.js');
+      insightsText = await dsCall(
+        'Gere um resumo executivo em 3 paragrafos curtos sobre o projeto abaixo. Riscos, destaques positivos e recomendacoes. Sem markdown, sem titulos, texto corrido.',
+        [{ role:'user', content: `Projeto CRM B2B Algar: ${totalPct}% concluido, ${stories.length} historias. WS: ${ctx}. ${overdue.length} items vencidos, ${pending.length} pendentes.` }], 2048
+      );
+    } catch { insightsText = `Projeto com ${totalPct}% de conclusão geral. ${stories.length} histórias em 7 workstreams.`; }
+
+    // Dark palette
+    const BK='0A0A0A', WH='FFFFFF', AC='E0E0E0', BT='1A1A1A', GB='F0F0F0', GL='CCCCCC', RA='F7F7F7';
+    const tb = { style: BorderStyle.SINGLE, size: 1, color: GL };
+    const brd = { top:tb, bottom:tb, left:tb, right:tb };
+    const nb = { style: BorderStyle.NONE, size:0, color:WH };
+    const nbs = { top:nb, bottom:nb, left:nb, right:nb };
+
+    const hc = (t,w) => new TableCell({ borders:brd, width:{size:w,type:WidthType.DXA}, shading:{fill:BK,type:ShadingType.CLEAR}, margins:{top:100,bottom:100,left:140,right:140},
+      children:[new Paragraph({children:[new TextRun({text:t,bold:true,color:WH,font:'Arial',size:18,allCaps:true})]})] });
+    const dc = (t,w,o={}) => new TableCell({ borders:brd, width:{size:w,type:WidthType.DXA}, shading:o.bg?{fill:o.bg,type:ShadingType.CLEAR}:undefined, margins:{top:100,bottom:100,left:140,right:140},
+      children:[new Paragraph({children:[new TextRun({text:String(t),font:'Arial',size:18,bold:o.bold||false,color:o.color||BT})]})] });
+    const sh = (n,t,bk) => new Paragraph({ spacing:{before:300,after:100}, border:{bottom:{style:BorderStyle.SINGLE,size:8,color:BK,space:4}},
+      children:[new BookmarkStart({id:bk,name:bk}), new TextRun({text:n+'  ',font:'Arial',size:28,bold:true,color:'AAAAAA'}), new TextRun({text:t,font:'Arial',size:28,bold:true,color:BK}), new BookmarkEnd({id:bk})] });
+    const bt2 = (t) => new Paragraph({ spacing:{after:120}, children:[new TextRun({text:t,font:'Arial',size:20,color:BT})] });
+    const sp = (s) => new Paragraph({ spacing:{before:s,after:0}, children:[] });
+    const te = (n,t,bk) => new Paragraph({ spacing:{before:60,after:60}, tabStops:[{type:TabStopType.RIGHT,position:9360,leader:'dot'}],
+      children:[ new InternalHyperlink({ anchor:bk, children:[new TextRun({text:n+'  '+t,font:'Arial',size:20,color:BK}), new TextRun({children:['\t'],font:'Arial',size:20})] }) ] });
+    const today = new Date().toISOString().slice(0,10);
+
+    // Seções do doc
+    const sections = [
+      { num:'01', title:'Resumo Executivo', id:'sec01' },
+      { num:'02', title:'Status por Workstream', id:'sec02' },
+      { num:'03', title:'Detalhamento de Histórias', id:'sec03' },
+      { num:'04', title:'Action Items', id:'sec04' },
+      { num:'05', title:'Cadências de Reunião', id:'sec05' },
+      { num:'06', title:'Análise e Recomendações', id:'sec06' },
+    ];
+
+    // Status por WS table rows
+    const wsRows = Object.entries(metrics).map(([w,m],i) => {
+      const pct = m.total?Math.round(m.done/m.total*100):0;
+      const rag = m.blocked>0?'BLOQUEADO':pct>=70?'VERDE':pct>=30?'AMARELO':'VERMELHO';
+      return new TableRow({ children:[
+        dc(WS[w]||w, 2800, { bg:i%2?RA:WH, bold:true }),
+        dc(`${pct}%`, 1200, { bg:i%2?RA:WH, bold:true, color: m.blocked>0?'CC0000':pct>=70?'228B22':'CC8800' }),
+        dc(String(m.done), 1000, { bg:i%2?RA:WH }),
+        dc(String(m.doing), 1200, { bg:i%2?RA:WH }),
+        dc(String(m.blocked), 1200, { bg:i%2?RA:WH, color: m.blocked>0?'CC0000':BT }),
+        dc(rag, 1960, { bg:i%2?RA:WH, bold:true, color: m.blocked>0?'CC0000':pct>=70?'228B22':'CC8800' }),
+      ] });
+    });
+
+    // Stories detail
+    const storyContent = [];
+    const wsKeys = [...new Set(stories.map(s=>s.workstream))];
+    wsKeys.forEach(w => {
+      storyContent.push(new Paragraph({ spacing:{before:200,after:100}, children:[new TextRun({text:WS[w]||w,font:'Arial',size:22,bold:true,color:BK})] }));
+      const ws = stories.filter(s=>s.workstream===w);
+      const rows = [new TableRow({ children:[ hc('História',3500), hc('Dev',1200), hc('Pts',600), hc('Sprint',1100), hc('RF',560), hc('HF',560), hc('Spec',600), hc('RT',560), hc('Plan',680) ] })];
+      ws.forEach((s,i) => {
+        const st = v => v==='done'?'✓':v==='doing'?'◐':v==='blocked'?'✕':v==='todo'?'○':'–';
+        const sc = v => v==='done'?'228B22':v==='doing'?'CC8800':v==='blocked'?'CC0000':BT;
+        rows.push(new TableRow({ children:[
+          dc(s.title,3500,{bg:i%2?RA:WH}), dc(s.dev_assignee||'—',1200,{bg:i%2?RA:WH}),
+          dc(String(s.story_points||'—'),600,{bg:i%2?RA:WH}), dc(s.sprint||'—',1100,{bg:i%2?RA:WH}),
+          dc(st(s.rf_status),560,{bg:i%2?RA:WH,color:sc(s.rf_status)}), dc(st(s.hf_status),560,{bg:i%2?RA:WH,color:sc(s.hf_status)}),
+          dc(st(s.spec_status),600,{bg:i%2?RA:WH,color:sc(s.spec_status)}), dc(st(s.rt_status),560,{bg:i%2?RA:WH,color:sc(s.rt_status)}),
+          dc(st(s.plan_status),680,{bg:i%2?RA:WH,color:sc(s.plan_status)}),
+        ] }));
+      });
+      storyContent.push(new Table({ width:{size:9360,type:WidthType.DXA}, rows }));
+    });
+
+    // Action items
+    const aiRows = [new TableRow({ children:[ hc('Descrição',4000), hc('Responsável',1500), hc('Prazo',1360), hc('Status',1100), hc('WS',1400) ] })];
+    allActions.slice(0,20).forEach((a,i) => {
+      aiRows.push(new TableRow({ children:[
+        dc(a.description,4000,{bg:i%2?RA:WH}), dc(a.assignee||'—',1500,{bg:i%2?RA:WH}),
+        dc(a.due_date?new Date(a.due_date).toISOString().slice(0,10):'—',1360,{bg:i%2?RA:WH}),
+        dc(a.status==='done'?'Concluído':a.status==='doing'?'Em andamento':'Pendente',1100,{bg:i%2?RA:WH}),
+        dc(WS[a.workstream]||'—',1400,{bg:i%2?RA:WH}),
+      ] }));
+    });
+
+    const doc = new Document({
+      numbering:{ config:[{ reference:'bullets', levels:[{level:0,format:LevelFormat.BULLET,text:'\u2022',alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:720,hanging:360}}}}] }] },
+      sections: [
+        // CAPA
+        { properties:{ page:{ size:{width:12240,height:15840}, margin:{top:0,right:0,bottom:0,left:0} } },
+          children:[
+            new Table({ width:{size:12240,type:WidthType.DXA}, columnWidths:[12240], rows:[new TableRow({ children:[new TableCell({
+              borders:nbs, width:{size:12240,type:WidthType.DXA}, shading:{fill:BK,type:ShadingType.CLEAR}, margins:{top:4000,bottom:600,left:1440,right:1440},
+              children:[
+                new Paragraph({spacing:{after:200},children:[new TextRun({text:'PROJETO CRM B2B',font:'Arial',size:18,color:'888888',allCaps:true})]}),
+                new Paragraph({spacing:{after:0},children:[new TextRun({text:'RELATÓRIO DE',font:'Arial',size:56,bold:true,color:WH})]}),
+                new Paragraph({spacing:{after:300},children:[new TextRun({text:'ANDAMENTO',font:'Arial',size:56,bold:true,color:WH})]}),
+                new Paragraph({spacing:{after:600},children:[new TextRun({text:'Algar Telecom — Status do Projeto',font:'Arial',size:24,color:AC})]}),
+                sp(400),
+                new Table({ width:{size:9360,type:WidthType.DXA}, columnWidths:[2800,6560], rows:[
+                  ...[ ['PROJETO','CRM B2B Algar Telecom'], ['DATA',today], ['PROGRESSO',`${totalPct}% concluído`], ['HISTÓRIAS',`${stories.length} histórias em 7 workstreams`], ['GERADO POR','Ever i9 — Painel GP'] ].map(([l,v]) =>
+                    new TableRow({ children:[
+                      new TableCell({ borders:{top:{style:BorderStyle.SINGLE,size:1,color:'333333'},bottom:nb,left:nb,right:nb}, width:{size:2800,type:WidthType.DXA}, shading:{fill:BK,type:ShadingType.CLEAR}, margins:{top:120,bottom:120,left:0,right:140},
+                        children:[new Paragraph({children:[new TextRun({text:l,font:'Arial',size:18,color:'888888',allCaps:true})]})] }),
+                      new TableCell({ borders:{top:{style:BorderStyle.SINGLE,size:1,color:'333333'},bottom:nb,left:nb,right:nb}, width:{size:6560,type:WidthType.DXA}, shading:{fill:BK,type:ShadingType.CLEAR}, margins:{top:120,bottom:120,left:0,right:140},
+                        children:[new Paragraph({children:[new TextRun({text:v,font:'Arial',size:18,color:WH,bold:true})]})] }),
+                    ] })
+                  )
+                ] }),
+              ]
+            })] })] })
+          ]
+        },
+        // CORPO
+        { properties:{ page:{ size:{width:12240,height:15840}, margin:{top:1440,right:1440,bottom:1440,left:1440} } },
+          headers:{ default: new Header({ children:[new Paragraph({ border:{bottom:{style:BorderStyle.SINGLE,size:4,color:BK,space:4}}, tabStops:[{type:TabStopType.RIGHT,position:TabStopPosition.MAX}],
+            children:[ new TextRun({text:'RELATÓRIO',font:'Arial',size:16,color:'888888'}), new TextRun({text:' / ',font:'Arial',size:16,color:'888888'}), new TextRun({text:'Andamento Projeto Algar',font:'Arial',size:16,color:BK,bold:true}) ] })] }) },
+          footers:{ default: new Footer({ children:[new Paragraph({ border:{top:{style:BorderStyle.SINGLE,size:4,color:BK,space:4}}, tabStops:[{type:TabStopType.RIGHT,position:TabStopPosition.MAX}],
+            children:[ new TextRun({text:'Ever i9 — Confidencial',font:'Arial',size:16,color:'888888'}), new TextRun({children:['\t'],font:'Arial',size:16}), new SimpleField('PAGE') ] })] }) },
+          children:[
+            // Sumário
+            new Paragraph({spacing:{after:200},children:[new TextRun({text:'SUMÁRIO',font:'Arial',size:28,bold:true,color:BK})]}),
+            new Paragraph({border:{bottom:{style:BorderStyle.SINGLE,size:8,color:BK,space:4}},spacing:{after:300},children:[]}),
+            ...sections.map(s => te(s.num,s.title,s.id)),
+            new Paragraph({children:[new PageBreak()]}),
+            // 01 Resumo
+            sh('01','Resumo Executivo','sec01'),
+            ...insightsText.split('\n').filter(l=>l.trim()).map(l => bt2(l)),
+            // 02 Status por WS
+            sh('02','Status por Workstream','sec02'),
+            bt2(`Progresso geral: ${totalPct}% • ${stories.length} histórias • ${allActions.length} action items (${overdue.length} vencidos)`),
+            sp(100),
+            new Table({ width:{size:9360,type:WidthType.DXA}, rows:[
+              new TableRow({ children:[ hc('Workstream',2800), hc('%',1200), hc('Feito',1000), hc('Andamento',1200), hc('Bloqueado',1200), hc('RAG',1960) ] }),
+              ...wsRows
+            ] }),
+            // 03 Detalhamento
+            sh('03','Detalhamento de Histórias','sec03'),
+            ...storyContent,
+            // 04 Action Items
+            sh('04','Action Items','sec04'),
+            bt2(`${allActions.length} itens registrados • ${overdue.length} vencidos • ${pending.length} pendentes`),
+            sp(100),
+            new Table({ width:{size:9360,type:WidthType.DXA}, rows: aiRows }),
+            // 05 Cadências
+            sh('05','Cadências de Reunião','sec05'),
+            ...cadences.map(c => bt2(`• ${c.title} (${c.type}) — ${c.frequency}, ${c.weekday} ${c.time_of_day}, ${c.duration_min}min. Participantes: ${c.participants||'—'}`)),
+            cadences.length===0 ? bt2('Nenhuma cadência definida.') : sp(1),
+            // 06 Análise
+            sh('06','Análise e Recomendações','sec06'),
+            ...insightsText.split('\n').filter(l=>l.trim()).map(l => bt2(l)),
+          ]
+        }
+      ]
+    });
+
+    const buffer = await Packer.toBuffer(doc);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="Relatorio_Andamento_Algar_${today}.docx"`);
+    res.send(Buffer.from(buffer));
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
