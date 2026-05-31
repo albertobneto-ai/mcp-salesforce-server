@@ -394,3 +394,22 @@ export async function markAllRead(userEmail, userName) {
   await ensureTaskDetailSchema();
   await pool.query(`UPDATE gp_notifications SET is_read = TRUE WHERE (user_email = $1 OR user_name = $2)`, [userEmail||'', userName||'']);
 }
+
+// ── Planning per activity (sprint individual por atividade) ──
+export async function ensurePlanningCols() {
+  const cols = ['rf_sprint','hf_sprint','spec_sprint','rt_sprint','plan_sprint'];
+  for (const c of cols) {
+    try { await pool.query(`ALTER TABLE gp_stories ADD COLUMN IF NOT EXISTS ${c} VARCHAR(20) DEFAULT ''`); } catch {}
+  }
+}
+export async function setPlanningCell(storyId, activity, sprint) {
+  await ensurePlanningCols();
+  const col = activity + '_sprint'; // rf_sprint, hf_sprint, etc.
+  const allowed = ['rf_sprint','hf_sprint','spec_sprint','rt_sprint','plan_sprint'];
+  if (!allowed.includes(col)) return null;
+  // Toggle: se já está nessa sprint, limpa; senão, seta
+  const cur = (await pool.query(`SELECT ${col} FROM gp_stories WHERE id = $1`, [storyId])).rows[0]?.[col];
+  const newVal = cur === sprint ? '' : sprint;
+  await pool.query(`UPDATE gp_stories SET ${col} = $1, updated_at = NOW() WHERE id = $2`, [newVal, storyId]);
+  return newVal;
+}
