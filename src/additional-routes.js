@@ -691,5 +691,64 @@ ${mappingXml}
     }
   });
 
+
+
+  // CDP Token Exchange + API proxy
+  app.get("/api/datacloud/cdp-test", async (req, res) => {
+    try {
+      await connectToTargetOrg(req);
+      const conn = sfClient.getConnection();
+      const instanceUrl = conn.instanceUrl;
+      const accessToken = conn.accessToken;
+      
+      // Step 1: Exchange token for CDP token
+      const tokenUrl = instanceUrl + "/services/a360/token";
+      const tokenBody = "grant_type=urn:salesforce:grant-type:external:cdp" +
+        "&subject_token=" + encodeURIComponent(accessToken) +
+        "&subject_token_type=urn:ietf:params:oauth:token-type:access_token";
+      
+      const fetch = (await import("node-fetch")).default || globalThis.fetch;
+      
+      let tokenResponse;
+      try {
+        tokenResponse = await conn.request({
+          method: "POST",
+          url: "/services/a360/token",
+          body: tokenBody,
+          headers: { "Content-Type": "application/x-www-form-urlencoded" }
+        });
+      } catch(e) {
+        // Try native fetch as fallback
+        const r = await globalThis.fetch(tokenUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: tokenBody
+        });
+        tokenResponse = await r.json();
+      }
+      
+      if (tokenResponse.access_token) {
+        // Step 2: Use CDP token to call SSOT API
+        const cdpToken = tokenResponse.access_token;
+        const cdpUrl = (tokenResponse.instance_url || instanceUrl) + "/services/a360/api/v1/data-streams";
+        
+        const r2 = await globalThis.fetch(cdpUrl, {
+          method: "GET",
+          headers: { "Authorization": "Bearer " + cdpToken, "Content-Type": "application/json" }
+        });
+        const data = await r2.json();
+        
+        sfClient.clearTargetOrg();
+        res.json({ status: "ok", tokenExchange: "success", cdpInstanceUrl: tokenResponse.instance_url, data });
+      } else {
+        sfClient.clearTargetOrg();
+        res.json({ status: "error", message: "Token exchange failed", tokenResponse });
+      }
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.json({ status: "error", message: err.message, stack: err.stack?.substring(0, 200) });
+    }
+  });
+
   console.log("Routes: execute-anonymous, datacloud-overview, datacloud-ssot-proxy, datacloud-query, execute-apex-b64, soql-b64, soql-get, upsert, update-b64, composite, deploy-formula-fields, update-layout, lead-convert-mapping, field-history");
 }
