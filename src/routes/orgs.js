@@ -1,7 +1,7 @@
 // src/routes/orgs.js — CRUD de orgs + seletor
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
-import { testConnection, describeObject, runSoql } from '../services/sf-multi.js';
+import { testConnection, describeObject, runSoql, runToolingQuery } from '../services/sf-multi.js';
 import pool from '../config/db.js';
 
 const router = express.Router();
@@ -85,6 +85,19 @@ router.get('/:id/soql', authMiddleware, async (req, res) => {
     const q = req.query.q;
     if (!q) return res.status(400).json({ error: 'query param q obrigatorio' });
     const result = await runSoql(org, q);
+    res.json({ totalSize: result.totalSize, records: result.records });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+
+// GET /api/orgs/:id/tooling?q= — Tooling API SOQL read-only (para Flows, ApexClass etc)
+router.get('/:id/tooling', authMiddleware, async (req, res) => {
+  try {
+    const org = await getOrgById(req.params.id);
+    if (!org) return res.status(404).json({ error: 'Org nao encontrada' });
+    const q = req.query.q;
+    if (!q) return res.status(400).json({ error: 'query param q obrigatorio' });
+    const result = await runToolingQuery(org, q);
     res.json({ totalSize: result.totalSize, records: result.records });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
