@@ -3,106 +3,113 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CRM Algar Telecom | Emulador</title>
+<title>CRM Algar Telecom</title>
 <link rel="icon" href="https://login.salesforce.com/favicon.ico">
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <style>
-:root{--bg:#0B1120;--sf:#111827;--cd:#1A2332;--cdh:#1E293B;--bd:#1E3A5F;--bdl:#2D4A6F;--tx:#E2E8F0;--tm:#94A3B8;--td:#64748B;--ag:#00A651;--agd:#00793B;--agl:#33D17A;--sfc:#0176D3;--sfcd:#014486;--sfcl:#47A7F5;--lg:#F57C00;--lgl:#FFB74D;--dn:#EF4444;--ok:#10B981;--wn:#F59E0B;--pp:#8B5CF6;--f:'Outfit',system-ui,sans-serif}
+:root{--ag:#4a8c3f;--ag2:#3d7534;--ag3:#5ba14e;--aglt:#e8f5e3;--agbg:#f0f7ed;--hdr:#4a8c3f;--hdr2:#3d7534;--bg:#f5f5f5;--w:#ffffff;--t:#333333;--t2:#666666;--t3:#999999;--b:#dddddd;--b2:#e0e0e0;--link:#1a73c8;--err:#cc0000;--warn:#e67e00;--ok:#2d8c2d;--f:'Open Sans',Arial,sans-serif}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:var(--f);background:var(--bg);color:var(--tx);font-size:13px;overflow:hidden;height:100vh}
-::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--sf)}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
-.hdr{height:48px;background:var(--sf);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 20px;gap:16px;flex-shrink:0}
-.logo{display:flex;align-items:center;gap:10px}
-.logo-i{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--ag),var(--agd));display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#fff}
-.logo-t{font-size:14px;font-weight:700;color:var(--tx)}
-.logo-s{font-size:9px;color:var(--ag);font-weight:600;letter-spacing:1.5px}
-.hdr-mid{flex:1;display:flex;justify-content:center}
-.flow-badge{display:flex;align-items:center;gap:8px;padding:6px 14px;background:var(--cd);border:1px solid var(--bd);border-radius:8px;font-size:11px}
-.flow-badge .arr{color:var(--ag);font-size:14px}
-.hdr-r{display:flex;align-items:center;gap:8px}
-.btn{padding:6px 14px;border-radius:6px;border:1px solid var(--bd);background:transparent;color:var(--tm);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--f);display:inline-flex;align-items:center;gap:5px}
-.btn:hover{background:var(--cdh);border-color:var(--bdl)}
-.btn-p{background:var(--ag);border-color:var(--ag);color:#fff}.btn-p:hover{background:var(--agd)}
-.btn-sf{background:var(--sfc)15;border-color:var(--sfc)40;color:var(--sfcl)}
-.btn-lg{background:var(--lg)15;border-color:var(--lg)40;color:var(--lgl)}
-.btn-close{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.7)}
-.btn-close:hover{background:rgba(239,68,68,.15);border-color:var(--dn);color:var(--dn)}
-.wrap{display:flex;flex:1;overflow:hidden}
-.side{width:200px;background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column;flex-shrink:0}
-.side-nav{flex:1;padding:8px 0}
-.snav{display:flex;align-items:center;gap:10px;padding:10px 18px;cursor:pointer;color:var(--tm);font-size:13px;font-weight:500;border-left:3px solid transparent;transition:all .12s}
-.snav:hover{background:var(--cdh);color:var(--tx)}
-.snav.a{color:var(--ag);font-weight:700;background:rgba(0,166,81,.08);border-left-color:var(--ag)}
-.snav-i{font-size:15px;width:18px;text-align:center}
-.side-ft{padding:10px 18px;border-top:1px solid var(--bd);font-size:9px;color:var(--td)}
-.main{flex:1;overflow:auto;padding:20px}
-.kpis{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
-.kpi{background:var(--cd);border:1px solid var(--bd);border-radius:8px;padding:14px 18px;flex:1;min-width:130px}
-.kpi-l{font-size:10px;color:var(--td);font-weight:600;letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px}
-.kpi-v{font-size:22px;font-weight:700}
-.kpi-s{font-size:10px;color:var(--tm);margin-top:3px}
-.card{background:var(--cd);border:1px solid var(--bd);border-radius:10px;padding:18px;margin-bottom:14px}
-.card-h{font-size:11px;font-weight:700;color:var(--td);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-.tbl{width:100%;border-collapse:collapse;font-size:12px}
-.tbl th{padding:8px 10px;text-align:left;color:var(--td);font-weight:600;font-size:10px;letter-spacing:.8px;text-transform:uppercase;border-bottom:1px solid var(--bd)}
-.tbl td{padding:8px 10px;border-bottom:1px solid rgba(30,58,95,.15)}
-.tbl tr{cursor:pointer;transition:background .1s}
-.tbl tr:hover td{background:var(--cdh)}
-.bg-sync{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:600;letter-spacing:.3px}
-.bg-ok{background:rgba(16,185,129,.12);color:var(--ok)}.bg-pn{background:rgba(245,158,11,.12);color:var(--wn)}.bg-ns{background:rgba(100,116,139,.12);color:var(--td)}
-.bg-or{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:600}
-.bg-or-l{background:rgba(245,124,0,.1);color:var(--lgl)}.bg-or-s{background:rgba(1,118,211,.1);color:var(--sfcl)}
-.stg{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:600}
-.ptag{display:inline-block;padding:2px 7px;border-radius:3px;font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase}
-.scbar{display:flex;align-items:center;gap:5px}
-.scbar-t{width:50px;height:5px;border-radius:3px;background:var(--bd)}
-.scbar-f{height:100%;border-radius:3px;transition:width .4s}
-.dual{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding:10px}
-.dual-box{text-align:center;padding:12px 18px;border-radius:8px;min-width:130px}
-.dual-box-l{background:rgba(245,124,0,.08);border:1px solid rgba(245,124,0,.2)}
-.dual-box-s{background:rgba(1,118,211,.08);border:1px solid rgba(1,118,211,.2)}
-.dual-mid{display:flex;flex-direction:column;align-items:center;gap:5px}
-.dual-line{width:50px;height:2px;background:linear-gradient(90deg,var(--lg),var(--ag),var(--sfc))}
-.dual-sf{padding:5px 10px;background:rgba(0,166,81,.1);border:1px dashed rgba(0,166,81,.3);border-radius:5px}
+body{font-family:var(--f);background:var(--bg);color:var(--t);font-size:12px;overflow-x:hidden;height:100vh;display:flex;flex-direction:column}
+a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}
+/* Header */
+.hdr{height:44px;background:linear-gradient(180deg,#5a9e4d,#3d7534);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0}
+.hdr-l{display:flex;align-items:center;gap:6px}
+.logo-crm{font-size:8px;color:rgba(255,255,255,.7);font-weight:700;letter-spacing:1px;line-height:1}
+.logo-algar{display:flex;align-items:baseline;gap:1px}
+.logo-algar-t{font-size:18px;font-weight:700;color:#fff;letter-spacing:-.5px}
+.logo-algar-arr{font-size:16px;color:#90ee90;font-weight:700}
+.logo-tel{font-size:10px;color:rgba(255,255,255,.65);margin-left:3px;font-style:italic}
+.hdr-r{display:flex;align-items:center;gap:10px}
+.hdr-av{width:30px;height:30px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px solid rgba(255,255,255,.4)}
+.hdr-av img{width:100%;height:100%}
+.hdr-av-i{font-size:14px;color:var(--ag)}
+.hdr-name{color:#fff;font-size:12px;font-weight:700;letter-spacing:.3px}
+.hdr-close{background:none;border:1px solid rgba(255,255,255,.3);border-radius:4px;padding:4px 12px;color:rgba(255,255,255,.8);font-size:11px;cursor:pointer;font-family:var(--f)}
+.hdr-close:hover{background:rgba(255,255,255,.15)}
+/* Submenu */
+.submenu{height:28px;background:#fff;border-bottom:1px solid var(--b);display:flex;align-items:center;padding:0 16px;gap:16px;font-size:11px;flex-shrink:0}
+.submenu a{color:var(--t2);font-weight:600;display:flex;align-items:center;gap:3px}
+.submenu a:hover{color:var(--ag)}
+.submenu .sep{color:var(--b)}
+/* Content */
+.content{flex:1;overflow:auto;padding:12px 16px}
+/* Dados do Cliente */
+.sec-title{font-size:13px;font-weight:700;color:var(--link);margin-bottom:8px}
+.data-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;background:var(--w);border:1px solid var(--b);border-radius:3px;margin-bottom:12px}
+.data-row{display:flex;padding:4px 10px;border-bottom:1px solid #f0f0f0;font-size:11px}
+.data-lbl{color:var(--t2);font-weight:600;min-width:130px;flex-shrink:0}
+.data-val{color:var(--t);font-weight:700}
+.data-val-link{color:var(--link);font-weight:700;cursor:pointer}
+/* Info Tabs */
+.info-tabs{display:flex;margin-bottom:0;border-bottom:none}
+.itab{padding:7px 18px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--b);border-bottom:none;background:#f0f0f0;color:var(--t2);margin-right:2px;border-radius:4px 4px 0 0;display:flex;align-items:center;gap:5px}
+.itab.a{background:var(--ag);color:#fff;border-color:var(--ag)}
+.itab:hover:not(.a){background:#e8e8e8}
+.itab-icon{font-size:10px}
+/* Table card */
+.tcard{background:var(--w);border:1px solid var(--b);border-radius:0 4px 4px 4px;padding:12px;margin-bottom:14px}
+.tcard-h{font-size:12px;font-weight:700;color:var(--t);margin-bottom:8px}
+.tcard-sub{font-size:11px;color:var(--t2);margin-bottom:6px}
+.stat-line{display:flex;gap:16px;font-size:11px;margin-bottom:6px}
+.stat-g{color:var(--ok);font-weight:600}.stat-r{color:var(--err);font-weight:600}
+/* Tables */
+.ctbl{width:100%;border-collapse:collapse;font-size:11px;border:1px solid var(--b)}
+.ctbl th{background:var(--aglt);padding:5px 8px;text-align:left;font-weight:700;color:var(--t);border:1px solid var(--b);white-space:nowrap;font-size:10px}
+.ctbl td{padding:5px 8px;border:1px solid #eee;white-space:nowrap}
+.ctbl tr:hover td{background:#f9f9f9}
+.ctbl .link{color:var(--link);cursor:pointer;text-decoration:underline}
+/* Status badges */
+.st{padding:1px 6px;border-radius:2px;font-size:10px;font-weight:700;display:inline-block}
+.st-ativo{background:#d4edda;color:#155724}.st-cancel{background:#f8d7da;color:#721c24}.st-aberto{background:#fff3cd;color:#856404}.st-migrado{background:#e2e3e5;color:#383d41}.st-aguard{background:#cce5ff;color:#004085}.st-sync{background:#d4edda;color:#155724}.st-pend{background:#fff3cd;color:#856404}.st-nosync{background:#e2e3e5;color:#6c757d}
+/* Dual bar */
+.dual-bar{background:linear-gradient(90deg,rgba(245,124,0,.08),rgba(0,166,81,.05),rgba(1,118,211,.08));border:1px solid var(--b);border-radius:4px;padding:8px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;font-size:11px}
+.dual-l{display:flex;align-items:center;gap:6px}
+.dual-badge{padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700}
+.dual-lg{background:#fff3e0;color:#e65100}.dual-sf{background:#e3f2fd;color:#0d47a1}.dual-snk{background:#e8f5e9;color:#2e7d32}
+.dual-arr{color:var(--ag);font-weight:700;font-size:14px}
+/* Produto table */
+.ptbl{width:100%;border-collapse:collapse;font-size:11px;border:1px solid var(--b);margin-top:8px}
+.ptbl th{background:var(--agbg);padding:4px 8px;text-align:left;font-weight:700;color:var(--t);border:1px solid var(--b);font-size:10px;white-space:nowrap}
+.ptbl td{padding:4px 8px;border:1px solid #eee;font-size:11px}
+.ptbl tr:hover td{background:#fafafa}
+/* Footer */
+.ftr{height:28px;background:#f0f0f0;border-top:1px solid var(--b);display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:10px;color:var(--t3);flex-shrink:0}
+.ftr-btn{padding:3px 12px;background:var(--ag);color:#fff;border:none;border-radius:3px;font-size:10px;font-weight:600;cursor:pointer;font-family:var(--f)}
 /* Modal */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:flex;align-items:center;justify-content:center}
-.modal{background:var(--sf);border:1px solid var(--bd);border-radius:12px;width:90%;max-width:560px;max-height:80vh;overflow:auto}
-.modal-h{padding:14px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
-.modal-b{padding:20px}
-.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.fd-l{font-size:10px;font-weight:600;color:var(--td);letter-spacing:.8px;text-transform:uppercase;margin-bottom:3px}
-.fd-v{font-size:13px;color:var(--tx)}
-.modal-acts{margin-top:20px;padding-top:14px;border-top:1px solid var(--bd);display:flex;gap:8px}
-.btn-sync-sf{flex:1;padding:10px;border-radius:6px;border:none;background:var(--sfc);color:#fff;font-weight:600;font-size:12px;cursor:pointer;font-family:var(--f)}
-.btn-sync-lg{flex:1;padding:10px;border-radius:6px;border:none;background:var(--lg);color:#fff;font-weight:600;font-size:12px;cursor:pointer;font-family:var(--f)}
-.bar-c{display:flex;gap:5px;align-items:flex-end;height:100px;padding:0 6px}
-.bar-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
-.bar-v{font-size:9px;color:var(--tm);font-weight:600}
-.bar-b{width:100%;max-width:36px;border-radius:3px 3px 0 0;background:linear-gradient(180deg,var(--ag),var(--agd));display:flex;align-items:center;justify-content:center}
-.bar-b span{font-size:11px;font-weight:700;color:#fff}
-.bar-l{font-size:7px;color:var(--td);text-align:center;line-height:1.1}
-.proc-item{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--bg);border-radius:5px;border:1px solid var(--bd);margin-bottom:8px}
-.proc-l{flex:1}
-.proc-n{font-size:16px;font-weight:700;color:var(--ag)}
-.sync-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(30,58,95,.1)}
-.sync-bar{width:70px;height:5px;border-radius:3px;background:var(--bd)}
-.sync-fill{height:100%;border-radius:3px;background:var(--ok);transition:width .4s}
-.scen{padding:14px;background:var(--bg);border-radius:7px;border:1px solid var(--bd)}
-.scen-t{font-size:12px;font-weight:700;color:var(--tx);margin:6px 0}
-.scen-d{font-size:10px;color:var(--tm);margin-bottom:10px;line-height:1.4}
-.scen-s{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--td);margin-bottom:3px}
-.scen-dot{width:4px;height:4px;border-radius:2px;flex-shrink:0}
-.log-row{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(30,58,95,.06)}
-.log-t{font-size:10px;color:var(--td);font-family:monospace;width:55px}
-.log-id{font-size:10px;color:var(--td);font-family:monospace;width:65px}
-.log-n{font-size:12px;color:var(--tx);flex:1}
-.log-dir{font-size:9px;padding:2px 7px;border-radius:3px;font-weight:600}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--w);border-radius:6px;width:92%;max-width:640px;max-height:80vh;overflow:auto;box-shadow:0 8px 32px rgba(0,0,0,.25)}
+.modal-hd{padding:10px 16px;background:var(--ag);color:#fff;display:flex;align-items:center;justify-content:space-between;border-radius:6px 6px 0 0}
+.modal-hd h3{font-size:14px;font-weight:700}
+.modal-bd{padding:16px}
+.modal-gd{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-fl{font-size:10px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.modal-fv{font-size:12px;color:var(--t);font-weight:600}
+.modal-ft{padding:10px 16px;border-top:1px solid var(--b);display:flex;gap:8px}
+.mbtn{flex:1;padding:8px;border:none;border-radius:4px;font-weight:700;font-size:11px;cursor:pointer;font-family:var(--f)}
+.mbtn-sf{background:#1565c0;color:#fff}.mbtn-lg{background:#e65100;color:#fff}.mbtn-x{background:#f5f5f5;color:var(--t);border:1px solid var(--b)}
+/* Sidebar collapse for navigation */
+.left-nav{width:160px;background:var(--w);border-right:1px solid var(--b);flex-shrink:0;display:flex;flex-direction:column;overflow:hidden}
+.lnav-h{padding:8px 12px;background:var(--aglt);border-bottom:1px solid var(--b);font-size:10px;font-weight:700;color:var(--ag);text-transform:uppercase;letter-spacing:1px}
+.lnav-i{padding:8px 12px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:7px;color:var(--t2);border-left:3px solid transparent;transition:all .1s}
+.lnav-i:hover{background:var(--aglt);color:var(--t)}
+.lnav-i.a{background:var(--aglt);color:var(--ag);font-weight:700;border-left-color:var(--ag)}
+.lnav-i .ic{font-size:13px;width:16px;text-align:center}
+.lnav-ft{margin-top:auto;padding:8px 12px;font-size:9px;color:var(--t3);border-top:1px solid var(--b)}
+/* Filters */
+.flt-row{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.flt-row label{font-size:10px;color:var(--t2);font-weight:600}
+.flt-row select,.flt-row input{padding:3px 8px;border:1px solid var(--b);border-radius:3px;font-size:11px;font-family:var(--f)}
+.flt-btn{padding:3px 10px;border:1px solid var(--b);border-radius:3px;font-size:10px;font-weight:600;cursor:pointer;font-family:var(--f);background:var(--w)}
+.flt-btn.a{background:var(--ag);color:#fff;border-color:var(--ag)}
+.flt-btn:hover:not(.a){background:#f0f0f0}
+/* KPI row */
+.kpi-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.kpi-box{background:var(--w);border:1px solid var(--b);border-radius:4px;padding:10px 14px;flex:1;min-width:120px;border-left:3px solid var(--ag)}
+.kpi-n{font-size:22px;font-weight:700;color:var(--ag)}
+.kpi-l{font-size:10px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
 </style>
 </head>
 <body>
@@ -110,26 +117,22 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);font-size:13px;ov
 <script type="text/babel">
 const {useState,useEffect,useCallback,useMemo}=React;
 const API="https://mcp-sf-provisioning-462dd29c2455.herokuapp.com/api/snowflake";
-const fmt=v=>{if(v==null)return"—";if(typeof v==="number")return v>=1e6?`R$ ${(v/1e6).toFixed(2)}M`:v>=1e3?`R$ ${(v/1e3).toFixed(0)}K`:`R$ ${v}`;return v};
+const fmt=v=>{if(v==null)return"—";if(typeof v==="number")return v>=1e6?`R$ ${(v/1e6).toFixed(2)}M`:v>=1e3?`R$ ${(v/1e3).toFixed(0)}K`:`R$ ${v.toLocaleString("pt-BR")}`;return v};
 const fS=v=>v>=1e6?`${(v/1e6).toFixed(1)}M`:v>=1e3?`${(v/1e3).toFixed(0)}K`:v;
 const dt=s=>s?new Date(s).toLocaleDateString("pt-BR"):"—";
 
-const SyncBg=({s})=>{const m={SYNCED:{c:"bg-ok",i:"◉",l:"Sincronizado"},PENDING:{c:"bg-pn",i:"◎",l:"Pendente"},NOT_SYNCED:{c:"bg-ns",i:"○",l:"Não Sync"}};const x=m[s]||m.NOT_SYNCED;return <span className={`bg-sync ${x.c}`}>{x.i} {x.l}</span>};
-const OrigBg=({o})=>{const isL=o==="LEGACY";return <span className={`bg-or ${isL?"bg-or-l":"bg-or-s"}`}>{isL?"▣ LEGACY":"☁ SALESFORCE"}</span>};
-const StgPill=({s})=>{const colors={"Prospecting":"#64748B","Qualification":"#8B5CF6","Proposal":"#0176D3","Negotiation":"#F59E0B","Closed Won":"#10B981","Closed Lost":"#EF4444","Open":"#0176D3","Working":"#F59E0B","Nurturing":"#8B5CF6","Active":"#10B981","Expiring":"#F59E0B","Negotiation/Review":"#F59E0B"};const c=colors[s]||"#64748B";return <span className="stg" style={{background:c+"1A",color:c}}>{s||"—"}</span>};
-const ProdTag=({p})=>{const colors={"MPLS Dedicado":"#E91E63","SD-WAN":"#9C27B0","IoT Platform":"#00BCD4","UCaaS":"#FF9800","Fiber Backbone":"#4CAF50","Cloud Hosting":"#2196F3","Cybersecurity":"#F44336","Colocation":"#795548","Dark Fiber":"#607D8B"};const c=colors[p]||"#64748B";return <span className="ptag" style={{background:c+"1A",color:c}}>{p||"—"}</span>};
-const ScoreBar=({v})=>{const c=v>=80?"#EF4444":v>=50?"#F59E0B":"#3B82F6";return <div className="scbar"><div className="scbar-t"><div className="scbar-f" style={{width:`${v}%`,background:c}}/></div><span style={{fontSize:11,color:c,fontWeight:700}}>{v}</span></div>};
-
 function App(){
-  const [nav,setNav]=useState("dashboard");
+  const [nav,setNav]=useState("cliente");
+  const [tab,setTab]=useState("contratos");
   const [loading,setLoading]=useState(true);
   const [leg,setLeg]=useState({a:[],c:[],l:[],o:[]});
   const [crm,setCrm]=useState({a:[],c:[],l:[],o:[]});
   const [ov,setOv]=useState(null);
   const [sel,setSel]=useState(null);
   const [selT,setSelT]=useState(null);
+  const [selClient,setSelClient]=useState(null);
   const [slog,setSlog]=useState([]);
-  const [flt,setFlt]=useState("ALL");
+  const [flt,setFlt]=useState("TODOS");
 
   const load=useCallback(async()=>{
     setLoading(true);
@@ -142,326 +145,358 @@ function App(){
         ex("SELECT * FROM CRM_ACCOUNTS ORDER BY NAME"),ex("SELECT * FROM CRM_CONTACTS LIMIT 30"),
         ex("SELECT * FROM CRM_LEADS LIMIT 20"),ex("SELECT * FROM CRM_OPPORTUNITIES ORDER BY AMOUNT DESC")]);
       setLeg({a:la,c:lc,l:ll,o:lo});setCrm({a:ca,c:cc,l:cl,o:co});setOv(o.data||o);
+      if(la.length>0)setSelClient(la[0]);
     }catch(e){console.error(e)}
     setLoading(false);
   },[]);
   useEffect(()=>{load()},[load]);
 
-  const doSync=(rec,dir)=>{
-    const e={time:new Date().toLocaleTimeString("pt-BR"),dir,name:rec.NAME||`${rec.FIRST_NAME} ${rec.LAST_NAME}`,id:rec.LEGACY_ID||rec.SF_ID};
-    setSlog(p=>[e,...p].slice(0,20));setSel(null);
-  };
+  const doSync=(rec,dir)=>{const e={time:new Date().toLocaleTimeString("pt-BR"),dir,name:rec.NAME||`${rec.FIRST_NAME} ${rec.LAST_NAME}`,id:rec.LEGACY_ID||rec.SF_ID};setSlog(p=>[e,...p].slice(0,20));setSel(null)};
 
-  const allA=useMemo(()=>{
-    const items=[];
-    leg.a.forEach(a=>items.push({...a,_o:"LEGACY",_s:a.SYNC_STATUS,_id:a.LEGACY_ID}));
-    crm.a.forEach(a=>{if(!items.find(x=>x.SF_ID===a.SF_ID))items.push({...a,_o:"SF",_s:"SYNCED",_id:a.SF_ID})});
-    return flt==="ALL"?items:flt==="LEGACY"?items.filter(i=>i._o==="LEGACY"):items.filter(i=>i._o==="SF");
-  },[leg.a,crm.a,flt]);
+  const allA=useMemo(()=>{const it=[];leg.a.forEach(a=>it.push({...a,_o:"LEGACY",_s:a.SYNC_STATUS,_id:a.LEGACY_ID}));crm.a.forEach(a=>{if(!it.find(x=>x.SF_ID===a.SF_ID))it.push({...a,_o:"SF",_s:"SYNCED",_id:a.SF_ID})});return flt==="TODOS"?it:flt==="LEGACY"?it.filter(i=>i._o==="LEGACY"):it.filter(i=>i._o==="SF")},[leg.a,crm.a,flt]);
+  const allL=useMemo(()=>{const it=[];leg.l.forEach(l=>it.push({...l,_o:"LEGACY",_s:l.SYNC_STATUS,_id:l.LEGACY_ID}));crm.l.forEach(l=>{if(!it.find(x=>x.SF_ID===l.SF_ID))it.push({...l,_o:"SF",_s:"SYNCED",_id:l.SF_ID})});return flt==="TODOS"?it:flt==="LEGACY"?it.filter(i=>i._o==="LEGACY"):it.filter(i=>i._o==="SF")},[leg.l,crm.l,flt]);
+  const allO=useMemo(()=>{const it=[];leg.o.forEach(o=>it.push({...o,_o:"LEGACY",_s:o.SYNC_STATUS,_id:o.LEGACY_ID}));crm.o.forEach(o=>{if(!it.find(x=>x.SF_ID===o.SF_ID))it.push({...o,_o:"SF",_s:"SYNCED",_id:o.SF_ID})});return flt==="TODOS"?it:flt==="LEGACY"?it.filter(i=>i._o==="LEGACY"):it.filter(i=>i._o==="SF")},[leg.o,crm.o,flt]);
 
-  const allL=useMemo(()=>{
-    const items=[];
-    leg.l.forEach(l=>items.push({...l,_o:"LEGACY",_s:l.SYNC_STATUS,_id:l.LEGACY_ID}));
-    crm.l.forEach(l=>{if(!items.find(x=>x.SF_ID===l.SF_ID))items.push({...l,_o:"SF",_s:"SYNCED",_id:l.SF_ID})});
-    return flt==="ALL"?items:flt==="LEGACY"?items.filter(i=>i._o==="LEGACY"):items.filter(i=>i._o==="SF");
-  },[leg.l,crm.l,flt]);
+  const navItems=[{id:"cliente",i:"👤",l:"Dados do Cliente"},{id:"contratos",i:"📋",l:"Contratos"},{id:"servicos",i:"🔧",l:"Serviços"},{id:"leads",i:"📊",l:"Leads"},{id:"oportunidades",i:"💰",l:"Oportunidades"},{id:"faturamento",i:"💳",l:"Faturamento"},{id:"sync",i:"🔄",l:"Dupla Convivência"}];
 
-  const allO=useMemo(()=>{
-    const items=[];
-    leg.o.forEach(o=>items.push({...o,_o:"LEGACY",_s:o.SYNC_STATUS,_id:o.LEGACY_ID}));
-    crm.o.forEach(o=>{if(!items.find(x=>x.SF_ID===o.SF_ID))items.push({...o,_o:"SF",_s:"SYNCED",_id:o.SF_ID})});
-    return flt==="ALL"?items:flt==="LEGACY"?items.filter(i=>i._o==="LEGACY"):items.filter(i=>i._o==="SF");
-  },[leg.o,crm.o,flt]);
+  const stMap=s=>s==="SYNCED"?"st-sync":s==="PENDING"?"st-pend":"st-nosync";
+  const stLabel=s=>s==="SYNCED"?"Sincronizado":s==="PENDING"?"Pendente":"Não Sync";
+  const stStatus=s=>s==="ATIVO"||s==="Active"?"st-ativo":s==="CANCELADO"||s==="Cancelled"?"st-cancel":s==="AGUARDANDO ATIVACAO"?"st-aguard":s==="MIGRADO"?"st-migrado":"st-aberto";
 
-  const navs=[{id:"dashboard",i:"◫",l:"Dashboard"},{id:"accounts",i:"◧",l:"Contas"},{id:"leads",i:"◨",l:"Leads"},{id:"opportunities",i:"◩",l:"Oportunidades"},{id:"contracts",i:"◪",l:"Contratos"},{id:"sync",i:"⟳",l:"Sync Center"}];
+  // Client for detail view
+  const cl=selClient||leg.a[0]||{};
+  const clContacts=(leg.c||[]).filter(c=>c.ACCOUNT_LEGACY_ID===cl.LEGACY_ID);
+  const clOpps=(leg.o||[]).filter(o=>o.ACCOUNT_LEGACY_ID===cl.LEGACY_ID);
 
-  const stageData=useMemo(()=>{
-    const stages=["Prospecting","Qualification","Proposal","Negotiation","Negotiation/Review","Closed Won"];
-    const all=[...leg.o,...crm.o];
-    return stages.map(s=>{const it=all.filter(o=>o.STAGE===s);return{stage:s.replace("Negotiation/Review","Neg/Rev"),count:it.length,amount:it.reduce((a,o)=>a+(o.AMOUNT||0),0)}}).filter(s=>s.count>0);
-  },[leg.o,crm.o]);
-  const maxAmt=Math.max(...stageData.map(s=>s.amount),1);
-
-  const products=["MPLS Dedicado","SD-WAN","IoT Platform","UCaaS","Fiber Backbone","Cloud Hosting","Cybersecurity","Colocation","Dark Fiber"];
+  // Product lines (simulated from opp data)
+  const productLines=useMemo(()=>{
+    const lines=[];
+    allO.forEach(o=>{
+      lines.push({
+        status:o.STAGE==="Closed Won"?"ATIVO":o.STAGE==="Closed Lost"?"CANCELADO":o.PROBABILITY>=50?"ATIVO":"AGUARDANDO ATIVACAO",
+        contrato:o._id,linhaP:o.PRODUCT==="MPLS Dedicado"||o.PRODUCT==="Fiber Backbone"?"COMUNICACAO DADOS":o.PRODUCT==="UCaaS"?"TELEFONIA FIXA":"TELEFONIA MOVEL",
+        identificador:o._id?.replace(/[A-Z-]/g,"").slice(0,8)||"—",
+        nome:o.NAME,endereco:o._o==="LEGACY"?"—":"—",situacao:o._o==="LEGACY"?"Legacy":"Salesforce",
+        sync:o._s,origin:o._o,raw:o
+      });
+    });
+    return lines.slice(0,12);
+  },[allO]);
 
   return (
     <div style={{display:"flex",flexDirection:"column",height:"100vh"}}>
-      {/* HEADER */}
+      {/* ═══ HEADER ═══ */}
       <div className="hdr">
-        <div className="logo"><div className="logo-i">AT</div><div><div className="logo-t">Algar Telecom</div><div className="logo-s">CRM EMULATOR</div></div></div>
-        <div className="hdr-mid">
-          <div className="flow-badge">
-            <OrigBg o="LEGACY"/><span className="arr">→</span><span style={{fontSize:10,color:"var(--tm)"}}>Snowflake</span><span className="arr">→</span><OrigBg o="SF"/>
+        <div className="hdr-l">
+          <div style={{lineHeight:1}}>
+            <div className="logo-crm">CRM</div>
+            <div className="logo-algar">
+              <span className="logo-algar-t">Algar</span>
+              <span className="logo-algar-arr">:&gt;</span>
+            </div>
           </div>
+          <span className="logo-tel">Telecom</span>
         </div>
         <div className="hdr-r">
-          <button className="btn btn-p" onClick={load}>⟳ Refresh</button>
-          <button className="btn btn-close" onClick={()=>window.parent.postMessage("crm-closed","*")}>✕ Fechar</button>
+          <div className="hdr-av"><span className="hdr-av-i">👤</span></div>
+          <span className="hdr-name">ADMINISTRADOR EVER I9</span>
+          <button className="hdr-close" onClick={()=>window.parent.postMessage("crm-closed","*")}>✕ Fechar</button>
         </div>
       </div>
 
-      <div className="wrap">
-        {/* SIDEBAR */}
-        <div className="side">
-          <div className="side-nav">
-            {navs.map(n=><div key={n.id} className={`snav${nav===n.id?" a":""}`} onClick={()=>setNav(n.id)}><span className="snav-i">{n.i}</span>{n.l}</div>)}
-          </div>
-          <div className="side-ft">
+      {/* ═══ SUBMENU ═══ */}
+      <div className="submenu">
+        <a href="#" onClick={e=>e.preventDefault()}>▼ Telefones Úteis</a>
+        <a href="#" onClick={e=>e.preventDefault()}>▼ Links Úteis</a>
+        <a href="#" onClick={e=>e.preventDefault()}>▼ Quadro de Avisos</a>
+        <span className="sep">|</span>
+        <span style={{color:"var(--t3)"}}>Dupla Convivência:</span>
+        <span className="dual-badge dual-lg">▣ Legacy</span>
+        <span style={{color:"var(--ag)",fontWeight:700}}>⇄</span>
+        <span className="dual-badge dual-sf">☁ Salesforce</span>
+        <span className="dual-badge dual-snk">❄ Snowflake</span>
+      </div>
+
+      {/* ═══ BODY ═══ */}
+      <div style={{display:"flex",flex:1,overflow:"hidden"}}>
+        {/* LEFT NAV */}
+        <div className="left-nav">
+          <div className="lnav-h">Navegação</div>
+          {navItems.map(n=><div key={n.id} className={`lnav-i${nav===n.id?" a":""}`} onClick={()=>setNav(n.id)}><span className="ic">{n.i}</span>{n.l}</div>)}
+          <div className="lnav-ft">
             <div>Snowflake: rajlbkg-yk87012</div>
             <div>Org: DevHub Hyperforce</div>
-            <div style={{color:"var(--ok)",marginTop:2}}>◉ Online</div>
+            <div style={{color:"var(--ok)"}}>● Online</div>
           </div>
         </div>
 
-        {/* MAIN */}
-        <div className="main">
-          {/* Filter bar for list views */}
-          {["accounts","leads","opportunities"].includes(nav)&&(
-            <div style={{display:"flex",gap:4,marginBottom:12}}>
-              {[{id:"ALL",l:"Todos"},{id:"LEGACY",l:"Legacy"},{id:"SF",l:"Salesforce"}].map(f=>
-                <button key={f.id} className="btn" onClick={()=>setFlt(f.id)} style={flt===f.id?{background:"rgba(0,166,81,.15)",borderColor:"var(--ag)",color:"var(--ag)"}:{}}>{f.l}</button>
-              )}
-            </div>
-          )}
-
+        {/* MAIN CONTENT */}
+        <div className="content">
           {loading?(
-            <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"60vh",gap:14}}>
-              <div style={{width:36,height:36,border:"3px solid var(--bd)",borderTopColor:"var(--ag)",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
-              <div style={{color:"var(--td)",fontSize:12}}>Carregando Snowflake + Salesforce...</div>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"50vh",gap:12}}>
+              <div style={{width:32,height:32,border:"3px solid var(--b)",borderTopColor:"var(--ag)",borderRadius:"50%",animation:"spin .8s linear infinite"}}/>
+              <div style={{color:"var(--t3)",fontSize:11}}>Carregando dados Snowflake + Salesforce...</div>
               <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
             </div>
           ):(
           <>
-          {/* ═══ DASHBOARD ═══ */}
-          {nav==="dashboard"&&<div>
-            {/* Dual Flow */}
-            <div className="card">
-              <div className="card-h">DUPLA CONVIVÊNCIA — FLUXO BIDIRECIONAL</div>
-              <div className="dual">
-                <div className="dual-box dual-box-l">
-                  <div style={{fontSize:10,color:"var(--lgl)",fontWeight:600,letterSpacing:1}}>LEGACY CRM</div>
-                  <div style={{fontSize:9,color:"var(--td)"}}>ERP TOTVS</div>
-                  <div style={{fontSize:26,fontWeight:700,color:"var(--lgl)",marginTop:3}}>{leg.a.length+leg.l.length+leg.o.length}</div>
-                  <div style={{fontSize:9,color:"var(--td)"}}>registros</div>
-                </div>
-                <div className="dual-mid">
-                  <div style={{display:"flex",alignItems:"center",gap:5}}>
-                    <span style={{color:"var(--lg)",fontSize:13}}>◀</span>
-                    <div className="dual-line"/>
-                    <span style={{color:"var(--sfc)",fontSize:13}}>▶</span>
-                  </div>
-                  <div className="dual-sf"><div style={{fontSize:8,color:"var(--ag)",fontWeight:700,letterSpacing:1}}>SNOWFLAKE</div><div style={{fontSize:8,color:"var(--td)"}}>Data Lake</div></div>
-                  <div style={{display:"flex",gap:10}}>
-                    <span style={{fontSize:9,color:"var(--ok)"}}>◉ {[...leg.a,...leg.l,...leg.o].filter(r=>r.SYNC_STATUS==="SYNCED").length} sync</span>
-                    <span style={{fontSize:9,color:"var(--wn)"}}>◎ {[...leg.a,...leg.l,...leg.o].filter(r=>r.SYNC_STATUS==="PENDING").length} pend</span>
-                  </div>
-                </div>
-                <div className="dual-box dual-box-s">
-                  <div style={{fontSize:10,color:"var(--sfcl)",fontWeight:600,letterSpacing:1}}>SALESFORCE</div>
-                  <div style={{fontSize:9,color:"var(--td)"}}>Sales Cloud</div>
-                  <div style={{fontSize:26,fontWeight:700,color:"var(--sfcl)",marginTop:3}}>{crm.a.length+crm.l.length+crm.o.length}</div>
-                  <div style={{fontSize:9,color:"var(--td)"}}>registros</div>
-                </div>
+          {/* ═══ DADOS DO CLIENTE ═══ */}
+          {nav==="cliente"&&<div>
+            <div className="sec-title">Dados do Cliente</div>
+
+            {/* Client selector */}
+            <div className="flt-row">
+              <label>Cliente:</label>
+              <select value={cl.LEGACY_ID||""} onChange={e=>{const f=leg.a.find(a=>a.LEGACY_ID===e.target.value);if(f)setSelClient(f)}} style={{minWidth:200}}>
+                {leg.a.map(a=><option key={a.LEGACY_ID} value={a.LEGACY_ID}>{a.NAME}</option>)}
+              </select>
+              <span className={`st ${stMap(cl.SYNC_STATUS)}`}>{stLabel(cl.SYNC_STATUS)}</span>
+            </div>
+
+            {/* Data fields - matching the real CRM layout */}
+            <div style={{background:"var(--w)",border:"1px solid var(--b)",borderRadius:3,padding:10,marginBottom:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"2px 20px"}}>
+                <div className="data-row"><span className="data-lbl">Nome do Cliente:</span><span className="data-val">{cl.NAME||"—"}</span></div>
+                <div className="data-row"><span className="data-lbl">Programa Ligação:</span><span className="data-val">—</span></div>
+                <div className="data-row" style={{gridRow:"span 2"}}/>
+                <div className="data-row"><span className="data-lbl">CPF/CNPJ:</span><span className="data-val-link">{cl.CNPJ||"—"}</span></div>
+                <div className="data-row"><span className="data-lbl">Tipo de Cliente:</span><span className="data-val">{cl.TYPE==="Enterprise"?"PESSOA JURIDICA":"PESSOA FISICA"}</span></div>
+                <div className="data-row"><span className="data-lbl">Segmento:</span><span className="data-val">{cl.SEGMENT||"CORPORATIVO"}</span></div>
+                <div className="data-row"><span className="data-lbl">Grupo de Relacionamento:</span><span className="data-val">—</span></div>
+                <div className="data-row"><span className="data-lbl">Sub Segmento:</span><span className="data-val">{cl.TYPE==="Enterprise"?"PREMIUM":"GOLD"}</span></div>
+                <div className="data-row"><span className="data-lbl">Senha:</span><span className="data-val">—</span></div>
+                <div className="data-row"><span className="data-lbl">Situação:</span><span className="data-val" style={{color:"var(--ok)"}}>ATIVO</span></div>
+                <div className="data-row"><span className="data-lbl">Telefone atual:</span><span className="data-val">(34) 99912-3456</span></div>
+                <div className="data-row" style={{gridColumn:"1/-1"}}><span className="data-lbl">Subscrição (Contrato) atual:</span><span className="data-val">{cl.LEGACY_ID||"—"}</span></div>
+                <div className="data-row" style={{gridColumn:"1/-1"}}><span className="data-lbl">Endereço:</span><span className="data-val">{cl.BILLING_CITY||"—"} - {cl.BILLING_STATE||"—"}</span></div>
               </div>
             </div>
-            {/* KPIs */}
-            <div className="kpis">
-              <div className="kpi"><div className="kpi-l">CONTAS LEGACY</div><div className="kpi-v" style={{color:"var(--lgl)"}}>{leg.a.length}</div><div className="kpi-s">{leg.a.filter(a=>a.SYNC_STATUS==="SYNCED").length} sincronizadas</div></div>
-              <div className="kpi"><div className="kpi-l">CONTAS SALESFORCE</div><div className="kpi-v" style={{color:"var(--sfcl)"}}>{crm.a.length}</div><div className="kpi-s">Sales Cloud</div></div>
-              <div className="kpi"><div className="kpi-l">PIPELINE TOTAL</div><div className="kpi-v" style={{color:"var(--ag)"}}>R${fS([...leg.o,...crm.o].reduce((a,o)=>a+(o.AMOUNT||0),0))}</div><div className="kpi-s">{leg.o.length+crm.o.length} oportunidades</div></div>
-              <div className="kpi"><div className="kpi-l">LEADS ATIVOS</div><div className="kpi-v" style={{color:"#EF4444"}}>{leg.l.length+crm.l.length}</div><div className="kpi-s">{leg.l.filter(l=>l.RATING==="Hot").length} hot</div></div>
-            </div>
-            <div className="grid2">
-              {/* Pipeline Chart */}
-              <div className="card"><div className="card-h">PIPELINE COMBINADO</div>
-                <div className="bar-c">{stageData.map((s,i)=><div key={i} className="bar-item"><div className="bar-v">R${fS(s.amount)}</div><div className="bar-b" style={{height:Math.max(18,(s.amount/maxAmt)*80)}}><span>{s.count}</span></div><div className="bar-l">{s.stage}</div></div>)}</div>
+
+            {/* Dual coexistence indicator */}
+            <div className="dual-bar">
+              <div className="dual-l">
+                <span className="dual-badge dual-lg">▣ Legacy CRM</span>
+                <span className="dual-arr">→</span>
+                <span className="dual-badge dual-snk">❄ Snowflake</span>
+                <span className="dual-arr">→</span>
+                <span className="dual-badge dual-sf">☁ Salesforce</span>
               </div>
-              {/* Dual Coex Processes */}
-              <div className="card"><div className="card-h">PROCESSOS DUPLA CONVIVÊNCIA</div>
-                {[{f:"LEGACY",t:"SF",l:"Lead captado no CRM Legado → Qualificar no Salesforce",st:"Lead-to-Opp",n:leg.l.filter(l=>l.SF_ID).length},
-                  {f:"SF",t:"LEGACY",l:"Opp criada no Salesforce → Faturar no ERP TOTVS",st:"Quote-to-Cash",n:crm.o.filter(o=>o.STAGE==="Closed Won").length},
-                  {f:"LEGACY",t:"SF",l:"Conta migrada do Legado → Account 360 no SF",st:"Account Migration",n:leg.a.filter(a=>a.SYNC_STATUS==="SYNCED").length}
-                ].map((p,i)=><div key={i} className="proc-item"><div className="proc-l"><div style={{display:"flex",gap:5,marginBottom:3}}><OrigBg o={p.f}/><span style={{color:"var(--ag)"}}>→</span><OrigBg o={p.t}/></div><div style={{fontSize:10,color:"var(--tm)"}}>{p.l}</div></div><div style={{textAlign:"right"}}><div className="proc-n">{p.n}</div><div style={{fontSize:8,color:"var(--td)"}}>{p.st}</div></div></div>)}
-              </div>
-              {/* Top Opps Legacy */}
-              <div className="card"><div className="card-h">TOP OPORTUNIDADES LEGACY</div>
-                {leg.o.slice(0,4).map((o,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:i<3?"1px solid rgba(30,58,95,.1)":"none"}}><div><div style={{fontSize:12,fontWeight:600}}>{o.NAME}</div><div style={{display:"flex",gap:5,marginTop:3}}><ProdTag p={o.PRODUCT}/><SyncBg s={o.SYNC_STATUS}/></div></div><div style={{textAlign:"right"}}><div style={{fontSize:13,fontWeight:700,color:"var(--ag)"}}>{fmt(o.AMOUNT)}</div><StgPill s={o.STAGE}/></div></div>)}
-              </div>
-              {/* Sync Log */}
-              <div className="card"><div className="card-h">SYNC LOG</div>
-                {slog.length===0?<div style={{padding:16,textAlign:"center",color:"var(--td)",fontSize:11}}>Clique em registros para sincronizar.<br/><span style={{color:"var(--ag)"}}>Inicie em qualquer sistema e finalize no outro.</span></div>
-                :slog.slice(0,5).map((s,i)=><div key={i} className="log-row"><span className="log-t">{s.time}</span><span className="log-id">{s.id}</span><span className="log-n">{s.name}</span><span className="log-dir" style={{background:s.dir==="TO_SF"?"rgba(1,118,211,.15)":"rgba(245,124,0,.15)",color:s.dir==="TO_SF"?"var(--sfcl)":"var(--lgl)"}}>{s.dir==="TO_SF"?"→ SF":"→ Legacy"}</span></div>)}
+              <div>
+                <span style={{fontSize:10,color:"var(--ok)",fontWeight:600}}>● SF_ID: {cl.SF_ID||"Não sincronizado"}</span>
               </div>
             </div>
+
+            {/* Informações tabs */}
+            <div style={{fontSize:13,fontWeight:700,color:"var(--link)",marginBottom:6}}>Informações</div>
+            <div className="info-tabs">
+              {[{id:"contratos",i:"📋",l:"Cliente"},{id:"ctab",i:"📄",l:"Contratos"},{id:"servicos",i:"🔧",l:"Serviços"},{id:"fat",i:"💳",l:"Faturamento-Cobrança"},{id:"pre",i:"📱",l:"Pré-Pago"}].map(t=>
+                <div key={t.id} className={`itab${tab===t.id?" a":""}`} onClick={()=>setTab(t.id)}>
+                  <span className="itab-icon">{t.i}</span>{t.l}
+                </div>
+              )}
+            </div>
+
+            <div className="tcard">
+              {tab==="contratos"&&<div>
+                <div className="tcard-h">Atendimentos em Aberto - Cliente</div>
+                <div className="stat-line">
+                  <span className="stat-g">+ Casos: 0</span>
+                  <span className="stat-r">— Ordens de Serviço: {clOpps.length}</span>
+                </div>
+                <div className="tcard-sub">{clOpps.length} items found, displaying all items.</div>
+                <table className="ctbl"><thead><tr><th>Protocolo</th><th>Telefone</th><th>Linha Produto</th><th>Subscrição</th><th>Serviço</th><th>Status</th><th>Data Solicitação</th><th>Origem</th><th>Sync</th></tr></thead>
+                <tbody>{clOpps.length>0?clOpps.map((o,i)=><tr key={i}>
+                  <td className="link">{o.LEGACY_ID}</td><td>(34) 99912-3456</td><td>{o.PRODUCT}</td><td>{o.LEGACY_ID}</td><td>{o.NAME}</td>
+                  <td><span className="st st-aberto">ABERTO</span></td><td>{dt(o.CLOSE_DATE)}</td>
+                  <td><span className="dual-badge dual-lg" style={{fontSize:9}}>Legacy</span></td>
+                  <td><span className={`st ${stMap(o.SYNC_STATUS)}`} style={{fontSize:9}}>{stLabel(o.SYNC_STATUS)}</span></td>
+                </tr>):<tr><td colSpan={9} style={{textAlign:"center",padding:12,color:"var(--t3)"}}>Nenhum atendimento em aberto</td></tr>}</tbody></table>
+
+                <div style={{marginTop:12}}>
+                  <div className="stat-line"><span className="stat-g">+ Oportunidades em Aberto: {clOpps.filter(o=>o.STAGE!=="Closed Won").length}</span></div>
+                  <div className="stat-line"><span className="stat-g">+ Pedidos de Venda em Aberto: 0</span></div>
+                  <div className="stat-line"><span className="stat-g">+ Faturas Vencidas: 0</span></div>
+                </div>
+              </div>}
+              {tab==="ctab"&&<div>
+                <div className="tcard-h">Contratos do Cliente</div>
+                <table className="ctbl"><thead><tr><th>Contrato</th><th>Status</th><th>Valor</th><th>Início</th><th>Término</th></tr></thead>
+                <tbody>{(ov?.contracts||[]).map((c,i)=><tr key={i}><td className="link">{c.NAME}</td><td><span className={`st ${c.STATUS==="Active"?"st-ativo":"st-aguard"}`}>{c.STATUS}</span></td><td>{fmt(c.VALUE)}</td><td>{dt(c.START_DATE)}</td><td>{dt(c.END_DATE)}</td></tr>)}</tbody></table>
+              </div>}
+              {tab==="servicos"&&<div><div className="tcard-h">Serviços Ativos</div><p style={{color:"var(--t3)"}}>Serviços disponíveis via integração Salesforce.</p></div>}
+              {tab==="fat"&&<div><div className="tcard-h">Faturamento e Cobrança</div><p style={{color:"var(--t3)"}}>Dados de faturamento via ERP TOTVS / Snowflake.</p></div>}
+              {tab==="pre"&&<div><div className="tcard-h">Pré-Pago</div><p style={{color:"var(--t3)"}}>Informações de pré-pago não disponíveis.</p></div>}
+            </div>
+
+            {/* Products table - matching the real CRM */}
+            <div className="flt-row">
+              <label>Identificador</label><input style={{width:80}}/>
+              <label>Circuito</label><input style={{width:80}}/>
+              <label>Nº Vinculado</label><input style={{width:80}}/>
+              <label>Por Status</label>
+              <select><option>TODOS</option><option>ATIVO</option><option>CANCELADO</option><option>MIGRADO</option></select>
+            </div>
+
+            <table className="ptbl"><thead><tr><th>Status ▲</th><th>Contratos</th><th>Linha de Produtos</th><th>Identificador</th><th>Nome do Produto</th><th>Endereço</th><th>Origem</th><th>Sync</th><th>Ações</th></tr></thead>
+            <tbody>{productLines.filter(p=>p.raw.ACCOUNT_LEGACY_ID===cl.LEGACY_ID||allO.length<5).slice(0,8).map((p,i)=><tr key={i}>
+              <td><span className={`st ${stStatus(p.status)}`}>{p.status}</span></td>
+              <td className="link">{p.contrato}</td><td>{p.linhaP}</td><td>{p.identificador}</td>
+              <td>{p.nome}</td><td>{p.endereco}</td>
+              <td><span className={`dual-badge ${p.origin==="LEGACY"?"dual-lg":"dual-sf"}`} style={{fontSize:9}}>{p.origin==="LEGACY"?"Legacy":"Salesforce"}</span></td>
+              <td><span className={`st ${stMap(p.sync)}`} style={{fontSize:9}}>{stLabel(p.sync)}</span></td>
+              <td><a href="#" onClick={e=>{e.preventDefault();setSel(p.raw);setSelT("opp")}} style={{fontSize:10}}>Interação</a> <a href="#" onClick={e=>e.preventDefault()} style={{fontSize:10}}>Serviços</a></td>
+            </tr>)}</tbody></table>
           </div>}
 
-          {/* ═══ ACCOUNTS ═══ */}
-          {nav==="accounts"&&<div>
-            <div className="kpis">
-              <div className="kpi"><div className="kpi-l">LEGACY</div><div className="kpi-v" style={{color:"var(--lgl)"}}>{leg.a.length}</div></div>
-              <div className="kpi"><div className="kpi-l">SALESFORCE</div><div className="kpi-v" style={{color:"var(--sfcl)"}}>{crm.a.length}</div></div>
-              <div className="kpi"><div className="kpi-l">SINCRONIZADAS</div><div className="kpi-v" style={{color:"var(--ok)"}}>{leg.a.filter(a=>a.SYNC_STATUS==="SYNCED").length}</div></div>
-              <div className="kpi"><div className="kpi-l">RECEITA LEGACY</div><div className="kpi-v" style={{color:"var(--ag)"}}>R${fS(leg.a.reduce((a,x)=>a+(x.ANNUAL_REVENUE||0),0))}</div></div>
+          {/* ═══ CONTRATOS ═══ */}
+          {nav==="contratos"&&<div>
+            <div className="sec-title">Contratos</div>
+            <table className="ctbl"><thead><tr><th>ID</th><th>Contrato</th><th>Conta</th><th>Status</th><th>Valor</th><th>Início</th><th>Término</th></tr></thead>
+            <tbody>{(ov?.contracts||[]).map((r,i)=><tr key={i}><td style={{fontFamily:"monospace",fontSize:10}}>{r.ID}</td><td className="link">{r.NAME}</td><td>{r.ACCOUNT_ID}</td><td><span className={`st ${r.STATUS==="Active"?"st-ativo":"st-aguard"}`}>{r.STATUS}</span></td><td style={{fontWeight:700}}>{fmt(r.VALUE)}</td><td>{dt(r.START_DATE)}</td><td>{dt(r.END_DATE)}</td></tr>)}</tbody></table>
+          </div>}
+
+          {/* ═══ SERVIÇOS (Accounts) ═══ */}
+          {nav==="servicos"&&<div>
+            <div className="sec-title">Contas — Visão Consolidada</div>
+            <div className="flt-row">{[{id:"TODOS",l:"Todos"},{id:"LEGACY",l:"Legacy"},{id:"SF",l:"Salesforce"}].map(f=><button key={f.id} className={`flt-btn${flt===f.id?" a":""}`} onClick={()=>setFlt(f.id)}>{f.l}</button>)}</div>
+            <div className="kpi-row">
+              <div className="kpi-box"><div className="kpi-n">{leg.a.length}</div><div className="kpi-l">Legacy</div></div>
+              <div className="kpi-box" style={{borderLeftColor:"#1565c0"}}><div className="kpi-n" style={{color:"#1565c0"}}>{crm.a.length}</div><div className="kpi-l">Salesforce</div></div>
+              <div className="kpi-box" style={{borderLeftColor:"var(--ok)"}}><div className="kpi-n" style={{color:"var(--ok)"}}>{leg.a.filter(a=>a.SYNC_STATUS==="SYNCED").length}</div><div className="kpi-l">Sincronizadas</div></div>
             </div>
-            <div className="card" style={{padding:0,overflow:"hidden"}}>
-              <table className="tbl"><thead><tr><th>Origem</th><th>ID</th><th>Nome</th><th>CNPJ</th><th>Indústria</th><th>Cidade</th><th>Receita</th><th>Sync</th></tr></thead>
-              <tbody>{allA.map((r,i)=><tr key={i} onClick={()=>{setSel(r);setSelT("acc")}}>
-                <td><OrigBg o={r._o}/></td>
-                <td style={{fontSize:10,color:"var(--td)",fontFamily:"monospace"}}>{r._id}</td>
-                <td style={{fontWeight:600,color:"var(--ag)"}}>{r.NAME}</td>
-                <td>{r.CNPJ||"—"}</td><td>{r.INDUSTRY||"—"}</td>
-                <td>{r.BILLING_CITY||r.CITY||"—"}/{r.BILLING_STATE||r.STATE||""}</td>
-                <td style={{fontWeight:600}}>{fmt(r.ANNUAL_REVENUE||r.REVENUE)}</td>
-                <td><SyncBg s={r._s}/></td>
-              </tr>)}</tbody></table>
-            </div>
+            <table className="ctbl"><thead><tr><th>Origem</th><th>ID</th><th>Nome</th><th>CNPJ</th><th>Indústria</th><th>Cidade/UF</th><th>Receita</th><th>Sync</th></tr></thead>
+            <tbody>{allA.map((r,i)=><tr key={i} onClick={()=>{setSel(r);setSelT("acc")}}>
+              <td><span className={`dual-badge ${r._o==="LEGACY"?"dual-lg":"dual-sf"}`} style={{fontSize:9}}>{r._o==="LEGACY"?"▣ Legacy":"☁ SF"}</span></td>
+              <td style={{fontSize:10,fontFamily:"monospace",color:"var(--t3)"}}>{r._id}</td>
+              <td className="link" style={{fontWeight:700}}>{r.NAME}</td><td>{r.CNPJ||"—"}</td><td>{r.INDUSTRY||"—"}</td>
+              <td>{r.BILLING_CITY||r.CITY||"—"}/{r.BILLING_STATE||r.STATE||""}</td>
+              <td style={{fontWeight:700}}>{fmt(r.ANNUAL_REVENUE||r.REVENUE)}</td>
+              <td><span className={`st ${stMap(r._s)}`}>{stLabel(r._s)}</span></td>
+            </tr>)}</tbody></table>
           </div>}
 
           {/* ═══ LEADS ═══ */}
           {nav==="leads"&&<div>
-            <div className="kpis">
-              <div className="kpi"><div className="kpi-l">LEGACY</div><div className="kpi-v" style={{color:"var(--lgl)"}}>{leg.l.length}</div></div>
-              <div className="kpi"><div className="kpi-l">SALESFORCE</div><div className="kpi-v" style={{color:"var(--sfcl)"}}>{crm.l.length}</div></div>
-              <div className="kpi"><div className="kpi-l">HOT</div><div className="kpi-v" style={{color:"#EF4444"}}>{allL.filter(l=>l.RATING==="Hot").length}</div></div>
-              <div className="kpi"><div className="kpi-l">MÉDIA SCORE</div><div className="kpi-v" style={{color:"var(--wn)"}}>{Math.round(allL.reduce((a,l)=>a+(l.SCORE||0),0)/(allL.length||1))}</div></div>
+            <div className="sec-title">Leads</div>
+            <div className="flt-row">{[{id:"TODOS",l:"Todos"},{id:"LEGACY",l:"Legacy"},{id:"SF",l:"Salesforce"}].map(f=><button key={f.id} className={`flt-btn${flt===f.id?" a":""}`} onClick={()=>setFlt(f.id)}>{f.l}</button>)}</div>
+            <div className="kpi-row">
+              <div className="kpi-box"><div className="kpi-n">{allL.filter(l=>l.RATING==="Hot").length}</div><div className="kpi-l">Hot</div></div>
+              <div className="kpi-box" style={{borderLeftColor:"var(--warn)"}}><div className="kpi-n" style={{color:"var(--warn)"}}>{allL.filter(l=>l.RATING==="Warm").length}</div><div className="kpi-l">Warm</div></div>
+              <div className="kpi-box" style={{borderLeftColor:"#1565c0"}}><div className="kpi-n" style={{color:"#1565c0"}}>{allL.filter(l=>l.RATING==="Cold").length}</div><div className="kpi-l">Cold</div></div>
             </div>
-            <div className="card" style={{padding:0,overflow:"hidden"}}>
-              <table className="tbl"><thead><tr><th>Origem</th><th>Nome</th><th>Empresa</th><th>Cargo</th><th>Status</th><th>Rating</th><th>Score</th><th>Sync</th></tr></thead>
-              <tbody>{allL.map((r,i)=><tr key={i} onClick={()=>{setSel(r);setSelT("lead")}}>
-                <td><OrigBg o={r._o}/></td>
-                <td style={{fontWeight:600,color:"var(--ag)"}}>{r.FIRST_NAME} {r.LAST_NAME}</td>
-                <td>{r.COMPANY||"—"}</td><td>{r.TITLE||"—"}</td>
-                <td><StgPill s={r.STATUS}/></td>
-                <td style={{color:r.RATING==="Hot"?"#EF4444":r.RATING==="Warm"?"#F59E0B":"#3B82F6",fontWeight:700,fontSize:11}}>{r.RATING||"—"}</td>
-                <td>{r.SCORE?<ScoreBar v={r.SCORE}/>:"—"}</td>
-                <td><SyncBg s={r._s}/></td>
-              </tr>)}</tbody></table>
-            </div>
+            <table className="ctbl"><thead><tr><th>Origem</th><th>Nome</th><th>Empresa</th><th>Cargo</th><th>Status</th><th>Rating</th><th>Score</th><th>Canal</th><th>Sync</th></tr></thead>
+            <tbody>{allL.map((r,i)=><tr key={i} onClick={()=>{setSel(r);setSelT("lead")}}>
+              <td><span className={`dual-badge ${r._o==="LEGACY"?"dual-lg":"dual-sf"}`} style={{fontSize:9}}>{r._o==="LEGACY"?"▣ Legacy":"☁ SF"}</span></td>
+              <td className="link" style={{fontWeight:700}}>{r.FIRST_NAME} {r.LAST_NAME}</td><td>{r.COMPANY||"—"}</td><td>{r.TITLE||"—"}</td>
+              <td><span className={`st ${r.STATUS==="Open"?"st-aberto":r.STATUS==="Working"?"st-aguard":"st-migrado"}`}>{r.STATUS||"—"}</span></td>
+              <td style={{color:r.RATING==="Hot"?"var(--err)":r.RATING==="Warm"?"var(--warn)":"#1565c0",fontWeight:700}}>{r.RATING||"—"}</td>
+              <td>{r.SCORE||"—"}</td><td>{r.CHANNEL||"—"}</td>
+              <td><span className={`st ${stMap(r._s)}`}>{stLabel(r._s)}</span></td>
+            </tr>)}</tbody></table>
           </div>}
 
-          {/* ═══ OPPORTUNITIES ═══ */}
-          {nav==="opportunities"&&<div>
-            <div className="kpis">
-              <div className="kpi"><div className="kpi-l">LEGACY</div><div className="kpi-v" style={{color:"var(--lgl)"}}>{leg.o.length}</div></div>
-              <div className="kpi"><div className="kpi-l">SALESFORCE</div><div className="kpi-v" style={{color:"var(--sfcl)"}}>{crm.o.length}</div></div>
-              <div className="kpi"><div className="kpi-l">PIPELINE ABERTO</div><div className="kpi-v" style={{color:"var(--ag)"}}>R${fS(allO.filter(o=>o.STAGE!=="Closed Won"&&o.STAGE!=="Closed Lost").reduce((a,o)=>a+(o.AMOUNT||0),0))}</div></div>
-              <div className="kpi"><div className="kpi-l">WON</div><div className="kpi-v" style={{color:"var(--ok)"}}>{allO.filter(o=>o.STAGE==="Closed Won").length}</div></div>
+          {/* ═══ OPORTUNIDADES ═══ */}
+          {nav==="oportunidades"&&<div>
+            <div className="sec-title">Oportunidades</div>
+            <div className="flt-row">{[{id:"TODOS",l:"Todos"},{id:"LEGACY",l:"Legacy"},{id:"SF",l:"Salesforce"}].map(f=><button key={f.id} className={`flt-btn${flt===f.id?" a":""}`} onClick={()=>setFlt(f.id)}>{f.l}</button>)}</div>
+            <div className="kpi-row">
+              <div className="kpi-box"><div className="kpi-n">R${fS(allO.filter(o=>o.STAGE!=="Closed Won"&&o.STAGE!=="Closed Lost").reduce((a,o)=>a+(o.AMOUNT||0),0))}</div><div className="kpi-l">Pipeline Aberto</div></div>
+              <div className="kpi-box" style={{borderLeftColor:"var(--ok)"}}><div className="kpi-n" style={{color:"var(--ok)"}}>{allO.filter(o=>o.STAGE==="Closed Won").length}</div><div className="kpi-l">Won</div></div>
+              <div className="kpi-box" style={{borderLeftColor:"var(--warn)"}}><div className="kpi-n" style={{color:"var(--warn)"}}>{allO.length}</div><div className="kpi-l">Total</div></div>
             </div>
-            {/* Products */}
-            <div className="card"><div className="card-h">PIPELINE POR PRODUTO TELECOM</div>
-              <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
-                {products.map(p=>{const it=allO.filter(o=>o.PRODUCT===p);if(!it.length)return null;const t=it.reduce((a,o)=>a+(o.AMOUNT||0),0);
-                return <div key={p} style={{padding:"7px 12px",background:"var(--bg)",borderRadius:5,border:"1px solid var(--bd)",minWidth:105}}>
-                  <ProdTag p={p}/><div style={{marginTop:4,fontSize:15,fontWeight:700}}>R${fS(t)}</div><div style={{fontSize:9,color:"var(--td)"}}>{it.length} opp{it.length>1?"s":""}</div>
-                </div>})}
-              </div>
-            </div>
-            <div className="card" style={{padding:0,overflow:"hidden"}}>
-              <table className="tbl"><thead><tr><th>Origem</th><th>Nome</th><th>Produto</th><th>Estágio</th><th>Valor</th><th>Prob</th><th>Fechamento</th><th>Sync</th></tr></thead>
-              <tbody>{allO.map((r,i)=><tr key={i} onClick={()=>{setSel(r);setSelT("opp")}}>
-                <td><OrigBg o={r._o}/></td>
-                <td style={{fontWeight:600,color:"var(--ag)"}}>{r.NAME}</td>
-                <td>{r.PRODUCT?<ProdTag p={r.PRODUCT}/>:"—"}</td>
-                <td><StgPill s={r.STAGE}/></td>
-                <td style={{fontWeight:700}}>{fmt(r.AMOUNT)}</td>
-                <td style={{color:(r.PROBABILITY||0)>=70?"var(--ok)":"var(--tm)"}}>{r.PROBABILITY||0}%</td>
-                <td>{dt(r.CLOSE_DATE)}</td>
-                <td><SyncBg s={r._s}/></td>
-              </tr>)}</tbody></table>
-            </div>
+            <table className="ctbl"><thead><tr><th>Origem</th><th>Nome</th><th>Produto</th><th>Estágio</th><th>Valor</th><th>Prob</th><th>Fechamento</th><th>Tipo</th><th>Sync</th></tr></thead>
+            <tbody>{allO.map((r,i)=><tr key={i} onClick={()=>{setSel(r);setSelT("opp")}}>
+              <td><span className={`dual-badge ${r._o==="LEGACY"?"dual-lg":"dual-sf"}`} style={{fontSize:9}}>{r._o==="LEGACY"?"▣ Legacy":"☁ SF"}</span></td>
+              <td className="link" style={{fontWeight:700}}>{r.NAME}</td><td>{r.PRODUCT||"—"}</td>
+              <td><span className={`st ${r.STAGE==="Closed Won"?"st-ativo":r.STAGE==="Closed Lost"?"st-cancel":"st-aberto"}`}>{r.STAGE}</span></td>
+              <td style={{fontWeight:700}}>{fmt(r.AMOUNT)}</td>
+              <td>{r.PROBABILITY||0}%</td><td>{dt(r.CLOSE_DATE)}</td><td>{r.TYPE||"—"}</td>
+              <td><span className={`st ${stMap(r._s)}`}>{stLabel(r._s)}</span></td>
+            </tr>)}</tbody></table>
           </div>}
 
-          {/* ═══ CONTRACTS ═══ */}
-          {nav==="contracts"&&<div>
-            <div className="kpis">
-              <div className="kpi"><div className="kpi-l">ATIVOS</div><div className="kpi-v" style={{color:"var(--ok)"}}>{(ov?.contracts||[]).filter(c=>c.STATUS==="Active").length}</div></div>
-              <div className="kpi"><div className="kpi-l">VALOR TOTAL</div><div className="kpi-v" style={{color:"var(--ag)"}}>R${fS((ov?.contracts||[]).reduce((a,c)=>a+(c.VALUE||0),0))}</div></div>
-              <div className="kpi"><div className="kpi-l">EXPIRANDO</div><div className="kpi-v" style={{color:"var(--wn)"}}>{(ov?.contracts||[]).filter(c=>c.STATUS==="Expiring").length}</div></div>
-            </div>
-            <div className="card" style={{padding:0,overflow:"hidden"}}>
-              <table className="tbl"><thead><tr><th>ID</th><th>Contrato</th><th>Conta</th><th>Status</th><th>Valor</th><th>Início</th><th>Término</th></tr></thead>
-              <tbody>{(ov?.contracts||[]).map((r,i)=><tr key={i}>
-                <td style={{fontFamily:"monospace",fontSize:10,color:"var(--td)"}}>{r.ID}</td>
-                <td style={{fontWeight:600,color:"var(--ag)"}}>{r.NAME}</td>
-                <td>{r.ACCOUNT_ID}</td><td><StgPill s={r.STATUS}/></td>
-                <td style={{fontWeight:700}}>{fmt(r.VALUE)}</td><td>{dt(r.START_DATE)}</td><td>{dt(r.END_DATE)}</td>
-              </tr>)}</tbody></table>
-            </div>
-          </div>}
+          {/* ═══ FATURAMENTO ═══ */}
+          {nav==="faturamento"&&<div><div className="sec-title">Faturamento e Cobrança</div><p style={{color:"var(--t3)"}}>Dados de faturamento disponíveis via integração ERP TOTVS / Snowflake.</p></div>}
 
           {/* ═══ SYNC CENTER ═══ */}
           {nav==="sync"&&<div>
-            {/* Dual Flow */}
-            <div className="card">
-              <div className="card-h">DUPLA CONVIVÊNCIA — FLUXO BIDIRECIONAL</div>
-              <div className="dual">
-                <div className="dual-box dual-box-l"><div style={{fontSize:10,color:"var(--lgl)",fontWeight:600}}>LEGACY CRM</div><div style={{fontSize:26,fontWeight:700,color:"var(--lgl)",marginTop:3}}>{leg.a.length+leg.l.length+leg.o.length}</div></div>
-                <div className="dual-mid"><div style={{display:"flex",alignItems:"center",gap:5}}><span style={{color:"var(--lg)"}}>◀</span><div className="dual-line"/><span style={{color:"var(--sfc)"}}>▶</span></div><div className="dual-sf"><div style={{fontSize:8,color:"var(--ag)",fontWeight:700}}>SNOWFLAKE</div></div></div>
-                <div className="dual-box dual-box-s"><div style={{fontSize:10,color:"var(--sfcl)",fontWeight:600}}>SALESFORCE</div><div style={{fontSize:26,fontWeight:700,color:"var(--sfcl)",marginTop:3}}>{crm.a.length+crm.l.length+crm.o.length}</div></div>
+            <div className="sec-title">Dupla Convivência — Centro de Sincronização</div>
+            <div className="dual-bar">
+              <div className="dual-l">
+                <span className="dual-badge dual-lg">▣ Legacy CRM ({leg.a.length+leg.l.length+leg.o.length})</span>
+                <span className="dual-arr">⇄</span>
+                <span className="dual-badge dual-snk">❄ Snowflake</span>
+                <span className="dual-arr">⇄</span>
+                <span className="dual-badge dual-sf">☁ Salesforce ({crm.a.length+crm.l.length+crm.o.length})</span>
               </div>
             </div>
-            <div className="grid2">
-              {/* L→SF */}
-              <div className="card"><div className="card-h" style={{color:"var(--lgl)"}}>▣ LEGACY → ☁ SALESFORCE</div>
-                {[{l:"Contas",sy:leg.a.filter(a=>a.SYNC_STATUS==="SYNCED").length,t:leg.a.length},{l:"Contatos",sy:leg.c.filter(c=>c.SYNC_STATUS==="SYNCED").length,t:leg.c.length},{l:"Leads",sy:leg.l.filter(l=>l.SYNC_STATUS==="SYNCED").length,t:leg.l.length},{l:"Opps",sy:leg.o.filter(o=>o.SYNC_STATUS==="SYNCED").length,t:leg.o.length}].map((it,i)=>
-                  <div key={i} className="sync-row"><span style={{fontSize:12}}>{it.l}</span><div style={{display:"flex",alignItems:"center",gap:7}}><div className="sync-bar"><div className="sync-fill" style={{width:`${it.t?(it.sy/it.t)*100:0}%`}}/></div><span style={{fontSize:10,color:"var(--ok)",fontWeight:600}}>{it.sy}/{it.t}</span></div></div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+              <div style={{background:"var(--w)",border:"1px solid var(--b)",borderRadius:4,padding:12}}>
+                <div style={{fontSize:12,fontWeight:700,color:"#e65100",marginBottom:8}}>▣ LEGACY → ☁ SALESFORCE</div>
+                {[{l:"Contas",sy:leg.a.filter(a=>a.SYNC_STATUS==="SYNCED").length,t:leg.a.length},{l:"Contatos",sy:leg.c.filter(c=>c.SYNC_STATUS==="SYNCED").length,t:leg.c.length},{l:"Leads",sy:leg.l.filter(l=>l.SYNC_STATUS==="SYNCED").length,t:leg.l.length},{l:"Oportunidades",sy:leg.o.filter(o=>o.SYNC_STATUS==="SYNCED").length,t:leg.o.length}].map((it,i)=>
+                  <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid #f0f0f0",fontSize:11}}>
+                    <span>{it.l}</span>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <div style={{width:60,height:5,borderRadius:3,background:"#e0e0e0"}}><div style={{width:`${it.t?(it.sy/it.t)*100:0}%`,height:"100%",borderRadius:3,background:"var(--ok)"}}/></div>
+                      <span style={{fontSize:10,color:"var(--ok)",fontWeight:600}}>{it.sy}/{it.t}</span>
+                    </div>
+                  </div>
                 )}
               </div>
-              {/* SF→L */}
-              <div className="card"><div className="card-h" style={{color:"var(--sfcl)"}}>☁ SALESFORCE → ▣ LEGACY</div>
-                {[{l:"Contas",t:crm.a.length},{l:"Contatos",t:crm.c.length},{l:"Leads",t:crm.l.length},{l:"Opps",t:crm.o.length}].map((it,i)=>
-                  <div key={i} className="sync-row"><span style={{fontSize:12}}>{it.l}</span><span style={{fontSize:10,color:"var(--sfcl)",fontWeight:600}}>{it.t} registros</span></div>
+              <div style={{background:"var(--w)",border:"1px solid var(--b)",borderRadius:4,padding:12}}>
+                <div style={{fontSize:12,fontWeight:700,color:"#1565c0",marginBottom:8}}>☁ SALESFORCE → ▣ LEGACY</div>
+                {[{l:"Contas",t:crm.a.length},{l:"Contatos",t:crm.c.length},{l:"Leads",t:crm.l.length},{l:"Oportunidades",t:crm.o.length}].map((it,i)=>
+                  <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid #f0f0f0",fontSize:11}}>
+                    <span>{it.l}</span><span style={{fontSize:10,color:"#1565c0",fontWeight:600}}>{it.t} registros</span>
+                  </div>
                 )}
               </div>
             </div>
-            {/* Scenarios */}
-            <div className="card"><div className="card-h">CENÁRIOS DE DUPLA CONVIVÊNCIA</div>
-              <div className="grid3">
-                {[{t:"Lead → Opportunity",d:"Lead captado no CRM Legado qualificado e convertido em Opp no Salesforce",f:"LEGACY",to:"SF",
-                  steps:["Lead entra no CRM Legado","Sync → Snowflake","Data Cloud ingere","Lead criado no SF","Qualificação no SF","Conversão Lead→Opp"]},
-                  {t:"Quote → Order",d:"Cotação gerada no Salesforce enviada para faturamento no ERP TOTVS",f:"SF",to:"LEGACY",
-                  steps:["Opp ganha no SF","Quote aprovada","Sync → Snowflake","ERP recebe pedido","Faturamento TOTVS","NF emitida"]},
-                  {t:"Account 360",d:"Visão unificada da conta com dados de ambos os sistemas",f:"LEGACY",to:"SF",
-                  steps:["Conta no Legacy CRM","Conta no Salesforce","Snowflake consolida","Data Cloud unifica","Identity Resolution","Account 360 no SF"]}
-                ].map((s,i)=><div key={i} className="scen">
-                  <div style={{display:"flex",gap:4}}><OrigBg o={s.f}/><span style={{color:"var(--ag)"}}>→</span><OrigBg o={s.to}/></div>
-                  <div className="scen-t">{s.t}</div><div className="scen-d">{s.d}</div>
-                  {s.steps.map((st,si)=><div key={si} className="scen-s"><span className="scen-dot" style={{background:si<3?"var(--lg)":"var(--sfc)"}}/>{si+1}. {st}</div>)}
-                </div>)}
-              </div>
-            </div>
+            {/* Sync Log */}
+            {slog.length>0&&<div style={{background:"var(--w)",border:"1px solid var(--b)",borderRadius:4,padding:12}}>
+              <div style={{fontSize:12,fontWeight:700,marginBottom:8}}>Log de Sincronizações</div>
+              {slog.map((s,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 0",borderBottom:"1px solid #f0f0f0",fontSize:11}}>
+                <span style={{fontFamily:"monospace",color:"var(--t3)",width:55}}>{s.time}</span>
+                <span style={{fontFamily:"monospace",color:"var(--t3)",width:60}}>{s.id}</span>
+                <span style={{flex:1}}>{s.name}</span>
+                <span className={`dual-badge ${s.dir==="TO_SF"?"dual-sf":"dual-lg"}`} style={{fontSize:9}}>{s.dir==="TO_SF"?"→ Salesforce":"→ Legacy"}</span>
+                <span style={{color:"var(--ok)",fontSize:10}}>● OK</span>
+              </div>)}
+            </div>}
           </div>}
           </>)}
         </div>
       </div>
 
+      {/* ═══ FOOTER ═══ */}
+      <div className="ftr">
+        <span>© 2015 Algar CRM — Emulador Dupla Convivência v1.0</span>
+        <button className="ftr-btn" onClick={load}>AlgarCRM Mob</button>
+      </div>
+
       {/* ═══ DETAIL MODAL ═══ */}
       {sel&&<div className="modal-bg" onClick={()=>setSel(null)}>
         <div className="modal" onClick={e=>e.stopPropagation()}>
-          <div className="modal-h">
-            <div><div style={{fontSize:15,fontWeight:700}}>{sel.NAME||`${sel.FIRST_NAME} ${sel.LAST_NAME}`}</div><div style={{display:"flex",gap:6,marginTop:5}}><OrigBg o={sel._o}/><SyncBg s={sel._s}/></div></div>
-            <button className="btn" onClick={()=>setSel(null)}>✕</button>
+          <div className="modal-hd">
+            <h3>{sel.NAME||`${sel.FIRST_NAME} ${sel.LAST_NAME}`}</h3>
+            <button style={{background:"none",border:"none",color:"#fff",fontSize:16,cursor:"pointer"}} onClick={()=>setSel(null)}>✕</button>
           </div>
-          <div className="modal-b">
-            <div className="modal-grid">
-              {(selT==="acc"?[
-                {l:"ID",v:sel._id},{l:"CNPJ",v:sel.CNPJ},{l:"Indústria",v:sel.INDUSTRY},{l:"Tipo",v:sel.TYPE},
-                {l:"Cidade",v:`${sel.BILLING_CITY||sel.CITY||"—"}/${sel.BILLING_STATE||sel.STATE||""}`},{l:"Receita",v:fmt(sel.ANNUAL_REVENUE||sel.REVENUE)},
-                {l:"Segmento",v:sel.SEGMENT},{l:"Sistema",v:sel.LEGACY_SYSTEM},{l:"SF_ID",v:sel.SF_ID},{l:"Última Sync",v:dt(sel.LAST_SYNC)}
-              ]:selT==="lead"?[
-                {l:"ID",v:sel._id},{l:"Email",v:sel.EMAIL},{l:"Telefone",v:sel.PHONE},{l:"Empresa",v:sel.COMPANY},
-                {l:"Cargo",v:sel.TITLE},{l:"Status",v:sel.STATUS},{l:"Rating",v:sel.RATING},{l:"Score",v:sel.SCORE},
-                {l:"Canal",v:sel.CHANNEL},{l:"SF_ID",v:sel.SF_ID},{l:"Sistema",v:sel.LEGACY_SYSTEM},{l:"Última Sync",v:dt(sel.LAST_SYNC)}
-              ]:[
-                {l:"ID",v:sel._id},{l:"Produto",v:sel.PRODUCT},{l:"Estágio",v:sel.STAGE},{l:"Valor",v:fmt(sel.AMOUNT)},
-                {l:"Probabilidade",v:`${sel.PROBABILITY||0}%`},{l:"Tipo",v:sel.TYPE},{l:"Fechamento",v:dt(sel.CLOSE_DATE)},
-                {l:"SF_ID",v:sel.SF_ID},{l:"Sistema",v:sel.LEGACY_SYSTEM},{l:"Última Sync",v:dt(sel.LAST_SYNC)}
-              ]).map((f,i)=><div key={i}><div className="fd-l">{f.l}</div><div className="fd-v">{f.v||"—"}</div></div>)}
+          <div className="modal-bd">
+            <div style={{display:"flex",gap:6,marginBottom:12}}>
+              <span className={`dual-badge ${sel._o==="LEGACY"?"dual-lg":"dual-sf"}`}>{sel._o==="LEGACY"?"▣ Legacy CRM":"☁ Salesforce"}</span>
+              <span className={`st ${stMap(sel._s)}`}>{stLabel(sel._s)}</span>
             </div>
-            <div className="modal-acts">
-              <button className="btn-sync-sf" onClick={()=>doSync(sel,"TO_SF")}>☁ Enviar para Salesforce</button>
-              <button className="btn-sync-lg" onClick={()=>doSync(sel,"TO_LEGACY")}>▣ Enviar para Legacy CRM</button>
+            <div className="modal-gd">
+              {(selT==="acc"?[{l:"ID",v:sel._id},{l:"CNPJ",v:sel.CNPJ},{l:"Indústria",v:sel.INDUSTRY},{l:"Tipo",v:sel.TYPE},{l:"Cidade",v:`${sel.BILLING_CITY||sel.CITY||"—"}/${sel.BILLING_STATE||sel.STATE||""}`},{l:"Receita",v:fmt(sel.ANNUAL_REVENUE||sel.REVENUE)},{l:"Segmento",v:sel.SEGMENT},{l:"Sistema",v:sel.LEGACY_SYSTEM},{l:"SF_ID",v:sel.SF_ID},{l:"Última Sync",v:dt(sel.LAST_SYNC)}]
+              :selT==="lead"?[{l:"ID",v:sel._id},{l:"Email",v:sel.EMAIL},{l:"Telefone",v:sel.PHONE},{l:"Empresa",v:sel.COMPANY},{l:"Cargo",v:sel.TITLE},{l:"Status",v:sel.STATUS},{l:"Rating",v:sel.RATING},{l:"Score",v:sel.SCORE},{l:"Canal",v:sel.CHANNEL},{l:"SF_ID",v:sel.SF_ID}]
+              :[{l:"ID",v:sel._id},{l:"Produto",v:sel.PRODUCT},{l:"Estágio",v:sel.STAGE},{l:"Valor",v:fmt(sel.AMOUNT)},{l:"Probabilidade",v:`${sel.PROBABILITY||0}%`},{l:"Tipo",v:sel.TYPE},{l:"Fechamento",v:dt(sel.CLOSE_DATE)},{l:"SF_ID",v:sel.SF_ID},{l:"Sistema",v:sel.LEGACY_SYSTEM},{l:"Última Sync",v:dt(sel.LAST_SYNC)}]
+              ).map((f,i)=><div key={i}><div className="modal-fl">{f.l}</div><div className="modal-fv">{f.v||"—"}</div></div>)}
             </div>
+          </div>
+          <div className="modal-ft">
+            <button className="mbtn mbtn-sf" onClick={()=>doSync(sel,"TO_SF")}>☁ Enviar para Salesforce</button>
+            <button className="mbtn mbtn-lg" onClick={()=>doSync(sel,"TO_LEGACY")}>▣ Enviar para Legacy CRM</button>
+            <button className="mbtn mbtn-x" onClick={()=>setSel(null)}>Fechar</button>
           </div>
         </div>
       </div>}
