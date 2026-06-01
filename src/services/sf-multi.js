@@ -161,3 +161,10 @@ export async function moveFieldInLayout(org, layoutName, fieldName, toSectionLab
   const item = Array.isArray(result) ? result[0] : result;
   return { status: item?.success ? 'moved' : 'failed', field: fieldName, from: fromSection, to: toSectionLabel, success: item?.success };
 }
+
+// Executar Tooling API SOQL em qualquer org (read-only)
+export async function runToolingQuery(org, query) {
+  const conn = await connectToOrg(org);
+  return await conn.tooling.query(query);
+}
+
