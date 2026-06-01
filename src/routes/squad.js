@@ -15,6 +15,36 @@ router.get('/stages', authMiddleware, squadAuth, (req, res) => {
   res.json({ stages: sq.STAGES });
 });
 
+// ── EXTRACT TEXT (de arquivos .txt/.docx/.pdf) ──
+router.post('/extract-text', authMiddleware, squadAuth, async (req, res) => {
+  try {
+    const { file_name, content_base64 } = req.body;
+    if (!file_name || !content_base64) return res.status(400).json({ erro: 'file_name e content_base64 obrigatórios' });
+    const buffer = Buffer.from(content_base64, 'base64');
+    const ext = file_name.toLowerCase().split('.').pop();
+    let text = '';
+
+    if (ext === 'txt' || ext === 'md') {
+      text = buffer.toString('utf-8');
+    } else if (ext === 'docx') {
+      const mammoth = await import('mammoth');
+      const result = await mammoth.default.extractRawText({ buffer });
+      text = result.value || '';
+    } else if (ext === 'pdf') {
+      const pdfParse = (await import('pdf-parse')).default;
+      const result = await pdfParse(buffer);
+      text = result.text || '';
+    } else {
+      return res.status(400).json({ erro: 'Formato não suportado. Use .txt, .docx ou .pdf' });
+    }
+
+    res.json({ text, chars: text.length, file_name });
+  } catch (e) {
+    console.error('[Squad extract-text]', e.message);
+    res.status(500).json({ erro: 'Erro ao extrair texto: ' + e.message });
+  }
+});
+
 // ── CARDS ──
 router.get('/cards', authMiddleware, squadAuth, async (req, res) => {
   try { res.json({ cards: await sq.getCards() }); }
