@@ -1089,7 +1089,8 @@ app.get("/api/scratch-orgs/password/:scratchOrgInfoId", async (req, res) => {
     if (!AuthCode) return res.json({status:"error",message:"AuthCode expired"});
     
     // Create connection to scratch org
-    const scratchConn = new (require("jsforce")).Connection({
+    const jsforceLib = require("jsforce");
+    const scratchConn = new jsforceLib.Connection({
       instanceUrl: LoginUrl,
       accessToken: AuthCode,
       version: "62.0"
