@@ -179,6 +179,57 @@ function CreateModal({onClose,onCreate}){
     ));
 }
 
+function InputModal({card,onConfirm,onCancel}){
+  const[txt,setTxt]=S(card?.description||'');
+  const[uploading,setUploading]=S(false);
+  const[fileName,setFileName]=S('');
+  const handleFile=async(file)=>{
+    if(!file)return;
+    setUploading(true);setFileName(file.name);
+    const ext=file.name.split('.').pop().toLowerCase();
+    if(ext==='txt'||ext==='md'){
+      const reader=new FileReader();
+      reader.onload=()=>{setTxt(reader.result);setUploading(false);};
+      reader.readAsText(file);
+    }else if(ext==='docx'||ext==='pdf'){
+      const reader=new FileReader();
+      reader.onload=async()=>{
+        const b64=reader.result.split(',')[1];
+        try{
+          const r=await api('/extract-text',{method:'POST',body:JSON.stringify({file_name:file.name,content_base64:b64})});
+          if(r?.text)setTxt(r.text);
+          else alert('Não foi possível extrair texto do arquivo');
+        }catch(err){alert('Erro: '+err.message);}
+        setUploading(false);
+      };
+      reader.readAsDataURL(file);
+    }else{alert('Formato não suportado. Use .txt, .docx ou .pdf');setUploading(false);}
+  };
+  return e('div',{className:'modal-overlay',onClick:ev=>{if(ev.target===ev.currentTarget)onCancel()}},
+    e('div',{className:'modal agent-modal',style:{maxWidth:620}},
+      e('div',{className:'modal-header'},
+        e('h2',null,'◇ Requisito — '+card?.title),
+        e('button',{className:'close',onClick:onCancel},'×')),
+      e('div',{className:'modal-body'},
+        e('div',{style:{fontSize:12,color:'#94a3b8',marginBottom:12,lineHeight:1.5}},
+          'Cole ou escreva o requisito de negócio que será transformado pelo agente. Você também pode fazer upload de um arquivo.'),
+        e('textarea',{value:txt,onChange:ev=>setTxt(ev.target.value),placeholder:'Descreva o requisito de negócio em detalhes...\n\nExemplo: Como gerente comercial, preciso que o sistema permita registrar visitas presenciais aos clientes, com check-in por geolocalização...',
+          style:{width:'100%',minHeight:200,border:'1px solid #2a2a3e',borderRadius:8,padding:12,fontSize:13,fontFamily:'Outfit,sans-serif',background:'#12121f',color:'#f1f5f9',outline:'none',resize:'vertical',lineHeight:1.6,boxSizing:'border-box'}}),
+        e('div',{style:{display:'flex',alignItems:'center',gap:10,marginTop:12}},
+          e('label',{style:{display:'flex',alignItems:'center',gap:6,padding:'8px 16px',borderRadius:8,border:'1px dashed #3a3a5e',cursor:uploading?'wait':'pointer',color:'#64748b',fontSize:12,fontWeight:600,transition:'all .15s',background:fileName?'rgba(139,92,246,.08)':'transparent'}},
+            uploading?e('div',{className:'spinner',style:{width:14,height:14,borderWidth:2}}):null,
+            uploading?'Extraindo texto...':fileName?('✓ '+fileName):'⬆ Upload arquivo (.txt, .docx, .pdf)',
+            e('input',{type:'file',accept:'.txt,.md,.docx,.pdf',style:{display:'none'},onChange:ev=>{if(ev.target.files[0])handleFile(ev.target.files[0]);ev.target.value='';}})),
+          txt.length>0&&e('span',{style:{fontSize:10,color:'#475569',marginLeft:'auto'}},txt.length.toLocaleString()+' caracteres'),
+        ),
+      ),
+      e('div',{className:'modal-footer'},
+        e('button',{className:'btn btn-cancel',onClick:onCancel},'Cancelar'),
+        e('button',{className:'btn btn-primary',onClick:()=>{if(txt.trim())onConfirm(txt.trim())},disabled:!txt.trim()||uploading},
+          'Prosseguir →')),
+    ));
+}
+
 function AgentConfirmModal({preview,onConfirm,onCancel,loading}){
   if(!preview)return null;
   const ag=preview.agent||{};
@@ -261,6 +312,7 @@ function App(){
   const[stats,setStats]=S(null);const[sidebarOpen,setSidebarOpen]=S(false);
   const[agentPreview,setAgentPreview]=S(null);const[agentLoading,setAgentLoading]=S(false);
   const[pendingMove,setPendingMove]=S(null);const[runningCards,setRunningCards]=S(new Set());
+  const[showInputModal,setShowInputModal]=S(null);
 
   const load=C(async()=>{const r=await api('/cards');if(r)setCards(r.cards||[]);},[]);
   const loadStats=C(async()=>{const r=await api('/stats');if(r)setStats(r);},[]);
@@ -271,10 +323,10 @@ function App(){
   const moveCard=async(id,stage)=>{
     const stageConfig=STAGES.find(s=>s.key===stage);
     if(stageConfig?.hasAgent){
-      // Mostrar modal de confirmação
+      // Etapa 1: mostrar modal de input do requisito
+      const card=cards.find(c=>c.id===id);
       setPendingMove({id,stage});
-      const preview=await api('/cards/'+id+'/agent-preview?stage='+stage);
-      if(preview)setAgentPreview(preview);
+      setShowInputModal(card||{id,title:'Card',description:''});
       return;
     }
     // Move simples (sem agente)
@@ -282,6 +334,21 @@ function App(){
     await api('/cards/'+id+'/move',{method:'POST',body:JSON.stringify({stage})});
     loadStats();
   };
+
+  // Etapa 1→2: após input do requisito, salvar e mostrar preview do agente
+  const onInputConfirm=async(inputText)=>{
+    if(!pendingMove)return;
+    const{id,stage}=pendingMove;
+    // Salvar texto como descrição do card
+    await api('/cards/'+id,{method:'PATCH',body:JSON.stringify({description:inputText})});
+    setCards(p=>p.map(c=>c.id===id?{...c,description:inputText}:c));
+    setShowInputModal(null);
+    // Etapa 2: mostrar preview do agente
+    const preview=await api('/cards/'+id+'/agent-preview?stage='+stage);
+    if(preview)setAgentPreview({...preview,inputPreview:inputText.slice(0,500)+(inputText.length>500?'...':'')});
+  };
+
+  const cancelInput=()=>{setShowInputModal(null);setPendingMove(null);};
 
   const confirmAgent=async()=>{
     if(!pendingMove)return;
@@ -355,6 +422,7 @@ function App(){
           e('div',{style:{fontSize:40,marginBottom:12}},'◈'),
           e('div',{style:{fontSize:14,fontWeight:600}},'Nenhum card ainda')))),
     showCreate&&e(CreateModal,{onClose:()=>setShowCreate(false),onCreate:createCard}),
+    showInputModal&&e(InputModal,{card:showInputModal,onConfirm:onInputConfirm,onCancel:cancelInput}),
     agentPreview&&e(AgentConfirmModal,{preview:agentPreview,onConfirm:confirmAgent,onCancel:cancelAgent,loading:agentLoading}),
     detailId&&e(DetailPanel,{card:detailData.card,artifacts:detailData.artifacts||[],runs:detailData.runs||[],onClose:closeDetail}),
   );
