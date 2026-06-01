@@ -28,6 +28,12 @@ export async function mountChatApp(app) {
     app.use('/api/gp', gpRoutes);
   } catch (e) { console.error('[GP] Rota nao carregada:', e.message); }
 
+  // Squad Agentes SF
+  try {
+    const { default: squadRoutes } = await import('./routes/squad.js');
+    app.use('/api/squad', squadRoutes);
+  } catch (e) { console.error('[Squad] Rota nao carregada:', e.message); }
+
   // Servir prototipos como HTML estatico
   const protoDir = '/tmp/prototipos';
   try { const fs = await import('fs'); fs.default.mkdirSync(protoDir, { recursive: true }); } catch {}
@@ -44,5 +50,5 @@ export async function mountChatApp(app) {
     });
   });
 
-  console.log('[everi9] Rotas montadas: /api/auth, /api/chat, /api/download, /api/setup, /api/orgs');
+  console.log('[everi9] Rotas montadas: /api/auth, /api/chat, /api/download, /api/setup, /api/orgs, /api/squad');
 }
