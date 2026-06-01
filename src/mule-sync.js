@@ -1,7 +1,27 @@
 // mule-sync.js — MuleSoft Integration Layer (CDC real-time sync)
 // Handles: Sales Cloud <-> Snowflake <-> CRM Algar bidirectional sync
 
-export function registerMuleSyncRoutes(app, sfClient, snowflake) {
+export function registerMuleSyncRoutes(app, sfClient) {
+
+  const PORT = process.env.PORT || 3000;
+  
+  // Internal Snowflake query wrapper (calls our own /api/snowflake/execute)
+  const snowflake = {
+    execute: async (sql) => {
+      try {
+        const resp = await fetch(`http://localhost:${PORT}/api/snowflake/execute`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sql })
+        });
+        const data = await resp.json();
+        return data.status === "ok" ? data.data : [];
+      } catch (e) {
+        console.error("[MuleSync] Snowflake error:", e.message);
+        return [];
+      }
+    }
+  };
 
   // ═══ HEALTH CHECK ═══
   app.get("/api/mule/health", (req, res) => {
