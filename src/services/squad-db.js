@@ -42,6 +42,16 @@ export async function ensureSquadSchema() {
     );
     CREATE INDEX IF NOT EXISTS idx_squad_artifacts_card ON squad_artifacts(card_id);
     CREATE INDEX IF NOT EXISTS idx_squad_runs_card ON squad_agent_runs(card_id);
+    CREATE TABLE IF NOT EXISTS squad_attachments (
+      id              SERIAL PRIMARY KEY,
+      card_id         INTEGER       NOT NULL REFERENCES squad_cards(id) ON DELETE CASCADE,
+      file_name       VARCHAR(255)  NOT NULL,
+      file_type       VARCHAR(20)   DEFAULT '',
+      extracted_text  TEXT          DEFAULT '',
+      file_size       INTEGER       DEFAULT 0,
+      created_at      TIMESTAMPTZ   DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_squad_attachments_card ON squad_attachments(card_id);
   `);
 }
 
@@ -184,4 +194,59 @@ export async function getStats() {
     total_cards: total.rows[0]?.total || 0,
     total_artifacts: artifacts.rows[0]?.total || 0,
   };
+}
+
+// ── Attachments ──
+export async function getAttachments(cardId) {
+  await ensureSquadSchema();
+  const r = await pool.query(
+    'SELECT id, card_id, file_name, file_type, file_size, length(extracted_text) as text_length, created_at FROM squad_attachments WHERE card_id = $1 ORDER BY created_at',
+    [cardId]
+  );
+  return r.rows;
+}
+
+export async function getAttachmentFull(id) {
+  await ensureSquadSchema();
+  const r = await pool.query('SELECT * FROM squad_attachments WHERE id = $1', [id]);
+  return r.rows[0] || null;
+}
+
+export async function addAttachment({ card_id, file_name, file_type, extracted_text, file_size }) {
+  await ensureSquadSchema();
+  const r = await pool.query(
+    `INSERT INTO squad_attachments (card_id, file_name, file_type, extracted_text, file_size)
+     VALUES ($1,$2,$3,$4,$5) RETURNING id, card_id, file_name, file_type, file_size, created_at`,
+    [card_id, file_name, file_type || '', extracted_text || '', file_size || 0]
+  );
+  return r.rows[0];
+}
+
+export async function deleteAttachment(id) {
+  await ensureSquadSchema();
+  await pool.query('DELETE FROM squad_attachments WHERE id = $1', [id]);
+}
+
+export async function deleteAllAttachments(cardId) {
+  await ensureSquadSchema();
+  await pool.query('DELETE FROM squad_attachments WHERE card_id = $1', [cardId]);
+}
+
+// Retorna todo o texto combinado (description + attachments) para input do agente
+export async function getFullCardInput(cardId) {
+  await ensureSquadSchema();
+  const card = await getCard(cardId);
+  if (!card) return '';
+  const attachments = await pool.query(
+    'SELECT file_name, extracted_text FROM squad_attachments WHERE card_id = $1 ORDER BY created_at',
+    [cardId]
+  );
+  let parts = [];
+  if (card.description?.trim()) parts.push(card.description.trim());
+  for (const att of attachments.rows) {
+    if (att.extracted_text?.trim()) {
+      parts.push(`\n--- ARQUIVO ANEXO: ${att.file_name} ---\n${att.extracted_text.trim()}\n--- FIM ARQUIVO ---`);
+    }
+  }
+  return parts.join('\n\n');
 }
