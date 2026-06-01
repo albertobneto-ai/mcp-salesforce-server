@@ -1057,6 +1057,7 @@ app.get("/api/scratch-orgs/create/:template", async (req, res) => {
     datacloud: { orgName: "CRM-B2B-DataCloud", edition: "Developer", features: ["SalesCloud"], durationDays: 7 },
     agentforce: { orgName: "CRM-B2B-Agentforce", edition: "Developer", features: ["SalesCloud"], durationDays: 7 },
     whatsapp: { orgName: "CRM-B2B-WhatsApp", edition: "Developer", features: ["SalesCloud", "ServiceCloud"], durationDays: 7 },
+    mulesoft: { orgName: "CRM-B2B-MuleSoft", edition: "Developer", features: ["SalesCloud", "ServiceCloud"], durationDays: 7 },
   };
 
   const template = templates[req.params.template];
@@ -1097,6 +1098,7 @@ const WORKSTREAM_RULES = {
   datacloud: { keywords: ["data cloud", "datacloud", "neoway", "ingestion", "prospect", "enriquecimento", "segmentacao"], objects: ["Neoway_Prospect__c"], template: "datacloud" },
   agentforce: { keywords: ["agentforce", "agent", "agente", "autonomo", "topico", "acao", "einstein"], objects: [], template: "agentforce" },
   whatsapp: { keywords: ["whatsapp", "messaging", "mensagem", "digital engagement", "chat", "sms", "canal"], objects: [], template: "whatsapp" },
+  mulesoft: { keywords: ["mulesoft", "mule", "anypoint", "ipaa", "integracao", "api manager", "raml", "named credential", "external service", "cdc", "platform event"], objects: [], template: "mulesoft" },
 };
 
 // --- Suggest: auto-detect workstream from description or manifest ---
@@ -1249,6 +1251,7 @@ app.get("/api/scratch-orgs/smart-create", async (req, res) => {
       datacloud: { orgName: "CRM-B2B-DataCloud", edition: "Developer", features: ["SalesCloud"], durationDays: 7 },
       agentforce: { orgName: "CRM-B2B-Agentforce", edition: "Developer", features: ["SalesCloud"], durationDays: 7 },
       whatsapp: { orgName: "CRM-B2B-WhatsApp", edition: "Developer", features: ["SalesCloud", "ServiceCloud"], durationDays: 7 },
+      mulesoft: { orgName: "CRM-B2B-MuleSoft", edition: "Developer", features: ["SalesCloud", "ServiceCloud"], durationDays: 7 },
     };
 
     const scratchDef = templates[detectedWs];
