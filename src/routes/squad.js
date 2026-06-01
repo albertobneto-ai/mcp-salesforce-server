@@ -142,9 +142,9 @@ router.get('/cards/:id/artifacts', authMiddleware, squadAuth, async (req, res) =
   catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── DOWNLOAD artefato (aceita token via query param para window.open) ──
+// ── DOWNLOAD artefato como .docx Dark theme ──
 router.get('/artifacts/:id/download', async (req, res) => {
-  // Auth flexível: Bearer header OU ?token= query param
+  // Auth flexível: Bearer header OU ?token= query param (window.open)
   const token = req.query.token || (req.headers.authorization || '').replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Token ausente' });
   try {
@@ -158,11 +158,25 @@ router.get('/artifacts/:id/download', async (req, res) => {
     );
     if (!rows.length) return res.status(404).json({ erro: 'Artefato não encontrado' });
     const art = rows[0];
-    const ext = art.file_name?.endsWith('.json') ? 'json' : 'md';
-    res.setHeader('Content-Type', ext === 'json' ? 'application/json' : 'text/markdown; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${art.file_name || 'artifact.' + ext}"`);
-    res.send(art.content || '');
-  } catch (e) { res.status(500).json({ erro: e.message }); }
+
+    // JSON puro: download como .json
+    if (art.artifact_type === 'manifest_json' || art.file_name?.endsWith('.json')) {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${art.file_name || 'manifest.json'}"`);
+      return res.send(art.content || '');
+    }
+
+    // Demais artefatos: gera .docx com tema Dark
+    const { generateDocxBuffer } = await import('./download.js');
+    const docxName = (art.file_name || 'Documento').replace(/\.\w+$/, '');
+    const buffer = await generateDocxBuffer(art.content || '', art.artifact_type || art.stage, docxName);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="${docxName}.docx"`);
+    res.send(buffer);
+  } catch (e) {
+    console.error('[Squad download error]', e.message);
+    res.status(500).json({ erro: e.message });
+  }
 });
 
 // ── AGENT RUNS (log) ──
