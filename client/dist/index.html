@@ -14,21 +14,50 @@
   <script>
 (function(){
   function gr(){try{return JSON.parse(localStorage.getItem('everi9_user')||'{}').role||'';}catch(e){return'';}}
+
+  /* === Data Cloud Overlay === */
   var ov=document.createElement('div');ov.id='dc-overlay';ov.style.cssText='position:fixed;inset:0;z-index:1050;display:none;';
   var ifr=document.createElement('iframe');ifr.src='/datacloud.html';ifr.style.cssText='width:100%;height:100%;border:none;';
   ov.appendChild(ifr);document.body.appendChild(ov);
-  window.addEventListener('message',function(e){if(e.data==='dc-closed')ov.style.display='none';});
+
+  /* === CRM Algar Overlay === */
+  var ov2=document.createElement('div');ov2.id='crm-overlay';ov2.style.cssText='position:fixed;inset:0;z-index:1050;display:none;';
+  var ifr2=document.createElement('iframe');ifr2.src='/crm-algar.html';ifr2.style.cssText='width:100%;height:100%;border:none;';
+  ov2.appendChild(ifr2);document.body.appendChild(ov2);
+
+  /* === Message handler for both overlays === */
+  window.addEventListener('message',function(e){
+    if(e.data==='dc-closed')ov.style.display='none';
+    if(e.data==='crm-closed')ov2.style.display='none';
+  });
+
+  /* === Inject sidebar buttons === */
   setInterval(function(){
     var role=gr();if(role!=='admin'&&role!=='architect')return;
-    if(document.getElementById('dc-sidebar-btn'))return;
     var bs=document.querySelectorAll('button'),gp=null;
     for(var i=0;i<bs.length;i++){if(bs[i].textContent.trim()==='GP'){gp=bs[i];break;}}
     if(!gp)return;
-    var b=document.createElement('button');b.id='dc-sidebar-btn';b.title='Data Cloud Sandbox';
-    b.onclick=function(ev){ev.stopPropagation();ov.style.display='block';ifr.contentWindow.location.reload();};
-    b.style.cssText='background:none;border:1px solid rgba(6,182,212,.25);border-radius:8px;padding:6px 14px;color:#06b6d4;font-size:13px;cursor:pointer;font-family:Outfit,sans-serif;font-weight:600;';
-    b.textContent='☁️ DC';
-    gp.parentNode.insertBefore(b,gp);
+
+    /* DC button */
+    if(!document.getElementById('dc-sidebar-btn')){
+      var b=document.createElement('button');b.id='dc-sidebar-btn';b.title='Data Cloud Sandbox';
+      b.onclick=function(ev){ev.stopPropagation();ov.style.display='block';ifr.contentWindow.location.reload();};
+      b.style.cssText='background:none;border:1px solid rgba(6,182,212,.25);border-radius:8px;padding:6px 14px;color:#06b6d4;font-size:13px;cursor:pointer;font-family:Outfit,sans-serif;font-weight:600;';
+      b.textContent='\u2601\uFE0F DC';
+      gp.parentNode.insertBefore(b,gp);
+    }
+
+    /* CRM Algar button */
+    if(!document.getElementById('crm-sidebar-btn')){
+      var dcBtn=document.getElementById('dc-sidebar-btn');
+      var b2=document.createElement('button');b2.id='crm-sidebar-btn';b2.title='CRM Algar Telecom — Emulador Dupla Convivência';
+      b2.onclick=function(ev){ev.stopPropagation();ov2.style.display='block';ifr2.contentWindow.location.reload();};
+      b2.style.cssText='background:none;border:1px solid rgba(0,166,81,.25);border-radius:8px;padding:6px 14px;color:#00A651;font-size:13px;cursor:pointer;font-family:Outfit,sans-serif;font-weight:600;';
+      b2.textContent='\uD83D\uDCDE CRM';
+      if(dcBtn&&dcBtn.nextSibling){dcBtn.parentNode.insertBefore(b2,dcBtn.nextSibling);}
+      else if(dcBtn){dcBtn.parentNode.insertBefore(b2,gp);}
+      else{gp.parentNode.insertBefore(b2,gp);}
+    }
   },800);
 })();
 </script></body>
