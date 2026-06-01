@@ -15,7 +15,7 @@ router.get('/stages', authMiddleware, squadAuth, (req, res) => {
   res.json({ stages: sq.STAGES });
 });
 
-// ── EXTRACT TEXT (de arquivos .txt/.docx/.pdf) ──
+// ── EXTRACT TEXT (de arquivos .txt/.docx/.pdf/.xlsx) ──
 router.post('/extract-text', authMiddleware, squadAuth, async (req, res) => {
   try {
     const { file_name, content_base64 } = req.body;
@@ -24,7 +24,7 @@ router.post('/extract-text', authMiddleware, squadAuth, async (req, res) => {
     const ext = file_name.toLowerCase().split('.').pop();
     let text = '';
 
-    if (ext === 'txt' || ext === 'md') {
+    if (ext === 'txt' || ext === 'md' || ext === 'csv') {
       text = buffer.toString('utf-8');
     } else if (ext === 'docx') {
       const mammoth = await import('mammoth');
@@ -34,8 +34,18 @@ router.post('/extract-text', authMiddleware, squadAuth, async (req, res) => {
       const pdfParse = (await import('pdf-parse')).default;
       const result = await pdfParse(buffer);
       text = result.text || '';
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      const XLSX = await import('xlsx');
+      const wb = XLSX.default.read(buffer, { type: 'buffer' });
+      const parts = [];
+      for (const sheetName of wb.SheetNames) {
+        const sheet = wb.Sheets[sheetName];
+        const csv = XLSX.default.utils.sheet_to_csv(sheet);
+        if (csv.trim()) parts.push(`[Aba: ${sheetName}]\n${csv}`);
+      }
+      text = parts.join('\n\n');
     } else {
-      return res.status(400).json({ erro: 'Formato não suportado. Use .txt, .docx ou .pdf' });
+      return res.status(400).json({ erro: 'Formato não suportado. Use .txt, .docx, .pdf, .xlsx ou .csv' });
     }
 
     res.json({ text, chars: text.length, file_name });
@@ -57,7 +67,8 @@ router.get('/cards/:id', authMiddleware, squadAuth, async (req, res) => {
     if (!card) return res.status(404).json({ erro: 'Card não encontrado' });
     const artifacts = await sq.getArtifacts(card.id);
     const runs = await sq.getAgentRuns(card.id);
-    res.json({ card, artifacts, runs });
+    const attachments = await sq.getAttachments(card.id);
+    res.json({ card, artifacts, runs, attachments });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
@@ -110,19 +121,27 @@ router.get('/cards/:id/agent-preview', authMiddleware, squadAuth, async (req, re
     const needsPrev = prevMap[stage];
     const hasPrev = needsPrev ? artifacts.some(a => a.stage === needsPrev) : true;
 
+    // Para HF: usa description + attachments como input
+    const attachments = await sq.getAttachments(card.id);
+    let inputPreview = '';
+    if (stage === 'hf') {
+      const fullInput = await sq.getFullCardInput(card.id);
+      inputPreview = fullInput ? fullInput.slice(0, 500) + (fullInput.length > 500 ? '...' : '') : '(sem conteúdo)';
+    } else if (hasPrev && needsPrev) {
+      const prevArt = artifacts.find(a => a.stage === needsPrev);
+      inputPreview = prevArt ? prevArt.content.slice(0, 500) + '...' : '';
+    } else {
+      inputPreview = (card.description || card.title).slice(0, 500);
+    }
+
     res.json({
       agentAvailable: true,
-      agent: {
-        label: agent.label,
-        model: agent.model,
-        description: agent.desc,
-      },
+      agent: { label: agent.label, model: agent.model, description: agent.desc },
       card: { id: card.id, title: card.title, description: card.description },
       hasPreviousArtifact: hasPrev,
       missingArtifact: !hasPrev ? `Artefato do estágio "${needsPrev}" necessário` : null,
-      inputPreview: hasPrev && needsPrev
-        ? (artifacts.find(a => a.stage === needsPrev)?.content || '').slice(0, 500) + '...'
-        : (card.description || card.title).slice(0, 500),
+      attachments: attachments.length,
+      inputPreview,
     });
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
@@ -212,6 +231,63 @@ router.get('/artifacts/:id/download', async (req, res) => {
 // ── AGENT RUNS (log) ──
 router.get('/cards/:id/runs', authMiddleware, squadAuth, async (req, res) => {
   try { res.json({ runs: await sq.getAgentRuns(Number(req.params.id)) }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── ATTACHMENTS (arquivos anexados ao card) ──
+router.get('/cards/:id/attachments', authMiddleware, squadAuth, async (req, res) => {
+  try { res.json({ attachments: await sq.getAttachments(Number(req.params.id)) }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+router.post('/cards/:id/attachments', authMiddleware, squadAuth, async (req, res) => {
+  try {
+    const { file_name, content_base64 } = req.body;
+    if (!file_name || !content_base64) return res.status(400).json({ erro: 'file_name e content_base64 obrigatórios' });
+
+    // Extrair texto do arquivo
+    const buffer = Buffer.from(content_base64, 'base64');
+    const ext = file_name.toLowerCase().split('.').pop();
+    let text = '';
+
+    if (ext === 'txt' || ext === 'md' || ext === 'csv') {
+      text = buffer.toString('utf-8');
+    } else if (ext === 'docx') {
+      const mammoth = await import('mammoth');
+      text = (await mammoth.default.extractRawText({ buffer })).value || '';
+    } else if (ext === 'pdf') {
+      const pdfParse = (await import('pdf-parse')).default;
+      text = (await pdfParse(buffer)).text || '';
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      const XLSX = await import('xlsx');
+      const wb = XLSX.default.read(buffer, { type: 'buffer' });
+      const parts = [];
+      for (const s of wb.SheetNames) {
+        const csv = XLSX.default.utils.sheet_to_csv(wb.Sheets[s]);
+        if (csv.trim()) parts.push(`[Aba: ${s}]\n${csv}`);
+      }
+      text = parts.join('\n\n');
+    } else {
+      return res.status(400).json({ erro: 'Formato não suportado (.txt, .docx, .pdf, .xlsx, .csv)' });
+    }
+
+    const att = await sq.addAttachment({
+      card_id: Number(req.params.id),
+      file_name, file_type: ext,
+      extracted_text: text,
+      file_size: buffer.length,
+    });
+    res.json({ attachment: att, extracted_chars: text.length });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+router.delete('/cards/:id/attachments/:attId', authMiddleware, squadAuth, async (req, res) => {
+  try { await sq.deleteAttachment(Number(req.params.attId)); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+router.delete('/cards/:id/attachments', authMiddleware, squadAuth, async (req, res) => {
+  try { await sq.deleteAllAttachments(Number(req.params.id)); res.json({ ok: true }); }
   catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
