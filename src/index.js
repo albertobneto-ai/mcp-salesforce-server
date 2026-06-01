@@ -1074,6 +1074,47 @@ app.get("/api/scratch-orgs/create/:template", async (req, res) => {
   }
 });
 
+
+// --- Set scratch org password (uses AuthCode before expiry) ---
+app.get("/api/scratch-orgs/password/:scratchOrgInfoId", async (req, res) => {
+  try {
+    const soi = await conn.query(
+      "SELECT AuthCode, LoginUrl, SignupUsername, ScratchOrg FROM ScratchOrgInfo " +
+      "WHERE Id = '" + req.params.scratchOrgInfoId + "' AND Status = 'Active'"
+    );
+    if (!soi.records || !soi.records.length) return res.json({status:"error",message:"Scratch org not found"});
+    
+    const { AuthCode, LoginUrl, SignupUsername } = soi.records[0];
+    if (!AuthCode) return res.json({status:"error",message:"AuthCode expired"});
+    
+    // Create connection to scratch org
+    const scratchConn = new (require("jsforce")).Connection({
+      instanceUrl: LoginUrl,
+      accessToken: AuthCode,
+      version: "62.0"
+    });
+    
+    // Get user ID
+    const users = await scratchConn.query("SELECT Id FROM User WHERE Username = '" + SignupUsername + "'");
+    if (!users.records.length) return res.json({status:"error",message:"User not found"});
+    
+    const userId = users.records[0].Id;
+    const newPwd = "Algar@Mule2026!";
+    
+    // Set password via REST
+    const result = await scratchConn.request({
+      method: "POST",
+      url: "/services/data/v62.0/sobjects/User/" + userId + "/password",
+      body: JSON.stringify({ NewPassword: newPwd }),
+      headers: { "Content-Type": "application/json" }
+    });
+    
+    res.json({ status:"ok", username: SignupUsername, password: newPwd, loginUrl: "https://test.salesforce.com", instanceUrl: LoginUrl });
+  } catch(err) {
+    res.json({ status:"error", message: err.message || String(err) });
+  }
+});
+
 // --- List scratch orgs ---
 app.get("/api/scratch-orgs", async (req, res) => {
   try {
