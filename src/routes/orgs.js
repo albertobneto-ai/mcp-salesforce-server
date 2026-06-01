@@ -1,7 +1,7 @@
 // src/routes/orgs.js — CRUD de orgs + seletor
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
-import { testConnection, describeObject, runSoql, runToolingQuery } from '../services/sf-multi.js';
+import { testConnection, describeObject, runSoql, runToolingQuery, readLayout, describeLayouts } from '../services/sf-multi.js';
 import pool from '../config/db.js';
 
 const router = express.Router();
@@ -99,6 +99,17 @@ router.get('/:id/tooling', authMiddleware, async (req, res) => {
     if (!q) return res.status(400).json({ error: 'query param q obrigatorio' });
     const result = await runToolingQuery(org, q);
     res.json({ totalSize: result.totalSize, records: result.records });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+
+// GET /api/orgs/:id/layouts/:objectName — Layouts com seções e campos (read-only)
+router.get('/:id/layouts/:objectName', authMiddleware, async (req, res) => {
+  try {
+    const org = await getOrgById(req.params.id);
+    if (!org) return res.status(404).json({ error: 'Org nao encontrada' });
+    const data = await describeLayouts(org, req.params.objectName);
+    res.json(data);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
