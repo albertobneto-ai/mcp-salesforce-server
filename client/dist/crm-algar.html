@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM Algar Telecom | Emulador</title>
+<link rel="icon" href="https://login.salesforce.com/favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+:root{--bg:#0B1120;--sf:#111827;--cd:#1A2332;--cdh:#1E293B;--bd:#1E3A5F;--bdl:#2D4A6F;--tx:#E2E8F0;--tm:#94A3B8;--td:#64748B;--ag:#00A651;--agd:#00793B;--agl:#33D17A;--sfc:#0176D3;--sfcd:#014486;--sfcl:#47A7F5;--lg:#F57C00;--lgl:#FFB74D;--dn:#EF4444;--ok:#10B981;--wn:#F59E0B;--pp:#8B5CF6;--f:'Outfit',system-ui,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--f);background:var(--bg);color:var(--tx);font-size:13px;overflow:hidden;height:100vh}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--sf)}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
+.hdr{height:48px;background:var(--sf);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 20px;gap:16px;flex-shrink:0}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-i{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--ag),var(--agd));display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#fff}
+.logo-t{font-size:14px;font-weight:700;color:var(--tx)}
+.logo-s{font-size:9px;color:var(--ag);font-weight:600;letter-spacing:1.5px}
+.hdr-mid{flex:1;display:flex;justify-content:center}
+.flow-badge{display:flex;align-items:center;gap:8px;padding:6px 14px;background:var(--cd);border:1px solid var(--bd);border-radius:8px;font-size:11px}
+.flow-badge .arr{color:var(--ag);font-size:14px}
+.hdr-r{display:flex;align-items:center;gap:8px}
+.btn{padding:6px 14px;border-radius:6px;border:1px solid var(--bd);background:transparent;color:var(--tm);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--f);display:inline-flex;align-items:center;gap:5px}
+.btn:hover{background:var(--cdh);border-color:var(--bdl)}
+.btn-p{background:var(--ag);border-color:var(--ag);color:#fff}.btn-p:hover{background:var(--agd)}
+.btn-sf{background:var(--sfc)15;border-color:var(--sfc)40;color:var(--sfcl)}
+.btn-lg{background:var(--lg)15;border-color:var(--lg)40;color:var(--lgl)}
+.btn-close{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.7)}
+.btn-close:hover{background:rgba(239,68,68,.15);border-color:var(--dn);color:var(--dn)}
+.wrap{display:flex;flex:1;overflow:hidden}
+.side{width:200px;background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column;flex-shrink:0}
+.side-nav{flex:1;padding:8px 0}
+.snav{display:flex;align-items:center;gap:10px;padding:10px 18px;cursor:pointer;color:var(--tm);font-size:13px;font-weight:500;border-left:3px solid transparent;transition:all .12s}
+.snav:hover{background:var(--cdh);color:var(--tx)}
+.snav.a{color:var(--ag);font-weight:700;background:rgba(0,166,81,.08);border-left-color:var(--ag)}
+.snav-i{font-size:15px;width:18px;text-align:center}
+.side-ft{padding:10px 18px;border-top:1px solid var(--bd);font-size:9px;color:var(--td)}
+.main{flex:1;overflow:auto;padding:20px}
+.kpis{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.kpi{background:var(--cd);border:1px solid var(--bd);border-radius:8px;padding:14px 18px;flex:1;min-width:130px}
+.kpi-l{font-size:10px;color:var(--td);font-weight:600;letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px}
+.kpi-v{font-size:22px;font-weight:700}
+.kpi-s{font-size:10px;color:var(--tm);margin-top:3px}
+.card{background:var(--cd);border:1px solid var(--bd);border-radius:10px;padding:18px;margin-bottom:14px}
+.card-h{font-size:11px;font-weight:700;color:var(--td);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{padding:8px 10px;text-align:left;color:var(--td);font-weight:600;font-size:10px;letter-spacing:.8px;text-transform:uppercase;border-bottom:1px solid var(--bd)}
+.tbl td{padding:8px 10px;border-bottom:1px solid rgba(30,58,95,.15)}
+.tbl tr{cursor:pointer;transition:background .1s}
+.tbl tr:hover td{background:var(--cdh)}
+.bg-sync{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:600;letter-spacing:.3px}
+.bg-ok{background:rgba(16,185,129,.12);color:var(--ok)}.bg-pn{background:rgba(245,158,11,.12);color:var(--wn)}.bg-ns{background:rgba(100,116,139,.12);color:var(--td)}
+.bg-or{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:600}
+.bg-or-l{background:rgba(245,124,0,.1);color:var(--lgl)}.bg-or-s{background:rgba(1,118,211,.1);color:var(--sfcl)}
+.stg{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:600}
+.ptag{display:inline-block;padding:2px 7px;border-radius:3px;font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase}
+.scbar{display:flex;align-items:center;gap:5px}
+.scbar-t{width:50px;height:5px;border-radius:3px;background:var(--bd)}
+.scbar-f{height:100%;border-radius:3px;transition:width .4s}
+.dual{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding:10px}
+.dual-box{text-align:center;padding:12px 18px;border-radius:8px;min-width:130px}
+.dual-box-l{background:rgba(245,124,0,.08);border:1px solid rgba(245,124,0,.2)}
+.dual-box-s{background:rgba(1,118,211,.08);border:1px solid rgba(1,118,211,.2)}
+.dual-mid{display:flex;flex-direction:column;align-items:center;gap:5px}
+.dual-line{width:50px;height:2px;background:linear-gradient(90deg,var(--lg),var(--ag),var(--sfc))}
+.dual-sf{padding:5px 10px;background:rgba(0,166,81,.1);border:1px dashed rgba(0,166,81,.3);border-radius:5px}
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--sf);border:1px solid var(--bd);border-radius:12px;width:90%;max-width:560px;max-height:80vh;overflow:auto}
+.modal-h{padding:14px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.modal-b{padding:20px}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fd-l{font-size:10px;font-weight:600;color:var(--td);letter-spacing:.8px;text-transform:uppercase;margin-bottom:3px}
+.fd-v{font-size:13px;color:var(--tx)}
+.modal-acts{margin-top:20px;padding-top:14px;border-top:1px solid var(--bd);display:flex;gap:8px}
+.btn-sync-sf{flex:1;padding:10px;border-radius:6px;border:none;background:var(--sfc);color:#fff;font-weight:600;font-size:12px;cursor:pointer;font-family:var(--f)}
+.btn-sync-lg{flex:1;padding:10px;border-radius:6px;border:none;background:var(--lg);color:#fff;font-weight:600;font-size:12px;cursor:pointer;font-family:var(--f)}
+.bar-c{display:flex;gap:5px;align-items:flex-end;height:100px;padding:0 6px}
+.bar-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.bar-v{font-size:9px;color:var(--tm);font-weight:600}
+.bar-b{width:100%;max-width:36px;border-radius:3px 3px 0 0;background:linear-gradient(180deg,var(--ag),var(--agd));display:flex;align-items:center;justify-content:center}
+.bar-b span{font-size:11px;font-weight:700;color:#fff}
+.bar-l{font-size:7px;color:var(--td);text-align:center;line-height:1.1}
+.proc-item{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--bg);border-radius:5px;border:1px solid var(--bd);margin-bottom:8px}
+.proc-l{flex:1}
+.proc-n{font-size:16px;font-weight:700;color:var(--ag)}
+.sync-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(30,58,95,.1)}
+.sync-bar{width:70px;height:5px;border-radius:3px;background:var(--bd)}
+.sync-fill{height:100%;border-radius:3px;background:var(--ok);transition:width .4s}
+.scen{padding:14px;background:var(--bg);border-radius:7px;border:1px solid var(--bd)}
+.scen-t{font-size:12px;font-weight:700;color:var(--tx);margin:6px 0}
+.scen-d{font-size:10px;color:var(--tm);margin-bottom:10px;line-height:1.4}
+.scen-s{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--td);margin-bottom:3px}
+.scen-dot{width:4px;height:4px;border-radius:2px;flex-shrink:0}
+.log-row{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(30,58,95,.06)}
+.log-t{font-size:10px;color:var(--td);font-family:monospace;width:55px}
+.log-id{font-size:10px;color:var(--td);font-family:monospace;width:65px}
+.log-n{font-size:12px;color:var(--tx);flex:1}
+.log-dir{font-size:9px;padding:2px 7px;border-radius:3px;font-weight:600}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useCallback,useMemo}=React;
+const API="https://mcp-sf-provisioning-462dd29c2455.herokuapp.com/api/snowflake";
+const fmt=v=>{if(v==null)return"—";if(typeof v==="number")return v>=1e6?`R$ ${(v/1e6).toFixed(2)}M`:v>=1e3?`R$ ${(v/1e3).toFixed(0)}K`:`R$ ${v}`;return v};
+const fS=v=>v>=1e6?`${(v/1e6).toFixed(1)}M`:v>=1e3?`${(v/1e3).toFixed(0)}K`:v;
+const dt=s=>s?new Date(s).toLocaleDateString("pt-BR"):"—";
+
+const SyncBg=({s})=>{const m={SYNCED:{c:"bg-ok",i:"◉",l:"Sincronizado"},PENDING:{c:"bg-pn",i:"◎",l:"Pendente"},NOT_SYNCED:{c:"bg-ns",i:"○",l:"Não Sync"}};const x=m[s]||m.NOT_SYNCED;return <span className={`bg-sync ${x.c}`}>{x.i} {x.l}</span>};
+const OrigBg=({o})=>{const isL=o==="LEGACY";return <span className={`bg-or ${isL?"bg-or-l":"bg-or-s"}`}>{isL?"▣ LEGACY":"☁ SALESFORCE"}</span>};
+const StgPill=({s})=>{const colors={"Prospecting":"#64748B","Qualification":"#8B5CF6","Proposal":"#0176D3","Negotiation":"#F59E0B","Closed Won":"#10B981","Closed Lost":"#EF4444","Open":"#0176D3","Working":"#F59E0B","Nurturing":"#8B5CF6","Active":"#10B981","Expiring":"#F59E0B","Negotiation/Review":"#F59E0B"};const c=colors[s]||"#64748B";return <span className="stg" style={{background:c+"1A",color:c}}>{s||"—"}</span>};
+const ProdTag=({p})=>{const colors={"MPLS Dedicado":"#E91E63","SD-WAN":"#9C27B0","IoT Platform":"#00BCD4","UCaaS":"#FF9800","Fiber Backbone":"#4CAF50","Cloud Hosting":"#2196F3","Cybersecurity":"#F44336","Colocation":"#795548","Dark Fiber":"#607D8B"};const c=colors[p]||"#64748B";return <span className="ptag" style={{background:c+"1A",color:c}}>{p||"—"}</span>};
+const ScoreBar=({v})=>{const c=v>=80?"#EF4444":v>=50?"#F59E0B":"#3B82F6";return <div className="scbar"><div className="scbar-t"><div className="scbar-f" style={{width:`${v}%`,background:c}}/></div><span style={{fontSize:11,color:c,fontWeight:700}}>{v}</span></div>};
+
+function App(){
+  const [nav,setNav]=useState("dashboard");
+  const [loading,setLoading]=useState(true);
+  const [leg,setLeg]=useState({a:[],c:[],l:[],o:[]});
+  const [crm,setCrm]=useState({a:[],c:[],l:[],o:[]});
+  const [ov,setOv]=useState(null);
+  const [sel,setSel]=useState(null);
+  const [selT,setSelT]=useState(null);
+  const [slog,setSlog]=useState([]);
+  const [flt,setFlt]=useState("ALL");
+
+  const load=useCallback(async()=>{
+    setLoading(true);
+    try{
+      const ex=async sql=>{const r=await fetch(API+"/execute",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sql})});const d=await r.json();return d.status==="ok"?d.data:[]};
+      const o=await fetch(API+"/overview").then(r=>r.json());
+      const [la,lc,ll,lo,ca,cc,cl,co]=await Promise.all([
+        ex("SELECT * FROM LEGACY_ACCOUNTS ORDER BY NAME"),ex("SELECT * FROM LEGACY_CONTACTS ORDER BY LAST_NAME"),
+        ex("SELECT * FROM LEGACY_LEADS ORDER BY SCORE DESC"),ex("SELECT * FROM LEGACY_OPPORTUNITIES ORDER BY AMOUNT DESC"),
+        ex("SELECT * FROM CRM_ACCOUNTS ORDER BY NAME"),ex("SELECT * FROM CRM_CONTACTS LIMIT 30"),
+        ex("SELECT * FROM CRM_LEADS LIMIT 20"),ex("SELECT * FROM CRM_OPPORTUNITIES ORDER BY AMOUNT DESC")]);
+      setLeg({a:la,c:lc,l:ll,o:lo});setCrm({a:ca,c:cc,l:cl,o:co});setOv(o.data||o);
+    }catch(e){console.error(e)}
+    setLoading(false);
+  },[]);
+  useEffect(()=>{load()},[load]);
+
+  const doSync=(rec,dir)=>{
+    const e={time:new Date().toLocaleTimeString("pt-BR"),dir,name:rec.NAME||`${rec.FIRST_NAME} ${rec.LAST_NAME}`,id:rec.LEGACY_ID||rec.SF_ID};
+    setSlog(p=>[e,...p].slice(0,20));setSel(null);
+  };
+
+  const allA=useMemo(()=>{
+    const items=[];
+    leg.a.forEach(a=>items.push({...a,_o:"LEGACY",_s:a.SYNC_STATUS,_id:a.LEGACY_ID}));
+    crm.a.forEach(a=>{if(!items.find(x=>x.SF_ID===a.SF_ID))items.push({...a,_o:"SF",_s:"SYNCED",_id:a.SF_ID})});
+    return flt==="ALL"?items:flt==="LEGACY"?items.filter(i=>i._o==="LEGACY"):items.filter(i=>i._o==="SF");
+  },[leg.a,crm.a,flt]);
+
+  const allL=useMemo(()=>{
+    const items=[];
+    leg.l.forEach(l=>items.push({...l,_o:"LEGACY",_s:l.SYNC_STATUS,_id:l.LEGACY_ID}));
+    crm.l.forEach(l=>{if(!items.find(x=>x.SF_ID===l.SF_ID))items.push({...l,_o:"SF",_s:"SYNCED",_id:l.SF_ID})});
+    return flt==="ALL"?items:flt==="LEGACY"?items.filter(i=>i._o==="LEGACY"):items.filter(i=>i._o==="SF");
+  },[leg.l,crm.l,flt]);
+
+  const allO=useMemo(()=>{
+    const items=[];
+    leg.o.forEach(o=>items.push({...o,_o:"LEGACY",_s:o.SYNC_STATUS,_id:o.LEGACY_ID}));
+    crm.o.forEach(o=>{if(!items.find(x=>x.SF_ID===o.SF_ID))items.push({...o,_o:"SF",_s:"SYNCED",_id:o.SF_ID})});
+    return flt==="ALL"?items:flt==="LEGACY"?items.filter(i=>i._o==="LEGACY"):items.filter(i=>i._o==="SF");
+  },[leg.o,crm.o,flt]);
+
+  const navs=[{id:"dashboard",i:"◫",l:"Dashboard"},{id:"accounts",i:"◧",l:"Contas"},{id:"leads",i:"◨",l:"Leads"},{id:"opportunities",i:"◩",l:"Oportunidades"},{id:"contracts",i:"◪",l:"Contratos"},{id:"sync",i:"⟳",l:"Sync Center"}];
+
+  const stageData=useMemo(()=>{
+    const stages=["Prospecting","Qualification","Proposal","Negotiation","Negotiation/Review","Closed Won"];
+    const all=[...leg.o,...crm.o];
+    return stages.map(s=>{const it=all.filter(o=>o.STAGE===s);return{stage:s.replace("Negotiation/Review","Neg/Rev"),count:it.length,amount:it.reduce((a,o)=>a+(o.AMOUNT||0),0)}}).filter(s=>s.count>0);
+  },[leg.o,crm.o]);
+  const maxAmt=Math.max(...stageData.map(s=>s.amount),1);
+
+  const products=["MPLS Dedicado","SD-WAN","IoT Platform","UCaaS","Fiber Backbone","Cloud Hosting","Cybersecurity","Colocation","Dark Fiber"];
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",height:"100vh"}}>
+      {/* HEADER */}
+      <div className="hdr">
+        <div className="logo"><div className="logo-i">AT</div><div><div className="logo-t">Algar Telecom</div><div className="logo-s">CRM EMULATOR</div></div></div>
+        <div className="hdr-mid">
+          <div className="flow-badge">
+            <OrigBg o="LEGACY"/><span className="arr">→</span><span style={{fontSize:10,color:"var(--tm)"}}>Snowflake</span><span className="arr">→</span><OrigBg o="SF"/>
+          </div>
+        </div>
+        <div className="hdr-r">
+          <button className="btn btn-p" onClick={load}>⟳ Refresh</button>
+          <button className="btn btn-close" onClick={()=>window.parent.postMessage("crm-closed","*")}>✕ Fechar</button>
+        </div>
+      </div>
+
+      <div className="wrap">
+        {/* SIDEBAR */}
+        <div className="side">
+          <div className="side-nav">
+            {navs.map(n=><div key={n.id} className={`snav${nav===n.id?" a":""}`} onClick={()=>setNav(n.id)}><span className="snav-i">{n.i}</span>{n.l}</div>)}
+          </div>
+          <div className="side-ft">
+            <div>Snowflake: rajlbkg-yk87012</div>
+            <div>Org: DevHub Hyperforce</div>
+            <div style={{color:"var(--ok)",marginTop:2}}>◉ Online</div>
+          </div>
+        </div>
+
+        {/* MAIN */}
+        <div className="main">
+          {/* Filter bar for list views */}
+          {["accounts","leads","opportunities"].includes(nav)&&(
+            <div style={{display:"flex",gap:4,marginBottom:12}}>
+              {[{id:"ALL",l:"Todos"},{id:"LEGACY",l:"Legacy"},{id:"SF",l:"Salesforce"}].map(f=>
+                <button key={f.id} className="btn" onClick={()=>setFlt(f.id)} style={flt===f.id?{background:"rgba(0,166,81,.15)",borderColor:"var(--ag)",color:"var(--ag)"}:{}}>{f.l}</button>
+              )}
+            </div>
+          )}
+
+          {loading?(
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"60vh",gap:14}}>
+              <div style={{width:36,height:36,border:"3px solid var(--bd)",borderTopColor:"var(--ag)",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
+              <div style={{color:"var(--td)",fontSize:12}}>Carregando Snowflake + Salesforce...</div>
+              <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+            </div>
+          ):(
+          <>
+          {/* ═══ DASHBOARD ═══ */}
+          {nav==="dashboard"&&<div>
+            {/* Dual Flow */}
+            <div className="card">
+              <div className="card-h">DUPLA CONVIVÊNCIA — FLUXO BIDIRECIONAL</div>
+              <div className="dual">
+                <div className="dual-box dual-box-l">
+                  <div style={{fontSize:10,color:"var(--lgl)",fontWeight:600,letterSpacing:1}}>LEGACY CRM</div>
+                  <div style={{fontSize:9,color:"var(--td)"}}>ERP TOTVS</div>
+                  <div style={{fontSize:26,fontWeight:700,color:"var(--lgl)",marginTop:3}}>{leg.a.length+leg.l.length+leg.o.length}</div>
+                  <div style={{fontSize:9,color:"var(--td)"}}>registros</div>
+                </div>
+                <div className="dual-mid">
+                  <div style={{display:"flex",alignItems:"center",gap:5}}>
+                    <span style={{color:"var(--lg)",fontSize:13}}>◀</span>
+                    <div className="dual-line"/>
+                    <span style={{color:"var(--sfc)",fontSize:13}}>▶</span>
+                  </div>
+                  <div className="dual-sf"><div style={{fontSize:8,color:"var(--ag)",fontWeight:700,letterSpacing:1}}>SNOWFLAKE</div><div style={{fontSize:8,color:"var(--td)"}}>Data Lake</div></div>
+                  <div style={{display:"flex",gap:10}}>
+                    <span style={{fontSize:9,color:"var(--ok)"}}>◉ {[...leg.a,...leg.l,...leg.o].filter(r=>r.SYNC_STATUS==="SYNCED").length} sync</span>
+                    <span style={{fontSize:9,color:"var(--wn)"}}>◎ {[...leg.a,...leg.l,...leg.o].filter(r=>r.SYNC_STATUS==="PENDING").length} pend</span>
+                  </div>
+                </div>
+                <div className="dual-box dual-box-s">
+                  <div style={{fontSize:10,color:"var(--sfcl)",fontWeight:600,letterSpacing:1}}>SALESFORCE</div>
+                  <div style={{fontSize:9,color:"var(--td)"}}>Sales Cloud</div>
+                  <div style={{fontSize:26,fontWeight:700,color:"var(--sfcl)",marginTop:3}}>{crm.a.length+crm.l.length+crm.o.length}</div>
+                  <div style={{fontSize:9,color:"var(--td)"}}>registros</div>
+                </div>
+              </div>
+            </div>
+            {/* KPIs */}
+            <div className="kpis">
+              <div className="kpi"><div className="kpi-l">CONTAS LEGACY</div><div className="kpi-v" style={{color:"var(--lgl)"}}>{leg.a.length}</div><div className="kpi-s">{leg.a.filter(a=>a.SYNC_STATUS==="SYNCED").length} sincronizadas</div></div>
+              <div className="kpi"><div className="kpi-l">CONTAS SALESFORCE</div><div className="kpi-v" style={{color:"var(--sfcl)"}}>{crm.a.length}</div><div className="kpi-s">Sales Cloud</div></div>
+              <div className="kpi"><div className="kpi-l">PIPELINE TOTAL</div><div className="kpi-v" style={{color:"var(--ag)"}}>R${fS([...leg.o,...crm.o].reduce((a,o)=>a+(o.AMOUNT||0),0))}</div><div className="kpi-s">{leg.o.length+crm.o.length} oportunidades</div></div>
+              <div className="kpi"><div className="kpi-l">LEADS ATIVOS</div><div className="kpi-v" style={{color:"#EF4444"}}>{leg.l.length+crm.l.length}</div><div className="kpi-s">{leg.l.filter(l=>l.RATING==="Hot").length} hot</div></div>
+            </div>
+            <div className="grid2">
+              {/* Pipeline Chart */}
+              <div className="card"><div className="card-h">PIPELINE COMBINADO</div>
+                <div className="bar-c">{stageData.map((s,i)=><div key={i} className="bar-item"><div className="bar-v">R${fS(s.amount)}</div><div className="bar-b" style={{height:Math.max(18,(s.amount/maxAmt)*80)}}><span>{s.count}</span></div><div className="bar-l">{s.stage}</div></div>)}</div>
+              </div>
+              {/* Dual Coex Processes */}
+              <div className="card"><div className="card-h">PROCESSOS DUPLA CONVIVÊNCIA</div>
+                {[{f:"LEGACY",t:"SF",l:"Lead captado no CRM Legado → Qualificar no Salesforce",st:"Lead-to-Opp",n:leg.l.filter(l=>l.SF_ID).length},
+                  {f:"SF",t:"LEGACY",l:"Opp criada no Salesforce → Faturar no ERP TOTVS",st:"Quote-to-Cash",n:crm.o.filter(o=>o.STAGE==="Closed Won").length},
+                  {f:"LEGACY",t:"SF",l:"Conta migrada do Legado → Account 360 no SF",st:"Account Migration",n:leg.a.filter(a=>a.SYNC_STATUS==="SYNCED").length}
+                ].map((p,i)=><div key={i} className="proc-item"><div className="proc-l"><div style={{display:"flex",gap:5,marginBottom:3}}><OrigBg o={p.f}/><span style={{color:"var(--ag)"}}>→</span><OrigBg o={p.t}/></div><div style={{fontSize:10,color:"var(--tm)"}}>{p.l}</div></div><div style={{textAlign:"right"}}><div className="proc-n">{p.n}</div><div style={{fontSize:8,color:"var(--td)"}}>{p.st}</div></div></div>)}
+              </div>
+              {/* Top Opps Legacy */}
+              <div className="card"><div className="card-h">TOP OPORTUNIDADES LEGACY</div>
+                {leg.o.slice(0,4).map((o,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:i<3?"1px solid rgba(30,58,95,.1)":"none"}}><div><div style={{fontSize:12,fontWeight:600}}>{o.NAME}</div><div style={{display:"flex",gap:5,marginTop:3}}><ProdTag p={o.PRODUCT}/><SyncBg s={o.SYNC_STATUS}/></div></div><div style={{textAlign:"right"}}><div style={{fontSize:13,fontWeight:700,color:"var(--ag)"}}>{fmt(o.AMOUNT)}</div><StgPill s={o.STAGE}/></div></div>)}
+              </div>
+              {/* Sync Log */}
+              <div className="card"><div className="card-h">SYNC LOG</div>
+                {slog.length===0?<div style={{padding:16,textAlign:"center",color:"var(--td)",fontSize:11}}>Clique em registros para sincronizar.<br/><span style={{color:"var(--ag)"}}>Inicie em qualquer sistema e finalize no outro.</span></div>
+                :slog.slice(0,5).map((s,i)=><div key={i} className="log-row"><span className="log-t">{s.time}</span><span className="log-id">{s.id}</span><span className="log-n">{s.name}</span><span className="log-dir" style={{background:s.dir==="TO_SF"?"rgba(1,118,211,.15)":"rgba(245,124,0,.15)",color:s.dir==="TO_SF"?"var(--sfcl)":"var(--lgl)"}}>{s.dir==="TO_SF"?"→ SF":"→ Legacy"}</span></div>)}
+              </div>
+            </div>
+          </div>}
+
+          {/* ═══ ACCOUNTS ═══ */}
+          {nav==="accounts"&&<div>
+            <div className="kpis">
+              <div className="kpi"><div className="kpi-l">LEGACY</div><div className="kpi-v" style={{color:"var(--lgl)"}}>{leg.a.length}</div></div>
+              <div className="kpi"><div className="kpi-l">SALESFORCE</div><div className="kpi-v" style={{color:"var(--sfcl)"}}>{crm.a.length}</div></div>
+              <div className="kpi"><div className="kpi-l">SINCRONIZADAS</div><div className="kpi-v" style={{color:"var(--ok)"}}>{leg.a.filter(a=>a.SYNC_STATUS==="SYNCED").length}</div></div>
+              <div className="kpi"><div className="kpi-l">RECEITA LEGACY</div><div className="kpi-v" style={{color:"var(--ag)"}}>R${fS(leg.a.reduce((a,x)=>a+(x.ANNUAL_REVENUE||0),0))}</div></div>
+            </div>
+            <div className="card" style={{padding:0,overflow:"hidden"}}>
+              <table className="tbl"><thead><tr><th>Origem</th><th>ID</th><th>Nome</th><th>CNPJ</th><th>Indústria</th><th>Cidade</th><th>Receita</th><th>Sync</th></tr></thead>
+              <tbody>{allA.map((r,i)=><tr key={i} onClick={()=>{setSel(r);setSelT("acc")}}>
+                <td><OrigBg o={r._o}/></td>
+                <td style={{fontSize:10,color:"var(--td)",fontFamily:"monospace"}}>{r._id}</td>
+                <td style={{fontWeight:600,color:"var(--ag)"}}>{r.NAME}</td>
+                <td>{r.CNPJ||"—"}</td><td>{r.INDUSTRY||"—"}</td>
+                <td>{r.BILLING_CITY||r.CITY||"—"}/{r.BILLING_STATE||r.STATE||""}</td>
+                <td style={{fontWeight:600}}>{fmt(r.ANNUAL_REVENUE||r.REVENUE)}</td>
+                <td><SyncBg s={r._s}/></td>
+              </tr>)}</tbody></table>
+            </div>
+          </div>}
+
+          {/* ═══ LEADS ═══ */}
+          {nav==="leads"&&<div>
+            <div className="kpis">
+              <div className="kpi"><div className="kpi-l">LEGACY</div><div className="kpi-v" style={{color:"var(--lgl)"}}>{leg.l.length}</div></div>
+              <div className="kpi"><div className="kpi-l">SALESFORCE</div><div className="kpi-v" style={{color:"var(--sfcl)"}}>{crm.l.length}</div></div>
+              <div className="kpi"><div className="kpi-l">HOT</div><div className="kpi-v" style={{color:"#EF4444"}}>{allL.filter(l=>l.RATING==="Hot").length}</div></div>
+              <div className="kpi"><div className="kpi-l">MÉDIA SCORE</div><div className="kpi-v" style={{color:"var(--wn)"}}>{Math.round(allL.reduce((a,l)=>a+(l.SCORE||0),0)/(allL.length||1))}</div></div>
+            </div>
+            <div className="card" style={{padding:0,overflow:"hidden"}}>
+              <table className="tbl"><thead><tr><th>Origem</th><th>Nome</th><th>Empresa</th><th>Cargo</th><th>Status</th><th>Rating</th><th>Score</th><th>Sync</th></tr></thead>
+              <tbody>{allL.map((r,i)=><tr key={i} onClick={()=>{setSel(r);setSelT("lead")}}>
+                <td><OrigBg o={r._o}/></td>
+                <td style={{fontWeight:600,color:"var(--ag)"}}>{r.FIRST_NAME} {r.LAST_NAME}</td>
+                <td>{r.COMPANY||"—"}</td><td>{r.TITLE||"—"}</td>
+                <td><StgPill s={r.STATUS}/></td>
+                <td style={{color:r.RATING==="Hot"?"#EF4444":r.RATING==="Warm"?"#F59E0B":"#3B82F6",fontWeight:700,fontSize:11}}>{r.RATING||"—"}</td>
+                <td>{r.SCORE?<ScoreBar v={r.SCORE}/>:"—"}</td>
+                <td><SyncBg s={r._s}/></td>
+              </tr>)}</tbody></table>
+            </div>
+          </div>}
+
+          {/* ═══ OPPORTUNITIES ═══ */}
+          {nav==="opportunities"&&<div>
+            <div className="kpis">
+              <div className="kpi"><div className="kpi-l">LEGACY</div><div className="kpi-v" style={{color:"var(--lgl)"}}>{leg.o.length}</div></div>
+              <div className="kpi"><div className="kpi-l">SALESFORCE</div><div className="kpi-v" style={{color:"var(--sfcl)"}}>{crm.o.length}</div></div>
+              <div className="kpi"><div className="kpi-l">PIPELINE ABERTO</div><div className="kpi-v" style={{color:"var(--ag)"}}>R${fS(allO.filter(o=>o.STAGE!=="Closed Won"&&o.STAGE!=="Closed Lost").reduce((a,o)=>a+(o.AMOUNT||0),0))}</div></div>
+              <div className="kpi"><div className="kpi-l">WON</div><div className="kpi-v" style={{color:"var(--ok)"}}>{allO.filter(o=>o.STAGE==="Closed Won").length}</div></div>
+            </div>
+            {/* Products */}
+            <div className="card"><div className="card-h">PIPELINE POR PRODUTO TELECOM</div>
+              <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+                {products.map(p=>{const it=allO.filter(o=>o.PRODUCT===p);if(!it.length)return null;const t=it.reduce((a,o)=>a+(o.AMOUNT||0),0);
+                return <div key={p} style={{padding:"7px 12px",background:"var(--bg)",borderRadius:5,border:"1px solid var(--bd)",minWidth:105}}>
+                  <ProdTag p={p}/><div style={{marginTop:4,fontSize:15,fontWeight:700}}>R${fS(t)}</div><div style={{fontSize:9,color:"var(--td)"}}>{it.length} opp{it.length>1?"s":""}</div>
+                </div>})}
+              </div>
+            </div>
+            <div className="card" style={{padding:0,overflow:"hidden"}}>
+              <table className="tbl"><thead><tr><th>Origem</th><th>Nome</th><th>Produto</th><th>Estágio</th><th>Valor</th><th>Prob</th><th>Fechamento</th><th>Sync</th></tr></thead>
+              <tbody>{allO.map((r,i)=><tr key={i} onClick={()=>{setSel(r);setSelT("opp")}}>
+                <td><OrigBg o={r._o}/></td>
+                <td style={{fontWeight:600,color:"var(--ag)"}}>{r.NAME}</td>
+                <td>{r.PRODUCT?<ProdTag p={r.PRODUCT}/>:"—"}</td>
+                <td><StgPill s={r.STAGE}/></td>
+                <td style={{fontWeight:700}}>{fmt(r.AMOUNT)}</td>
+                <td style={{color:(r.PROBABILITY||0)>=70?"var(--ok)":"var(--tm)"}}>{r.PROBABILITY||0}%</td>
+                <td>{dt(r.CLOSE_DATE)}</td>
+                <td><SyncBg s={r._s}/></td>
+              </tr>)}</tbody></table>
+            </div>
+          </div>}
+
+          {/* ═══ CONTRACTS ═══ */}
+          {nav==="contracts"&&<div>
+            <div className="kpis">
+              <div className="kpi"><div className="kpi-l">ATIVOS</div><div className="kpi-v" style={{color:"var(--ok)"}}>{(ov?.contracts||[]).filter(c=>c.STATUS==="Active").length}</div></div>
+              <div className="kpi"><div className="kpi-l">VALOR TOTAL</div><div className="kpi-v" style={{color:"var(--ag)"}}>R${fS((ov?.contracts||[]).reduce((a,c)=>a+(c.VALUE||0),0))}</div></div>
+              <div className="kpi"><div className="kpi-l">EXPIRANDO</div><div className="kpi-v" style={{color:"var(--wn)"}}>{(ov?.contracts||[]).filter(c=>c.STATUS==="Expiring").length}</div></div>
+            </div>
+            <div className="card" style={{padding:0,overflow:"hidden"}}>
+              <table className="tbl"><thead><tr><th>ID</th><th>Contrato</th><th>Conta</th><th>Status</th><th>Valor</th><th>Início</th><th>Término</th></tr></thead>
+              <tbody>{(ov?.contracts||[]).map((r,i)=><tr key={i}>
+                <td style={{fontFamily:"monospace",fontSize:10,color:"var(--td)"}}>{r.ID}</td>
+                <td style={{fontWeight:600,color:"var(--ag)"}}>{r.NAME}</td>
+                <td>{r.ACCOUNT_ID}</td><td><StgPill s={r.STATUS}/></td>
+                <td style={{fontWeight:700}}>{fmt(r.VALUE)}</td><td>{dt(r.START_DATE)}</td><td>{dt(r.END_DATE)}</td>
+              </tr>)}</tbody></table>
+            </div>
+          </div>}
+
+          {/* ═══ SYNC CENTER ═══ */}
+          {nav==="sync"&&<div>
+            {/* Dual Flow */}
+            <div className="card">
+              <div className="card-h">DUPLA CONVIVÊNCIA — FLUXO BIDIRECIONAL</div>
+              <div className="dual">
+                <div className="dual-box dual-box-l"><div style={{fontSize:10,color:"var(--lgl)",fontWeight:600}}>LEGACY CRM</div><div style={{fontSize:26,fontWeight:700,color:"var(--lgl)",marginTop:3}}>{leg.a.length+leg.l.length+leg.o.length}</div></div>
+                <div className="dual-mid"><div style={{display:"flex",alignItems:"center",gap:5}}><span style={{color:"var(--lg)"}}>◀</span><div className="dual-line"/><span style={{color:"var(--sfc)"}}>▶</span></div><div className="dual-sf"><div style={{fontSize:8,color:"var(--ag)",fontWeight:700}}>SNOWFLAKE</div></div></div>
+                <div className="dual-box dual-box-s"><div style={{fontSize:10,color:"var(--sfcl)",fontWeight:600}}>SALESFORCE</div><div style={{fontSize:26,fontWeight:700,color:"var(--sfcl)",marginTop:3}}>{crm.a.length+crm.l.length+crm.o.length}</div></div>
+              </div>
+            </div>
+            <div className="grid2">
+              {/* L→SF */}
+              <div className="card"><div className="card-h" style={{color:"var(--lgl)"}}>▣ LEGACY → ☁ SALESFORCE</div>
+                {[{l:"Contas",sy:leg.a.filter(a=>a.SYNC_STATUS==="SYNCED").length,t:leg.a.length},{l:"Contatos",sy:leg.c.filter(c=>c.SYNC_STATUS==="SYNCED").length,t:leg.c.length},{l:"Leads",sy:leg.l.filter(l=>l.SYNC_STATUS==="SYNCED").length,t:leg.l.length},{l:"Opps",sy:leg.o.filter(o=>o.SYNC_STATUS==="SYNCED").length,t:leg.o.length}].map((it,i)=>
+                  <div key={i} className="sync-row"><span style={{fontSize:12}}>{it.l}</span><div style={{display:"flex",alignItems:"center",gap:7}}><div className="sync-bar"><div className="sync-fill" style={{width:`${it.t?(it.sy/it.t)*100:0}%`}}/></div><span style={{fontSize:10,color:"var(--ok)",fontWeight:600}}>{it.sy}/{it.t}</span></div></div>
+                )}
+              </div>
+              {/* SF→L */}
+              <div className="card"><div className="card-h" style={{color:"var(--sfcl)"}}>☁ SALESFORCE → ▣ LEGACY</div>
+                {[{l:"Contas",t:crm.a.length},{l:"Contatos",t:crm.c.length},{l:"Leads",t:crm.l.length},{l:"Opps",t:crm.o.length}].map((it,i)=>
+                  <div key={i} className="sync-row"><span style={{fontSize:12}}>{it.l}</span><span style={{fontSize:10,color:"var(--sfcl)",fontWeight:600}}>{it.t} registros</span></div>
+                )}
+              </div>
+            </div>
+            {/* Scenarios */}
+            <div className="card"><div className="card-h">CENÁRIOS DE DUPLA CONVIVÊNCIA</div>
+              <div className="grid3">
+                {[{t:"Lead → Opportunity",d:"Lead captado no CRM Legado qualificado e convertido em Opp no Salesforce",f:"LEGACY",to:"SF",
+                  steps:["Lead entra no CRM Legado","Sync → Snowflake","Data Cloud ingere","Lead criado no SF","Qualificação no SF","Conversão Lead→Opp"]},
+                  {t:"Quote → Order",d:"Cotação gerada no Salesforce enviada para faturamento no ERP TOTVS",f:"SF",to:"LEGACY",
+                  steps:["Opp ganha no SF","Quote aprovada","Sync → Snowflake","ERP recebe pedido","Faturamento TOTVS","NF emitida"]},
+                  {t:"Account 360",d:"Visão unificada da conta com dados de ambos os sistemas",f:"LEGACY",to:"SF",
+                  steps:["Conta no Legacy CRM","Conta no Salesforce","Snowflake consolida","Data Cloud unifica","Identity Resolution","Account 360 no SF"]}
+                ].map((s,i)=><div key={i} className="scen">
+                  <div style={{display:"flex",gap:4}}><OrigBg o={s.f}/><span style={{color:"var(--ag)"}}>→</span><OrigBg o={s.to}/></div>
+                  <div className="scen-t">{s.t}</div><div className="scen-d">{s.d}</div>
+                  {s.steps.map((st,si)=><div key={si} className="scen-s"><span className="scen-dot" style={{background:si<3?"var(--lg)":"var(--sfc)"}}/>{si+1}. {st}</div>)}
+                </div>)}
+              </div>
+            </div>
+          </div>}
+          </>)}
+        </div>
+      </div>
+
+      {/* ═══ DETAIL MODAL ═══ */}
+      {sel&&<div className="modal-bg" onClick={()=>setSel(null)}>
+        <div className="modal" onClick={e=>e.stopPropagation()}>
+          <div className="modal-h">
+            <div><div style={{fontSize:15,fontWeight:700}}>{sel.NAME||`${sel.FIRST_NAME} ${sel.LAST_NAME}`}</div><div style={{display:"flex",gap:6,marginTop:5}}><OrigBg o={sel._o}/><SyncBg s={sel._s}/></div></div>
+            <button className="btn" onClick={()=>setSel(null)}>✕</button>
+          </div>
+          <div className="modal-b">
+            <div className="modal-grid">
+              {(selT==="acc"?[
+                {l:"ID",v:sel._id},{l:"CNPJ",v:sel.CNPJ},{l:"Indústria",v:sel.INDUSTRY},{l:"Tipo",v:sel.TYPE},
+                {l:"Cidade",v:`${sel.BILLING_CITY||sel.CITY||"—"}/${sel.BILLING_STATE||sel.STATE||""}`},{l:"Receita",v:fmt(sel.ANNUAL_REVENUE||sel.REVENUE)},
+                {l:"Segmento",v:sel.SEGMENT},{l:"Sistema",v:sel.LEGACY_SYSTEM},{l:"SF_ID",v:sel.SF_ID},{l:"Última Sync",v:dt(sel.LAST_SYNC)}
+              ]:selT==="lead"?[
+                {l:"ID",v:sel._id},{l:"Email",v:sel.EMAIL},{l:"Telefone",v:sel.PHONE},{l:"Empresa",v:sel.COMPANY},
+                {l:"Cargo",v:sel.TITLE},{l:"Status",v:sel.STATUS},{l:"Rating",v:sel.RATING},{l:"Score",v:sel.SCORE},
+                {l:"Canal",v:sel.CHANNEL},{l:"SF_ID",v:sel.SF_ID},{l:"Sistema",v:sel.LEGACY_SYSTEM},{l:"Última Sync",v:dt(sel.LAST_SYNC)}
+              ]:[
+                {l:"ID",v:sel._id},{l:"Produto",v:sel.PRODUCT},{l:"Estágio",v:sel.STAGE},{l:"Valor",v:fmt(sel.AMOUNT)},
+                {l:"Probabilidade",v:`${sel.PROBABILITY||0}%`},{l:"Tipo",v:sel.TYPE},{l:"Fechamento",v:dt(sel.CLOSE_DATE)},
+                {l:"SF_ID",v:sel.SF_ID},{l:"Sistema",v:sel.LEGACY_SYSTEM},{l:"Última Sync",v:dt(sel.LAST_SYNC)}
+              ]).map((f,i)=><div key={i}><div className="fd-l">{f.l}</div><div className="fd-v">{f.v||"—"}</div></div>)}
+            </div>
+            <div className="modal-acts">
+              <button className="btn-sync-sf" onClick={()=>doSync(sel,"TO_SF")}>☁ Enviar para Salesforce</button>
+              <button className="btn-sync-lg" onClick={()=>doSync(sel,"TO_LEGACY")}>▣ Enviar para Legacy CRM</button>
+            </div>
+          </div>
+        </div>
+      </div>}
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
