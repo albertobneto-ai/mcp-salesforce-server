@@ -318,4 +318,57 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
+
+// ═══ Função exportável para gerar .docx a partir de markdown ═══
+export async function generateDocxBuffer(content, type, title) {
+  const filename = title || type || 'Documento';
+  const tipoLabels = { spec: 'ESPECIFICACAO TECNICA', hf: 'HISTORIA FUNCIONAL', ata: 'ATA DE REUNIAO', runbook: 'RUNBOOK DE IMPLEMENTACAO', spec_document: 'ESPECIFICACAO TECNICA', hf_document: 'HISTORIA FUNCIONAL', manifest_json: 'MANIFEST JSON' };
+  const tipoLabel = tipoLabels[type] || 'DOCUMENTO';
+  const date = new Date().toLocaleDateString('pt-BR');
+  const bodyElements = parseMarkdown(content, type);
+
+  const doc = new Document({
+    styles: { default: { document: { run: { font: "Arial", size: 20 } } } },
+    sections: [
+      {
+        properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 0, right: 0, bottom: 0, left: 0 } } },
+        children: [
+          new Table({
+            width: { size: 12240, type: WidthType.DXA }, columnWidths: [12240],
+            rows: [new TableRow({ children: [new TableCell({
+              borders: noBorders, width: { size: 12240, type: WidthType.DXA },
+              shading: { fill: BLACK, type: ShadingType.CLEAR },
+              margins: { top: 4000, bottom: 600, left: 1440, right: 1440 },
+              children: [
+                new Paragraph({ spacing: { after: 200 }, children: [new TextRun({ text: "EVERI9 / SQUAD AGENTES SF", font: "Arial", size: 18, color: "888888", allCaps: true })] }),
+                new Paragraph({ spacing: { after: 300 }, children: [new TextRun({ text: tipoLabel, font: "Arial", size: 56, bold: true, color: "FFFFFF" })] }),
+                new Paragraph({ spacing: { after: 600 }, children: [new TextRun({ text: filename.replace(/_/g, " "), font: "Arial", size: 24, color: ACCENT })] }),
+                spacer(400),
+                new Table({ width: { size: 9360, type: WidthType.DXA }, columnWidths: [2800, 6560],
+                  rows: [metaRow("DOCUMENTO", filename), metaRow("TIPO", tipoLabel), metaRow("DATA", date), metaRow("GERADO POR", "Ever i9 — Squad Agentes SF")] })
+              ]
+            })] })]
+          })
+        ]
+      },
+      {
+        properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
+        headers: { default: new Header({ children: [new Paragraph({
+          border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: BLACK, space: 4 } },
+          tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
+          children: [new TextRun({ text: "EVERI9", font: "Arial", size: 16, color: "888888" }), new TextRun({ text: " / ", font: "Arial", size: 16, color: "888888" }), new TextRun({ text: tipoLabel, font: "Arial", size: 16, color: BLACK, bold: true })]
+        })] }) },
+        footers: { default: new Footer({ children: [new Paragraph({
+          border: { top: { style: BorderStyle.SINGLE, size: 4, color: BLACK, space: 4 } },
+          tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
+          children: [new TextRun({ text: "Confidencial — Ever i9 Squad", font: "Arial", size: 16, color: "888888" }), new TextRun({ children: ["\t"], font: "Arial", size: 16 }), new SimpleField("PAGE")]
+        })] }) },
+        children: bodyElements,
+      }
+    ]
+  });
+
+  return Packer.toBuffer(doc);
+}
+
 export default router;
