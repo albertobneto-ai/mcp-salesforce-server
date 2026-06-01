@@ -348,10 +348,16 @@ function App(){
   const moveCard=async(id,stage)=>{
     const stageConfig=STAGES.find(s=>s.key===stage);
     if(stageConfig?.hasAgent){
-      // Etapa 1: mostrar modal de input do requisito
-      const card=cards.find(c=>c.id===id);
       setPendingMove({id,stage});
-      setShowInputModal(card||{id,title:'Card',description:''});
+      if(stage==='hf'){
+        // HF: mostrar modal de input para escrever/colar/upload o requisito
+        const card=cards.find(c=>c.id===id);
+        setShowInputModal(card||{id,title:'Card',description:''});
+      }else{
+        // Spec/Dev/Refinamento: ir direto para preview do agente (usa artefato anterior)
+        const preview=await api('/cards/'+id+'/agent-preview?stage='+stage);
+        if(preview)setAgentPreview(preview);
+      }
       return;
     }
     // Move simples (sem agente)
