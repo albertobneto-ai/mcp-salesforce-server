@@ -168,3 +168,16 @@ export async function runToolingQuery(org, query) {
   return await conn.tooling.query(query);
 }
 
+// Ler layout metadata (read-only)
+export async function readLayout(org, fullName) {
+  const conn = await connectToOrg(org);
+  return await conn.metadata.read('Layout', fullName);
+}
+
+// Listar layouts de um objeto via describe
+export async function describeLayouts(org, objectName) {
+  const conn = await connectToOrg(org);
+  const url = `/services/data/v62.0/sobjects/${objectName}/describe/layouts`;
+  return await conn.request(url);
+}
+
