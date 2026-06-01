@@ -95,8 +95,10 @@ export async function runHfAgent(cardId) {
   const run = await sq.createAgentRun({ card_id: cardId, stage: 'hf', model_used: 'dynamic-pool' });
 
   try {
-    const prompt = await enrichPrompt(hfPrompt, card.description || card.title);
-    const messages = [{ role: 'user', content: card.title + '\n\n' + (card.description || '') }];
+    const fullInput = await sq.getFullCardInput(cardId);
+    const inputText = fullInput || card.title;
+    const prompt = await enrichPrompt(hfPrompt, inputText.slice(0, 500));
+    const messages = [{ role: 'user', content: inputText }];
 
     const result = await openrouter.callWithDynamicPool(prompt, messages, 16384);
 
