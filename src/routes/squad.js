@@ -143,7 +143,17 @@ router.get('/cards/:id/artifacts', authMiddleware, squadAuth, async (req, res) =
 });
 
 // ── DOWNLOAD artefato como texto ──
-router.get('/artifacts/:id/download', authMiddleware, squadAuth, async (req, res) => {
+router.get('/artifacts/:id/download', async (req, res) => {
+  // Auth: aceita Bearer header OU ?token= query param (para download via window.open)
+  const token = req.query.token || (req.headers.authorization || '').replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'Token ausente' });
+  try {
+    const jwt = await import('jsonwebtoken');
+    const SECRET = process.env.JWT_SECRET || 'everi9-dev-secret';
+    jwt.default.verify(token, SECRET);
+  } catch { return res.status(401).json({ error: 'Token inválido' }); }
+  // Auth OK — segue para o download
+  {
   try {
     const { rows } = await (await import('../config/db.js')).default.query(
       'SELECT * FROM squad_artifacts WHERE id = $1', [Number(req.params.id)]
@@ -155,6 +165,7 @@ router.get('/artifacts/:id/download', authMiddleware, squadAuth, async (req, res
     res.setHeader('Content-Disposition', `attachment; filename="${art.file_name || 'artifact.' + ext}"`);
     res.send(art.content || '');
   } catch (e) { res.status(500).json({ erro: e.message }); }
+  }
 });
 
 // ── AGENT RUNS (log) ──
