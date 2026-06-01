@@ -5,7 +5,6 @@ import * as sq from '../services/squad-db.js';
 
 const router = express.Router();
 
-// Qualquer perfil autenticado acessa o Squad
 const squadAuth = (req, res, next) => {
   if (!req.user?.role) return res.status(403).json({ erro: 'Autenticação necessária.' });
   next();
@@ -49,20 +48,91 @@ router.delete('/cards/:id', authMiddleware, squadAuth, async (req, res) => {
   catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
-// ── MOVE (drag & drop) ──
+// ── MOVE (drag & drop — SEM disparar agente) ──
 router.post('/cards/:id/move', authMiddleware, squadAuth, async (req, res) => {
   try {
     const { stage } = req.body;
     if (!stage) return res.status(400).json({ erro: 'stage é obrigatório' });
-
     const card = await sq.moveCard(Number(req.params.id), stage);
     if (!card) return res.status(404).json({ erro: 'Card não encontrado' });
-
-    // Verifica se stage tem agente (Entrega 2 ativará a execução)
     const stageConfig = sq.STAGES.find(s => s.key === stage);
-    const agentAvailable = stageConfig?.hasAgent || false;
+    res.json({ card, agentAvailable: stageConfig?.hasAgent || false, stage: stageConfig });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
 
-    res.json({ card, agentAvailable, stage: stageConfig });
+// ── PREVIEW do agente (o que será executado antes de confirmar) ──
+router.get('/cards/:id/agent-preview', authMiddleware, squadAuth, async (req, res) => {
+  try {
+    const { stage } = req.query;
+    if (!stage) return res.status(400).json({ erro: 'stage query param obrigatório' });
+
+    const card = await sq.getCard(Number(req.params.id));
+    if (!card) return res.status(404).json({ erro: 'Card não encontrado' });
+
+    // Import dinâmico do agent map
+    const { AGENT_MAP } = await import('../services/squad-agent.js');
+    const agent = AGENT_MAP[stage];
+    if (!agent) return res.json({ agentAvailable: false });
+
+    // Verifica se tem artefato anterior necessário
+    const artifacts = await sq.getArtifacts(card.id);
+    const prevMap = { spec: 'hf', dev: 'spec' };
+    const needsPrev = prevMap[stage];
+    const hasPrev = needsPrev ? artifacts.some(a => a.stage === needsPrev) : true;
+
+    res.json({
+      agentAvailable: true,
+      agent: {
+        label: agent.label,
+        model: agent.model,
+        description: agent.desc,
+      },
+      card: { id: card.id, title: card.title, description: card.description },
+      hasPreviousArtifact: hasPrev,
+      missingArtifact: !hasPrev ? `Artefato do estágio "${needsPrev}" necessário` : null,
+      inputPreview: hasPrev && needsPrev
+        ? (artifacts.find(a => a.stage === needsPrev)?.content || '').slice(0, 500) + '...'
+        : (card.description || card.title).slice(0, 500),
+    });
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── EXECUTAR AGENTE (após confirmação do modal) ──
+router.post('/cards/:id/run-agent', authMiddleware, squadAuth, async (req, res) => {
+  try {
+    const { stage } = req.body;
+    if (!stage) return res.status(400).json({ erro: 'stage é obrigatório' });
+
+    const card = await sq.getCard(Number(req.params.id));
+    if (!card) return res.status(404).json({ erro: 'Card não encontrado' });
+
+    // Keep-alive para evitar H12 timeout do Heroku
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Transfer-Encoding', 'chunked');
+    res.write(' ');
+    const keepAlive = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+
+    try {
+      const { executeAgent } = await import('../services/squad-agent.js');
+      const result = await executeAgent(card.id, stage);
+
+      clearInterval(keepAlive);
+      res.end(JSON.stringify({
+        success: true,
+        artifact: result.artifact,
+        model: result.model,
+        card_id: card.id,
+        stage,
+      }));
+    } catch (err) {
+      clearInterval(keepAlive);
+      res.end(JSON.stringify({
+        success: false,
+        erro: err.message,
+        card_id: card.id,
+        stage,
+      }));
+    }
   } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
@@ -70,6 +140,21 @@ router.post('/cards/:id/move', authMiddleware, squadAuth, async (req, res) => {
 router.get('/cards/:id/artifacts', authMiddleware, squadAuth, async (req, res) => {
   try { res.json({ artifacts: await sq.getArtifacts(Number(req.params.id)) }); }
   catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// ── DOWNLOAD artefato como texto ──
+router.get('/artifacts/:id/download', authMiddleware, squadAuth, async (req, res) => {
+  try {
+    const { rows } = await (await import('../config/db.js')).default.query(
+      'SELECT * FROM squad_artifacts WHERE id = $1', [Number(req.params.id)]
+    );
+    if (!rows.length) return res.status(404).json({ erro: 'Artefato não encontrado' });
+    const art = rows[0];
+    const ext = art.file_name?.endsWith('.json') ? 'json' : 'md';
+    res.setHeader('Content-Type', ext === 'json' ? 'application/json' : 'text/markdown; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${art.file_name || 'artifact.' + ext}"`);
+    res.send(art.content || '');
+  } catch (e) { res.status(500).json({ erro: e.message }); }
 });
 
 // ── AGENT RUNS (log) ──
