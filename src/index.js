@@ -1078,6 +1078,7 @@ app.get("/api/scratch-orgs/create/:template", async (req, res) => {
 // --- Set scratch org password (uses AuthCode before expiry) ---
 app.get("/api/scratch-orgs/password/:scratchOrgInfoId", async (req, res) => {
   try {
+    const conn = sfClient.getConnection();
     const soi = await conn.query(
       "SELECT AuthCode, LoginUrl, SignupUsername, ScratchOrg FROM ScratchOrgInfo " +
       "WHERE Id = '" + req.params.scratchOrgInfoId + "' AND Status = 'Active'"
