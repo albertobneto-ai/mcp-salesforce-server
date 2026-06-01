@@ -34,6 +34,12 @@ export async function mountChatApp(app) {
     app.use('/api/squad', squadRoutes);
   } catch (e) { console.error('[Squad] Rota nao carregada:', e.message); }
 
+  // Inventory
+  try {
+    const { default: inventoryRoutes } = await import('./routes/inventory.js');
+    app.use('/api/inventory', inventoryRoutes);
+  } catch (e) { console.error('[Inventory] Rota nao carregada:', e.message); }
+
   // Servir prototipos como HTML estatico
   const protoDir = '/tmp/prototipos';
   try { const fs = await import('fs'); fs.default.mkdirSync(protoDir, { recursive: true }); } catch {}
