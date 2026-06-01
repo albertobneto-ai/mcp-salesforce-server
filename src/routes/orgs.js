@@ -1,10 +1,16 @@
 // src/routes/orgs.js — CRUD de orgs + seletor
 import express from 'express';
 import { authMiddleware } from '../middleware/auth.js';
-import { testConnection } from '../services/sf-multi.js';
+import { testConnection, describeObject, runSoql } from '../services/sf-multi.js';
 import pool from '../config/db.js';
 
 const router = express.Router();
+
+// Helper: busca org do Postgres com credenciais
+async function getOrgById(id) {
+  const r = await pool.query('SELECT * FROM orgs WHERE id = $1', [id]);
+  return r.rows[0] || null;
+}
 
 // GET /api/orgs — Lista orgs do usuario (admin ve todas)
 router.get('/', authMiddleware, async (req, res) => {
@@ -54,11 +60,32 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 // GET /api/orgs/:id/test — Testar conexão
 router.get('/:id/test', authMiddleware, async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM orgs WHERE id = $1', [req.params.id]);
-    if (!result.rows.length) return res.status(404).json({ error: 'Org nao encontrada' });
-    const org = result.rows[0];
+    const org = await getOrgById(req.params.id);
+    if (!org) return res.status(404).json({ error: 'Org nao encontrada' });
     const test = await testConnection(org);
     res.json(test);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/orgs/:id/describe/:objectName — Describe read-only
+router.get('/:id/describe/:objectName', authMiddleware, async (req, res) => {
+  try {
+    const org = await getOrgById(req.params.id);
+    if (!org) return res.status(404).json({ error: 'Org nao encontrada' });
+    const desc = await describeObject(org, req.params.objectName);
+    res.json(desc);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/orgs/:id/soql?q= — SOQL read-only
+router.get('/:id/soql', authMiddleware, async (req, res) => {
+  try {
+    const org = await getOrgById(req.params.id);
+    if (!org) return res.status(404).json({ error: 'Org nao encontrada' });
+    const q = req.query.q;
+    if (!q) return res.status(400).json({ error: 'query param q obrigatorio' });
+    const result = await runSoql(org, q);
+    res.json({ totalSize: result.totalSize, records: result.records });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
