@@ -284,56 +284,90 @@ function AgentConfirmModal({preview,onConfirm,onCancel,loading}){
     ));
 }
 
-function DetailPanel({card,artifacts,runs,onClose}){
+function DetailPanel({card,artifacts,runs,attachments,onClose,onRefresh}){
   if(!card)return null;
   const stg=STAGES.find(s=>s.key===card.stage);
-  const downloadArtifact=(id,name)=>{window.open(API+'/artifacts/'+id+'/download?token='+encodeURIComponent(localStorage.getItem('everi9_token')||''))};
+  const isAnalise=card.stage==='analise';
+  const[editDesc,setEditDesc]=S(card.description||'');
+  const[saving,setSaving]=S(false);
+  const[uploading,setUploading]=S(false);
+  const atts=attachments||[];
+  E(()=>{setEditDesc(card.description||'')},[card.id,card.description]);
+  const saveDesc=async()=>{setSaving(true);await api('/cards/'+card.id,{method:'PATCH',body:JSON.stringify({description:editDesc})});setSaving(false);if(onRefresh)onRefresh();};
+  const uploadFile=async(file)=>{if(!file)return;setUploading(true);const reader=new FileReader();reader.onload=async()=>{const b64=reader.result.split(',')[1];await api('/cards/'+card.id+'/attachments',{method:'POST',body:JSON.stringify({file_name:file.name,content_base64:b64})});setUploading(false);if(onRefresh)onRefresh();};reader.readAsDataURL(file);};
+  const deleteAtt=async(attId)=>{await api('/cards/'+card.id+'/attachments/'+attId,{method:'DELETE'});if(onRefresh)onRefresh();};
+  const downloadArt=(id)=>{window.open(API+'/artifacts/'+id+'/download?token='+encodeURIComponent(localStorage.getItem('everi9_token')||''))};
   return e('div',{className:'detail-panel'},
     e('div',{className:'dp-header'},
       e('div',{style:{flex:1}},
         e('div',{style:{fontSize:10,color:'#64748b',fontWeight:600,textTransform:'uppercase',letterSpacing:.8}},stg?.label),
         e('div',{style:{fontSize:17,fontWeight:700,color:'#1a1a2e',marginTop:4}},card.title),
         e('div',{style:{display:'flex',gap:6,marginTop:8,flexWrap:'wrap'}},
-          card.priority&&e('span',{style:{padding:'3px 8px',borderRadius:6,background:card.priority==='high'?'#fef2f2':'#eff6ff',color:card.priority==='high'?'#fca5a5':'#93c5fd',fontSize:10,fontWeight:600}},card.priority.toUpperCase()),
-          card.mode&&e('span',{style:{padding:'3px 8px',borderRadius:6,background:'#ede9fe',color:'#a78bfa',fontSize:10,fontWeight:600}},card.mode==='auto'?'AUTO':'MANUAL'),
+          card.priority&&e('span',{style:{padding:'3px 8px',borderRadius:6,background:card.priority==='high'?'#fef2f2':'#eff6ff',color:card.priority==='high'?'#dc2626':'#3b82f6',fontSize:10,fontWeight:600}},card.priority.toUpperCase()),
+          card.mode&&e('span',{style:{padding:'3px 8px',borderRadius:6,background:'#ede9fe',color:'#7c3aed',fontSize:10,fontWeight:600}},card.mode==='auto'?'AUTO':'MANUAL'),
         )),
-      e('button',{onClick:onClose,style:{background:'none',border:'1px solid #2a2a3e',borderRadius:8,width:30,height:30,color:'#94a3b8',cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'}},'×')),
+      e('button',{onClick:onClose,style:{background:'none',border:'1px solid #e2e8f0',borderRadius:8,width:32,height:32,color:'#9ca3af',cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'}},'×')),
     e('div',{className:'dp-body'},
-      card.description&&e('div',{className:'dp-section'},
-        e('div',{className:'dp-section-title'},'DESCRIÇÃO'),
-        e('div',{style:{fontSize:13,color:'#374151',lineHeight:1.6,background:'#f8f9fc',borderRadius:8,padding:12,border:'1px solid #2a2a3e'}},card.description)),
+      // DESCRIÇÃO/REQUISITO
+      e('div',{className:'dp-section'},
+        e('div',{className:'dp-section-title'},isAnalise?'REQUISITO (editável)':'DESCRIÇÃO'),
+        isAnalise
+          ?e('div',null,
+            e('textarea',{value:editDesc,onChange:ev=>setEditDesc(ev.target.value),placeholder:'Descreva o requisito de negócio aqui...',style:{width:'100%',minHeight:120,border:'1px solid #e2e8f0',borderRadius:8,padding:12,fontSize:13,fontFamily:'Outfit,sans-serif',background:'#f8f9fc',color:'#1a1a2e',outline:'none',resize:'vertical',lineHeight:1.6,boxSizing:'border-box'}}),
+            e('div',{style:{display:'flex',justifyContent:'flex-end',marginTop:8}},
+              e('button',{onClick:saveDesc,disabled:saving,style:{padding:'6px 16px',borderRadius:6,border:'none',background:'#7c3aed',color:'#fff',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'Outfit',opacity:saving?.5:1}},saving?'Salvando...':'Salvar')))
+          :card.description?e('div',{style:{fontSize:13,color:'#374151',lineHeight:1.6,background:'#f8f9fc',borderRadius:8,padding:12,border:'1px solid #e2e8f0',whiteSpace:'pre-wrap'}},card.description):null,
+      ),
+      // ANEXOS
+      e('div',{className:'dp-section'},
+        e('div',{className:'dp-section-title'},'ANEXOS ('+atts.length+')'),
+        atts.map(a=>e('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'#f8f9fc',border:'1px solid #e2e8f0',borderRadius:8,marginBottom:6}},
+          e('span',{style:{fontSize:14}},{xlsx:'📊',xls:'📊',pdf:'📕',docx:'📄',txt:'📝',csv:'📊',md:'📝'}[a.file_type]||'📎'),
+          e('span',{style:{fontSize:12,fontWeight:500,color:'#1a1a2e',flex:1}},a.file_name),
+          e('span',{style:{fontSize:10,color:'#9ca3af'}},Math.round((a.file_size||0)/1024)+'KB'),
+          isAnalise&&e('button',{onClick:()=>deleteAtt(a.id),style:{background:'none',border:'none',color:'#ef4444',cursor:'pointer',fontSize:14,padding:'2px'}},'×'),
+        )),
+        isAnalise&&e('label',{style:{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',borderRadius:8,border:'1px dashed #d1d5db',cursor:uploading?'wait':'pointer',color:'#9ca3af',fontSize:12,fontWeight:500,marginTop:4}},
+          uploading?e('div',{className:'spinner',style:{width:14,height:14,borderWidth:2}}):null,
+          uploading?'Extraindo texto...':'⬆ Adicionar arquivo (.txt, .docx, .pdf, .xlsx)',
+          e('input',{type:'file',accept:'.txt,.md,.docx,.pdf,.xlsx,.xls,.csv',style:{display:'none'},onChange:ev=>{if(ev.target.files[0])uploadFile(ev.target.files[0]);ev.target.value='';}})),
+        !isAnalise&&!atts.length&&e('div',{style:{color:'#9ca3af',fontSize:12,fontStyle:'italic'}},'Nenhum anexo'),
+      ),
+      // PIPELINE
       e('div',{className:'dp-section'},
         e('div',{className:'dp-section-title'},'PIPELINE'),
         e('div',{style:{display:'flex',gap:4,flexWrap:'wrap'}},
           STAGES.map(s=>{const idx=STAGES.findIndex(x=>x.key===s.key);const ci=STAGES.findIndex(x=>x.key===card.stage);const past=idx<ci;const active=s.key===card.stage;
-            return e('div',{key:s.key,style:{padding:'6px 10px',borderRadius:6,fontSize:9,fontWeight:700,letterSpacing:.5,border:'1px solid '+(active?s.color+'80':'#e2e8f0'),background:active?s.color+'20':past?'#f0fdf4':'#f8f9fc',color:active?s.color:past?'#22c55e':'#475569'}},
+            return e('div',{key:s.key,style:{padding:'6px 10px',borderRadius:6,fontSize:9,fontWeight:700,letterSpacing:.5,border:'1px solid '+(active?s.color+'80':'#e2e8f0'),background:active?s.color+'15':past?'#f0fdf4':'#f8f9fc',color:active?s.color:past?'#15803d':'#9ca3af'}},
               past?'✓ ':active?'● ':'○ ',s.label);}))),
+      // ARTEFATOS
       e('div',{className:'dp-section'},
         e('div',{className:'dp-section-title'},'ARTEFATOS ('+artifacts.length+')'),
-        artifacts.length===0?e('div',{style:{color:'#94a3b8',fontSize:12,fontStyle:'italic'}},'Nenhum artefato'):
-        artifacts.map(a=>e('div',{key:a.id,style:{background:'#f8f9fc',border:'1px solid #2a2a3e',borderRadius:8,padding:10,marginBottom:6}},
+        artifacts.length===0?e('div',{style:{color:'#9ca3af',fontSize:12,fontStyle:'italic'}},'Nenhum artefato'):
+        artifacts.map(a=>e('div',{key:a.id,style:{background:'#f8f9fc',border:'1px solid #e2e8f0',borderRadius:8,padding:10,marginBottom:6}},
           e('div',{style:{display:'flex',alignItems:'center',gap:6}},
-            e('span',{style:{color:'#22c55e'}},'◆'),
+            e('span',{style:{color:'#15803d'}},'◆'),
             e('span',{style:{fontSize:12,fontWeight:600,color:'#1e293b',flex:1}},a.artifact_type.toUpperCase()),
-            e('button',{onClick:()=>downloadArtifact(a.id,a.file_name),style:{background:'#ede9fe',border:'1px solid #3730a3',borderRadius:6,padding:'4px 10px',color:'#a78bfa',fontSize:10,fontWeight:700,cursor:'pointer',fontFamily:'Outfit'}},'⬇ Download')),
-          e('div',{style:{fontSize:10,color:'#475569',marginTop:4}},a.model_used+' · '+new Date(a.created_at).toLocaleString('pt-BR')),
+            e('button',{onClick:()=>downloadArt(a.id),style:{background:'#ede9fe',border:'1px solid #c4b5fd',borderRadius:6,padding:'4px 10px',color:'#7c3aed',fontSize:10,fontWeight:700,cursor:'pointer',fontFamily:'Outfit'}},'⬇ Download')),
+          e('div',{style:{fontSize:10,color:'#9ca3af',marginTop:4}},a.model_used+' · '+new Date(a.created_at).toLocaleString('pt-BR')),
           a.content&&e('details',{style:{marginTop:6}},
-            e('summary',{style:{fontSize:10,color:'#64748b',cursor:'pointer'}},'Ver conteúdo'),
-            e('pre',{style:{fontSize:10,color:'#94a3b8',background:'#f0f0f5',padding:8,borderRadius:6,marginTop:4,maxHeight:300,overflow:'auto',whiteSpace:'pre-wrap',lineHeight:1.5}},a.content.slice(0,3000)+(a.content.length>3000?'\n\n... (truncado)':''))),
+            e('summary',{style:{fontSize:10,color:'#9ca3af',cursor:'pointer'}},'Ver conteúdo'),
+            e('pre',{style:{fontSize:10,color:'#6b7280',background:'#f0f0f5',padding:8,borderRadius:6,marginTop:4,maxHeight:300,overflow:'auto',whiteSpace:'pre-wrap',lineHeight:1.5}},a.content.slice(0,3000)+(a.content.length>3000?'\n\n... (truncado)':''))),
         ))),
+      // RUNS
       e('div',{className:'dp-section'},
         e('div',{className:'dp-section-title'},'EXECUÇÕES ('+runs.length+')'),
-        runs.map(r=>e('div',{key:r.id,style:{display:'flex',alignItems:'center',gap:8,padding:'6px 0',borderBottom:'1px solid #1e1e32'}},
-          e('div',{style:{width:8,height:8,borderRadius:'50%',background:r.status==='done'?'#22c55e':r.status==='running'?'#eab308':'#ef4444'}}),
+        runs.map(r=>e('div',{key:r.id,style:{display:'flex',alignItems:'center',gap:8,padding:'6px 0',borderBottom:'1px solid #e8e8ef'}},
+          e('div',{style:{width:8,height:8,borderRadius:'50%',background:r.status==='done'?'#15803d':r.status==='running'?'#b45309':'#dc2626'}}),
           e('span',{style:{fontSize:11,color:'#374151',flex:1}},r.stage+' — '+r.status+(r.error_msg?' — '+r.error_msg:'')),
-          e('span',{style:{fontSize:10,color:'#475569'}},new Date(r.started_at).toLocaleString('pt-BR')),
+          e('span',{style:{fontSize:10,color:'#9ca3af'}},new Date(r.started_at).toLocaleString('pt-BR')),
         ))),
     ));
 }
 
 function App(){
   const[cards,setCards]=S([]);const[view,setView]=S('board');const[showCreate,setShowCreate]=S(false);
-  const[dragging,setDragging]=S(null);const[detailId,setDetailId]=S(null);const[detailData,setDetailData]=S({card:null,artifacts:[],runs:[]});
+  const[dragging,setDragging]=S(null);const[detailId,setDetailId]=S(null);const[detailData,setDetailData]=S({card:null,artifacts:[],runs:[],attachments:[]});
   const[stats,setStats]=S(null);const[sidebarOpen,setSidebarOpen]=S(false);
   const[agentPreview,setAgentPreview]=S(null);const[agentLoading,setAgentLoading]=S(false);
   const[pendingMove,setPendingMove]=S(null);const[runningCards,setRunningCards]=S(new Set());
@@ -350,17 +384,37 @@ function App(){
     if(stageConfig?.hasAgent){
       setPendingMove({id,stage});
       if(stage==='hf'){
-        // HF: mostrar modal de input para escrever/colar/upload o requisito
+        // Verificar se card já tem conteúdo ou anexos
         const card=cards.find(c=>c.id===id);
-        setShowInputModal(card||{id,title:'Card',description:''});
+        const attResp=await api('/cards/'+id+'/attachments');
+        const hasContent=(card?.description||'').trim().length>0;
+        const hasAttachments=(attResp?.attachments||[]).length>0;
+        if(hasContent||hasAttachments){
+          // Já tem conteúdo — perguntar se mantém ou substitui
+          const attCount=(attResp?.attachments||[]).length;
+          const msg=hasAttachments
+            ?`Este card já possui ${hasContent?'requisito escrito':''}${hasContent&&hasAttachments?' e ':''}${hasAttachments?attCount+' arquivo(s) anexado(s)':''}.\n\nDeseja manter o conteúdo atual e gerar a HF, ou abrir o editor para modificar?`
+            :`Este card já possui requisito escrito.\n\nDeseja manter e gerar a HF, ou abrir o editor para modificar?`;
+          const keep=confirm(msg+'\n\nOK = Manter e gerar\nCancelar = Abrir editor');
+          if(keep){
+            // Ir direto para preview do agente
+            const preview=await api('/cards/'+id+'/agent-preview?stage=hf');
+            if(preview)setAgentPreview(preview);
+          }else{
+            // Abrir InputModal para editar
+            setShowInputModal(card||{id,title:'Card',description:''});
+          }
+        }else{
+          // Sem conteúdo — abrir InputModal
+          setShowInputModal(card||{id,title:'Card',description:''});
+        }
       }else{
-        // Spec/Dev/Refinamento: ir direto para preview do agente (usa artefato anterior)
+        // Spec/Dev/Refinamento: ir direto para preview
         const preview=await api('/cards/'+id+'/agent-preview?stage='+stage);
         if(preview)setAgentPreview(preview);
       }
       return;
     }
-    // Move simples (sem agente)
     setCards(p=>p.map(c=>c.id===id?{...c,stage}:c));
     await api('/cards/'+id+'/move',{method:'POST',body:JSON.stringify({stage})});
     loadStats();
@@ -406,7 +460,7 @@ function App(){
   const deleteCard=async(id)=>{if(!confirm('Excluir card e artefatos?'))return;setCards(p=>p.filter(c=>c.id!==id));await api('/cards/'+id,{method:'DELETE'});if(detailId===id)closeDetail();loadStats();};
 
   const openDetail=async(id)=>{setDetailId(id);const r=await api('/cards/'+id);if(r)setDetailData(r);};
-  const closeDetail=()=>{setDetailId(null);setDetailData({card:null,artifacts:[],runs:[]});};
+  const closeDetail=()=>{setDetailId(null);setDetailData({card:null,artifacts:[],runs:[],attachments:[]});};
   const closePanel=()=>window.parent?.postMessage('squad-closed','*');
 
   return e('div',null,
@@ -455,7 +509,7 @@ function App(){
     showCreate&&e(CreateModal,{onClose:()=>setShowCreate(false),onCreate:createCard}),
     showInputModal&&e(InputModal,{card:showInputModal,onConfirm:onInputConfirm,onCancel:cancelInput}),
     agentPreview&&e(AgentConfirmModal,{preview:agentPreview,onConfirm:confirmAgent,onCancel:cancelAgent,loading:agentLoading}),
-    detailId&&e(DetailPanel,{card:detailData.card,artifacts:detailData.artifacts||[],runs:detailData.runs||[],onClose:closeDetail}),
+    detailId&&e(DetailPanel,{card:detailData.card,artifacts:detailData.artifacts||[],runs:detailData.runs||[],attachments:detailData.attachments||[],onClose:closeDetail,onRefresh:()=>openDetail(detailId)}),
   );
 }
 ReactDOM.createRoot(document.getElementById('app')).render(e(App));
