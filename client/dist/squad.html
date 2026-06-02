@@ -373,7 +373,14 @@ function App(){
   const[pendingMove,setPendingMove]=S(null);const[runningCards,setRunningCards]=S(new Set());
   const[showInputModal,setShowInputModal]=S(null);
 
-  const load=C(async()=>{const r=await api('/cards');if(r)setCards(r.cards||[]);},[]);
+  const load=C(async()=>{
+    const r=await api('/cards');
+    if(r){setCards(r.cards||[]);}
+    else{
+      // Token pode não estar pronto ainda — retry em 2s
+      setTimeout(async()=>{const r2=await api('/cards');if(r2)setCards(r2.cards||[]);},2000);
+    }
+  },[]);
   const loadStats=C(async()=>{const r=await api('/stats');if(r)setStats(r);},[]);
   E(()=>{load();loadStats();},[]);
 
