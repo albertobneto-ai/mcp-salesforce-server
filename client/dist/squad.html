@@ -474,7 +474,25 @@ function App(){
 
   const openDetail=async(id)=>{setDetailId(id);const r=await api('/cards/'+id);if(r)setDetailData(r);};
   const closeDetail=()=>{setDetailId(null);setDetailData({card:null,artifacts:[],runs:[],attachments:[]});};
-  const closePanel=()=>window.parent?.postMessage('squad-closed','*');
+  const closePanel=()=>{
+    // Se standalone (não iframe): logout e redirecionar para login
+    if(window===window.parent||!window.parent){
+      if(confirm('Deseja sair do Squad e encerrar a sessão?')){
+        localStorage.removeItem('everi9_token');
+        localStorage.removeItem('everi9_user');
+        window.location.href='/';
+      }
+    }else{
+      window.parent.postMessage('squad-closed','*');
+    }
+  };
+
+  // Auth check: se não tem token, redirecionar para login (standalone)
+  E(()=>{
+    if(window===window.parent&&!localStorage.getItem('everi9_token')){
+      window.location.href='/';
+    }
+  },[]);
 
   return e('div',null,
     e('button',{className:'mobile-menu',onClick:()=>setSidebarOpen(!sidebarOpen)},sidebarOpen?'×':'☰'),
@@ -482,7 +500,7 @@ function App(){
       e('div',{className:'logo'},
         e('div',{className:'icon'},'◈'),
         e('div',null,e('div',{className:'text'},'Squad Agentes'),e('div',{className:'sub'},'Salesforce AI Pipeline')),
-        e('button',{className:'close-btn',onClick:closePanel},'×')),
+        e('button',{className:'close-btn',onClick:closePanel,title:'Sair'},window===window.parent?'Sair':'×')),
       e('div',{className:'nav'},
         e('div',{className:'nav-item'+(view==='board'?' active':''),onClick:()=>{setView('board');setSidebarOpen(false)}},'▣ Board'),
         e('div',{className:'nav-item'+(view==='list'?' active':''),onClick:()=>{setView('list');setSidebarOpen(false)}},'▤ Lista'),
