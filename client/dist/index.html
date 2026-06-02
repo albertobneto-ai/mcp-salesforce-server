@@ -55,52 +55,81 @@
     }
   },1000);
 
-  /* === Inject sidebar buttons === */
+  /* === Inject app drawer under Aplicações sidebar item === */
   setInterval(function(){
     var role=gr();if(!role)return;
+    if(document.getElementById('apps-drawer'))return;
     var isAdmin=role==='admin'||role==='architect';
-    var bs=document.querySelectorAll('button'),gp=null;
-    for(var i=0;i<bs.length;i++){if(bs[i].textContent.trim()==='GP'){gp=bs[i];break;}}
-    if(!gp)return;
 
-    /* DC button (admin/architect only) */
-    if(isAdmin&&!document.getElementById('dc-sidebar-btn')){
-      var b=document.createElement('button');b.id='dc-sidebar-btn';b.title='Data Cloud Sandbox';
-      b.onclick=function(ev){ev.stopPropagation();ov.style.display='block';ifr.src='/datacloud.html';};
-      b.style.cssText='background:none;border:1px solid rgba(148,163,184,.25);border-radius:8px;padding:5px 12px;color:#64748b;font-size:12px;cursor:pointer;font-family:Outfit,sans-serif;font-weight:600;letter-spacing:.2px;transition:all .15s;';
-      b.textContent='DC';
-      gp.parentNode.insertBefore(b,gp);
-    }
-
-    /* CRM Algar button (admin/architect only) */
-    if(isAdmin&&!document.getElementById('crm-sidebar-btn')){
-      var dcBtn=document.getElementById('dc-sidebar-btn');
-      var b2=document.createElement('button');b2.id='crm-sidebar-btn';b2.title='CRM Algar Telecom — Emulador Dupla Convivência';
-      b2.onclick=function(ev){ev.stopPropagation();ov2.style.display='block';ifr2.src='/crm-algar.html';};
-      b2.style.cssText='background:none;border:1px solid rgba(148,163,184,.25);border-radius:8px;padding:5px 12px;color:#64748b;font-size:12px;cursor:pointer;font-family:Outfit,sans-serif;font-weight:600;letter-spacing:.2px;transition:all .15s;';
-      b2.textContent='CRM';
-      if(dcBtn&&dcBtn.nextSibling){dcBtn.parentNode.insertBefore(b2,dcBtn.nextSibling);}
-      else if(dcBtn){dcBtn.parentNode.insertBefore(b2,gp);}
-      else{gp.parentNode.insertBefore(b2,gp);}
-    }
-
-    /* Squad Agentes button (all roles) */
-    if(!document.getElementById('squad-sidebar-btn')){
-      var crmBtn=document.getElementById('crm-sidebar-btn');
-      var b3=document.createElement('button');b3.id='squad-sidebar-btn';b3.title='Squad Agentes SF — Pipeline AI';
-      b3.onclick=function(ev){ev.stopPropagation();ov3.style.display='block';ifr3.src='/squad.html';};
-      b3.style.cssText='background:none;border:1px solid rgba(148,163,184,.25);border-radius:8px;padding:5px 12px;color:#64748b;font-size:12px;cursor:pointer;font-family:Outfit,sans-serif;font-weight:600;letter-spacing:.2px;transition:all .15s;';
-      b3.textContent='Squad';
-      if(gp){
-        if(crmBtn&&crmBtn.nextSibling){crmBtn.parentNode.insertBefore(b3,crmBtn.nextSibling);}
-        else if(crmBtn){crmBtn.parentNode.insertBefore(b3,gp);}
-        else{gp.parentNode.insertBefore(b3,gp);}
-      }else{
-        /* Fallback: injetar no header para perfis sem GP */
-        var hdr=document.querySelector('header')||document.querySelector('[class*="header"]')||document.querySelector('nav');
-        if(hdr){hdr.appendChild(b3);}
+    /* Find the Aplicações sidebar item */
+    var items=document.querySelectorAll('div,span,button');
+    var appsItem=null;
+    for(var i=0;i<items.length;i++){
+      var txt=items[i].textContent.trim();
+      if(txt==='◫ Aplicações'||txt==='Aplicações'){
+        appsItem=items[i];
+        /* Walk up to find the clickable parent (usually a div with onClick) */
+        var p=appsItem;
+        while(p&&!p.style.cursor&&p.parentNode){p=p.parentNode;if(p.tagName==='DIV'&&p.childElementCount<5)break;}
+        if(p&&p.tagName==='DIV')appsItem=p;
+        break;
       }
     }
+    if(!appsItem)return;
+
+    /* Create collapsible drawer */
+    var drawer=document.createElement('div');drawer.id='apps-drawer';
+    drawer.style.cssText='max-height:0;overflow:hidden;transition:max-height .25s ease;padding:0 8px;';
+
+    var inner=document.createElement('div');
+    inner.style.cssText='display:flex;flex-direction:column;gap:3px;padding:6px 0;';
+
+    function mkApp(id,label,color,fn){
+      var btn=document.createElement('div');btn.id=id;
+      btn.style.cssText='padding:7px 12px;border-radius:8px;font-size:12px;font-weight:500;color:'+color+';cursor:pointer;font-family:Outfit,sans-serif;transition:background .12s;display:flex;align-items:center;gap:8px;';
+      btn.innerHTML='<span style="width:6px;height:6px;border-radius:50%;background:'+color+';flex-shrink:0;opacity:.6"></span>'+label;
+      btn.onmouseenter=function(){this.style.background='rgba(255,255,255,.06)'};
+      btn.onmouseleave=function(){this.style.background='transparent'};
+      btn.onclick=function(ev){ev.stopPropagation();fn();};
+      return btn;
+    }
+
+    /* GP */
+    var gpBtn=mkApp('app-gp','Gestão de Projetos','#94a3b8',function(){
+      var bs=document.querySelectorAll('button');
+      for(var j=0;j<bs.length;j++){if(bs[j].textContent.trim()==='GP'){bs[j].click();break;}}
+    });
+    inner.appendChild(gpBtn);
+
+    /* Squad */
+    inner.appendChild(mkApp('app-squad','Squad Agentes','#a78bfa',function(){
+      ov3.style.display='block';ifr3.src='/squad.html';
+    }));
+
+    if(isAdmin){
+      /* DC */
+      inner.appendChild(mkApp('app-dc','Data Cloud','#06b6d4',function(){
+        ov.style.display='block';ifr.src='/datacloud.html';
+      }));
+      /* CRM */
+      inner.appendChild(mkApp('app-crm','CRM Algar','#10b981',function(){
+        ov2.style.display='block';ifr2.src='/crm-algar.html';
+      }));
+    }
+
+    drawer.appendChild(inner);
+
+    /* Insert drawer after Aplicações item */
+    appsItem.parentNode.insertBefore(drawer,appsItem.nextSibling);
+
+    /* Toggle on click */
+    var expanded=false;
+    appsItem.addEventListener('click',function(ev){
+      ev.stopPropagation();ev.preventDefault();
+      expanded=!expanded;
+      drawer.style.maxHeight=expanded?(inner.scrollHeight+16)+'px':'0';
+    });
+
   },800);
 })();
 </script>
