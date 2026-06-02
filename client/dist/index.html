@@ -37,18 +37,56 @@
     if(e.data==='squad-closed')ov3.style.display='none';
   });
 
-  /* === Redirect funcional/architect/desenvolvedor to Squad (page exclusiva) === */
-  var squadRedirected=false;
-  var squadRedirectCheck=setInterval(function(){
-    if(squadRedirected)return;
+  /* === Role-based redirects === */
+  var roleRedirected=false;
+  var roleCheck=setInterval(function(){
+    if(roleRedirected)return;
     var role=gr();
     var hasToken=!!localStorage.getItem('everi9_token');
     if(!role||!hasToken)return;
-    var squadRoles=['funcional','architect','desenvolvedor'];
+
+    /* Squad roles: redirect to standalone /squad.html */
+    var squadRoles=['funcional','architect','desenvolvedor','developer'];
     if(squadRoles.indexOf(role)>=0){
-      squadRedirected=true;
-      clearInterval(squadRedirectCheck);
+      roleRedirected=true;
+      clearInterval(roleCheck);
       window.location.href='/squad.html';
+      return;
+    }
+
+    /* GP role: auto-open GP panel, hide chat, close=logout */
+    if(role==='gp'){
+      roleRedirected=true;
+      clearInterval(roleCheck);
+      /* Esconde toda a UI principal exceto o GP */
+      var style=document.createElement('style');
+      style.textContent='body>div#root>*:not([class*="gp"]):not([class*="GP"]){opacity:0;pointer-events:none;position:absolute;} .gp-close-override{display:none!important;}';
+      document.head.appendChild(style);
+      /* Auto-clica no botão GP quando disponível */
+      var gpAutoClick=setInterval(function(){
+        var bs=document.querySelectorAll('button');
+        for(var i=0;i<bs.length;i++){
+          if(bs[i].textContent.trim()==='GP'){
+            bs[i].click();
+            clearInterval(gpAutoClick);
+            /* Interceptar fechamento do GP para fazer logout */
+            setTimeout(function(){
+              var closeBtn=document.querySelector('[title="Fechar GP"],[title="Voltar"]');
+              if(closeBtn){
+                closeBtn.addEventListener('click',function(ev){
+                  ev.preventDefault();ev.stopPropagation();
+                  if(confirm('Deseja sair e encerrar a sessão?')){
+                    localStorage.removeItem('everi9_token');
+                    localStorage.removeItem('everi9_user');
+                    window.location.href='/';
+                  }
+                },true);
+              }
+            },1000);
+            break;
+          }
+        }
+      },800);
     }
   },1000);
 
