@@ -223,36 +223,24 @@ export function registerMuleSyncRoutes(app, sfClient) {
           // 2. Se vem do CRM Algar (não do SF), criar no SF primeiro
           if (!skipSalesforce && (r.source_system === "CRM_ALGAR" || !sfIdInput || sfIdInput.startsWith("CRM-"))) {
             try {
-              const conn2 = sfClient.getConnection();
-              if (conn2) {
-                const sfResult = await conn2.sobject("Account").create({
+              const sfResp = await fetch(`${SELF}/api/data/composite`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ steps: [{ objectName: "Account", refPrefix: "acc", records: [{
                   Name: r.name || r.Name,
                   Industry: r.industry || r.Industry,
                   Type: r.type || r.Type,
                   BillingCity: r.city || r.BillingCity,
                   BillingState: r.state || r.BillingState,
                   Legacy_CRM_Id__c: crmId
-                });
-                if (sfResult.success) {
-                  finalSfId = sfResult.id;
-                  console.log("[CRM→SF] Account criado:", sfResult.id, "CRM_ID:", crmId);
-                } else {
-                  console.error("[CRM→SF] Falha:", JSON.stringify(sfResult));
-                }
-              } else {
-                // Fallback: usar API interna
-                const sfResp = await fetch(`${SELF}/api/data/composite`, {
-                  method: "POST", headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ steps: [{ objectName: "Account", refPrefix: "acc", records: [{ Name: r.name || r.Name, Industry: r.industry || r.Industry, Legacy_CRM_Id__c: crmId }] }] })
-                });
-                const sfData = await sfResp.json();
-                if (sfData?.idMap?.acc_0) {
-                  finalSfId = sfData.idMap.acc_0;
-                  console.log("[CRM→SF-fallback] Account criado:", finalSfId);
-                }
-              }
+                }]}]})
+              });
+              const sfData = await sfResp.json();
+              console.log("[CRM→SF] composite response:", JSON.stringify(sfData));
+              const accId = sfData?.idMap?.acc_0;
+              if (accId) { finalSfId = accId; console.log("[CRM→SF] OK:", accId, "CRM_ID:", crmId); }
+              else { console.error("[CRM→SF] No accId in:", JSON.stringify(sfData)); }
             } catch (e) {
-              console.error("[CRM→SF] Erro:", e.message);
+              console.error("[CRM→SF] Erro:", e.message, e.stack);
             }
           }
 
