@@ -56,9 +56,9 @@ export function registerMuleSyncRoutes(app, sfClient) {
         for (const r of crmResult.records) {
           if (r.sfId && r.crmId) {
             try {
-              await conn.sobject("Account").update({
-                Id: r.sfId,
-                Legacy_CRM_Id__c: r.crmId
+              await fetch(`${SELF}/api/update-records`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ objectName: "Account", records: [{ Id: r.sfId, Legacy_CRM_Id__c: r.crmId }] })
               });
               backUpdates.push({ sfId: r.sfId, crmId: r.crmId, status: "sf_updated" });
             } catch (e) {
@@ -221,19 +221,26 @@ export function registerMuleSyncRoutes(app, sfClient) {
           results.push({ crmId: existing[0].CRM_ID, sfId: sfIdInput, name: r.name || r.Name, status: "updated_in_crm_algar" });
         } else {
           // 2. Se vem do CRM Algar (não do SF), criar no SF primeiro
-          if (!skipSalesforce && conn && (r.source_system === "CRM_ALGAR" || !sfIdInput || sfIdInput.startsWith("CRM-"))) {
+          if (!skipSalesforce && (r.source_system === "CRM_ALGAR" || !sfIdInput || sfIdInput.startsWith("CRM-"))) {
             try {
-              const sfResult = await conn.sobject("Account").create({
-                Name: r.name || r.Name,
-                Industry: r.industry || r.Industry,
-                Type: r.type || r.Type,
-                BillingCity: r.city || r.BillingCity,
-                BillingState: r.state || r.BillingState,
-                AnnualRevenue: r.annual_revenue || r.AnnualRevenue,
-                Legacy_CRM_Id__c: crmId
+              const sfResp = await fetch(`${SELF}/api/data/composite`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  steps: [{ objectName: "Account", refPrefix: "acc", records: [{
+                    Name: r.name || r.Name,
+                    Industry: r.industry || r.Industry,
+                    Type: r.type || r.Type,
+                    BillingCity: r.city || r.BillingCity,
+                    BillingState: r.state || r.BillingState,
+                    Legacy_CRM_Id__c: crmId
+                  }]}]
+                })
               });
-              if (sfResult.success) {
-                finalSfId = sfResult.id;
+              const sfData = await sfResp.json();
+              const accId = sfData?.idMap?.acc_0;
+              if (accId) {
+                finalSfId = accId;
+                console.log("[CRM→SF] Account criado:", accId, "Legacy_CRM_Id__c:", crmId);
               }
             } catch (e) {
               console.error("[CRM→SF]", e.message);
