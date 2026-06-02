@@ -37,22 +37,20 @@
     if(e.data==='squad-closed')ov3.style.display='none';
   });
 
-  /* === Auto-open Squad for funcional/architect/desenvolvedor === */
-  var squadAutoOpened=false;
-  var squadAutoCheck=setInterval(function(){
-    if(squadAutoOpened)return;
+  /* === Redirect funcional/architect/desenvolvedor to Squad (page exclusiva) === */
+  var squadRedirected=false;
+  var squadRedirectCheck=setInterval(function(){
+    if(squadRedirected)return;
     var role=gr();
     var hasToken=!!localStorage.getItem('everi9_token');
     if(!role||!hasToken)return;
-    var autoRoles=['funcional','architect','desenvolvedor'];
-    if(autoRoles.indexOf(role)>=0){
-      squadAutoOpened=true;
-      setTimeout(function(){
-        ov3.style.display='block';
-        ifr3.contentWindow.location.reload();
-      },500);
+    var squadRoles=['funcional','architect','desenvolvedor'];
+    if(squadRoles.indexOf(role)>=0){
+      squadRedirected=true;
+      clearInterval(squadRedirectCheck);
+      window.location.href='/squad.html';
     }
-  },1500);
+  },1000);
 
   /* === Inject sidebar buttons === */
   setInterval(function(){
