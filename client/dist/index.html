@@ -55,6 +55,21 @@
     }
   },1000);
 
+  /* === Hide DC/GP from header + robot logo === */
+  setInterval(function(){
+    var bs=document.querySelectorAll('button');
+    for(var i=0;i<bs.length;i++){
+      var t=bs[i].textContent.trim();
+      /* Hide DC header button */
+      if(t==='☁️ DC'||t==='☁\uFE0F DC'){bs[i].style.display='none';}
+      /* Hide GP header button */
+      if(t==='GP'&&bs[i].title&&bs[i].title.indexOf('Painel')>=0){bs[i].style.display='none';}
+    }
+    /* Hide robot logo image in sidebar */
+    var imgs=document.querySelectorAll('img[alt="Ever i9"]');
+    for(var j=0;j<imgs.length;j++){imgs[j].style.display='none';}
+  },500);
+
   /* === Inject app drawer under Aplicações sidebar item === */
   setInterval(function(){
     var role=gr();if(!role)return;
