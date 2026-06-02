@@ -67,8 +67,8 @@
     if(isAdmin&&!document.getElementById('dc-sidebar-btn')){
       var b=document.createElement('button');b.id='dc-sidebar-btn';b.title='Data Cloud Sandbox';
       b.onclick=function(ev){ev.stopPropagation();ov.style.display='block';ifr.src='/datacloud.html';};
-      b.style.cssText='background:none;border:1px solid rgba(6,182,212,.25);border-radius:8px;padding:6px 14px;color:#06b6d4;font-size:13px;cursor:pointer;font-family:Outfit,sans-serif;font-weight:600;';
-      b.textContent='\u2601\uFE0F DC';
+      b.style.cssText='background:none;border:1px solid rgba(148,163,184,.25);border-radius:8px;padding:5px 12px;color:#64748b;font-size:12px;cursor:pointer;font-family:Outfit,sans-serif;font-weight:600;letter-spacing:.2px;transition:all .15s;';
+      b.textContent='DC';
       gp.parentNode.insertBefore(b,gp);
     }
 
@@ -77,8 +77,8 @@
       var dcBtn=document.getElementById('dc-sidebar-btn');
       var b2=document.createElement('button');b2.id='crm-sidebar-btn';b2.title='CRM Algar Telecom — Emulador Dupla Convivência';
       b2.onclick=function(ev){ev.stopPropagation();ov2.style.display='block';ifr2.src='/crm-algar.html';};
-      b2.style.cssText='background:none;border:1px solid rgba(0,166,81,.25);border-radius:8px;padding:6px 14px;color:#00A651;font-size:13px;cursor:pointer;font-family:Outfit,sans-serif;font-weight:600;';
-      b2.textContent='\uD83D\uDCDE CRM';
+      b2.style.cssText='background:none;border:1px solid rgba(148,163,184,.25);border-radius:8px;padding:5px 12px;color:#64748b;font-size:12px;cursor:pointer;font-family:Outfit,sans-serif;font-weight:600;letter-spacing:.2px;transition:all .15s;';
+      b2.textContent='CRM';
       if(dcBtn&&dcBtn.nextSibling){dcBtn.parentNode.insertBefore(b2,dcBtn.nextSibling);}
       else if(dcBtn){dcBtn.parentNode.insertBefore(b2,gp);}
       else{gp.parentNode.insertBefore(b2,gp);}
@@ -89,8 +89,8 @@
       var crmBtn=document.getElementById('crm-sidebar-btn');
       var b3=document.createElement('button');b3.id='squad-sidebar-btn';b3.title='Squad Agentes SF — Pipeline AI';
       b3.onclick=function(ev){ev.stopPropagation();ov3.style.display='block';ifr3.src='/squad.html';};
-      b3.style.cssText='background:none;border:1px solid rgba(139,92,246,.3);border-radius:8px;padding:6px 14px;color:#a78bfa;font-size:13px;cursor:pointer;font-family:Outfit,sans-serif;font-weight:600;';
-      b3.textContent='\uD83E\uDD16 Squad';
+      b3.style.cssText='background:none;border:1px solid rgba(148,163,184,.25);border-radius:8px;padding:5px 12px;color:#64748b;font-size:12px;cursor:pointer;font-family:Outfit,sans-serif;font-weight:600;letter-spacing:.2px;transition:all .15s;';
+      b3.textContent='Squad';
       if(gp){
         if(crmBtn&&crmBtn.nextSibling){crmBtn.parentNode.insertBefore(b3,crmBtn.nextSibling);}
         else if(crmBtn){crmBtn.parentNode.insertBefore(b3,gp);}
