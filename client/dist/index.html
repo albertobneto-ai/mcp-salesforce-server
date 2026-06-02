@@ -37,15 +37,29 @@
     if(e.data==='squad-closed')ov3.style.display='none';
   });
 
+  /* === Auto-open Squad for funcional/architect/desenvolvedor === */
+  var squadAutoOpened=false;
+  var squadAutoCheck=setInterval(function(){
+    if(squadAutoOpened)return;
+    var role=gr();
+    if(!role)return;
+    var autoRoles=['funcional','architect','desenvolvedor'];
+    if(autoRoles.indexOf(role)>=0){
+      squadAutoOpened=true;
+      ov3.style.display='block';
+    }
+  },1000);
+
   /* === Inject sidebar buttons === */
   setInterval(function(){
-    var role=gr();if(role!=='admin'&&role!=='architect')return;
+    var role=gr();if(!role)return;
+    var isAdmin=role==='admin'||role==='architect';
     var bs=document.querySelectorAll('button'),gp=null;
     for(var i=0;i<bs.length;i++){if(bs[i].textContent.trim()==='GP'){gp=bs[i];break;}}
     if(!gp)return;
 
-    /* DC button */
-    if(!document.getElementById('dc-sidebar-btn')){
+    /* DC button (admin/architect only) */
+    if(isAdmin&&!document.getElementById('dc-sidebar-btn')){
       var b=document.createElement('button');b.id='dc-sidebar-btn';b.title='Data Cloud Sandbox';
       b.onclick=function(ev){ev.stopPropagation();ov.style.display='block';ifr.contentWindow.location.reload();};
       b.style.cssText='background:none;border:1px solid rgba(6,182,212,.25);border-radius:8px;padding:6px 14px;color:#06b6d4;font-size:13px;cursor:pointer;font-family:Outfit,sans-serif;font-weight:600;';
@@ -53,8 +67,8 @@
       gp.parentNode.insertBefore(b,gp);
     }
 
-    /* CRM Algar button */
-    if(!document.getElementById('crm-sidebar-btn')){
+    /* CRM Algar button (admin/architect only) */
+    if(isAdmin&&!document.getElementById('crm-sidebar-btn')){
       var dcBtn=document.getElementById('dc-sidebar-btn');
       var b2=document.createElement('button');b2.id='crm-sidebar-btn';b2.title='CRM Algar Telecom — Emulador Dupla Convivência';
       b2.onclick=function(ev){ev.stopPropagation();ov2.style.display='block';ifr2.contentWindow.location.reload();};
@@ -65,16 +79,22 @@
       else{gp.parentNode.insertBefore(b2,gp);}
     }
 
-    /* Squad Agentes button */
+    /* Squad Agentes button (all roles) */
     if(!document.getElementById('squad-sidebar-btn')){
       var crmBtn=document.getElementById('crm-sidebar-btn');
       var b3=document.createElement('button');b3.id='squad-sidebar-btn';b3.title='Squad Agentes SF — Pipeline AI';
       b3.onclick=function(ev){ev.stopPropagation();ov3.style.display='block';ifr3.contentWindow.location.reload();};
       b3.style.cssText='background:none;border:1px solid rgba(139,92,246,.3);border-radius:8px;padding:6px 14px;color:#a78bfa;font-size:13px;cursor:pointer;font-family:Outfit,sans-serif;font-weight:600;';
       b3.textContent='\u25C8 Squad';
-      if(crmBtn&&crmBtn.nextSibling){crmBtn.parentNode.insertBefore(b3,crmBtn.nextSibling);}
-      else if(crmBtn){crmBtn.parentNode.insertBefore(b3,gp);}
-      else{gp.parentNode.insertBefore(b3,gp);}
+      if(gp){
+        if(crmBtn&&crmBtn.nextSibling){crmBtn.parentNode.insertBefore(b3,crmBtn.nextSibling);}
+        else if(crmBtn){crmBtn.parentNode.insertBefore(b3,gp);}
+        else{gp.parentNode.insertBefore(b3,gp);}
+      }else{
+        /* Fallback: injetar no header para perfis sem GP */
+        var hdr=document.querySelector('header')||document.querySelector('[class*="header"]')||document.querySelector('nav');
+        if(hdr){hdr.appendChild(b3);}
+      }
     }
   },800);
 })();
