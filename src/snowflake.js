@@ -8,7 +8,7 @@ function getSnowflakeConnection() {
   return new Promise((resolve, reject) => {
     if (sfConn && sfConn.isUp()) return resolve(sfConn);
     
-    const account = process.env.SNOWFLAKE_ACCOUNT || "rajlbkg-yk87012";
+    const account = process.env.SNOWFLAKE_ACCOUNT || "vdc35898.us-east-1";
     const username = process.env.SNOWFLAKE_USERNAME;
     const password = process.env.SNOWFLAKE_PASSWORD;
     const warehouse = process.env.SNOWFLAKE_WAREHOUSE || "COMPUTE_WH";
@@ -59,7 +59,7 @@ export function registerSnowflakeRoutes(app) {
       const rows = await querySnowflake("SELECT CURRENT_ACCOUNT() AS ACCOUNT, CURRENT_DATABASE() AS DB, CURRENT_WAREHOUSE() AS WH, CURRENT_USER() AS USR");
       res.json({ status: "ok", data: rows[0] });
     } catch (err) {
-      res.json({ status: "error", message: err.message, account: process.env.SNOWFLAKE_ACCOUNT || "rajlbkg-yk87012", user: process.env.SNOWFLAKE_USERNAME });
+      res.json({ status: "error", message: err.message, account: process.env.SNOWFLAKE_ACCOUNT || "vdc35898.us-east-1", user: process.env.SNOWFLAKE_USERNAME });
     }
   });
   
