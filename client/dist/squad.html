@@ -131,7 +131,13 @@ body{font-family:'Outfit',system-ui,-apple-system,sans-serif;background:#f7f7fa;
 const e=React.createElement,{useState:S,useEffect:E,useRef:R,useCallback:C}=React;
 const API='/api/squad';
 function H(){const t=localStorage.getItem('everi9_token');return{'Content-Type':'application/json','Authorization':'Bearer '+(t||'')};}
-async function api(path,opts={}){const r=await fetch(API+path,{headers:H(),...opts});if(r.status===401){window.parent?.postMessage('squad-auth-fail','*');return null;}return r.json();}
+async function api(path,opts={}){
+  const t=localStorage.getItem('everi9_token');
+  if(!t)return {_authError:true};
+  const r=await fetch(API+path,{headers:H(),...opts});
+  if(r.status===401||r.status===403){window.parent?.postMessage('squad-auth-fail','*');return {_authError:true,_code:r.status};}
+  return r.json();
+}
 
 const STAGES=[
   {key:'analise',label:'ANÁLISE REQUISITO',color:'#94a3b8',hasAgent:false},
@@ -373,13 +379,13 @@ function App(){
   const[pendingMove,setPendingMove]=S(null);const[runningCards,setRunningCards]=S(new Set());
   const[showInputModal,setShowInputModal]=S(null);
 
+  const[authError,setAuthError]=S(false);
   const load=C(async()=>{
     const r=await api('/cards');
-    if(r){setCards(r.cards||[]);}
-    else{
-      // Token pode não estar pronto ainda — retry em 2s
-      setTimeout(async()=>{const r2=await api('/cards');if(r2)setCards(r2.cards||[]);},2000);
-    }
+    if(r?._authError){
+      setAuthError(true);
+      setTimeout(async()=>{const r2=await api('/cards');if(!r2?._authError){setAuthError(false);setCards(r2.cards||[]);}},3000);
+    }else if(r){setAuthError(false);setCards(r.cards||[]);}
   },[]);
   const loadStats=C(async()=>{const r=await api('/stats');if(r)setStats(r);},[]);
   E(()=>{load();loadStats();},[]);
@@ -495,6 +501,14 @@ function App(){
           e('button',{className:'mode-btn'+(view==='board'?' active':''),onClick:()=>setView('board')},'Board'),
           e('button',{className:'mode-btn'+(view==='list'?' active':''),onClick:()=>setView('list')},'Lista')),
         e('button',{className:'add-btn',onClick:()=>setShowCreate(true)},'+ NOVO CARD')),
+      authError&&e('div',{style:{margin:'12px 20px',padding:'14px 18px',background:'#fef3c7',border:'1px solid #fbbf24',borderRadius:10,display:'flex',alignItems:'center',gap:10}},
+        e('span',{style:{fontSize:20}},'⚠'),
+        e('div',null,
+          e('div',{style:{fontSize:13,fontWeight:600,color:'#92400e'}},'Sessão expirada ou não autenticado'),
+          e('div',{style:{fontSize:12,color:'#a16207',marginTop:2}},'Faça login novamente no Ever i9 para visualizar os cards.'),
+        ),
+        e('button',{onClick:()=>{load()},style:{marginLeft:'auto',padding:'6px 14px',borderRadius:6,border:'1px solid #fbbf24',background:'#fff',color:'#92400e',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'Outfit'}},'Tentar novamente'),
+      ),
       view==='board'&&e('div',{className:'board'},STAGES.map(s=>e(Column,{key:s.key,stage:s,cards,onMove:moveCard,onDragStart:setDragging,onDetail:openDetail,onDelete:deleteCard,runningCards}))),
       view==='list'&&e('div',{style:{flex:1,overflow:'auto',padding:20}},
         e('table',{style:{width:'100%',borderCollapse:'collapse',fontSize:12}},
