@@ -42,13 +42,17 @@
   var squadAutoCheck=setInterval(function(){
     if(squadAutoOpened)return;
     var role=gr();
-    if(!role)return;
+    var hasToken=!!localStorage.getItem('everi9_token');
+    if(!role||!hasToken)return;
     var autoRoles=['funcional','architect','desenvolvedor'];
     if(autoRoles.indexOf(role)>=0){
       squadAutoOpened=true;
-      ov3.style.display='block';
+      setTimeout(function(){
+        ov3.style.display='block';
+        ifr3.contentWindow.location.reload();
+      },500);
     }
-  },1000);
+  },1500);
 
   /* === Inject sidebar buttons === */
   setInterval(function(){
