@@ -137,16 +137,26 @@ function App(){
     if(!newAcc.name.trim())return alert("Nome é obrigatório");
     setCreating(true);
     try{
-      const r=await fetch(HEROKU+"/api/crm-algar/account",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({records:[{sf_id:"CRM-NEW-"+Date.now(),name:newAcc.name,industry:newAcc.industry,type:newAcc.type,
-          city:newAcc.city,state:newAcc.state,annual_revenue:parseFloat(newAcc.revenue)||0,source_system:"CRM_ALGAR"}]})});
-      const d=await r.json();
-      if(d.status==="ok"){
-        const rec=d.records?.[0]||{};
-        alert("Account criado com sucesso!\n\nCRM ID: "+rec.crmId+"\nSF ID: "+rec.sfId+"\nStatus: "+rec.status);
-        setShowCreate(false);setNewAcc({name:'',industry:'Telecommunications',type:'Customer - Direct',city:'',state:'MG',revenue:''});
-        load();
-      }else{alert("Erro: "+(d.message||"desconhecido"))}
+      const crmId="ACR-"+Date.now().toString().slice(-10);
+      // 1. Criar no Salesforce primeiro (pegar SF Account Id)
+      const sfResp=await fetch(HEROKU+"/api/data/composite",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({steps:[{objectName:"Account",refPrefix:"acc",records:[{
+          Name:newAcc.name,Industry:newAcc.industry,Type:newAcc.type,
+          BillingCity:newAcc.city,BillingState:newAcc.state,
+          Legacy_CRM_Id__c:crmId}]}]})});
+      const sfData=await sfResp.json();
+      const sfId=sfData?.idMap?.acc_0;
+      if(!sfId){alert("Erro ao criar no Salesforce: "+JSON.stringify(sfData));setCreating(false);return}
+      // 2. Criar no CRM Algar + Snowflake (com SF_ID real)
+      const crmResp=await fetch(HEROKU+"/api/crm-algar/account",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({records:[{sf_id:sfId,name:newAcc.name,industry:newAcc.industry,type:newAcc.type,
+          city:newAcc.city,state:newAcc.state,annual_revenue:parseFloat(newAcc.revenue)||0,source_system:"CRM_ALGAR"}],
+          skipSalesforce:true})});
+      const crmData=await crmResp.json();
+      const rec=crmData.records?.[0]||{};
+      alert("Conta criada com sucesso!\n\n✅ Salesforce: "+sfId+"\n✅ CRM Algar: "+rec.crmId+"\n✅ Snowflake: Sincronizado\n\nLegacy_CRM_Id__c no SF: "+crmId);
+      setShowCreate(false);setNewAcc({name:'',industry:'Telecommunications',type:'Customer - Direct',city:'',state:'MG',revenue:''});
+      load();
     }catch(e){alert("Erro: "+e.message)}
     setCreating(false);
   };
