@@ -137,7 +137,7 @@ router.get('/cards/:id/agent-preview', authMiddleware, squadAuth, async (req, re
     res.json({
       agentAvailable: true,
       agent: { label: agent.label, model: agent.model, description: agent.desc },
-      card: { id: card.id, title: card.title, description: card.description },
+      card: { id: card.id, title: card.title, description: card.description, story_number: card.story_number },
       hasPreviousArtifact: hasPrev,
       missingArtifact: !hasPrev ? `Artefato do estágio "${needsPrev}" necessário` : null,
       attachments: attachments.length,
