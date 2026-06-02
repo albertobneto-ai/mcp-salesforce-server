@@ -6,6 +6,7 @@ export async function ensureSquadSchema() {
     CREATE TABLE IF NOT EXISTS squad_cards (
       id           SERIAL PRIMARY KEY,
       title        VARCHAR(500)  NOT NULL,
+      story_number VARCHAR(50)   NOT NULL DEFAULT '',
       description  TEXT          DEFAULT '',
       stage        VARCHAR(30)   DEFAULT 'analise',
       mode         VARCHAR(10)   DEFAULT 'manual',
@@ -52,6 +53,8 @@ export async function ensureSquadSchema() {
       created_at      TIMESTAMPTZ   DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_squad_attachments_card ON squad_attachments(card_id);
+    -- Migration: add story_number if missing
+    ALTER TABLE squad_cards ADD COLUMN IF NOT EXISTS story_number VARCHAR(50) NOT NULL DEFAULT '';
   `);
 }
 
@@ -90,11 +93,11 @@ export async function getCard(id) {
 
 export async function createCard(data) {
   await ensureSquadSchema();
-  const { title, description = '', mode = 'manual', priority = 'medium', assignee = '', created_by = '' } = data;
+  const { title, description = '', mode = 'manual', priority = 'medium', assignee = '', created_by = '', story_number = '' } = data;
   const r = await pool.query(
-    `INSERT INTO squad_cards (title, description, stage, mode, priority, assignee, created_by)
-     VALUES ($1, $2, 'analise', $3, $4, $5, $6) RETURNING *`,
-    [title, description, mode, priority, assignee, created_by]
+    `INSERT INTO squad_cards (title, description, stage, mode, priority, assignee, created_by, story_number)
+     VALUES ($1, $2, 'analise', $3, $4, $5, $6, $7) RETURNING *`,
+    [title, description, mode, priority, assignee, created_by, story_number]
   );
   return r.rows[0];
 }
@@ -237,12 +240,13 @@ export async function getFullCardInput(cardId) {
   await ensureSquadSchema();
   const card = await getCard(cardId);
   if (!card) return '';
+  const storyRef = card.story_number ? `[História ${card.story_number}] ` : '';
   const attachments = await pool.query(
     'SELECT file_name, extracted_text FROM squad_attachments WHERE card_id = $1 ORDER BY created_at',
     [cardId]
   );
   let parts = [];
-  if (card.description?.trim()) parts.push(card.description.trim());
+  if (card.description?.trim()) parts.push(storyRef + card.description.trim());
   for (const att of attachments.rows) {
     if (att.extracted_text?.trim()) {
       parts.push(`\n--- ARQUIVO ANEXO: ${att.file_name} ---\n${att.extracted_text.trim()}\n--- FIM ARQUIVO ---`);
