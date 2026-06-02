@@ -8,7 +8,7 @@ function getSnowflakeConnection() {
   return new Promise((resolve, reject) => {
     if (sfConn && sfConn.isUp()) return resolve(sfConn);
     
-    const account = process.env.SNOWFLAKE_ACCOUNT || "vdc35898.us-east-1";
+    const account = "vdc35898.us-east-1"; // V2 AWS_US_EAST_1 — migrado de rajlbkg-yk87012
     const username = process.env.SNOWFLAKE_USERNAME;
     const password = process.env.SNOWFLAKE_PASSWORD;
     const warehouse = process.env.SNOWFLAKE_WAREHOUSE || "COMPUTE_WH";
