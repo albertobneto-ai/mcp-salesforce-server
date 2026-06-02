@@ -780,5 +780,60 @@ ${mappingXml}
     }
   });
 
+
+  // =============================================
+  // CONNECT REST API PROXY (Experience Cloud)
+  // =============================================
+
+  // POST: Chama qualquer endpoint da Connect API REST do Salesforce
+  app.post("/api/connect-rest", async (req, res) => {
+    try {
+      await connectToTargetOrg(req);
+      const conn = sfClient.getConnection();
+      const { path, method = "POST", body: payload } = req.body;
+      if (!path) return res.status(400).json({ error: "Informe path (ex: /connect/communities)" });
+      const url = `${conn.instanceUrl}/services/data/v62.0${path}`;
+      const fetchRes = await fetch(url, {
+        method,
+        headers: {
+          "Authorization": `Bearer ${conn.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: payload ? JSON.stringify(payload) : undefined,
+      });
+      const text = await fetchRes.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = text; }
+      sfClient.clearTargetOrg();
+      res.status(fetchRes.status).json({ httpStatus: fetchRes.status, data });
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.status(500).json({ status: "error", message: err.message });
+    }
+  });
+
+  // GET: Connect API proxy
+  app.get("/api/connect-rest", async (req, res) => {
+    try {
+      await connectToTargetOrg(req);
+      const conn = sfClient.getConnection();
+      const { path } = req.query;
+      if (!path) return res.status(400).json({ error: "Informe ?path=/connect/..." });
+      const url = `${conn.instanceUrl}/services/data/v62.0${path}`;
+      const fetchRes = await fetch(url, {
+        method: "GET",
+        headers: { "Authorization": `Bearer ${conn.accessToken}` },
+      });
+      const text = await fetchRes.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = text; }
+      sfClient.clearTargetOrg();
+      res.status(fetchRes.status).json({ httpStatus: fetchRes.status, data });
+    } catch (err) {
+      sfClient.clearTargetOrg();
+      res.status(500).json({ status: "error", message: err.message });
+    }
+  });
+
   console.log("Routes: execute-anonymous, datacloud-overview, datacloud-ssot-proxy, datacloud-query, execute-apex-b64, soql-b64, soql-get, upsert, update-b64, composite, deploy-formula-fields, update-layout, lead-convert-mapping, field-history");
 }
