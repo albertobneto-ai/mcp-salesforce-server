@@ -223,7 +223,7 @@ export function registerMuleSyncRoutes(app, sfClient) {
           // 2. Se vem do CRM Algar (não do SF), criar no SF primeiro
           if (!skipSalesforce && (r.source_system === "CRM_ALGAR" || !sfIdInput || sfIdInput.startsWith("CRM-"))) {
             try {
-              const sfResp = await fetch(`${SELF}/api/data/composite`, {
+              const sfResp = await fetch("https://mcp-sf-provisioning-462dd29c2455.herokuapp.com/api/data/composite", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ steps: [{ objectName: "Account", refPrefix: "acc", records: [{
                   Name: r.name || r.Name,
