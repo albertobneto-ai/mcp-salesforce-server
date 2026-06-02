@@ -142,7 +142,7 @@ function App(){
       const sfResp=await fetch(HEROKU+"/api/data/composite",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({steps:[{objectName:"Account",refPrefix:"acc",records:[{
           Name:newAcc.name,Industry:newAcc.industry,Type:newAcc.type,
-          BillingCity:newAcc.city,BillingState:newAcc.state,
+          BillingCity:newAcc.city,BillingStateCode:newAcc.state,BillingCountryCode:"BR",
           Legacy_CRM_Id__c:crmId}]}]})});
       const sfData=await sfResp.json();
       const sfId=sfData?.idMap?.acc_0;
