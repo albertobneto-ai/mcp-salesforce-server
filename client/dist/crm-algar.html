@@ -129,6 +129,27 @@ function App(){
   const [selClient,setSelClient]=useState(null);
   const [slog,setSlog]=useState([]);
   const [flt,setFlt]=useState("TODOS");
+  const [showCreate,setShowCreate]=useState(false);
+  const [newAcc,setNewAcc]=useState({name:'',industry:'Telecommunications',type:'Customer - Direct',city:'',state:'MG',revenue:''});
+  const [creating,setCreating]=useState(false);
+  const HEROKU="https://mcp-sf-provisioning-462dd29c2455.herokuapp.com";
+  const createAccount=async()=>{
+    if(!newAcc.name.trim())return alert("Nome é obrigatório");
+    setCreating(true);
+    try{
+      const r=await fetch(HEROKU+"/api/crm-algar/account",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({records:[{sf_id:"CRM-NEW-"+Date.now(),name:newAcc.name,industry:newAcc.industry,type:newAcc.type,
+          city:newAcc.city,state:newAcc.state,annual_revenue:parseFloat(newAcc.revenue)||0,source_system:"CRM_ALGAR"}]})});
+      const d=await r.json();
+      if(d.status==="ok"){
+        const rec=d.records?.[0]||{};
+        alert("Account criado com sucesso!\n\nCRM ID: "+rec.crmId+"\nSF ID: "+rec.sfId+"\nStatus: "+rec.status);
+        setShowCreate(false);setNewAcc({name:'',industry:'Telecommunications',type:'Customer - Direct',city:'',state:'MG',revenue:''});
+        load();
+      }else{alert("Erro: "+(d.message||"desconhecido"))}
+    }catch(e){alert("Erro: "+e.message)}
+    setCreating(false);
+  };
 
   const load=useCallback(async()=>{
     setLoading(true);
@@ -240,6 +261,7 @@ function App(){
                 {leg.a.map(a=><option key={a.LEGACY_ID} value={a.LEGACY_ID}>{a.NAME}</option>)}
               </select>
               <span className={`st ${stMap(cl.SYNC_STATUS)}`}>{stLabel(cl.SYNC_STATUS)}</span>
+              <button onClick={()=>setShowCreate(true)} style={{marginLeft:10,padding:"3px 12px",background:"#2e844a",color:"#fff",border:"none",borderRadius:3,cursor:"pointer",fontSize:11,fontWeight:600}}>+ Criar Conta</button>
             </div>
 
             {/* Data fields - matching the real CRM layout */}
@@ -260,6 +282,32 @@ function App(){
                 <div className="data-row" style={{gridColumn:"1/-1"}}><span className="data-lbl">Endereço:</span><span className="data-val">{cl.BILLING_CITY||"—"} - {cl.BILLING_STATE||"—"}</span></div>
               </div>
             </div>
+
+            {/* Modal Criar Conta */}
+            {showCreate&&<div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,.5)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <div style={{background:"#fff",borderRadius:6,padding:20,width:480,maxWidth:"90vw",boxShadow:"0 8px 32px rgba(0,0,0,.3)"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+                  <h3 style={{margin:0,fontSize:16,color:"#2e844a"}}>Criar Nova Conta (CRM Algar)</h3>
+                  <button onClick={()=>setShowCreate(false)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer"}}>✕</button>
+                </div>
+                <p style={{fontSize:11,color:"#666",margin:"0 0 12px"}}>A conta será criada no CRM Algar, Salesforce e Snowflake automaticamente (bidirecional).</p>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <div style={{gridColumn:"1/-1"}}><label style={{fontSize:11,fontWeight:600}}>Nome da Empresa *</label><input value={newAcc.name} onChange={e=>setNewAcc(a=>({...a,name:e.target.value}))} placeholder="Ex: Algar Fibra Óptica" style={{width:"100%",padding:"6px 8px",border:"1px solid #ccc",borderRadius:3,fontSize:12}}/></div>
+                  <div><label style={{fontSize:11,fontWeight:600}}>Indústria</label><select value={newAcc.industry} onChange={e=>setNewAcc(a=>({...a,industry:e.target.value}))} style={{width:"100%",padding:"6px",border:"1px solid #ccc",borderRadius:3,fontSize:12}}><option>Telecommunications</option><option>Technology</option><option>Finance</option><option>Healthcare</option><option>Manufacturing</option><option>Retail</option><option>Energy</option></select></div>
+                  <div><label style={{fontSize:11,fontWeight:600}}>Tipo</label><select value={newAcc.type} onChange={e=>setNewAcc(a=>({...a,type:e.target.value}))} style={{width:"100%",padding:"6px",border:"1px solid #ccc",borderRadius:3,fontSize:12}}><option>Customer - Direct</option><option>Customer - Channel</option><option>Prospect</option><option>Partner</option></select></div>
+                  <div><label style={{fontSize:11,fontWeight:600}}>Cidade</label><input value={newAcc.city} onChange={e=>setNewAcc(a=>({...a,city:e.target.value}))} placeholder="Uberlândia" style={{width:"100%",padding:"6px 8px",border:"1px solid #ccc",borderRadius:3,fontSize:12}}/></div>
+                  <div><label style={{fontSize:11,fontWeight:600}}>Estado</label><select value={newAcc.state} onChange={e=>setNewAcc(a=>({...a,state:e.target.value}))} style={{width:"100%",padding:"6px",border:"1px solid #ccc",borderRadius:3,fontSize:12}}><option>MG</option><option>SP</option><option>RJ</option><option>PR</option><option>SC</option><option>RS</option><option>GO</option><option>DF</option><option>BA</option><option>PE</option><option>CE</option><option>PA</option><option>AM</option></select></div>
+                  <div><label style={{fontSize:11,fontWeight:600}}>Receita Anual (R$)</label><input type="number" value={newAcc.revenue} onChange={e=>setNewAcc(a=>({...a,revenue:e.target.value}))} placeholder="5000000" style={{width:"100%",padding:"6px 8px",border:"1px solid #ccc",borderRadius:3,fontSize:12}}/></div>
+                </div>
+                <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:16}}>
+                  <button onClick={()=>setShowCreate(false)} style={{padding:"6px 16px",background:"#f3f3f3",border:"1px solid #ccc",borderRadius:3,cursor:"pointer",fontSize:12}}>Cancelar</button>
+                  <button onClick={createAccount} disabled={creating} style={{padding:"6px 16px",background:creating?"#999":"#2e844a",color:"#fff",border:"none",borderRadius:3,cursor:"pointer",fontSize:12,fontWeight:600}}>{creating?"Criando...":"Criar Conta"}</button>
+                </div>
+                <div style={{marginTop:12,padding:8,background:"#f8f8f8",borderRadius:3,fontSize:10,color:"#666"}}>
+                  Fluxo: CRM Algar → Salesforce (Legacy_CRM_Id__c) → Snowflake (LEGACY_ACCOUNTS) | Cross-reference IDs automático
+                </div>
+              </div>
+            </div>}
 
             {/* Dual coexistence indicator */}
             <div className="dual-bar">
