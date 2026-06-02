@@ -1,5 +1,5 @@
-// mule-sync.js — Arquitetura correta: Sales Cloud → MuleSoft → CRM Algar → Snowflake → Data Cloud
-// MuleSoft (iPaaS) orquestra entre sistemas. CRM Algar é dono dos dados e alimenta o Snowflake.
+// mule-sync.js — Arquitetura: Sales Cloud → MuleSoft → CRM Algar / Snowflake → Data Cloud
+// v3.0 — CDC completo: Account (via CRM Algar), Lead/Contact/Opp (direto Snowflake)
 
 export function registerMuleSyncRoutes(app, sfClient) {
 
@@ -22,8 +22,8 @@ export function registerMuleSyncRoutes(app, sfClient) {
   const num = (v) => (v == null || v === "" ? "NULL" : Number(v));
 
   // ════════════════════════════════════════════
-  // CAMADA 1 — MULESOFT (iPaaS / orquestrador)
-  // Sales Cloud → MuleSoft → chama CRM Algar API
+  // CAMADA 1 — MULESOFT CDC: ACCOUNT
+  // Sales Cloud → MuleSoft → CRM Algar → Snowflake
   // ════════════════════════════════════════════
   app.post("/api/mule/cdc/account", async (req, res) => {
     const start = Date.now();
@@ -32,7 +32,6 @@ export function registerMuleSyncRoutes(app, sfClient) {
       const { records, operation = "UPSERT", source = "Salesforce" } = req.body;
       if (!records?.length) return res.status(400).json({ status: "error", message: "records required" });
 
-      // MuleSoft transforma o payload Salesforce e chama a API do CRM Algar
       const crmPayload = records.map(r => ({
         sf_id: r.Id || r.SF_ID,
         name: r.Name,
@@ -44,24 +43,11 @@ export function registerMuleSyncRoutes(app, sfClient) {
         source_system: source
       }));
 
-      // MuleSoft → CRM Algar (não grava Snowflake direto!)
       const crmResp = await fetch(`${SELF}/api/crm-algar/account`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ records: crmPayload, correlationId })
       });
       const crmResult = await crmResp.json();
-
-      // Log no Salesforce
-      try {
-        const conn = sfClient.getConnection();
-        if (conn) await conn.sobject("Integration_Log__c").create({
-          Source_System__c: source, Target_System__c: "Legacy CRM",
-          Operation__c: operation, Object_Name__c: "Account", Status__c: "Success",
-          Duration_ms__c: Date.now() - start, API_Name__c: "account-sync-process-api",
-          HTTP_Method__c: "POST", HTTP_Status__c: 200, Correlation_Id__c: correlationId,
-          Flow_Name__c: "salescloud-to-mulesoft-to-crmalgar"
-        });
-      } catch (e) {}
 
       res.json({
         status: "ok", correlationId, layer: "MuleSoft → CRM Algar",
@@ -74,9 +60,175 @@ export function registerMuleSyncRoutes(app, sfClient) {
   });
 
   // ════════════════════════════════════════════
-  // CAMADA 2 — CRM ALGAR (dono dos dados legados)
-  // Recebe do MuleSoft, grava no SEU banco nativo,
-  // depois dispara ingestão para o Snowflake (data lake)
+  // CDC: LEAD — direto no Snowflake CRM_LEADS
+  // ════════════════════════════════════════════
+  app.post("/api/mule/cdc/lead", async (req, res) => {
+    const start = Date.now();
+    const correlationId = `CDC-LEAD-${Date.now()}`;
+    try {
+      const { records } = req.body;
+      if (!records?.length) return res.status(400).json({ status: "error", message: "records required" });
+
+      let upserted = 0;
+      for (const r of records) {
+        const sfId = r.Id || r.SF_ID;
+        const existing = await snowflake.execute(
+          `SELECT SF_ID FROM CRM_LEADS WHERE SF_ID = '${esc(sfId)}'`
+        );
+        if (existing?.length > 0) {
+          await snowflake.execute(`UPDATE CRM_LEADS SET
+            FIRST_NAME='${esc(r.FirstName)}', LAST_NAME='${esc(r.LastName)}',
+            EMAIL='${esc(r.Email)}', PHONE='${esc(r.Phone)}',
+            COMPANY='${esc(r.Company)}', TITLE='${esc(r.Title)}',
+            STATUS='${esc(r.Status)}', RATING='${esc(r.Rating)}',
+            LAST_SYNC=CURRENT_TIMESTAMP()
+            WHERE SF_ID='${esc(sfId)}'`);
+        } else {
+          await snowflake.execute(`INSERT INTO CRM_LEADS
+            (SF_ID, FIRST_NAME, LAST_NAME, EMAIL, PHONE, COMPANY, TITLE, STATUS, RATING, LAST_SYNC)
+            VALUES('${esc(sfId)}','${esc(r.FirstName)}','${esc(r.LastName)}',
+            '${esc(r.Email)}','${esc(r.Phone)}','${esc(r.Company)}',
+            '${esc(r.Title)}','${esc(r.Status)}','${esc(r.Rating)}',CURRENT_TIMESTAMP())`);
+        }
+        upserted++;
+      }
+
+      res.json({ status: "ok", correlationId, object: "Lead", upserted, duration_ms: Date.now() - start });
+    } catch (err) {
+      res.status(500).json({ status: "error", correlationId, message: err.message });
+    }
+  });
+
+  // ════════════════════════════════════════════
+  // CDC: CONTACT — direto no Snowflake CRM_CONTACTS
+  // ════════════════════════════════════════════
+  app.post("/api/mule/cdc/contact", async (req, res) => {
+    const start = Date.now();
+    const correlationId = `CDC-CONTACT-${Date.now()}`;
+    try {
+      const { records } = req.body;
+      if (!records?.length) return res.status(400).json({ status: "error", message: "records required" });
+
+      let upserted = 0;
+      for (const r of records) {
+        const sfId = r.Id || r.SF_ID;
+        const existing = await snowflake.execute(
+          `SELECT SF_ID FROM CRM_CONTACTS WHERE SF_ID = '${esc(sfId)}'`
+        );
+        if (existing?.length > 0) {
+          await snowflake.execute(`UPDATE CRM_CONTACTS SET
+            FIRST_NAME='${esc(r.FirstName)}', LAST_NAME='${esc(r.LastName)}',
+            EMAIL='${esc(r.Email)}', PHONE='${esc(r.Phone)}',
+            TITLE='${esc(r.Title)}', ACCOUNT_ID='${esc(r.AccountId)}',
+            ACCOUNT_NAME='${esc(r.AccountName || "")}', DEPARTMENT='${esc(r.Department)}',
+            LAST_SYNC=CURRENT_TIMESTAMP()
+            WHERE SF_ID='${esc(sfId)}'`);
+        } else {
+          await snowflake.execute(`INSERT INTO CRM_CONTACTS
+            (SF_ID, FIRST_NAME, LAST_NAME, EMAIL, PHONE, TITLE, ACCOUNT_ID, ACCOUNT_NAME, DEPARTMENT, LAST_SYNC)
+            VALUES('${esc(sfId)}','${esc(r.FirstName)}','${esc(r.LastName)}',
+            '${esc(r.Email)}','${esc(r.Phone)}','${esc(r.Title)}',
+            '${esc(r.AccountId)}','${esc(r.AccountName || "")}','${esc(r.Department)}',CURRENT_TIMESTAMP())`);
+        }
+        upserted++;
+      }
+
+      res.json({ status: "ok", correlationId, object: "Contact", upserted, duration_ms: Date.now() - start });
+    } catch (err) {
+      res.status(500).json({ status: "error", correlationId, message: err.message });
+    }
+  });
+
+  // ════════════════════════════════════════════
+  // CDC: OPPORTUNITY — direto no Snowflake CRM_OPPORTUNITIES
+  // ════════════════════════════════════════════
+  app.post("/api/mule/cdc/opportunity", async (req, res) => {
+    const start = Date.now();
+    const correlationId = `CDC-OPP-${Date.now()}`;
+    try {
+      const { records } = req.body;
+      if (!records?.length) return res.status(400).json({ status: "error", message: "records required" });
+
+      let upserted = 0;
+      for (const r of records) {
+        const sfId = r.Id || r.SF_ID;
+        const existing = await snowflake.execute(
+          `SELECT SF_ID FROM CRM_OPPORTUNITIES WHERE SF_ID = '${esc(sfId)}'`
+        );
+        if (existing?.length > 0) {
+          await snowflake.execute(`UPDATE CRM_OPPORTUNITIES SET
+            NAME='${esc(r.Name)}', ACCOUNT_ID='${esc(r.AccountId)}',
+            ACCOUNT_NAME='${esc(r.AccountName || "")}', STAGE='${esc(r.StageName)}',
+            AMOUNT=${num(r.Amount)}, PROBABILITY=${num(r.Probability)},
+            CLOSE_DATE=${r.CloseDate ? "'" + esc(r.CloseDate) + "'" : "NULL"},
+            TYPE='${esc(r.Type)}', LAST_SYNC=CURRENT_TIMESTAMP()
+            WHERE SF_ID='${esc(sfId)}'`);
+        } else {
+          await snowflake.execute(`INSERT INTO CRM_OPPORTUNITIES
+            (SF_ID, NAME, ACCOUNT_ID, ACCOUNT_NAME, STAGE, AMOUNT, PROBABILITY, CLOSE_DATE, TYPE, LAST_SYNC)
+            VALUES('${esc(sfId)}','${esc(r.Name)}','${esc(r.AccountId)}',
+            '${esc(r.AccountName || "")}','${esc(r.StageName)}',${num(r.Amount)},
+            ${num(r.Probability)},${r.CloseDate ? "'" + esc(r.CloseDate) + "'" : "NULL"},
+            '${esc(r.Type)}',CURRENT_TIMESTAMP())`);
+        }
+        upserted++;
+      }
+
+      res.json({ status: "ok", correlationId, object: "Opportunity", upserted, duration_ms: Date.now() - start });
+    } catch (err) {
+      res.status(500).json({ status: "error", correlationId, message: err.message });
+    }
+  });
+
+  // ════════════════════════════════════════════
+  // FULL SYNC — sincroniza todos os objetos de uma vez
+  // ════════════════════════════════════════════
+  app.post("/api/mule/full-sync", async (req, res) => {
+    const start = Date.now();
+    try {
+      const conn = sfClient.getConnection();
+      if (!conn) return res.status(503).json({ status: "error", message: "SF not connected" });
+
+      const results = {};
+
+      // Leads
+      const leads = await conn.query("SELECT Id, FirstName, LastName, Email, Phone, Company, Title, Status, Rating FROM Lead");
+      if (leads.records?.length) {
+        const lr = await fetch(`${SELF}/api/mule/cdc/lead`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ records: leads.records })
+        });
+        results.leads = await lr.json();
+      }
+
+      // Contacts
+      const contacts = await conn.query("SELECT Id, FirstName, LastName, Email, Phone, Title, AccountId, Department FROM Contact");
+      if (contacts.records?.length) {
+        const cr = await fetch(`${SELF}/api/mule/cdc/contact`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ records: contacts.records })
+        });
+        results.contacts = await cr.json();
+      }
+
+      // Opportunities
+      const opps = await conn.query("SELECT Id, Name, AccountId, StageName, Amount, Probability, CloseDate, Type FROM Opportunity");
+      if (opps.records?.length) {
+        const or2 = await fetch(`${SELF}/api/mule/cdc/opportunity`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ records: opps.records })
+        });
+        results.opportunities = await or2.json();
+      }
+
+      res.json({ status: "ok", duration_ms: Date.now() - start, results });
+    } catch (err) {
+      res.status(500).json({ status: "error", message: err.message });
+    }
+  });
+
+  // ════════════════════════════════════════════
+  // CAMADA 2 — CRM ALGAR (Account — dono dos dados)
   // ════════════════════════════════════════════
   app.post("/api/crm-algar/account", async (req, res) => {
     const start = Date.now();
@@ -90,7 +242,6 @@ export function registerMuleSyncRoutes(app, sfClient) {
         const sfId = r.sf_id;
         const crmId = `ACR-${(sfId || Date.now().toString()).slice(-10)}`;
 
-        // Grava no banco NATIVO do CRM Algar
         const existing = await snowflake.execute(
           `SELECT CRM_ID FROM ALGAR_CRM_LAKE.ALGAR_CRM_NATIVE.ACCOUNTS WHERE SF_ID = '${esc(sfId)}'`
         );
@@ -112,7 +263,6 @@ export function registerMuleSyncRoutes(app, sfClient) {
         }
       }
 
-      // CRM Algar dispara SUA PRÓPRIA ingestão para o data lake (Snowflake LEGACY_ACCOUNTS)
       const ingestResp = await fetch(`${SELF}/api/crm-algar/ingest-to-lake`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ correlationId })
@@ -129,15 +279,10 @@ export function registerMuleSyncRoutes(app, sfClient) {
     }
   });
 
-  // ════════════════════════════════════════════
   // CAMADA 3 — INGESTÃO CRM ALGAR → SNOWFLAKE DATA LAKE
-  // CRM Algar empurra seus dados para o data lake (LEGACY_ACCOUNTS)
-  // que o Data Cloud consome via Zero Copy
-  // ════════════════════════════════════════════
   app.post("/api/crm-algar/ingest-to-lake", async (req, res) => {
     const start = Date.now();
     try {
-      // Pega registros nativos ainda não ingeridos
       const pending = await snowflake.execute(
         `SELECT CRM_ID, NAME, CNPJ, INDUSTRY, TYPE, CITY, STATE, ANNUAL_REVENUE, SEGMENT, SF_ID
          FROM ALGAR_CRM_LAKE.ALGAR_CRM_NATIVE.ACCOUNTS WHERE INGESTED_TO_LAKE = FALSE`
@@ -159,22 +304,17 @@ export function registerMuleSyncRoutes(app, sfClient) {
             VALUES('${legacyId}','${esc(r.NAME)}','${esc(r.CNPJ)}','${esc(r.INDUSTRY)}','${esc(r.TYPE)}',
             '${esc(r.CITY)}','${esc(r.STATE)}',${num(r.ANNUAL_REVENUE)},'${esc(r.SEGMENT)}','ALGAR_CRM','${esc(r.SF_ID)}','SYNCED',CURRENT_TIMESTAMP())`);
         }
-
-        // Marca como ingerido
         await snowflake.execute(`UPDATE ALGAR_CRM_LAKE.ALGAR_CRM_NATIVE.ACCOUNTS SET INGESTED_TO_LAKE=TRUE WHERE CRM_ID='${r.CRM_ID}'`);
         ingested++;
       }
 
-      res.json({ status: "ok", layer: "CRM Algar → Snowflake data lake", ingested, duration_ms: Date.now() - start,
-        note: "Data Cloud consome LEGACY_ACCOUNTS via Zero Copy" });
+      res.json({ status: "ok", layer: "CRM Algar → Snowflake data lake", ingested, duration_ms: Date.now() - start });
     } catch (err) {
       res.status(500).json({ status: "error", message: err.message });
     }
   });
 
-  // ════════════════════════════════════════════
-  // CRM ALGAR → SALES CLOUD (reverso, via MuleSoft)
-  // ════════════════════════════════════════════
+  // CRM ALGAR → SALES CLOUD (reverso)
   app.post("/api/crm-algar/to-salesforce/account", async (req, res) => {
     const start = Date.now();
     const correlationId = `CRM-SF-${Date.now()}`;
@@ -192,7 +332,6 @@ export function registerMuleSyncRoutes(app, sfClient) {
           Legacy_CRM_Id__c: r.CRM_ID || r.crm_id
         });
         if (sfResult.success) {
-          // Atualiza o banco nativo do CRM Algar com o SF_ID
           await snowflake.execute(`UPDATE ALGAR_CRM_LAKE.ALGAR_CRM_NATIVE.ACCOUNTS SET SF_ID='${sfResult.id}', UPDATED_AT=CURRENT_TIMESTAMP() WHERE CRM_ID='${esc(r.CRM_ID || r.crm_id)}'`);
           results.push({ sfId: sfResult.id, crmId: r.CRM_ID, status: "created_in_salesforce" });
         }
@@ -203,33 +342,38 @@ export function registerMuleSyncRoutes(app, sfClient) {
     }
   });
 
-  // ════════════════════════════════════════════
-  // STATUS — visão das 3 camadas
-  // ════════════════════════════════════════════
+  // STATUS
   app.get("/api/mule/status", async (req, res) => {
     try {
       const conn = sfClient.getConnection();
-      const sfCount = conn ? (await conn.query("SELECT COUNT() FROM Account")).totalSize : 0;
-      const crmNative = await snowflake.execute("SELECT COUNT(*) as C FROM ALGAR_CRM_LAKE.ALGAR_CRM_NATIVE.ACCOUNTS");
-      const pending = await snowflake.execute("SELECT COUNT(*) as C FROM ALGAR_CRM_LAKE.ALGAR_CRM_NATIVE.ACCOUNTS WHERE INGESTED_TO_LAKE=FALSE");
-      const lakeLegacy = await snowflake.execute("SELECT COUNT(*) as C FROM LEGACY_ACCOUNTS");
-      const lakeCrm = await snowflake.execute("SELECT COUNT(*) as C FROM CRM_ACCOUNTS");
-      const logs = conn ? (await conn.query("SELECT COUNT() FROM Integration_Log__c")).totalSize : 0;
+      const sfAccounts = conn ? (await conn.query("SELECT COUNT() FROM Account")).totalSize : 0;
+      const sfLeads = conn ? (await conn.query("SELECT COUNT() FROM Lead")).totalSize : 0;
+      const sfContacts = conn ? (await conn.query("SELECT COUNT() FROM Contact")).totalSize : 0;
+      const sfOpps = conn ? (await conn.query("SELECT COUNT() FROM Opportunity")).totalSize : 0;
+
+      const crmLeads = await snowflake.execute("SELECT COUNT(*) as C FROM CRM_LEADS");
+      const crmContacts = await snowflake.execute("SELECT COUNT(*) as C FROM CRM_CONTACTS");
+      const crmOpps = await snowflake.execute("SELECT COUNT(*) as C FROM CRM_OPPORTUNITIES");
+      const crmAccounts = await snowflake.execute("SELECT COUNT(*) as C FROM CRM_ACCOUNTS");
 
       res.json({
         status: "ok",
-        arquitetura: "Sales Cloud → MuleSoft → CRM Algar → Snowflake → Data Cloud",
-        camada_1_salescloud: { accounts: sfCount },
-        camada_2_crm_algar_native: { accounts: crmNative?.[0]?.C || 0, pendente_ingestao: pending?.[0]?.C || 0 },
-        camada_3_snowflake_lake: { legacy_accounts: lakeLegacy?.[0]?.C || 0, crm_accounts: lakeCrm?.[0]?.C || 0 },
-        integration_logs: logs,
+        arquitetura: "Sales Cloud → Heroku CDC → Snowflake → Data Cloud",
+        salesforce: { accounts: sfAccounts, leads: sfLeads, contacts: sfContacts, opportunities: sfOpps },
+        snowflake: {
+          crm_accounts: crmAccounts?.[0]?.C || 0,
+          crm_leads: crmLeads?.[0]?.C || 0,
+          crm_contacts: crmContacts?.[0]?.C || 0,
+          crm_opportunities: crmOpps?.[0]?.C || 0
+        },
         timestamp: new Date().toISOString()
       });
     } catch (err) { res.json({ status: "error", message: err.message }); }
   });
 
   app.get("/api/mule/health", (req, res) =>
-    res.json({ status: "ok", service: "MuleSoft Sync Layer", arquitetura: "SalesCloud→MuleSoft→CRMAlgar→Snowflake→DataCloud", version: "2.0" }));
+    res.json({ status: "ok", service: "MuleSoft Sync Layer", version: "3.0",
+      routes: ["/api/mule/cdc/account","/api/mule/cdc/lead","/api/mule/cdc/contact","/api/mule/cdc/opportunity","/api/mule/full-sync"] }));
 
-  console.log("[MuleSync] v2.0 — arquitetura correta registrada");
+  console.log("[MuleSync] v3.0 — CDC completo (Account/Lead/Contact/Opportunity)");
 }
