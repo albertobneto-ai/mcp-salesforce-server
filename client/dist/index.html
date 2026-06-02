@@ -54,8 +54,9 @@
       return;
     }
 
-    /* GP role: auto-open GP panel, hide chat, close=logout */
-    if(role==='gp'){
+    /* Gerente de Projetos: auto-open GP panel, hide chat, close=logout */
+    var gpRoles=['gp','gerente_projetos','gerente projetos','project_manager'];
+    if(gpRoles.indexOf(role)>=0){
       roleRedirected=true;
       clearInterval(roleCheck);
       /* Esconde toda a UI principal exceto o GP */
