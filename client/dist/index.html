@@ -53,42 +53,6 @@
       window.location.href='/squad.html';
       return;
     }
-
-    /* Gerente de Projetos: auto-open GP panel, hide chat, close=logout */
-    var gpRoles=['gp','gerente_projetos','gerente projetos','project_manager'];
-    if(gpRoles.indexOf(role)>=0){
-      roleRedirected=true;
-      clearInterval(roleCheck);
-      /* Esconde toda a UI principal exceto o GP */
-      var style=document.createElement('style');
-      style.textContent='body>div#root>*:not([class*="gp"]):not([class*="GP"]){opacity:0;pointer-events:none;position:absolute;} .gp-close-override{display:none!important;}';
-      document.head.appendChild(style);
-      /* Auto-clica no botão GP quando disponível */
-      var gpAutoClick=setInterval(function(){
-        var bs=document.querySelectorAll('button');
-        for(var i=0;i<bs.length;i++){
-          if(bs[i].textContent.trim()==='GP'){
-            bs[i].click();
-            clearInterval(gpAutoClick);
-            /* Interceptar fechamento do GP para fazer logout */
-            setTimeout(function(){
-              var closeBtn=document.querySelector('[title="Fechar GP"],[title="Voltar"]');
-              if(closeBtn){
-                closeBtn.addEventListener('click',function(ev){
-                  ev.preventDefault();ev.stopPropagation();
-                  if(confirm('Deseja sair e encerrar a sessão?')){
-                    localStorage.removeItem('everi9_token');
-                    localStorage.removeItem('everi9_user');
-                    window.location.href='/';
-                  }
-                },true);
-              }
-            },1000);
-            break;
-          }
-        }
-      },800);
-    }
   },1000);
 
   /* === Inject sidebar buttons === */
