@@ -74,6 +74,7 @@ router.get('/cards/:id', authMiddleware, squadAuth, async (req, res) => {
 
 router.post('/cards', authMiddleware, squadAuth, async (req, res) => {
   try {
+    if (!req.body.story_number?.trim()) return res.status(400).json({ erro: 'story_number é obrigatório' });
     const data = { ...req.body, created_by: req.user?.name || req.user?.email || '' };
     res.json({ card: await sq.createCard(data) });
   } catch (e) { res.status(500).json({ erro: e.message }); }
