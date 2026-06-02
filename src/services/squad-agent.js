@@ -96,7 +96,8 @@ export async function runHfAgent(cardId) {
 
   try {
     const fullInput = await sq.getFullCardInput(cardId);
-    const inputText = fullInput || card.title;
+    const storyRef = card.story_number ? `\n\nNúmero da História: ${card.story_number}\nREGRA: Referencie o número da história ${card.story_number} no título e ao longo do documento.` : '';
+    const inputText = (fullInput || card.title) + storyRef;
     const prompt = await enrichPrompt(hfPrompt, inputText.slice(0, 500));
     const messages = [{ role: 'user', content: inputText }];
 
@@ -139,6 +140,8 @@ export async function runSpecAgent(cardId) {
     const inputText = hfArtifact
       ? hfArtifact.content
       : (card.description || card.title);
+    const specStoryRef = card.story_number ? `\n\nNúmero da História: ${card.story_number}\nREGRA: Referencie o número ${card.story_number} no título e ao longo da especificação técnica.` : '';
+    inputText += specStoryRef;
 
     const prompt = await enrichPrompt(specPrompt, inputText.slice(0, 500));
     const messages = [{ role: 'user', content: inputText }];
