@@ -112,21 +112,28 @@ function Lab(){
     if(!confirm('Excluir este item?'))return;
     fetch('/api/lab/items/'+id,{method:'DELETE',headers:hd()}).then(function(){load()});
   };
+  const fetchBlob=function(id,cb){
+    fetch('/api/lab/items/'+id+'/content',{headers:{Authorization:'Bearer '+tk()}})
+      .then(function(r){
+        var ct=r.headers.get('content-type')||'application/octet-stream';
+        var cd=r.headers.get('content-disposition')||'';
+        var fn='';var m=cd.match(/filename="([^"]+)"/);if(m)fn=m[1];
+        return r.blob().then(function(b){return{blob:b,ct:ct,fn:fn}});
+      }).then(cb).catch(function(e){alert('Erro: '+e.message)});
+  };
   const doView=function(item){
-    if(item.url){
-      window.open(item.url,'_blank');return;
-    }
-    // For files or prototipos stored as content, open in overlay or new tab
-    window.open('/api/lab/items/'+item.id+'/content','_blank');
+    if(item.url){window.open(item.url,'_blank');return;}
+    fetchBlob(item.id,function(d){
+      var u=URL.createObjectURL(d.blob);window.open(u,'_blank');
+    });
   };
   const doDownload=function(item){
-    if(item.url){
-      var a=document.createElement('a');a.href=item.url;a.download=item.title;a.target='_blank';a.click();return;
-    }
-    var a2=document.createElement('a');
-    a2.href='/api/lab/items/'+item.id+'/content';
-    a2.download=item.file_name||item.title;
-    a2.click();
+    if(item.url){var a=document.createElement('a');a.href=item.url;a.download=item.title;a.target='_blank';a.click();return;}
+    fetchBlob(item.id,function(d){
+      var u=URL.createObjectURL(d.blob);
+      var a=document.createElement('a');a.href=u;a.download=d.fn||item.file_name||item.title;a.click();
+      URL.revokeObjectURL(u);
+    });
   };
   const catInfo=CATS.find(function(c){return c.key===tab});
   const fmtDate=function(d){try{return new Date(d).toLocaleDateString('pt-BR')}catch(e){return ''}};
