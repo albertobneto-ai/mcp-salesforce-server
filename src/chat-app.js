@@ -28,6 +28,12 @@ export async function mountChatApp(app) {
     app.use('/api/gp', gpRoutes);
   } catch (e) { console.error('[GP] Rota nao carregada:', e.message); }
 
+  // Refinamentos (Agenda de Refinamento)
+  try {
+    const { default: refRoutes } = await import('./routes/refinements.js');
+    app.use('/api/gp/refinements', refRoutes);
+  } catch (e) { console.error('[Refinements] Rota nao carregada:', e.message); }
+
   // Squad Agentes SF
   try {
     const { default: squadRoutes } = await import('./routes/squad.js');
@@ -62,5 +68,5 @@ export async function mountChatApp(app) {
     });
   });
 
-  console.log('[everi9] Rotas montadas: /api/auth, /api/chat, /api/download, /api/setup, /api/orgs, /api/squad');
+  console.log('[everi9] Rotas montadas: /api/auth, /api/chat, /api/download, /api/setup, /api/orgs, /api/squad, /api/gp/refinements');
 }
