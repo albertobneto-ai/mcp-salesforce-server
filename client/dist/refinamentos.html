@@ -4,26 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ever i9 — Refinamentos</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:#f8f9fc;color:#1a1a2e;overflow:hidden}
-::-webkit-scrollbar{width:6px;height:6px}
-::-webkit-scrollbar-track{background:#f0f1f4}
-::-webkit-scrollbar-thumb{background:#c8cdd6;border-radius:3px}
-button{font-family:inherit}
-textarea{font-family:inherit}
-input{font-family:inherit}
+body{font-family:'Outfit',system-ui,sans-serif;background:#f1f5f9;color:#1a1a2e;overflow:hidden}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:#e2e8f0}
+::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:3px}
+button,textarea,input,select{font-family:inherit}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const {useState,useRef,useEffect,useMemo,useCallback} = React;
-
+const {useState,useEffect,useMemo,useCallback} = React;
 const API = window.location.origin;
 function getToken(){ return localStorage.getItem('everi9_token')||''; }
 async function api(path, opts={}){
@@ -35,203 +32,196 @@ async function api(path, opts={}){
   return r.json();
 }
 
-const PHASES=[
-  {key:"usW",dbKey:"us_write_deadline",label:"ESCRITA US",short:"US-E",color:"#7c6df0",bg:"#7c6df033"},
-  {key:"usA",dbKey:"us_approve_deadline",label:"APROV. US",short:"US-A",color:"#5ba3e6",bg:"#5ba3e633"},
-  {key:"etW",dbKey:"et_write_deadline",label:"ESCRITA ET",short:"ET-E",color:"#e6a85b",bg:"#e6a85b33"},
-  {key:"etA",dbKey:"et_approve_deadline",label:"APROV. ET",short:"ET-A",color:"#5be69a",bg:"#5be69a33"},
-];
 const DOC_STATUS={
-  none:{label:"PENDENTE",color:"#b0b8c8",bg:"#f4f5f9",icon:"○"},
-  writing:{label:"EM ESCRITA",color:"#e6a85b",bg:"#fff8ee",icon:"◐"},
-  review:{label:"EM REVISÃO",color:"#5ba3e6",bg:"#eef6ff",icon:"◑"},
-  approved:{label:"APROVADA",color:"#3dba78",bg:"#eefbf3",icon:"●"},
-  rejected:{label:"REJEITADA",color:"#e65b5b",bg:"#fff0f0",icon:"✕"},
+  none:{l:"PENDENTE",c:"#94a3b8",bg:"#f1f5f9",i:"○"},
+  writing:{l:"EM ESCRITA",c:"#e6a85b",bg:"#fef9c3",i:"◐"},
+  review:{l:"EM REVISAO",c:"#3b82f6",bg:"#dbeafe",i:"◑"},
+  approved:{l:"APROVADA",c:"#22c55e",bg:"#dcfce7",i:"●"},
+  rejected:{l:"REJEITADA",c:"#ef4444",bg:"#fee2e2",i:"✕"},
 };
-const MOD_COLORS={
-  "CONTAS":{c:"#5b7fe6",bg:"#eef2ff"},"CONTAS / CONTATOS":{c:"#5bc3e6",bg:"#eef9ff"},
-  "CONTAS / LEAD":{c:"#5b7fe6",bg:"#eef2ff"},"TRANSVERSAL":{c:"#e6a85b",bg:"#fff8ee"},
-  "LEAD":{c:"#a85be6",bg:"#f5eeff"},"CONTATOS":{c:"#5be6d6",bg:"#eefffe"},
-  "SALES MAP":{c:"#3dba78",bg:"#eefbf3"},"TODOS":{c:"#e65b5b",bg:"#fff0f0"},
+const MOD={
+  "CONTAS":{c:"#3b82f6",bg:"#dbeafe"},
+  "CONTAS / CONTATOS":{c:"#0ea5e9",bg:"#e0f2fe"},
+  "CONTAS / LEAD":{c:"#3b82f6",bg:"#dbeafe"},
+  "TRANSVERSAL":{c:"#f59e0b",bg:"#fef3c7"},
+  "LEAD":{c:"#8b5cf6",bg:"#ede9fe"},
+  "CONTATOS":{c:"#06b6d4",bg:"#cffafe"},
+  "SALES MAP":{c:"#22c55e",bg:"#dcfce7"},
+  "TODOS":{c:"#ef4444",bg:"#fee2e2"},
 };
-const DOW_PT=["Dom","Seg","Ter","Qua","Qui","Sex","Sab"];
-const COL_W=32, LEFT_W=260;
+function fmtDate(s){if(!s)return"—";const d=new Date(s+"T12:00:00");return d.toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}).toUpperCase();}
+function fmtWeekday(s){if(!s)return"";const d=new Date(s+"T12:00:00");return d.toLocaleDateString("pt-BR",{weekday:"short"}).toUpperCase();}
 
-function parseISO(s){const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d);}
-function isoStr(dt){return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0");}
-function addDays(s,n){const d=parseISO(s);d.setDate(d.getDate()+n);return isoStr(d);}
-function isWeekend(s){const d=parseISO(s).getDay();return d===0||d===6;}
-function genDays(a,b){const r=[];let c=a;while(c<=b){r.push(c);c=addDays(c,1);}return r;}
-function groupWeeks(days){const w=[];let c=[];days.forEach(d=>{if(c.length&&parseISO(d).getDay()===1){w.push(c);c=[];}c.push(d);});if(c.length)w.push(c);return w;}
-function fmtShort(s){if(!s)return"—";const d=parseISO(s);return d.getDate()+"/"+(d.getMonth()+1);}
-function todayISO(){const d=new Date();return isoStr(d);}
-
-function getDeadline(item,phaseKey){
-  const p=PHASES.find(x=>x.key===phaseKey);
-  return p ? item[p.dbKey] : null;
-}
-function setDeadlineField(phaseKey){
-  const p=PHASES.find(x=>x.key===phaseKey);
-  return p ? p.dbKey : null;
-}
-
-// ═══ ADMIN PANEL ═══
-function AdminPanel({item, onClose, onSave}){
-  if(!item) return null;
-  const mc=MOD_COLORS[item.module]||MOD_COLORS["TODOS"];
-
-  const updateDoc=(docType,field,value)=>{
-    const patch={};
-    patch[docType+"_"+field]=value;
-    if(field==="status"&&value!=="none"&&!item[docType+"_file"]){/* ok */}
-    onSave(item.id, patch);
-  };
-
-  const DocCard=({docType,label,accent})=>{
-    const status=item[docType+"_status"]||"none";
-    const file=item[docType+"_file"]||"";
-    const notes=item[docType+"_notes"]||"";
-    const st=DOC_STATUS[status];
-    return React.createElement("div",{style:{border:"1px solid #e8ecf2",borderRadius:10,padding:14,backgroundColor:"#fff",marginBottom:12}},
-      // header
+function AdminPanel({item,onClose,onSave}){
+  if(!item)return null;
+  const mc=MOD[item.module]||MOD["TODOS"];
+  const updateDoc=(dt,field,value)=>{onSave(item.id,{[dt+"_"+field]:value});};
+  const DocCard=({dt,label,accent})=>{
+    const st=item[dt+"_status"]||"none";
+    const file=item[dt+"_file"]||"";
+    const notes=item[dt+"_notes"]||"";
+    const ds=DOC_STATUS[st];
+    return React.createElement("div",{style:{border:"1px solid #e2e8f0",borderRadius:12,padding:14,backgroundColor:"#fff",marginBottom:12}},
       React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}},
         React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8}},
           React.createElement("div",{style:{width:28,height:28,borderRadius:6,background:accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,color:"#fff"}},label),
           React.createElement("div",null,
-            React.createElement("div",{style:{fontSize:12,fontWeight:700,color:"#1a1a2e"}},docType==="hf"?"História Funcional":"Especificação Técnica"),
-            React.createElement("div",{style:{fontSize:10,color:"#8892a4"}},"Prazo: "+(docType==="hf"
-              ? "Escrita "+fmtShort(item.us_write_deadline)+" · Aprov "+fmtShort(item.us_approve_deadline)
-              : "Escrita "+fmtShort(item.et_write_deadline)+" · Aprov "+fmtShort(item.et_approve_deadline)))
+            React.createElement("div",{style:{fontSize:13,fontWeight:700,color:"#1a1a2e"}},dt==="hf"?"Historia Funcional":"Especificacao Tecnica"),
+            React.createElement("div",{style:{fontSize:10,color:"#94a3b8"}},"Prazo: "+(dt==="hf"
+              ?"Escrita "+fmtDate(item.us_write_deadline)+" · Aprov "+fmtDate(item.us_approve_deadline)
+              :"Escrita "+fmtDate(item.et_write_deadline)+" · Aprov "+fmtDate(item.et_approve_deadline)))
           )
         ),
-        React.createElement("div",{style:{fontSize:9,fontWeight:700,color:st.color,backgroundColor:st.bg,padding:"3px 10px",borderRadius:20,border:"1px solid "+st.color+"33"}},st.icon+" "+st.label)
+        React.createElement("div",{style:{fontSize:9,fontWeight:700,color:ds.c,backgroundColor:ds.bg,padding:"3px 10px",borderRadius:20,border:"1px solid "+ds.c+"33"}},ds.i+" "+ds.l)
       ),
-      // status buttons
       React.createElement("div",{style:{marginBottom:10}},
-        React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"#8892a4",letterSpacing:"0.08em",marginBottom:5}},"STATUS"),
+        React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.08em",marginBottom:5}},"STATUS"),
         React.createElement("div",{style:{display:"flex",gap:4,flexWrap:"wrap"}},
-          ...Object.entries(DOC_STATUS).map(([key,val])=>
-            React.createElement("button",{key,onClick:()=>updateDoc(docType,"status",key),style:{
+          ...Object.entries(DOC_STATUS).map(([k,v])=>
+            React.createElement("button",{key:k,onClick:()=>updateDoc(dt,"status",k),style:{
               fontSize:9,fontWeight:700,padding:"4px 10px",borderRadius:5,
-              border:status===key?"2px solid "+val.color:"1px solid #e8ecf2",
-              backgroundColor:status===key?val.bg:"#fff",color:status===key?val.color:"#8892a4",cursor:"pointer"
-            }},val.icon+" "+val.label)
+              border:st===k?"2px solid "+v.c:"1px solid #e2e8f0",
+              backgroundColor:st===k?v.bg:"#fff",color:st===k?v.c:"#94a3b8",cursor:"pointer"
+            }},v.i+" "+v.l)
           )
         )
       ),
-      // file
       React.createElement("div",{style:{marginBottom:10}},
-        React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"#8892a4",letterSpacing:"0.08em",marginBottom:5}},"ARQUIVO"),
+        React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.08em",marginBottom:5}},"ARQUIVO"),
         file
-          ? React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",backgroundColor:"#f8f9fc",borderRadius:6,border:"1px solid #e8ecf2"}},
+          ? React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",backgroundColor:"#f8fafc",borderRadius:6,border:"1px solid #e2e8f0"}},
               React.createElement("span",{style:{fontSize:11,color:"#1a1a2e",flex:1}},file),
-              React.createElement("button",{onClick:()=>updateDoc(docType,"file",""),style:{fontSize:9,color:"#e65b5b",background:"none",border:"none",cursor:"pointer",fontWeight:700}},"REMOVER")
+              React.createElement("button",{onClick:()=>updateDoc(dt,"file",""),style:{fontSize:9,color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontWeight:700}},"REMOVER")
             )
           : React.createElement("button",{onClick:()=>{
-              const name=prompt("Nome do arquivo (ex: HF-REF001-Carteira.docx):");
-              if(name){ updateDoc(docType,"file",name); if(status==="none") updateDoc(docType,"status","writing"); }
-            },style:{width:"100%",padding:"12px",borderRadius:6,border:"2px dashed #dde1e9",backgroundColor:"#fafbfe",color:"#8892a4",fontSize:11,cursor:"pointer"}},"+ REGISTRAR ARQUIVO (.docx, .pdf, .md)")
+              const name=prompt("Nome do arquivo (ex: HF-REF001.docx):");
+              if(name){updateDoc(dt,"file",name);if(st==="none")updateDoc(dt,"status","writing");}
+            },style:{width:"100%",padding:"12px",borderRadius:6,border:"2px dashed #cbd5e1",backgroundColor:"#f8fafc",color:"#94a3b8",fontSize:11,cursor:"pointer"}},"+ REGISTRAR ARQUIVO (.docx, .pdf, .md)")
       ),
-      // notes
       React.createElement("div",null,
-        React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"#8892a4",letterSpacing:"0.08em",marginBottom:5}},"OBSERVAÇÕES"),
-        React.createElement("textarea",{value:notes,onChange:e=>updateDoc(docType,"notes",e.target.value),placeholder:"Notas sobre este artefato...",rows:2,
-          style:{width:"100%",fontSize:11,padding:"8px 10px",borderRadius:6,border:"1px solid #e8ecf2",backgroundColor:"#f8f9fc",color:"#1a1a2e",resize:"vertical",boxSizing:"border-box"}})
+        React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.08em",marginBottom:5}},"OBSERVACOES"),
+        React.createElement("textarea",{value:notes,onChange:e=>updateDoc(dt,"notes",e.target.value),placeholder:"Notas...",rows:2,
+          style:{width:"100%",fontSize:11,padding:"8px 10px",borderRadius:6,border:"1px solid #e2e8f0",backgroundColor:"#f8fafc",color:"#1a1a2e",resize:"vertical",boxSizing:"border-box"}})
       )
     );
   };
-
-  return React.createElement("div",{style:{width:380,minWidth:380,borderLeft:"2px solid #e8ecf2",backgroundColor:"#f8f9fc",display:"flex",flexDirection:"column",overflow:"hidden"}},
-    // header
-    React.createElement("div",{style:{padding:"14px 16px",backgroundColor:"#fff",borderBottom:"1px solid #e8ecf2",display:"flex",alignItems:"flex-start",justifyContent:"space-between"}},
+  const parts=Array.isArray(item.participants)?item.participants:[];
+  return React.createElement("div",{style:{width:380,minWidth:380,borderLeft:"2px solid #e2e8f0",backgroundColor:"#fff",display:"flex",flexDirection:"column",overflow:"hidden"}},
+    React.createElement("div",{style:{padding:"14px 16px",borderBottom:"1px solid #e2e8f0",display:"flex",alignItems:"flex-start",justifyContent:"space-between"}},
       React.createElement("div",{style:{flex:1,minWidth:0}},
         React.createElement("div",{style:{display:"flex",alignItems:"center",gap:6,marginBottom:4}},
-          React.createElement("span",{style:{fontSize:10,fontWeight:700,color:"#8892a4",fontFamily:"monospace"}},item.ref_code),
+          React.createElement("span",{style:{fontSize:10,fontWeight:700,color:"#94a3b8",fontFamily:"monospace"}},item.ref_code),
           React.createElement("span",{style:{fontSize:8,fontWeight:700,color:mc.c,backgroundColor:mc.bg,padding:"2px 6px",borderRadius:3}},item.module)
         ),
-        React.createElement("div",{style:{fontSize:14,fontWeight:700,color:"#1a1a2e",lineHeight:1.3}},item.epic),
-        React.createElement("div",{style:{fontSize:11,color:"#8892a4",marginTop:4}},"Sessão: "+fmtShort(item.session_date)+" "+item.session_time+" · "+item.resp)
+        React.createElement("div",{style:{fontSize:15,fontWeight:700,color:"#1a1a2e",lineHeight:1.3}},item.epic),
+        React.createElement("div",{style:{fontSize:11,color:"#94a3b8",marginTop:4}},"Sessao: "+fmtDate(item.session_date)+" "+item.session_time+" · "+item.resp)
       ),
-      React.createElement("button",{onClick:onClose,style:{background:"none",border:"none",fontSize:18,color:"#b0b8c8",cursor:"pointer",padding:"0 4px"}},"✕")
+      React.createElement("button",{onClick:onClose,style:{background:"none",border:"none",fontSize:18,color:"#94a3b8",cursor:"pointer"}},"x")
     ),
-    // objective + participants
-    React.createElement("div",{style:{padding:"10px 16px",backgroundColor:"#fff",borderBottom:"1px solid #e8ecf2"}},
-      React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"#8892a4",letterSpacing:"0.08em",marginBottom:4}},"OBJETIVO"),
-      React.createElement("div",{style:{fontSize:11,color:"#555d6e",lineHeight:1.5}},item.objective),
-      React.createElement("div",{style:{display:"flex",gap:4,flexWrap:"wrap",marginTop:8}},
-        ...(Array.isArray(item.participants)?item.participants:[]).map(p=>
-          React.createElement("span",{key:p,style:{fontSize:9,fontWeight:600,color:"#5b4fc7",backgroundColor:"#f0eeff",padding:"2px 8px",borderRadius:10}},p)
-        )
+    React.createElement("div",{style:{padding:"10px 16px",borderBottom:"1px solid #e2e8f0"}},
+      React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.08em",marginBottom:4}},"OBJETIVO"),
+      React.createElement("div",{style:{fontSize:11,color:"#475569",lineHeight:1.5}},item.objective),
+      parts.length>0&&React.createElement("div",{style:{display:"flex",gap:4,flexWrap:"wrap",marginTop:8}},
+        ...parts.map(p=>React.createElement("span",{key:p,style:{fontSize:9,fontWeight:600,color:"#6366f1",backgroundColor:"#eef2ff",padding:"2px 8px",borderRadius:10}},p))
       )
     ),
-    // pipeline
-    React.createElement("div",{style:{padding:"10px 16px",backgroundColor:"#fff",borderBottom:"1px solid #e8ecf2"}},
-      React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"#8892a4",letterSpacing:"0.08em",marginBottom:6}},"PIPELINE"),
+    React.createElement("div",{style:{padding:"10px 16px",borderBottom:"1px solid #e2e8f0"}},
+      React.createElement("div",{style:{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.08em",marginBottom:6}},"PIPELINE"),
       React.createElement("div",{style:{display:"flex",gap:3}},
         ...[
-          {l:"SESSÃO",done:true,c:"#7c6df0"},
-          {l:"HF",done:item.hf_status==="approved",active:["writing","review"].includes(item.hf_status),c:"#7c6df0"},
-          {l:"APR-HF",done:item.hf_status==="approved",active:item.hf_status==="review",c:"#5ba3e6"},
-          {l:"ET",done:item.et_status==="approved",active:["writing","review"].includes(item.et_status),c:"#e6a85b"},
-          {l:"APR-ET",done:item.et_status==="approved",active:item.et_status==="review",c:"#3dba78"},
+          {l:"SESSAO",done:true,c:"#6366f1"},
+          {l:"HF",done:item.hf_status==="approved",active:["writing","review"].includes(item.hf_status),c:"#8b5cf6"},
+          {l:"APR-HF",done:item.hf_status==="approved",active:item.hf_status==="review",c:"#3b82f6"},
+          {l:"ET",done:item.et_status==="approved",active:["writing","review"].includes(item.et_status),c:"#f59e0b"},
+          {l:"APR-ET",done:item.et_status==="approved",active:item.et_status==="review",c:"#22c55e"},
         ].map((s,i)=>React.createElement("div",{key:i,style:{flex:1,textAlign:"center"}},
-          React.createElement("div",{style:{height:6,borderRadius:3,marginBottom:3,backgroundColor:s.done?s.c:s.active?s.c+"66":"#e8ecf2"}}),
-          React.createElement("span",{style:{fontSize:7,fontWeight:700,color:s.done?s.c:"#b0b8c8"}},s.l)
+          React.createElement("div",{style:{height:5,borderRadius:3,marginBottom:3,backgroundColor:s.done?s.c:s.active?s.c+"55":"#e2e8f0"}}),
+          React.createElement("span",{style:{fontSize:7,fontWeight:700,color:s.done?s.c:"#94a3b8"}},s.l)
         ))
       )
     ),
-    // doc cards
     React.createElement("div",{style:{flex:1,overflowY:"auto",padding:16}},
-      React.createElement(DocCard,{docType:"hf",label:"HF",accent:"#7c6df0"}),
-      React.createElement(DocCard,{docType:"et",label:"ET",accent:"#e6a85b"})
+      React.createElement(DocCard,{dt:"hf",label:"HF",accent:"#8b5cf6"}),
+      React.createElement(DocCard,{dt:"et",label:"ET",accent:"#f59e0b"})
     )
   );
 }
 
-// ═══ MAIN APP ═══
-function App(){
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [rangeStart, setRangeStart] = useState("2026-06-01");
-  const [rangeEnd, setRangeEnd] = useState("2026-07-31");
-  const [expanded, setExpanded] = useState({});
-  const [editing, setEditing] = useState(null);
-  const [hoverCol, setHoverCol] = useState(null);
-  const [selectedId, setSelectedId] = useState(null);
-  const [showAdmin, setShowAdmin] = useState(false);
-  const scrollRef = useRef(null);
+function RefCard({item,isSelected,onClick}){
+  const mc=MOD[item.module]||MOD["TODOS"];
+  const hfs=DOC_STATUS[item.hf_status||"none"];
+  const ets=DOC_STATUS[item.et_status||"none"];
+  const hfDone=item.hf_status==="approved";
+  const etDone=item.et_status==="approved";
+  const allDone=hfDone&&etDone;
+  return React.createElement("div",{onClick,style:{
+    background:"#fff",borderRadius:12,padding:"14px 16px",cursor:"pointer",
+    border:isSelected?"2px solid #6366f1":"1px solid #e2e8f0",
+    boxShadow:isSelected?"0 0 16px rgba(99,102,241,0.15)":"0 1px 3px rgba(0,0,0,0.04)",
+    transition:"all 0.15s",marginBottom:8
+  }},
+    React.createElement("div",{style:{display:"flex",alignItems:"center",gap:6,marginBottom:8}},
+      React.createElement("span",{style:{fontSize:9,fontWeight:700,color:"#94a3b8",fontFamily:"monospace"}},item.ref_code),
+      React.createElement("span",{style:{fontSize:8,fontWeight:700,color:mc.c,backgroundColor:mc.bg,padding:"2px 6px",borderRadius:3}},item.module),
+      allDone&&React.createElement("span",{style:{fontSize:8,fontWeight:700,color:"#22c55e",marginLeft:"auto"}},"COMPLETO")
+    ),
+    React.createElement("div",{style:{fontSize:13,fontWeight:600,color:"#1a1a2e",lineHeight:1.4,marginBottom:8}},item.epic),
+    React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:10,fontSize:11,color:"#64748b"}},
+      React.createElement("span",null,fmtWeekday(item.session_date)+" "+fmtDate(item.session_date)),
+      React.createElement("span",{style:{color:"#cbd5e1"}},"|"),
+      React.createElement("span",null,item.session_time),
+      item.resp&&item.resp!=="—"&&React.createElement("span",{style:{marginLeft:"auto",fontSize:10,color:"#94a3b8"}},item.resp)
+    ),
+    React.createElement("div",{style:{display:"flex",gap:6}},
+      React.createElement("div",{style:{flex:1,display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:6,background:hfs.bg,border:"1px solid "+hfs.c+"22"}},
+        React.createElement("span",{style:{fontSize:11,color:hfs.c,fontWeight:700}},hfs.i),
+        React.createElement("span",{style:{fontSize:10,fontWeight:600,color:hfs.c}},"HF"),
+        item.hf_file&&React.createElement("span",{style:{fontSize:8,color:"#94a3b8",marginLeft:"auto",maxWidth:60,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},item.hf_file)
+      ),
+      React.createElement("div",{style:{flex:1,display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:6,background:ets.bg,border:"1px solid "+ets.c+"22"}},
+        React.createElement("span",{style:{fontSize:11,color:ets.c,fontWeight:700}},ets.i),
+        React.createElement("span",{style:{fontSize:10,fontWeight:600,color:ets.c}},"ET"),
+        item.et_file&&React.createElement("span",{style:{fontSize:8,color:"#94a3b8",marginLeft:"auto",maxWidth:60,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},item.et_file)
+      )
+    ),
+    React.createElement("div",{style:{display:"flex",gap:2,marginTop:8}},
+      ...[
+        {d:item.us_write_deadline,l:"US-E",c:"#8b5cf6"},
+        {d:item.us_approve_deadline,l:"US-A",c:"#3b82f6"},
+        {d:item.et_write_deadline,l:"ET-E",c:"#f59e0b"},
+        {d:item.et_approve_deadline,l:"ET-A",c:"#22c55e"},
+      ].map((p,i)=>React.createElement("div",{key:i,style:{flex:1,textAlign:"center",padding:"3px 0",borderRadius:4,background:p.c+"12",fontSize:8,fontWeight:700,color:p.c}},
+        React.createElement("div",null,p.l),
+        React.createElement("div",{style:{fontSize:9,fontWeight:500,color:"#64748b",marginTop:1}},fmtDate(p.d))
+      ))
+    )
+  );
+}
 
-  const days=useMemo(()=>genDays(rangeStart,rangeEnd),[rangeStart,rangeEnd]);
-  const weeks=useMemo(()=>groupWeeks(days),[days]);
-  const dayIndex=useMemo(()=>{const m={};days.forEach((d,i)=>m[d]=i);return m;},[days]);
-  const totalW=days.length*COL_W;
-  const usedDays=days.filter(d=>!isWeekend(d)).length;
-  const today=todayISO();
+function App(){
+  const [items,setItems]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [selectedId,setSelectedId]=useState(null);
+  const [filterMod,setFilterMod]=useState("TODOS");
 
   const load=async()=>{
     setLoading(true);
     try{
       const d=await api('/api/gp/refinements');
-      if(d.refinements) setItems(d.refinements.map(r=>({
-        ...r,
-        session_date: r.session_date?.slice(0,10),
-        us_write_deadline: r.us_write_deadline?.slice(0,10),
-        us_approve_deadline: r.us_approve_deadline?.slice(0,10),
-        et_write_deadline: r.et_write_deadline?.slice(0,10),
-        et_approve_deadline: r.et_approve_deadline?.slice(0,10),
+      if(d.refinements) setItems(d.refinements.map(r=>({...r,
+        session_date:r.session_date?.slice(0,10),
+        us_write_deadline:r.us_write_deadline?.slice(0,10),
+        us_approve_deadline:r.us_approve_deadline?.slice(0,10),
+        et_write_deadline:r.et_write_deadline?.slice(0,10),
+        et_approve_deadline:r.et_approve_deadline?.slice(0,10),
       })));
     }catch(e){console.error(e);}
     setLoading(false);
   };
-
   useEffect(()=>{load();},[]);
-  useEffect(()=>{
-    if(scrollRef.current && dayIndex[today]!==undefined)
-      scrollRef.current.scrollLeft=dayIndex[today]*COL_W-180;
-  },[loading]);
 
   const seed=async()=>{
-    if(!confirm("Carregar agenda de refinamento Fase 1? (14 sessões)")) return;
+    if(!confirm("Carregar agenda Fase 1 (14 sessoes)?"))return;
     await api('/api/gp/refinements/seed',{method:'POST',body:{}});
     await load();
   };
@@ -239,7 +229,7 @@ function App(){
   const savePatch=async(id,patch)=>{
     const d=await api('/api/gp/refinements/'+id,{method:'PATCH',body:patch});
     if(d.refinement){
-      setItems(prev=>prev.map(r=>r.id===id?{...r,...patch,...d.refinement,
+      setItems(p=>p.map(r=>r.id===id?{...r,...patch,
         session_date:d.refinement.session_date?.slice(0,10),
         us_write_deadline:d.refinement.us_write_deadline?.slice(0,10),
         us_approve_deadline:d.refinement.us_approve_deadline?.slice(0,10),
@@ -249,182 +239,87 @@ function App(){
     }
   };
 
-  const handleCellClick=(id,phaseKey,day)=>{
-    if(editing?.id===id&&editing?.phaseKey===phaseKey){
-      const field=setDeadlineField(phaseKey);
-      if(field) savePatch(id,{[field]:day});
-      setEditing(null);
-    }
-  };
-  const startEditing=(id,pk,e)=>{e.stopPropagation();setEditing(p=>p?.id===id&&p?.phaseKey===pk?null:{id,phaseKey:pk});};
-  const handleRowClick=(id)=>{setExpanded(p=>({...p,[id]:!p[id]}));setSelectedId(id);setShowAdmin(true);};
-
+  const modules=useMemo(()=>{const s=new Set(items.map(r=>r.module));return["TODOS",...s];},[items]);
+  const filtered=useMemo(()=>filterMod==="TODOS"?items:items.filter(r=>r.module===filterMod),[items,filterMod]);
   const selectedItem=items.find(r=>r.id===selectedId)||null;
   const hfOk=items.filter(r=>r.hf_status==="approved").length;
   const etOk=items.filter(r=>r.et_status==="approved").length;
 
-  if(loading) return React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",fontSize:14,color:"#8892a4"}},"Carregando refinamentos...");
+  // Group by week
+  const groups=useMemo(()=>{
+    const map={};
+    filtered.forEach(r=>{
+      const d=new Date(r.session_date+"T12:00:00");
+      const mon=d.getDate()<=7?"W1":d.getDate()<=14?"W2":d.getDate()<=21?"W3":"W4";
+      const label=(d.getMonth()===5?"Jun":"Jul")+" "+mon;
+      if(!map[label])map[label]=[];
+      map[label].push(r);
+    });
+    return Object.entries(map);
+  },[filtered]);
 
+  const closeOverlay=()=>{
+    try{window.parent.postMessage('ref-closed','*');}catch(e){}
+    try{window.close();}catch(e){}
+  };
+
+  if(loading) return React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",fontSize:14,color:"#94a3b8"}},"Carregando...");
   if(!items.length) return React.createElement("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",gap:16}},
-    React.createElement("div",{style:{fontSize:16,fontWeight:700,color:"#1a1a2e"}},"Nenhum refinamento cadastrado"),
-    React.createElement("button",{onClick:seed,style:{padding:"10px 24px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#7c6df0,#5b4fc7)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}},"CARREGAR AGENDA FASE 1 (14 SESSÕES)")
+    React.createElement("div",{style:{fontSize:16,fontWeight:700}},"Nenhum refinamento cadastrado"),
+    React.createElement("button",{onClick:seed,style:{padding:"10px 24px",borderRadius:8,border:"none",background:"#6366f1",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}},"CARREGAR AGENDA FASE 1")
   );
 
-  return React.createElement("div",{style:{fontFamily:"'IBM Plex Sans',system-ui,sans-serif",backgroundColor:"#f8f9fc",color:"#1a1a2e",height:"100vh",display:"flex",flexDirection:"column",overflow:"hidden"}},
+  return React.createElement("div",{style:{fontFamily:"'Outfit',system-ui,sans-serif",backgroundColor:"#f1f5f9",height:"100vh",display:"flex",flexDirection:"column",overflow:"hidden"}},
     // HEADER
-    React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",backgroundColor:"#fff",borderBottom:"1px solid #e8ecf2"}},
+    React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 20px",backgroundColor:"#fff",borderBottom:"1px solid #e2e8f0"}},
       React.createElement("div",{style:{display:"flex",alignItems:"center",gap:10}},
-        React.createElement("div",{style:{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#7c6df0,#5b4fc7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,color:"#fff"}},"RF"),
+        React.createElement("div",{style:{width:32,height:32,borderRadius:8,background:"#6366f1",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,color:"#fff"}},"RF"),
         React.createElement("div",null,
-          React.createElement("div",{style:{fontSize:14,fontWeight:700}},"Agenda de Refinamento — Fase 1"),
-          React.createElement("div",{style:{fontSize:11,color:"#8892a4"}},items.length+" sessões · Jun–Jul 2026")
+          React.createElement("div",{style:{fontSize:15,fontWeight:700}},"Refinamentos — Fase 1"),
+          React.createElement("div",{style:{fontSize:11,color:"#94a3b8"}},items.length+" sessoes · Jun-Jul 2026")
         )
       ),
-      React.createElement("div",{style:{display:"flex",gap:6,alignItems:"center"}},
-        ...[{l:"HF OK",c:hfOk,cl:"#7c6df0"},{l:"ET OK",c:etOk,cl:"#e6a85b"}].map(s=>
-          React.createElement("div",{key:s.l,style:{display:"flex",alignItems:"center",gap:4,padding:"4px 10px",backgroundColor:"#f8f9fc",borderRadius:6,border:"1px solid #e8ecf2"}},
+      React.createElement("div",{style:{display:"flex",gap:8,alignItems:"center"}},
+        ...[{l:"HF",c:hfOk,cl:"#8b5cf6"},{l:"ET",c:etOk,cl:"#f59e0b"}].map(s=>
+          React.createElement("div",{key:s.l,style:{display:"flex",alignItems:"center",gap:4,padding:"5px 12px",backgroundColor:"#f8fafc",borderRadius:8,border:"1px solid #e2e8f0"}},
             React.createElement("div",{style:{width:8,height:8,borderRadius:2,backgroundColor:s.cl}}),
-            React.createElement("span",{style:{fontSize:10,fontWeight:700}},s.c+"/"+items.length),
-            React.createElement("span",{style:{fontSize:9,color:"#8892a4"}},s.l)
+            React.createElement("span",{style:{fontSize:11,fontWeight:700}},s.c+"/"+items.length),
+            React.createElement("span",{style:{fontSize:10,color:"#94a3b8"}},s.l+" OK")
           )
         ),
-        React.createElement("button",{onClick:()=>window.close(),style:{marginLeft:8,fontSize:10,fontWeight:700,padding:"5px 12px",borderRadius:5,border:"1px solid #e8ecf2",backgroundColor:"#fff",color:"#8892a4",cursor:"pointer"}},"FECHAR")
+        React.createElement("button",{onClick:closeOverlay,style:{marginLeft:8,fontSize:11,fontWeight:700,padding:"6px 14px",borderRadius:6,border:"1px solid #e2e8f0",backgroundColor:"#fff",color:"#64748b",cursor:"pointer"}},"FECHAR")
       )
     ),
-    // TOOLBAR
-    React.createElement("div",{style:{display:"flex",alignItems:"center",gap:10,padding:"6px 20px",backgroundColor:"#fff",borderBottom:"1px solid #e8ecf2",flexWrap:"wrap"}},
-      React.createElement("span",{style:{fontSize:10,color:"#8892a4",fontWeight:600}},"PERIODO"),
-      React.createElement("input",{type:"date",value:rangeStart,onChange:e=>setRangeStart(e.target.value),style:{fontSize:11,padding:"3px 6px",border:"1px solid #dde1e9",borderRadius:5,color:"#1a1a2e",backgroundColor:"#f8f9fc"}}),
-      React.createElement("span",{style:{fontSize:10,color:"#b0b8c8"}},"até"),
-      React.createElement("input",{type:"date",value:rangeEnd,onChange:e=>setRangeEnd(e.target.value),style:{fontSize:11,padding:"3px 6px",border:"1px solid #dde1e9",borderRadius:5,color:"#1a1a2e",backgroundColor:"#f8f9fc"}}),
-      React.createElement("div",{style:{display:"flex",gap:2}},
-        ...["1M","3M","6M"].map(t=>React.createElement("button",{key:t,onClick:()=>{
-          if(t==="1M"){setRangeStart("2026-06-01");setRangeEnd("2026-06-30");}
-          else if(t==="3M"){setRangeStart("2026-06-01");setRangeEnd("2026-08-31");}
-          else{setRangeStart("2026-06-01");setRangeEnd("2026-11-30");}
-        },style:{fontSize:9,fontWeight:700,padding:"3px 8px",borderRadius:4,border:"1px solid #dde1e9",backgroundColor:"#f8f9fc",color:"#5b4fc7",cursor:"pointer"}},t))
-      ),
-      React.createElement("span",{style:{fontSize:10,color:"#8892a4",fontStyle:"italic"}},usedDays+" dias úteis"),
-      React.createElement("div",{style:{flex:1}}),
-      React.createElement("div",{style:{display:"flex",gap:8}},
-        ...PHASES.map(p=>React.createElement("div",{key:p.key,style:{display:"flex",alignItems:"center",gap:3}},
-          React.createElement("div",{style:{width:8,height:8,borderRadius:2,backgroundColor:p.color}}),
-          React.createElement("span",{style:{fontSize:8,color:"#8892a4",fontWeight:600}},p.label)
-        ))
-      )
+    // FILTER
+    React.createElement("div",{style:{display:"flex",gap:4,padding:"8px 20px",borderBottom:"1px solid #e2e8f0",backgroundColor:"#fff",overflowX:"auto"}},
+      ...modules.map(m=>{
+        const mc=MOD[m]||MOD["TODOS"];
+        const isA=filterMod===m;
+        return React.createElement("button",{key:m,onClick:()=>setFilterMod(m),style:{
+          fontSize:10,fontWeight:700,padding:"4px 12px",borderRadius:6,cursor:"pointer",whiteSpace:"nowrap",
+          border:isA?"1.5px solid "+mc.c:"1px solid #e2e8f0",
+          backgroundColor:isA?mc.bg:"#fff",color:isA?mc.c:"#94a3b8"
+        }},m);
+      })
     ),
     // BODY
     React.createElement("div",{style:{flex:1,display:"flex",overflow:"hidden"}},
-      // LEFT
-      React.createElement("div",{style:{width:LEFT_W,minWidth:LEFT_W,borderRight:"2px solid #e8ecf2",backgroundColor:"#fff",overflowY:"auto",zIndex:5}},
-        React.createElement("div",{style:{height:50,display:"flex",alignItems:"flex-end",padding:"0 10px 4px",borderBottom:"1px solid #e8ecf2",position:"sticky",top:0,backgroundColor:"#fff",zIndex:6}},
-          React.createElement("span",{style:{fontSize:10,fontWeight:700,color:"#8892a4",letterSpacing:"0.06em"}},"REFINAMENTO / FASES")
-        ),
-        ...items.map(r=>{
-          const mc=MOD_COLORS[r.module]||MOD_COLORS["TODOS"];
-          const isExp=expanded[r.id]; const isSel=selectedId===r.id;
-          const hfS=DOC_STATUS[r.hf_status||"none"]; const etS=DOC_STATUS[r.et_status||"none"];
-          return React.createElement("div",{key:r.id},
-            React.createElement("div",{onClick:()=>handleRowClick(r.id),style:{height:34,display:"flex",alignItems:"center",gap:6,padding:"0 6px 0 10px",cursor:"pointer",backgroundColor:isSel?"#f0eeff":"transparent",borderLeft:isSel?"3px solid "+mc.c:"3px solid transparent",borderBottom:"1px solid #f2f4f8"}},
-              React.createElement("span",{style:{fontSize:8,color:isExp?"#5b4fc7":"#b0b8c8",fontWeight:900,width:10,transform:isExp?"rotate(90deg)":"none",transition:"transform 0.15s",display:"inline-block"}},"▶"),
-              React.createElement("span",{style:{fontSize:11,fontWeight:600,color:"#1a1a2e",flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},r.epic),
-              React.createElement("div",{style:{display:"flex",gap:3,alignItems:"center",marginLeft:4}},
-                React.createElement("div",{title:"HF: "+hfS.label,style:{width:7,height:7,borderRadius:2,backgroundColor:hfS.color,opacity:r.hf_status==="none"||!r.hf_status?0.25:0.9}}),
-                React.createElement("div",{title:"ET: "+etS.label,style:{width:7,height:7,borderRadius:2,backgroundColor:etS.color,opacity:r.et_status==="none"||!r.et_status?0.25:0.9}})
-              ),
-              React.createElement("span",{style:{fontSize:7,fontWeight:700,color:mc.c,backgroundColor:mc.bg,padding:"1px 5px",borderRadius:3,whiteSpace:"nowrap"}},r.module.length>8?r.module.slice(0,8):r.module)
-            ),
-            isExp && PHASES.map(p=>{
-              const isEd=editing?.id===r.id&&editing?.phaseKey===p.key;
-              return React.createElement("div",{key:p.key,style:{height:22,display:"flex",alignItems:"center",gap:4,padding:"0 6px 0 28px",borderBottom:"1px solid #fafbfe",backgroundColor:isEd?"#fffbf0":"#fafbfe"}},
-                React.createElement("span",{onClick:e=>startEditing(r.id,p.key,e),style:{fontSize:9,fontWeight:700,color:isEd?p.color:"#8892a4",cursor:"pointer",textDecoration:isEd?"underline":"none"}},p.short),
-                isEd&&React.createElement("span",{style:{fontSize:8,color:"#e6a85b",fontStyle:"italic",marginLeft:4}},"clique no dia")
-              );
-            })
-          );
-        })
-      ),
-      // TIMELINE
-      React.createElement("div",{ref:scrollRef,style:{flex:1,overflowX:"auto",overflowY:"auto"}},
-        React.createElement("div",{style:{minWidth:totalW,position:"relative"}},
-          // week headers
-          React.createElement("div",{style:{height:24,display:"flex",position:"sticky",top:0,backgroundColor:"#fff",zIndex:4,borderBottom:"1px solid #e8ecf2"}},
-            ...weeks.map((wk,wi)=>React.createElement("div",{key:wi,style:{width:wk.length*COL_W,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#5b4fc7",borderRight:"1px solid #e8ecf2"}},
-              (()=>{const d=parseISO(wk[0]);return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0");})()
-            ))
-          ),
-          // day headers
-          React.createElement("div",{style:{height:26,display:"flex",position:"sticky",top:24,backgroundColor:"#fff",zIndex:4,borderBottom:"2px solid #e8ecf2"}},
-            ...days.map(d=>{const dt=parseISO(d);const isT=d===today;const wk=isWeekend(d);
-              return React.createElement("div",{key:d,style:{width:COL_W,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:isT?900:500,color:isT?"#fff":wk?"#ccd0d8":"#8892a4",backgroundColor:isT?"#7c6df0":wk?"#f4f5f9":"transparent",borderRadius:isT?3:0,borderRight:"1px solid #f2f4f8"}},
-                React.createElement("span",null,dt.getDate()),
-                React.createElement("span",{style:{fontSize:6,fontWeight:600}},DOW_PT[dt.getDay()])
-              );
-            })
-          ),
-          // today line
-          dayIndex[today]!==undefined&&React.createElement("div",{style:{position:"absolute",top:50,bottom:0,left:dayIndex[today]*COL_W+COL_W/2,width:2,backgroundColor:"#7c6df055",zIndex:3,pointerEvents:"none"}}),
-          // rows
-          ...items.map(r=>{
-            const isExp=expanded[r.id]; const isSel=selectedId===r.id;
-            return React.createElement("div",{key:r.id},
-              // epic row
-              React.createElement("div",{style:{height:34,display:"flex",position:"relative",borderBottom:"1px solid #f2f4f8",backgroundColor:isSel?"#f0eeff":"transparent"}},
-                ...days.map(d=>React.createElement("div",{key:d,style:{width:COL_W,height:"100%",borderRight:"1px solid #f8f9fc",backgroundColor:isWeekend(d)?"#f8f9fc":"transparent"}})),
-                // session circle
-                dayIndex[r.session_date]!==undefined&&React.createElement("div",{style:{position:"absolute",left:dayIndex[r.session_date]*COL_W+(COL_W-12)/2,top:11,width:12,height:12,borderRadius:"50%",border:"2px solid #7c6df0",backgroundColor:"#f0eeff",zIndex:2}}),
-                // span bar
-                (()=>{
-                  const dls=[r.us_write_deadline,r.us_approve_deadline,r.et_write_deadline,r.et_approve_deadline].filter(d=>d&&dayIndex[d]!==undefined).sort();
-                  if(dls.length<2)return null;
-                  const f=dayIndex[dls[0]],l=dayIndex[dls[dls.length-1]];
-                  return React.createElement("div",{style:{position:"absolute",left:f*COL_W+COL_W/2,top:16,height:2,borderRadius:1,width:(l-f)*COL_W,background:"linear-gradient(90deg,#7c6df044,#3dba7844)",zIndex:1,pointerEvents:"none"}});
-                })(),
-                // compact dots
-                !isExp&&PHASES.map(p=>{
-                  const dl=getDeadline(r,p.key); const di=dl?dayIndex[dl]:undefined;
-                  if(di===undefined)return null;
-                  return React.createElement("div",{key:p.key,style:{position:"absolute",left:di*COL_W+(COL_W-7)/2,top:14,width:7,height:7,borderRadius:2,backgroundColor:p.color,opacity:0.75,zIndex:2}});
-                })
-              ),
-              // phase rows
-              isExp&&PHASES.map(p=>{
-                const dl=getDeadline(r,p.key); const di=dl?dayIndex[dl]:undefined;
-                const isEd=editing?.id===r.id&&editing?.phaseKey===p.key;
-                const sDi=dayIndex[r.session_date];
-                const bS=sDi!==undefined&&di!==undefined?Math.min(sDi,di):undefined;
-                const bE=sDi!==undefined&&di!==undefined?Math.max(sDi,di):undefined;
-                return React.createElement("div",{key:p.key,style:{height:22,display:"flex",position:"relative",borderBottom:"1px solid #fafbfe",backgroundColor:isEd?"#fffbf0":"#fafbfe"}},
-                  ...days.map(d=>{
-                    const isCl=isEd&&!isWeekend(d);
-                    return React.createElement("div",{key:d,
-                      onClick:()=>isCl&&handleCellClick(r.id,p.key,d),
-                      onMouseEnter:()=>isEd&&setHoverCol(d),
-                      onMouseLeave:()=>setHoverCol(null),
-                      style:{width:COL_W,height:"100%",borderRight:"1px solid #fafbfe",backgroundColor:isEd&&hoverCol===d&&!isWeekend(d)?p.bg:isWeekend(d)?"#f8f9fc":"transparent",cursor:isCl?"crosshair":"default"}
-                    });
-                  }),
-                  bS!==undefined&&bE!==undefined&&React.createElement("div",{style:{position:"absolute",left:bS*COL_W+1,top:7,height:8,borderRadius:3,width:(bE-bS)*COL_W+COL_W-2,backgroundColor:p.color,opacity:0.18,zIndex:1,pointerEvents:"none"}}),
-                  di!==undefined&&React.createElement("div",{onClick:e=>startEditing(r.id,p.key,e),style:{position:"absolute",left:di*COL_W+1,top:3,width:COL_W-2,height:16,borderRadius:3,backgroundColor:p.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:800,color:"#fff",zIndex:2,cursor:"pointer",boxShadow:"0 1px 3px "+p.color+"44"}},parseISO(dl).getDate())
-                );
-              })
-            );
-          }),
-          React.createElement("div",{style:{height:80}})
+      // CARDS
+      React.createElement("div",{style:{flex:1,overflowY:"auto",padding:20}},
+        ...groups.map(([week,refs])=>
+          React.createElement("div",{key:week,style:{marginBottom:20}},
+            React.createElement("div",{style:{fontSize:11,fontWeight:700,color:"#6366f1",letterSpacing:"0.1em",marginBottom:8,padding:"4px 0",borderBottom:"1px solid #e2e8f0"}},week+" — "+refs.length+" sessoes"),
+            React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(340px,1fr))",gap:10}},
+              ...refs.map(r=>React.createElement(RefCard,{key:r.id,item:r,isSelected:selectedId===r.id,onClick:()=>{setSelectedId(r.id);}}))
+            )
+          )
         )
       ),
       // ADMIN PANEL
-      showAdmin&&selectedItem&&React.createElement(AdminPanel,{item:selectedItem,onClose:()=>setShowAdmin(false),onSave:savePatch})
-    ),
-    // FOOTER
-    React.createElement("div",{style:{padding:"5px 20px",backgroundColor:"#fff",borderTop:"1px solid #e8ecf2",display:"flex",gap:12,fontSize:9,color:"#8892a4"}},
-      React.createElement("span",null,"Clique na ",React.createElement("b",null,"linha")," para abrir painel HF+ET"),
-      React.createElement("span",{style:{color:"#dde1e9"}},"|"),
-      React.createElement("span",null,"Clique no ",React.createElement("b",null,"label")," da fase + dia para editar prazo")
+      selectedItem&&React.createElement(AdminPanel,{item:selectedItem,onClose:()=>setSelectedId(null),onSave:savePatch})
     )
   );
 }
-
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
 </script>
 </body>
