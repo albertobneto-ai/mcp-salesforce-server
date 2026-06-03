@@ -40,6 +40,12 @@ export async function mountChatApp(app) {
     app.use('/api/inventory', inventoryRoutes);
   } catch (e) { console.error('[Inventory] Rota nao carregada:', e.message); }
 
+  // Laboratorio
+  try {
+    const { default: labRoutes } = await import('./routes/lab.js');
+    app.use('/api/lab', labRoutes);
+  } catch (e) { console.error('[Lab] Rota nao carregada:', e.message); }
+
   // Servir prototipos como HTML estatico
   const protoDir = '/tmp/prototipos';
   try { const fs = await import('fs'); fs.default.mkdirSync(protoDir, { recursive: true }); } catch {}
