@@ -25,7 +25,7 @@
   var ifr2=document.createElement('iframe');ifr2.style.cssText='width:100%;height:100%;border:none;';
   ov2.appendChild(ifr2);document.body.appendChild(ov2);
 
-  /* === Squad Agentes SF Overlay (admin only) === */
+  /* === Squad Agentes SF Overlay === */
   var ov3=document.createElement('div');ov3.id='squad-overlay';ov3.style.cssText='position:fixed;inset:0;z-index:1050;display:none;';
   var ifr3=document.createElement('iframe');ifr3.style.cssText='width:100%;height:100%;border:none;';
   ov3.appendChild(ifr3);document.body.appendChild(ov3);
@@ -36,12 +36,18 @@
   ov4.appendChild(ifr4);document.body.appendChild(ov4);
   window.__closeLabOverlay=function(){ov4.style.display='none';};
 
+  /* === Refinamentos Overlay === */
+  var ov5=document.createElement('div');ov5.id='ref-overlay';ov5.style.cssText='position:fixed;inset:0;z-index:1050;display:none;';
+  var ifr5=document.createElement('iframe');ifr5.style.cssText='width:100%;height:100%;border:none;';
+  ov5.appendChild(ifr5);document.body.appendChild(ov5);
+
   /* === Message handler for all overlays === */
   window.addEventListener('message',function(e){
     if(e.data==='dc-closed')ov.style.display='none';
     if(e.data==='crm-closed')ov2.style.display='none';
     if(e.data==='squad-closed')ov3.style.display='none';
     if(e.data==='lab-closed')ov4.style.display='none';
+    if(e.data==='ref-closed')ov5.style.display='none';
   });
 
   /* === Role-based redirects === */
@@ -51,8 +57,6 @@
     var role=gr();
     var hasToken=!!localStorage.getItem('everi9_token');
     if(!role||!hasToken)return;
-
-    /* Squad roles: redirect to standalone /squad.html */
     var squadRoles=['architect','desenvolvedor','developer'];
     if(squadRoles.indexOf(role)>=0){
       roleRedirected=true;
@@ -67,36 +71,31 @@
     var bs=document.querySelectorAll('button');
     for(var i=0;i<bs.length;i++){
       var t=bs[i].textContent.trim();
-      /* Hide DC header button */
-      if(t==='☁️ DC'||t==='☁\uFE0F DC'){bs[i].style.display='none';}
-      /* Hide GP header button */
+      if(t==='\u2601\uFE0F DC'||t==='\u2601 DC'){bs[i].style.display='none';}
       if(t==='GP'&&bs[i].title&&bs[i].title.indexOf('Painel')>=0){bs[i].style.display='none';}
     }
-    /* Hide robot logo image in sidebar */
     var imgs=document.querySelectorAll('img[alt="Ever i9"]');
     for(var j=0;j<imgs.length;j++){imgs[j].style.display='none';}
   },500);
 
-  /* === Inject app drawer under Aplicações sidebar item === */
+  /* === Inject app drawer under Aplicacoes sidebar item === */
   setInterval(function(){
     var role=gr();if(!role)return;
     if(document.getElementById('apps-drawer'))return;
     var isAdmin=role==='admin'||role==='architect';
 
-    /* Find Aplicações by scanning all elements for the text */
     var all=document.querySelectorAll('*');
     var target=null;
     for(var i=0;i<all.length;i++){
       var el=all[i];
       if(el.childElementCount>3)continue;
       var txt=(el.textContent||'').trim();
-      if(txt==='◫ Aplicações'||txt==='◫Aplicações'){
+      if(txt==='\u25EB Aplica\u00E7\u00F5es'||txt==='\u25EBAplica\u00E7\u00F5es'){
         target=el;break;
       }
     }
     if(!target)return;
 
-    /* Create drawer container */
     var drawer=document.createElement('div');drawer.id='apps-drawer';
     drawer.style.cssText='max-height:0;overflow:hidden;transition:max-height .25s ease;margin:0 8px;';
 
@@ -114,7 +113,7 @@
     }
 
     /* GP */
-    inner.appendChild(mkApp('app-gp','Gestão de Projetos','#94a3b8',function(){
+    inner.appendChild(mkApp('app-gp','Gest\u00E3o de Projetos','#94a3b8',function(){
       var bs=document.querySelectorAll('button');
       for(var j=0;j<bs.length;j++){if(bs[j].title&&bs[j].title.indexOf('Painel GP')>=0){bs[j].click();break;}}
     }));
@@ -122,6 +121,11 @@
     /* Squad */
     inner.appendChild(mkApp('app-squad','Squad Agentes','#a78bfa',function(){
       ov3.style.display='block';ifr3.src='/squad.html';
+    }));
+
+    /* Refinamentos */
+    inner.appendChild(mkApp('app-ref','Refinamentos','#7c6df0',function(){
+      ov5.style.display='block';ifr5.src='/refinamentos.html';
     }));
 
     if(isAdmin){
@@ -133,21 +137,19 @@
       }));
     }
 
-    /* Laboratório — visible to all roles */
-    inner.appendChild(mkApp('app-lab','Laboratório','#f59e0b',function(){
+    /* Laboratorio */
+    inner.appendChild(mkApp('app-lab','Laborat\u00F3rio','#f59e0b',function(){
       ov4.style.display='block';ifr4.src='/lab.html';
     }));
 
     drawer.appendChild(inner);
 
-    /* Insert after the target element */
     if(target.nextSibling){
       target.parentNode.insertBefore(drawer,target.nextSibling);
     }else{
       target.parentNode.appendChild(drawer);
     }
 
-    /* Toggle drawer on click - capture phase to beat React */
     var expanded=false;
     target.addEventListener('click',function(ev){
       ev.stopImmediatePropagation();ev.preventDefault();ev.stopPropagation();
@@ -157,32 +159,6 @@
 
   },800);
 
-  /* === Inject Laboratório sidebar item === */
-  setInterval(function(){
-    var role=gr();if(!role)return;
-    if(document.getElementById('lab-sidebar-item'))return;
-
-    var all=document.querySelectorAll('button');
-    var appBtn=null;
-    for(var i=0;i<all.length;i++){
-      var txt=(all[i].textContent||'').trim();
-      if(txt==='◫ Aplicações'||txt==='◫Aplicações'){appBtn=all[i];break;}
-    }
-    if(!appBtn)return;
-
-    var btn=document.createElement('button');btn.id='lab-sidebar-item';
-    btn.style.cssText='width:100%;display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;border:none;background:transparent;color:#666;font-size:14px;font-weight:400;cursor:pointer;margin-bottom:4px;font-family:Outfit,sans-serif;transition:all .2s;';
-    btn.innerHTML='<span style="font-size:16px;width:20px;text-align:center">◇</span>Laboratório';
-    btn.onmouseenter=function(){this.style.background='#f5f5f8'};
-    btn.onmouseleave=function(){this.style.background='transparent'};
-    btn.onclick=function(){ov4.style.display='block';ifr4.src='/lab.html';};
-
-    if(appBtn.nextSibling){
-      appBtn.parentNode.insertBefore(btn,appBtn.nextSibling);
-    }else{
-      appBtn.parentNode.appendChild(btn);
-    }
-  },800);
 })();
 </script>
   <script>
