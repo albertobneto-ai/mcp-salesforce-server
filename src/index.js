@@ -105,6 +105,35 @@ app.get("/test-connection", async (req, res) => {
   }
 });
 
+// --- Admin: update SF security token at runtime ---
+app.post("/api/admin/update-sf-token", async (req, res) => {
+  try {
+    const { token, adminKey } = req.body;
+    if (adminKey !== "everi9-admin-2026") {
+      return res.status(403).json({ status: "error", message: "Forbidden" });
+    }
+    if (!token) {
+      return res.status(400).json({ status: "error", message: "token is required" });
+    }
+    // Update in-memory config
+    sfClient.config.securityToken = token;
+    // Force reconnection
+    sfClient.conn = null;
+    sfClient.orgId = null;
+    // Try to reconnect with new token
+    await sfClient.ensureConnected();
+    const identity = await sfClient.conn.identity();
+    res.json({
+      status: "token_updated",
+      orgId: sfClient.getOrgId(),
+      username: identity.username,
+      message: "Security token updated and reconnected successfully"
+    });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
 // --- POST deploy (manifest in body, optional ?org=00DAs...) ---
 app.post("/api/deploy", async (req, res) => {
   try {
