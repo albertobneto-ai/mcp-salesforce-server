@@ -3,39 +3,25 @@ import { listItems, createItem, deleteItem, getItemContent } from '../lab-db.js'
 
 const router = Router();
 
-// Auth middleware (reuse from existing)
-function authMiddleware(req, res, next) {
-  const token = (req.headers.authorization || '').replace('Bearer ', '');
-  if (!token) return res.status(401).json({ error: 'Token required' });
-  try {
-    const jwt = await import('jsonwebtoken');
-    const decoded = jwt.default.verify(token, process.env.JWT_SECRET || 'everi9-secret-2026');
-    req.user = decoded;
-    next();
-  } catch {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-}
-
-// Wrapper because we use async import
+// Auth middleware (async wrapper)
 async function auth(req, res, next) {
-  const token = (req.headers.authorization || '').replace('Bearer ', '');
+  var token = (req.headers.authorization || '').replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Token required' });
   try {
-    const jwt = (await import('jsonwebtoken')).default;
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'everi9-secret-2026');
+    var jwt = (await import('jsonwebtoken')).default;
+    var decoded = jwt.verify(token, process.env.JWT_SECRET || 'everi9-secret-2026');
     req.user = decoded;
     next();
-  } catch {
+  } catch (e) {
     return res.status(401).json({ error: 'Invalid token' });
   }
 }
 
-// List items (optional ?category=prototipos|apresentacoes|documentacoes)
+// List items
 router.get('/items', auth, async (req, res) => {
   try {
-    const items = await listItems(req.query.category);
-    res.json({ items });
+    var items = await listItems(req.query.category);
+    res.json({ items: items });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -44,14 +30,20 @@ router.get('/items', auth, async (req, res) => {
 // Create item
 router.post('/items', auth, async (req, res) => {
   try {
-    const { category, title, description, url, file_name, file_type, file_size, file_content } = req.body;
-    if (!category || !title) return res.status(400).json({ error: 'category and title required' });
-    const item = await createItem({
-      category, title, description, url,
-      file_name, file_type, file_size, file_content,
+    var b = req.body;
+    if (!b.category || !b.title) return res.status(400).json({ error: 'category and title required' });
+    var item = await createItem({
+      category: b.category,
+      title: b.title,
+      description: b.description || '',
+      url: b.url || '',
+      file_name: b.file_name || '',
+      file_type: b.file_type || '',
+      file_size: b.file_size || 0,
+      file_content: b.file_content || '',
       created_by: req.user.name || req.user.email || ''
     });
-    res.json({ item });
+    res.json({ item: item });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -67,33 +59,33 @@ router.delete('/items/:id', auth, async (req, res) => {
   }
 });
 
-// Download / view item content
+// Download file content
 router.get('/items/:id/content', auth, async (req, res) => {
   try {
-    const item = await getItemContent(req.params.id);
+    var item = await getItemContent(req.params.id);
     if (!item) return res.status(404).json({ error: 'not found' });
     if (item.file_content) {
-      const buf = Buffer.from(item.file_content, 'base64');
+      var buf = Buffer.from(item.file_content, 'base64');
       res.setHeader('Content-Disposition', 'attachment; filename="' + (item.file_name || 'file') + '"');
       res.setHeader('Content-Type', item.file_type || 'application/octet-stream');
       return res.send(buf);
     }
     if (item.url) return res.json({ url: item.url });
-    res.json({ item });
+    res.json({ item: item });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// View (returns URL or content info without downloading)
+// View item metadata
 router.get('/items/:id', auth, async (req, res) => {
   try {
-    const item = await getItemContent(req.params.id);
+    var item = await getItemContent(req.params.id);
     if (!item) return res.status(404).json({ error: 'not found' });
-    // Don't send file_content in view (too large)
-    const { file_content, ...rest } = item;
-    rest.has_content = !!file_content;
-    res.json({ item: rest });
+    var result = Object.assign({}, item);
+    result.has_content = !!result.file_content;
+    delete result.file_content;
+    res.json({ item: result });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
