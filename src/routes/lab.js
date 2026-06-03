@@ -66,7 +66,9 @@ router.get('/items/:id/content', auth, async (req, res) => {
     if (!item) return res.status(404).json({ error: 'not found' });
     if (item.file_content) {
       var buf = Buffer.from(item.file_content, 'base64');
-      res.setHeader('Content-Disposition', 'attachment; filename="' + (item.file_name || 'file') + '"');
+      var fname = (item.file_name || 'file').replace(/[^\x20-\x7E]/g, '_');
+      var fnameUtf8 = encodeURIComponent(item.file_name || 'file');
+      res.setHeader('Content-Disposition', "attachment; filename=\"" + fname + "\"; filename*=UTF-8''" + fnameUtf8);
       res.setHeader('Content-Type', item.file_type || 'application/octet-stream');
       return res.send(buf);
     }
