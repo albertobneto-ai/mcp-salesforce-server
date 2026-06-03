@@ -68,9 +68,9 @@ const CATS=[
   {key:'documentacoes',label:'DOCUMENTAÇÕES',icon:'📄',cls:'docs',desc:'Guias e documentos'}
 ];
 function Lab(){
-  const[tab,setTab]=us('prototipos');
+  const initTab=(function(){var h=window.location.hash.replace('#','').split('&')[0];return['prototipos','apresentacoes','documentacoes'].indexOf(h)>=0?h:'prototipos'})();const initAdd=window.location.hash.indexOf('add=1')>=0;const[tab,setTab]=us(initTab);
   const[items,setItems]=us([]);
-  const[modal,setModal]=us(false);
+  const[modal,setModal]=us(initAdd);
   const[title,setTitle]=us('');
   const[desc,setDesc]=us('');
   const[url,setUrl]=us('');
