@@ -4,301 +4,398 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ever i9 — Laboratório</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0a0a1a;--card:#12122a;--border:#1e1e3a;--accent:#6C5CE7;--green:#00b894;--orange:#fdcb6e;--red:#d63031;--text:#e0e0e0;--muted:#888}
-html,body{height:100%;font-family:-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text)}
-#app{display:flex;height:100vh}
-.sidebar{width:220px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
-.sidebar header{padding:20px;border-bottom:1px solid var(--border)}
-.sidebar header h1{font-size:15px;font-weight:700;color:#fff}
-.sidebar header span{font-size:11px;color:var(--muted)}
-.nav-item{padding:12px 20px;font-size:13px;cursor:pointer;border-left:3px solid transparent;transition:.15s}
-.nav-item:hover{background:rgba(108,92,231,.1)}
-.nav-item.active{border-left-color:var(--accent);background:rgba(108,92,231,.15);color:#fff}
-.nav-section{padding:12px 20px 6px;font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted)}
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.topbar{height:50px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px}
-.topbar h2{font-size:15px;font-weight:600;color:#fff}
-.badge{background:var(--accent);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px}
-.content{flex:1;overflow-y:auto;padding:24px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:20px}
-.card h3{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:14px}
-.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:40px;text-align:center;cursor:pointer;transition:.2s}
-.upload-zone:hover,.upload-zone.dragover{border-color:var(--accent);background:rgba(108,92,231,.05)}
-.upload-zone p{color:var(--muted);font-size:13px;margin-top:8px}
-.upload-zone .icon{font-size:36px;opacity:.5}
-.btn{padding:10px 20px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px}
-.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{opacity:.85}
-.btn-green{background:var(--green);color:#fff}.btn-green:hover{opacity:.85}
-.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}.btn-outline:hover{border-color:var(--accent)}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.stats{display:flex;gap:16px;margin:16px 0}
-.stat{background:rgba(108,92,231,.1);border-radius:8px;padding:10px 16px;flex:1;text-align:center}
-.stat .n{font-size:22px;font-weight:700;color:#fff}
-.stat .l{font-size:11px;color:var(--muted);margin-top:2px}
-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px}
-th{text-align:left;padding:8px;border-bottom:1px solid var(--border);color:var(--muted);font-size:11px;text-transform:uppercase}
-td{padding:6px 8px;border-bottom:1px solid rgba(30,30,58,.5)}
-tr:hover{background:rgba(108,92,231,.05)}
-.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;color:#fff}
-.pill-green{background:var(--green)}.pill-orange{background:var(--orange);color:#333}.pill-purple{background:var(--accent)}.pill-red{background:var(--red)}
-#map{height:350px;border-radius:8px;margin-top:12px}
-.log{background:#0d0d20;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:monospace;font-size:12px;max-height:200px;overflow-y:auto;margin-top:12px;color:var(--green)}
-.actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
-input[type=file]{display:none}
-.file-info{display:flex;align-items:center;gap:10px;padding:10px;background:rgba(0,184,148,.1);border-radius:6px;margin-top:10px}
-.file-info .name{font-weight:600;color:var(--green)}
-.file-info .size{color:var(--muted);font-size:12px}
-.loading{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+body{font-family:'Outfit',sans-serif;background:#0a0a1a;color:#e0e0e0;min-height:100vh}
+.lab-header{background:#12122a;border-bottom:1px solid #1e1e3a;padding:16px 28px;display:flex;align-items:center;gap:14}
+.lab-header .logo{width:28px;height:28px;border-radius:8px;background:#22c55e;display:flex;align-items:center;justify-content:center;color:#12122a;font-size:11px;font-weight:700}
+.lab-header h1{font-size:17px;font-weight:700;color:#e0e0e0;letter-spacing:-.3px}
+.lab-header .close-btn{margin-left:auto;width:32px;height:32px;border-radius:8px;border:1px solid #1e1e3a;background:#12122a;cursor:pointer;font-size:16px;color:#94a3b8;display:flex;align-items:center;justify-content:center}
+.lab-header .close-btn:hover{background:#0f0f22;color:#e0e0e0}
+.tabs{display:flex;gap:6px;padding:16px 28px 0;background:#12122a}
+.tab{padding:10px 20px;border-radius:10px 10px 0 0;border:1.5px solid transparent;background:transparent;color:#64748b;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.3px;transition:all .15s}
+.tab.active{background:#0a0a1a;color:#e0e0e0;border-color:#1e1e3a;border-bottom-color:#0a0a1a;position:relative;top:1px}
+.tab:hover:not(.active){background:#0f0f22}
+.content{padding:24px 28px;max-width:900px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.section-title{font-size:13px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.8px}
+.add-btn{display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;border:none;background:#6C5CE7;color:#12122a;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.3px;transition:all .15s}
+.add-btn:hover{background:#2a2a3e}
+.item-card{background:#12122a;border-radius:12px;padding:16px 20px;border:1px solid #2a2a3e;margin-bottom:10px;display:flex;align-items:center;gap:14;transition:all .15s}
+.item-card:hover{border-color:#2a2a3e;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.item-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.item-icon.proto{background:#dbeafe;color:#3b82f6}
+.item-icon.apres{background:#fce7f3;color:#ec4899}
+.item-icon.kml{background:#1e1e3a;color:#6C5CE7}
+.item-icon.docs{background:#d1fae5;color:#10b981}
+.item-info{flex:1;min-width:0}
+.item-title{font-size:14px;font-weight:600;color:#e0e0e0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-meta{font-size:11px;color:#94a3b8;margin-top:3px;display:flex;gap:8px}
+.item-actions{display:flex;gap:6px;flex-shrink:0}
+.act-btn{width:34px;height:34px;border-radius:8px;border:1.5px solid #1e1e3a;background:#12122a;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;color:#64748b;transition:all .15s}
+.act-btn:hover{background:#0a0a1a;border-color:#2a2a3e;color:#e0e0e0}
+.act-btn.del{color:#fca5a5;border-color:#fee2e2}
+.act-btn.del:hover{background:#fef2f2;color:#ef4444}
+.empty{text-align:center;color:#94a3b8;padding:48px 0;font-size:13px}
+.modal-bg{position:fixed;inset:0;background:rgba(10,10,26,.65);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:#12122a;border-radius:16px;width:480px;max-width:95vw;overflow:hidden;box-shadow:0 24px 48px rgba(0,0,0,.2)}
+.modal-head{padding:18px 22px 14px;border-bottom:1px solid #1e1e3a;background:#12122a;display:flex;align-items:center;justify-content:space-between}
+.modal-head h2{font-size:15px;font-weight:700;color:#e0e0e0}
+.modal-body{padding:20px 22px}
+.modal-body label{display:block;font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;margin-top:14px}
+.modal-body label:first-child{margin-top:0}
+.modal-body input,.modal-body textarea{width:100%;border:1.5px solid #1e1e3a;border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none;transition:border .15s}
+.modal-body input:focus,.modal-body textarea:focus{border-color:#e0e0e0}
+.modal-foot{padding:14px 22px 18px;border-top:1px solid #1e1e3a;background:#12122a;display:flex;gap:8px}
+.modal-foot .save{flex:1;padding:10px;border-radius:8px;border:none;background:#6C5CE7;color:#12122a;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.modal-foot .cancel{padding:10px 18px;border-radius:8px;border:1px solid #1e1e3a;background:#12122a;font-size:13px;cursor:pointer;font-family:inherit}
+.file-drop{border:2px dashed #d1d5db;border-radius:10px;padding:20px;text-align:center;cursor:pointer;color:#94a3b8;font-size:12px;transition:all .15s;margin-top:8px}
+.file-drop:hover{border-color:#6366f1;color:#6366f1;background:#f5f3ff}
+.file-drop.has-file{border-color:#22c55e;color:#22c55e;background:#f0fdf4}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes thinkPulse{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 </head>
 <body>
-<div style="position:fixed;top:12px;right:16px;z-index:9999">
-<button onclick="if(window.parent && window.parent.__closeLabOverlay){window.parent.__closeLabOverlay()}else{window.close()}" style="background:#1e1e3a;border:1px solid #2a2a3e;color:#e0e0e0;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit">FECHAR</button>
-</div>
-<div id="app">
-  <div class="sidebar">
-    <header><h1>Ever i9</h1><span>Laboratório</span></header>
-    <div class="nav-section">CONVERSAO</div>
-    <div class="nav-item active">Conversao KML</div>
-    <div class="nav-section">EM BREVE</div>
-    <div class="nav-item" style="opacity:.4">Gerador de Dados</div>
-    <div class="nav-item" style="opacity:.4">Validador de Spec</div>
-  </div>
-  <div class="main">
-    <div class="topbar">
-      <h2>Conversao CSV para KML</h2>
-      <span class="badge">Network Coverage</span>
-    </div>
-    <div class="content">
-      <div class="card">
-        <h3>1. Upload do CSV</h3>
-        <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-          <div class="icon">CSV</div>
-          <p>Arraste o CSV aqui ou clique para selecionar</p>
-          <p style="font-size:11px;margin-top:4px;color:var(--muted)">Colunas: codigo, tipo, tecnologia, latitude, longitude, cidade, bairro, status, portas_total, portas_livres</p>
-        </div>
-        <input type="file" id="fileInput" accept=".csv">
-        <div id="fileInfo" style="display:none"></div>
-        <div style="margin-top:12px">
-          <button class="btn btn-outline" onclick="loadSample()">Carregar CSV de exemplo (29 assets)</button>
-        </div>
-      </div>
-      <div id="resultsArea" style="display:none">
-        <div class="stats" id="statsBar"></div>
-        <div class="grid2">
-          <div class="card">
-            <h3>2. Preview dos dados</h3>
-            <div style="max-height:350px;overflow-y:auto" id="tableArea"></div>
-          </div>
-          <div class="card">
-            <h3>3. Preview no mapa</h3>
-            <div id="map"></div>
-          </div>
-        </div>
-        <div class="card">
-          <h3>4. Exportar</h3>
-          <p style="font-size:13px;color:var(--muted);margin-bottom:12px" id="kmlSummary"></p>
-          <div class="actions">
-            <button class="btn btn-primary" id="btnDownload" onclick="downloadKMLs()">Baixar KMLs (.zip)</button>
-            <button class="btn btn-green" id="btnUploadSF" onclick="uploadToSF()">Gravar na Org SalesMaps</button>
-          </div>
-          <div class="log" id="logArea" style="display:none"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+<div id="app"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script>
-var parsedAssets=[], generatedKMLs=[], map=null, markersLayer=null;
-var COLORS={Ativa:'#00b894',Lotada:'#fdcb6e',Planejada:'#6c5ce7',Inativa:'#636e72'};
+const e=React.createElement,{useState:us,useEffect:ue,useRef:ur}=React;
+const CATS=[
+  {key:'prototipos',label:'PROTÓTIPOS',icon:'⚡',cls:'proto',desc:'POCs e simuladores'},
+  {key:'apresentacoes',label:'APRESENTAÇÕES',icon:'📊',cls:'apres',desc:'Decks e apresentações'},
+  {key:'documentacoes',label:'DOCUMENTAÇÕES',icon:'📄',cls:'docs',desc:'Guias e documentos'},
+  {key:'kml',label:'CONVERSÃO KML',icon:'🗺️',cls:'kml',desc:'CSV para KML (Salesforce Maps)'}
+];
+/* Global token helper */
+var tk=function(){try{return JSON.parse(localStorage.getItem('everi9_token')||'""')||localStorage.getItem('everi9_token')||''}catch(e){return localStorage.getItem('everi9_token')||''}};
 
-// Drag & Drop
-var dz=document.getElementById('dropZone');
-dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('dragover')});
-dz.addEventListener('dragleave',function(){dz.classList.remove('dragover')});
-dz.addEventListener('drop',function(e){e.preventDefault();dz.classList.remove('dragover');handleFile(e.dataTransfer.files[0])});
-document.getElementById('fileInput').addEventListener('change',function(e){handleFile(e.target.files[0])});
-
-function handleFile(file){
-  if(!file)return;
-  document.getElementById('fileInfo').style.display='block';
-  document.getElementById('fileInfo').innerHTML='<div class="file-info"><span class="name">'+file.name+'</span><span class="size">'+(file.size/1024).toFixed(1)+' KB</span></div>';
-  var reader=new FileReader();
-  reader.onload=function(e){processCSV(e.target.result)};
-  reader.readAsText(file);
-}
-
-// CSV Parser
-function csvToAssets(csv){
-  var lines=csv.trim().split('\n');
-  var header=lines[0].split(',').map(function(h){return h.trim()});
-  var assets=[];
-  for(var i=1;i<lines.length;i++){
-    var c=lines[i].split(',').map(function(x){return x.trim()});
-    if(c.length<6)continue;
-    var gi=function(name,fb){var idx=header.indexOf(name);return idx>=0?c[idx]:c[fb]};
-    var a={id:gi('codigo',0),type:gi('tipo',1),tech:gi('tecnologia',2),lat:parseFloat(gi('latitude',3)),lng:parseFloat(gi('longitude',4)),city:gi('cidade',5),bairro:gi('bairro',6)||'',status:gi('status',7)||'Ativa',total:parseInt(gi('portas_total',8)||'0'),avail:parseInt(gi('portas_livres',9)||'0')};
-    if(!isNaN(a.lat)&&!isNaN(a.lng))assets.push(a);
-  }
-  return assets;
-}
-
-// Geometria
-function offsetM(lat,lng,dx,dy){return[lat+(dy/111320),lng+(dx/(111320*Math.cos(lat*Math.PI/180)))]}
-function shapeAntena(lat,lng,s){s=s||100;return[offsetM(lat,lng,0,s*1.4),offsetM(lat,lng,-s*.5,-s*.3),offsetM(lat,lng,-s*.15,-s*.3),offsetM(lat,lng,-s*.15,-s*1.2),offsetM(lat,lng,s*.15,-s*1.2),offsetM(lat,lng,s*.15,-s*.3),offsetM(lat,lng,s*.5,-s*.3)]}
-function shapeHex(lat,lng,s){s=s||200;var p=[];for(var i=0;i<6;i++){var a=Math.PI/6+(2*Math.PI*i/6);p.push(offsetM(lat,lng,s*Math.cos(a),s*Math.sin(a)))}return p}
-function shapePoly(lat,lng,s){s=s||350;var p=[];for(var i=0;i<8;i++){var a=2*Math.PI*i/8;var r=s*(0.8+Math.random()*0.4);p.push(offsetM(lat,lng,r*Math.cos(a),r*Math.sin(a)))}return p}
-function shapeDiam(lat,lng,s){s=s||150;return[offsetM(lat,lng,0,s),offsetM(lat,lng,s*.6,0),offsetM(lat,lng,0,-s),offsetM(lat,lng,-s*.6,0)]}
-function getShape(a){if(a.type==='OLT')return shapeHex(a.lat,a.lng,180);if(a.type==='POP')return shapePoly(a.lat,a.lng,300);if(a.type==='Splitter')return shapeDiam(a.lat,a.lng,120);return shapeAntena(a.lat,a.lng,100)}
-
-// KML styles
-var KML_STYLES='<Style id="cto_ativa"><PolyStyle><color>3300CC00</color><outline>1</outline></PolyStyle><LineStyle><color>BB00CC00</color><width>1</width></LineStyle></Style>\n<Style id="cto_lotada"><PolyStyle><color>330080DD</color><outline>1</outline></PolyStyle><LineStyle><color>BB0080DD</color><width>2</width></LineStyle></Style>\n<Style id="cto_planejada"><PolyStyle><color>33E95090</color><outline>1</outline></PolyStyle><LineStyle><color>BBE95090</color><width>1</width></LineStyle></Style>\n<Style id="olt_ativa"><PolyStyle><color>4400FFFF</color><outline>1</outline></PolyStyle><LineStyle><color>FF00CCCC</color><width>2</width></LineStyle></Style>\n<Style id="olt_lotada"><PolyStyle><color>440055FF</color><outline>1</outline></PolyStyle><LineStyle><color>FF0055FF</color><width>2</width></LineStyle></Style>\n<Style id="olt_planejada"><PolyStyle><color>44FFAA00</color><outline>1</outline></PolyStyle><LineStyle><color>FFFFAA00</color><width>2</width></LineStyle></Style>\n<Style id="pop_ativa"><PolyStyle><color>2200AAFF</color><outline>1</outline></PolyStyle><LineStyle><color>CC00AAFF</color><width>3</width></LineStyle></Style>\n<Style id="pop_lotada"><PolyStyle><color>220000FF</color><outline>1</outline></PolyStyle><LineStyle><color>CC0000FF</color><width>3</width></LineStyle></Style>\n<Style id="pop_planejada"><PolyStyle><color>22FF8800</color><outline>1</outline></PolyStyle><LineStyle><color>CCFF8800</color><width>3</width></LineStyle></Style>\n<Style id="spl_ativa"><PolyStyle><color>3300DDAA</color><outline>1</outline></PolyStyle><LineStyle><color>BB00DDAA</color><width>1</width></LineStyle></Style>\n<Style id="spl_lotada"><PolyStyle><color>330088DD</color><outline>1</outline></PolyStyle><LineStyle><color>BB0088DD</color><width>2</width></LineStyle></Style>\n<Style id="spl_planejada"><PolyStyle><color>33DD88FF</color><outline>1</outline></PolyStyle><LineStyle><color>BBDD88FF</color><width>1</width></LineStyle></Style>';
-
-function styleId(a){var p={CTO:'cto',OLT:'olt',POP:'pop',Splitter:'spl'}[a.type]||'cto';return p+'_'+(a.status||'Ativa').toLowerCase()}
-
-function generateKML(assets,name){
-  var kml='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n<name>Cobertura '+name+' - Algar Telecom</name>\n<description>'+assets.length+' assets</description>\n'+KML_STYLES+'\n';
-  for(var i=0;i<assets.length;i++){
-    var a=assets[i],sh=getShape(a);sh.push(sh[0]);
-    var coords=sh.map(function(p){return p[1].toFixed(6)+','+p[0].toFixed(6)+',0'}).join(' ');
-    var occ=a.total>0?Math.round((a.total-a.avail)/a.total*100):0;
-    kml+='<Placemark><name>'+a.id+'</name><description><![CDATA[<b>'+a.id+'</b><br/>Tipo: '+a.type+'<br/>Bairro: '+a.bairro+'<br/>Tech: '+a.tech+'<br/>Status: '+a.status+'<br/>'+(a.total>0?'Portas: '+(a.total-a.avail)+'/'+a.total+' ('+occ+'%)<br/>Livres: '+a.avail:'Backbone')+']]></description><styleUrl>#'+styleId(a)+'</styleUrl><Polygon><outerBoundaryIs><LinearRing><coordinates>'+coords+'</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>\n';
-  }
-  kml+='</Document>\n</kml>';return kml;
-}
-
-function generateKMLsByCity(assets){
-  var cities={};
-  for(var i=0;i<assets.length;i++){var c=assets[i].city||'Sem Cidade';if(!cities[c])cities[c]=[];cities[c].push(assets[i])}
-  var result=[];
-  for(var city in cities){
-    var arr=cities[city];
-    for(var j=0;j<arr.length;j+=1000){
-      var chunk=arr.slice(j,j+1000);
-      var suffix=arr.length>1000?' Pt.'+(Math.floor(j/1000)+1):'';
-      var slug=city.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'-');
-      var fn='cobertura-'+slug+(arr.length>1000?'-pt'+(Math.floor(j/1000)+1):'')+'.kml';
-      result.push({city:city+suffix,filename:fn,assets:chunk.length,kml:generateKML(chunk,city+suffix)});
+function Lab(){
+  const initTab=(function(){var h=window.location.hash.replace('#','').split('&')[0];return['prototipos','apresentacoes','documentacoes','kml'].indexOf(h)>=0?h:'prototipos'})();const initAdd=window.location.hash.indexOf('add=1')>=0;const[tab,setTab]=us(initTab);
+  const[items,setItems]=us([]);
+  const[modal,setModal]=us(initAdd);
+  const[title,setTitle]=us('');
+  const[desc,setDesc]=us('');
+  const[url,setUrl]=us('');
+  const[file,setFile]=us(null);
+  const[loading,setLoading]=us(false);
+  const fileRef=ur();
+  const hd=function(){return{Authorization:'Bearer '+tk(),'Content-Type':'application/json'}};
+  const load=function(){
+    fetch('/api/lab/items?category='+tab,{headers:hd()})
+      .then(function(r){return r.json()})
+      .then(function(j){setItems(j.items||[])})
+      .catch(function(){});
+  };
+  ue(function(){load()},[tab]);
+  const doAdd=function(){
+    if(!title.trim())return;
+    setLoading(true);
+    var body={category:tab,title:title.trim(),description:desc.trim(),url:url.trim()};
+    if(file){
+      var reader=new FileReader();
+      reader.onload=function(){
+        body.file_name=file.name;
+        body.file_type=file.type;
+        body.file_size=file.size;
+        body.file_content=reader.result.split(',')[1];
+        fetch('/api/lab/items',{method:'POST',headers:hd(),body:JSON.stringify(body)})
+          .then(function(){setModal(false);setTitle('');setDesc('');setUrl('');setFile(null);load();setLoading(false)})
+          .catch(function(){setLoading(false)});
+      };
+      reader.readAsDataURL(file);
+    } else {
+      fetch('/api/lab/items',{method:'POST',headers:hd(),body:JSON.stringify(body)})
+        .then(function(){setModal(false);setTitle('');setDesc('');setUrl('');setFile(null);load();setLoading(false)})
+        .catch(function(){setLoading(false)});
     }
+  };
+  const doDelete=function(id){
+    if(!confirm('Excluir este item?'))return;
+    fetch('/api/lab/items/'+id,{method:'DELETE',headers:hd()}).then(function(){load()});
+  };
+  const fetchBlob=function(id,cb){
+    fetch('/api/lab/items/'+id+'/content',{headers:{Authorization:'Bearer '+tk()}})
+      .then(function(r){
+        var ct=r.headers.get('content-type')||'application/octet-stream';
+        var cd=r.headers.get('content-disposition')||'';
+        var fn='';var m=cd.match(/filename="([^"]+)"/);if(m)fn=m[1];
+        return r.blob().then(function(b){return{blob:b,ct:ct,fn:fn}});
+      }).then(cb).catch(function(e){alert('Erro: '+e.message)});
+  };
+  const doView=function(item){
+    if(item.url){window.open(item.url,'_blank');return;}
+    fetchBlob(item.id,function(d){
+      var u=URL.createObjectURL(d.blob);window.open(u,'_blank');
+    });
+  };
+  const doDownload=function(item){
+    if(item.url){var a=document.createElement('a');a.href=item.url;a.download=item.title;a.target='_blank';a.click();return;}
+    fetchBlob(item.id,function(d){
+      var u=URL.createObjectURL(d.blob);
+      var a=document.createElement('a');a.href=u;a.download=d.fn||item.file_name||item.title;a.click();
+      URL.revokeObjectURL(u);
+    });
+  };
+  const catInfo=CATS.find(function(c){return c.key===tab});
+  const fmtDate=function(d){try{return new Date(d).toLocaleDateString('pt-BR')}catch(e){return ''}};
+  const fmtSize=function(s){if(!s)return'';if(s>1048576)return(s/1048576).toFixed(1)+'MB';if(s>1024)return Math.round(s/1024)+'KB';return s+'B'};
+
+  /* === KML Tab === */
+  if(tab==='kml'){
+    return e('div',null,
+      e('div',{className:'lab-header'},e('div',{className:'logo'},'i9'),e('h1',null,'Laboratório'),e('button',{className:'close-btn',onClick:function(){if(window.parent&&window.parent.__closeLabOverlay)window.parent.__closeLabOverlay();else window.close()}},'✕')),
+      e('div',{className:'tabs'},CATS.map(function(c){return e('button',{key:c.key,className:'tab'+(tab===c.key?' active':''),onClick:function(){setTab(c.key);window.location.hash=c.key}},c.icon+' '+c.label)})),
+      e('div',{className:'content'},
+        e('div',{className:'section-header'},e('div',{className:'section-title'},'UPLOAD DO CSV'),e('button',{className:'add-btn',onClick:function(){var csv="codigo,tipo,tecnologia,latitude,longitude,cidade,bairro,status,portas_total,portas_livres\nOLT-UDI-01,OLT,GPON,-18.9188,-48.2581,Uberlandia,Centro,Ativa,128,45\nCTO-UDI-01,CTO,GPON,-18.9186,-48.2772,Uberlandia,Santa Monica,Ativa,16,7\nCTO-UDI-02,CTO,GPON,-18.921,-48.279,Uberlandia,Santa Monica,Lotada,16,0\nCTO-UDI-03,CTO,XGS-PON,-18.9145,-48.268,Uberlandia,Centro,Ativa,32,22\nPOP-UDI-01,POP,Backbone,-18.919,-48.258,Uberlandia,Centro,Ativa,0,0\nCTO-FRA-01,CTO,GPON,-20.537,-47.399,Franca,Centro,Ativa,16,11\nCTO-UBE-01,CTO,GPON,-19.7473,-47.9316,Uberaba,Centro,Ativa,16,5\nCTO-ITU-01,CTO,GPON,-18.4191,-49.4637,Ituiutaba,Centro,Planejada,16,14";var ta=document.getElementById("kml-csv-input");if(ta)ta.value=csv;if(window.__processKmlCsv)window.__processKmlCsv(csv)}},'Exemplo')),
+        e('textarea',{id:'kml-csv-input',placeholder:'Cole o CSV aqui...\n\nColunas: codigo, tipo, tecnologia, latitude, longitude, cidade, bairro, status, portas_total, portas_livres',style:{width:'100%',minHeight:100,background:'#0a0a1a',border:'1.5px solid #2a2a3e',borderRadius:10,padding:12,color:'#e0e0e0',fontSize:12,fontFamily:'monospace',resize:'vertical'},onChange:function(ev){if(window.__processKmlCsv)window.__processKmlCsv(ev.target.value)}}),
+        e('div',{style:{marginTop:8,display:'flex',gap:8}},
+          e('label',{style:{padding:'8px 16px',borderRadius:8,border:'1.5px solid #2a2a3e',background:'#12122a',color:'#94a3b8',fontSize:12,cursor:'pointer',fontFamily:'inherit',fontWeight:600}},'Upload CSV',e('input',{type:'file',accept:'.csv',style:{display:'none'},onChange:function(ev){var f=ev.target.files[0];if(!f)return;var reader=new FileReader();reader.onload=function(e){var ta=document.getElementById("kml-csv-input");if(ta)ta.value=e.target.result;if(window.__processKmlCsv)window.__processKmlCsv(e.target.result)};reader.readAsText(f)}})),
+          e('button',{id:'kml-download-btn',className:'add-btn',style:{background:'#6C5CE7',display:'none'},onClick:function(){if(window.__downloadKml)window.__downloadKml()}},'Baixar KML'),
+          e('button',{id:'kml-upload-sf-btn',className:'add-btn',style:{background:'#00b894',display:'none'},onClick:function(){if(window.__uploadKmlSF)window.__uploadKmlSF()}},'Gravar na Org')
+        ),
+        e('div',{id:'kml-stats',style:{display:'none'}}),
+        e('div',{style:{display:'flex',gap:16,marginTop:12}},
+          e('div',{style:{flex:1}},e('div',{id:'kml-table',style:{maxHeight:350,overflowY:'auto'}})),
+          e('div',{style:{flex:1}},e('div',{id:'kml-map',style:{height:350,borderRadius:10,background:'#0a0a1a'}}))
+        ),
+        e('div',{id:'kml-log',style:{display:'none',background:'#0a0a1a',border:'1px solid #1e1e3a',borderRadius:8,padding:12,fontFamily:'monospace',fontSize:12,maxHeight:150,overflowY:'auto',color:'#00b894',marginTop:12}})
+      ),
+      e(FloatingChat,null)
+    );
   }
-  return result;
+
+  return e('div',null,
+    e('div',{className:'lab-header'},
+      e('div',{className:'logo'},'i9'),
+      e('h1',null,'Laboratório'),
+      e('button',{className:'close-btn',onClick:function(){
+        if(window.parent&&window.parent.__closeLabOverlay)window.parent.__closeLabOverlay();
+        else window.close();
+      }},'×')
+    ),
+    e('div',{className:'tabs'},
+      CATS.map(function(c){
+        return e('button',{key:c.key,className:'tab'+(tab===c.key?' active':''),onClick:function(){setTab(c.key)}},
+          c.icon+' '+c.label
+        );
+      })
+    ),
+    e('div',{className:'content'},
+      e('div',{className:'section-header'},
+        e('div',null,
+          e('div',{className:'section-title'},catInfo.desc),
+          e('div',{style:{fontSize:11,color:'#b0b8c4',marginTop:2}},items.length+' itens')
+        ),
+        e('button',{className:'add-btn',onClick:function(){setModal(true);setTitle('');setDesc('');setUrl('');setFile(null)}},
+          e('span',{style:{fontSize:16,lineHeight:1}},'+'),' Adicionar'
+        )
+      ),
+      items.length===0?e('div',{className:'empty'},'Nenhum item em '+catInfo.label+'. Clique em + Adicionar para começar.'):
+        items.map(function(item){
+          return e('div',{key:item.id,className:'item-card',style:{animation:'slideUp .3s ease both'}},
+            e('div',{className:'item-icon '+catInfo.cls},catInfo.icon),
+            e('div',{className:'item-info'},
+              e('div',{className:'item-title'},item.title),
+              e('div',{className:'item-meta'},
+                item.file_name?e('span',null,'📎 '+item.file_name):null,
+                item.file_size?e('span',null,fmtSize(item.file_size)):null,
+                item.url?e('span',null,'🔗 Link'):null,
+                e('span',null,fmtDate(item.created_at)),
+                item.created_by?e('span',null,item.created_by):null
+              )
+            ),
+            e('div',{className:'item-actions'},
+              e('button',{className:'act-btn',title:'Visualizar',onClick:function(){doView(item)}},
+                e('svg',{width:16,height:16,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:2},
+                  e('path',{d:'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'}),
+                  e('circle',{cx:12,cy:12,r:3})
+                )
+              ),
+              e('button',{className:'act-btn',title:'Download',onClick:function(){doDownload(item)}},
+                e('svg',{width:16,height:16,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:2},
+                  e('path',{d:'M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4'}),
+                  e('polyline',{points:'7 10 12 15 17 10'}),
+                  e('line',{x1:12,y1:15,x2:12,y2:3})
+                )
+              ),
+              e('button',{className:'act-btn del',title:'Excluir',onClick:function(){doDelete(item.id)}},'×')
+            )
+          );
+        })
+    ),
+    modal?e('div',{className:'modal-bg',onClick:function(ev){if(ev.target===ev.currentTarget)setModal(false)}},
+      e('div',{className:'modal'},
+        e('div',{className:'modal-head'},
+          e('h2',null,'Adicionar a '+catInfo.label),
+          e('button',{className:'close-btn',onClick:function(){setModal(false)},style:{border:'1px solid #1e1e3a',borderRadius:6,width:28,height:28,background:'#12122a',cursor:'pointer',fontSize:14,color:'#94a3b8'}},'×')
+        ),
+        e('div',{className:'modal-body'},
+          e('label',null,'TÍTULO *'),
+          e('input',{value:title,onChange:function(ev){setTitle(ev.target.value)},placeholder:'Nome do item',autoFocus:true}),
+          e('label',null,'DESCRIÇÃO'),
+          e('textarea',{value:desc,onChange:function(ev){setDesc(ev.target.value)},rows:2,placeholder:'Descrição breve (opcional)'}),
+          e('label',null,'URL (LINK EXTERNO)'),
+          e('input',{value:url,onChange:function(ev){setUrl(ev.target.value)},placeholder:'https://... (opcional)'}),
+          e('label',null,'OU ARQUIVO'),
+          e('div',{className:'file-drop'+(file?' has-file':''),onClick:function(){fileRef.current.click()}},
+            file?('📎 '+file.name+' ('+fmtSize(file.size)+')'):('Clique para selecionar arquivo')
+          ),
+          e('input',{ref:fileRef,type:'file',style:{display:'none'},onChange:function(ev){if(ev.target.files[0])setFile(ev.target.files[0])}})
+        ),
+        e('div',{className:'modal-foot'},
+          e('button',{className:'save',onClick:doAdd,disabled:loading},loading?'SALVANDO...':'ADICIONAR'),
+          e('button',{className:'cancel',onClick:function(){setModal(false)}},'CANCELAR')
+        )
+      )
+    ):null,
+    /* Floating Chat */
+    e(ChatFloat,null)
+  );
 }
 
-function processCSV(csv){
-  parsedAssets=csvToAssets(csv);
-  if(parsedAssets.length===0){alert('Nenhum asset valido encontrado no CSV');return}
-  generatedKMLs=generateKMLsByCity(parsedAssets);
-  renderResults();
-}
+/* ============ CHAT FLOAT COMPONENT ============ */
+var MODELS=[
+  {id:'auto',name:'Claude / Grok',desc:'Automático'},
+  {id:'claude-opus-4-8',name:'Claude Opus 4.8',desc:'Máxima capacidade'},
+  {id:'deepseek-chat',name:'DeepSeek Chat',desc:'Rápido'},
+  {id:'free',name:'Modelo gratuito',desc:'~20 modelos gratuitos'}
+];
 
-function renderResults(){
-  document.getElementById('resultsArea').style.display='block';
-  // Stats
-  var ativa=0,lotada=0,plan=0,ports=0;
-  for(var i=0;i<parsedAssets.length;i++){var a=parsedAssets[i];if(a.status==='Ativa')ativa++;if(a.status==='Lotada')lotada++;if(a.status==='Planejada')plan++;ports+=a.avail}
-  var cities={};for(var i=0;i<parsedAssets.length;i++)cities[parsedAssets[i].city]=1;
-  document.getElementById('statsBar').innerHTML='<div class="stat"><div class="n">'+parsedAssets.length+'</div><div class="l">Assets</div></div><div class="stat"><div class="n">'+Object.keys(cities).length+'</div><div class="l">Cidades</div></div><div class="stat"><div class="n">'+ativa+'</div><div class="l">Ativas</div></div><div class="stat"><div class="n">'+lotada+'</div><div class="l">Lotadas</div></div><div class="stat"><div class="n">'+plan+'</div><div class="l">Planejadas</div></div><div class="stat"><div class="n">'+ports+'</div><div class="l">Portas livres</div></div>';
-  // Table
-  var html='<table><thead><tr><th>Codigo</th><th>Tipo</th><th>Tech</th><th>Cidade</th><th>Bairro</th><th>Status</th><th>Portas</th></tr></thead><tbody>';
-  var show=Math.min(parsedAssets.length,100);
-  for(var i=0;i<show;i++){var a=parsedAssets[i];var pc=a.status==='Ativa'?'pill-green':a.status==='Lotada'?'pill-orange':'pill-purple';html+='<tr><td>'+a.id+'</td><td>'+a.type+'</td><td>'+a.tech+'</td><td>'+a.city+'</td><td>'+a.bairro+'</td><td><span class="pill '+pc+'">'+a.status+'</span></td><td>'+(a.total>0?(a.total-a.avail)+'/'+a.total:'—')+'</td></tr>'}
-  if(parsedAssets.length>100)html+='<tr><td colspan="7" style="text-align:center;color:var(--muted)">... e mais '+(parsedAssets.length-100)+' registros</td></tr>';
-  html+='</tbody></table>';
-  document.getElementById('tableArea').innerHTML=html;
-  // Map
-  if(!map){map=L.map('map').setView([-18.92,-48.27],12);L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'CARTO',maxZoom:19}).addTo(map)}
-  if(markersLayer)map.removeLayer(markersLayer);
-  markersLayer=L.layerGroup().addTo(map);
-  var bounds=[];
-  for(var i=0;i<parsedAssets.length;i++){var a=parsedAssets[i];var r=a.type==='OLT'?9:a.type==='POP'?10:5;var m=L.circleMarker([a.lat,a.lng],{radius:r,fillColor:COLORS[a.status]||'#999',color:'#fff',weight:1,fillOpacity:.8});m.bindPopup('<b>'+a.id+'</b><br/>'+a.type+' · '+a.tech+'<br/>'+a.city+' · '+a.bairro+'<br/>Status: '+a.status);markersLayer.addLayer(m);bounds.push([a.lat,a.lng])}
-  if(bounds.length>0)map.fitBounds(bounds,{padding:[20,20]});
-  // KML summary
-  var totalKB=0;for(var i=0;i<generatedKMLs.length;i++)totalKB+=generatedKMLs[i].kml.length/1024;
-  document.getElementById('kmlSummary').innerHTML=generatedKMLs.length+' arquivo(s) KML gerado(s) — '+totalKB.toFixed(0)+' KB total';
-}
+function ChatFloat(){
+  var[open,setOpen]=us(false);
+  var[model,setModel]=us('auto');
+  var[msgs,setMsgs]=us([]);
+  var[input,setInput]=us('');
+  var[thinking,setThinking]=us(false);
+  var[showModels,setShowModels]=us(false);
+  var scrollRef=ur();
+  var curModel=MODELS.find(function(m){return m.id===model})||MODELS[0];
 
-// Download KMLs como ZIP ou individual
-function downloadKMLs(){
-  if(generatedKMLs.length===1){
-    var blob=new Blob([generatedKMLs[0].kml],{type:'application/vnd.google-earth.kml+xml'});
-    var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=generatedKMLs[0].filename;a.click();URL.revokeObjectURL(url);
-  }else{
-    for(var i=0;i<generatedKMLs.length;i++){
-      var blob=new Blob([generatedKMLs[i].kml],{type:'application/vnd.google-earth.kml+xml'});
-      var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=generatedKMLs[i].filename;a.click();URL.revokeObjectURL(url);
-    }
+  function scrollBottom(){
+    setTimeout(function(){if(scrollRef.current)scrollRef.current.scrollTop=scrollRef.current.scrollHeight},50);
   }
-}
 
-// Upload to SalesMaps org
-function uploadToSF(){
-  var btn=document.getElementById('btnUploadSF');
-  btn.disabled=true;btn.innerHTML='<span class="loading"></span> Enviando...';
-  var log=document.getElementById('logArea');log.style.display='block';log.innerHTML='';
-  function addLog(msg){log.innerHTML+=msg+'\\n';log.scrollTop=log.scrollHeight}
-  addLog('Iniciando upload para org SalesMaps...');
-
-  var idx=0;
-  function uploadNext(){
-    if(idx>=generatedKMLs.length){
-      addLog('\\n✅ '+generatedKMLs.length+' arquivo(s) enviado(s) com sucesso!');
-      addLog('Acesse SF Maps → ON THE MAP → Add Boundary → KML');
-      btn.disabled=false;btn.innerHTML='Gravar na Org SalesMaps';
-      return;
-    }
-    var k=generatedKMLs[idx];
-    addLog('Enviando '+k.filename+' ('+k.assets+' assets)...');
-    fetch(window.location.origin+'/api/kml/upload-sf',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({kml:k.kml,filename:k.filename,title:k.city+' - Algar Telecom'})
-    }).then(function(r){return r.json()}).then(function(d){
-      if(d.status==='ok'){addLog('  ✅ '+k.filename+' — '+d.message)}
-      else{addLog('  ❌ '+k.filename+' — '+(d.error||'erro'))}
-      idx++;uploadNext();
-    }).catch(function(err){addLog('  ❌ Erro: '+err.message);idx++;uploadNext()});
+  function send(){
+    var txt=input.trim();if(!txt||thinking)return;
+    var newMsgs=msgs.concat([{role:'user',content:txt}]);
+    setMsgs(newMsgs);setInput('');setThinking(true);scrollBottom();
+    var apiMsgs=newMsgs.map(function(m){return{role:m.role,content:m.content}});
+    fetch('/api/chat/',{
+      method:'POST',
+      headers:{Authorization:'Bearer '+tk(),'Content-Type':'application/json','x-model':model},
+      body:JSON.stringify({messages:apiMsgs})
+    }).then(function(r){return r.json()}).then(function(j){
+      var reply=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'Sem resposta';
+      var tipo=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.tipo)||'';
+      var mdl=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.model)||'';
+      setMsgs(function(p){return p.concat([{role:'assistant',content:reply,tipo:tipo,model:mdl}])});
+      setThinking(false);scrollBottom();
+    }).catch(function(err){
+      setMsgs(function(p){return p.concat([{role:'assistant',content:'Erro: '+err.message}])});
+      setThinking(false);scrollBottom();
+    });
   }
-  uploadNext();
+
+  function fmtContent(txt){
+    return(txt||'').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code style="background:#1e293b;color:#1e1e3a;padding:1px 5px;border-radius:3px;font-size:11px">$1</code>').replace(/\n/g,'<br/>');
+  }
+
+  if(!open){
+    return e('button',{onClick:function(){setOpen(true)},style:{position:'fixed',bottom:24,right:24,width:52,height:52,borderRadius:'50%',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'#12122a',fontSize:18,fontWeight:700,boxShadow:'0 4px 16px rgba(99,102,241,.4)',zIndex:200,fontFamily:'Outfit,sans-serif'}},'i9');
+  }
+
+  return e('div',{style:{position:'fixed',bottom:20,right:20,width:400,maxWidth:'95vw',height:520,maxHeight:'80vh',background:'#12122a',borderRadius:16,boxShadow:'0 12px 40px rgba(0,0,0,.2)',display:'flex',flexDirection:'column',zIndex:200,fontFamily:'Outfit,sans-serif',overflow:'hidden',animation:'slideUp .25s ease'}},
+    /* Header */
+    e('div',{style:{padding:'14px 16px',background:'#6C5CE7',display:'flex',alignItems:'center',gap:10,flexShrink:0}},
+      e('div',{style:{width:30,height:30,borderRadius:'50%',background:'#22c55e',display:'flex',alignItems:'center',justifyContent:'center',color:'#12122a',fontSize:11,fontWeight:700}},'i9'),
+      e('div',{style:{flex:1}},
+        e('div',{style:{color:'#0a0a1a',fontSize:13,fontWeight:700}},'Ever i9 AI'),
+        e('div',{onClick:function(){setShowModels(!showModels)},style:{color:'#94a3b8',fontSize:10,cursor:'pointer',display:'flex',alignItems:'center',gap:4}},curModel.name,' ▾')
+      ),
+      e('button',{onClick:function(){setMsgs([]);setInput('')},style:{background:'none',border:'none',color:'#64748b',cursor:'pointer',fontSize:11,fontFamily:'inherit'}},'Limpar'),
+      e('button',{onClick:function(){setOpen(false)},style:{background:'none',border:'none',color:'#94a3b8',cursor:'pointer',fontSize:18,padding:0,marginLeft:4}},'×')
+    ),
+    /* Model selector dropdown */
+    showModels?e('div',{style:{position:'absolute',top:56,left:12,right:12,background:'#12122a',borderRadius:10,boxShadow:'0 8px 24px rgba(0,0,0,.15)',border:'1px solid #1e1e3a',zIndex:10,padding:4}},
+      MODELS.map(function(m){
+        return e('div',{key:m.id,onClick:function(){setModel(m.id);setShowModels(false)},style:{padding:'10px 12px',borderRadius:8,cursor:'pointer',background:model===m.id?'#f5f3ff':'transparent',transition:'background .1s'},onMouseEnter:function(ev){if(model!==m.id)ev.currentTarget.style.background='#0f0f22'},onMouseLeave:function(ev){if(model!==m.id)ev.currentTarget.style.background='transparent'}},
+          e('div',{style:{fontSize:13,fontWeight:600,color:'#e0e0e0'}},m.name),
+          e('div',{style:{fontSize:10,color:'#94a3b8',marginTop:1}},m.desc)
+        );
+      })
+    ):null,
+    /* Messages */
+    e('div',{ref:scrollRef,style:{flex:1,overflowY:'auto',padding:'12px 14px',display:'flex',flexDirection:'column',gap:10}},
+      msgs.length===0?e('div',{style:{textAlign:'center',color:'#2a2a3e',fontSize:12,padding:'40px 0'}},'Pergunte qualquer coisa...'):null,
+      msgs.map(function(m,i){
+        var isUser=m.role==='user';
+        return e('div',{key:i,style:{display:'flex',gap:8,flexDirection:isUser?'row-reverse':'row',animation:'slideUp .2s ease'}},
+          e('div',{style:{width:26,height:26,borderRadius:'50%',flexShrink:0,background:isUser?'linear-gradient(135deg,#667eea,#764ba2)':'#22c55e',display:'flex',alignItems:'center',justifyContent:'center',color:'#12122a',fontSize:9,fontWeight:700}},isUser?'AB':'i9'),
+          e('div',{style:{maxWidth:'80%'}},
+            !isUser&&m.model?e('div',{style:{fontSize:9,color:'#94a3b8',marginBottom:2,fontWeight:600}},m.model):null,
+            e('div',{style:{padding:'10px 13px',borderRadius:isUser?'12px 12px 2px 12px':'12px 12px 12px 2px',background:isUser?'#1a1a2e':'#0a0a1a',color:isUser?'#e0e0e0':'#1a1a2e',fontSize:13,lineHeight:1.55},dangerouslySetInnerHTML:{__html:fmtContent(m.content)}})
+          )
+        );
+      }),
+      thinking?e('div',{style:{display:'flex',gap:8,alignItems:'center'}},
+        e('div',{style:{width:26,height:26,borderRadius:'50%',background:'#3b82f6',display:'flex',alignItems:'center',justifyContent:'center',color:'#12122a',fontSize:9,fontWeight:700,animation:'thinkPulse 1.3s ease-in-out infinite'}},'i9'),
+        e('div',{style:{display:'flex',gap:4,padding:'10px 14px',background:'#0a0a1a',borderRadius:12}},
+          [0,1,2].map(function(d){return e('div',{key:d,style:{width:6,height:6,borderRadius:'50%',background:'#94a3b8',animation:'bounce 1.2s ease-in-out '+d*.15+'s infinite'}})})
+        )
+      ):null
+    ),
+    /* Input */
+    e('div',{style:{padding:'10px 12px',borderTop:'1px solid #1e1e3a',display:'flex',gap:8,alignItems:'center',flexShrink:0}},
+      e('input',{value:input,onChange:function(ev){setInput(ev.target.value)},onKeyDown:function(ev){if(ev.key==='Enter'&&!ev.shiftKey){ev.preventDefault();send()}},placeholder:'Pergunte para a IA...',style:{flex:1,border:'1.5px solid #1e1e3a',borderRadius:10,padding:'10px 12px',fontSize:13,fontFamily:'inherit',outline:'none'},autoFocus:true}),
+      e('button',{onClick:send,disabled:thinking||!input.trim(),style:{width:38,height:38,borderRadius:10,border:'none',background:input.trim()?'#1a1a2e':'#1e1e3a',color:input.trim()?'#12122a':'#94a3b8',fontSize:16,cursor:input.trim()?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},'→')
+    )
+  );
 }
 
-// CSV de exemplo
-function loadSample(){
-  var csv='codigo,tipo,tecnologia,latitude,longitude,cidade,bairro,status,portas_total,portas_livres\n';
-  csv+='OLT-UDI-01,OLT,GPON,-18.9188,-48.2581,Uberlandia,Centro,Ativa,128,45\n';
-  csv+='OLT-UDI-02,OLT,XGS-PON,-18.9112,-48.2654,Uberlandia,Centro,Ativa,64,28\n';
-  csv+='CTO-UDI-SM-001,CTO,GPON,-18.9186,-48.2772,Uberlandia,Santa Monica,Ativa,16,7\n';
-  csv+='CTO-UDI-SM-002,CTO,GPON,-18.921,-48.279,Uberlandia,Santa Monica,Lotada,16,0\n';
-  csv+='CTO-UDI-CT-001,CTO,XGS-PON,-18.9145,-48.268,Uberlandia,Centro,Ativa,32,22\n';
-  csv+='POP-UDI-01,POP,Backbone,-18.919,-48.258,Uberlandia,Centro,Ativa,0,0\n';
-  csv+='CTO-UDI-CT-N01,CTO,GPON,-18.908,-48.27,Uberlandia,Centro,Ativa,16,10\n';
-  csv+='CTO-UDI-CT-N02,CTO,GPON,-18.908,-48.26,Uberlandia,Centro,Ativa,16,8\n';
-  csv+='CTO-UDI-CT-N03,CTO,GPON,-18.912,-48.255,Uberlandia,Centro,Ativa,16,4\n';
-  csv+='CTO-UDI-CT-N04,CTO,GPON,-18.917,-48.253,Uberlandia,Centro,Lotada,16,0\n';
-  csv+='CTO-UDI-CT-N05,CTO,GPON,-18.922,-48.255,Uberlandia,Centro,Ativa,16,12\n';
-  csv+='CTO-UDI-CT-N06,CTO,GPON,-18.925,-48.26,Uberlandia,Saraiva,Ativa,16,2\n';
-  csv+='CTO-UDI-CT-N07,CTO,GPON,-18.925,-48.27,Uberlandia,Saraiva,Ativa,16,6\n';
-  csv+='CTO-UDI-CT-N08,CTO,GPON,-18.92,-48.275,Uberlandia,Santa Monica,Lotada,16,0\n';
-  csv+='CTO-UDI-CT-M01,CTO,XGS-PON,-18.915,-48.265,Uberlandia,Centro,Ativa,32,15\n';
-  csv+='CTO-UDI-SM-010,CTO,GPON,-18.916,-48.28,Uberlandia,Santa Monica,Ativa,16,9\n';
-  csv+='CTO-UDI-SM-011,CTO,GPON,-18.92,-48.283,Uberlandia,Santa Monica,Ativa,16,3\n';
-  csv+='CTO-UDI-SM-012,CTO,GPON,-18.923,-48.281,Uberlandia,Santa Monica,Lotada,16,0\n';
-  csv+='CTO-UDI-TIB-001,CTO,GPON,-18.905,-48.25,Uberlandia,Tibery,Planejada,16,16\n';
-  csv+='CTO-UDI-TIB-002,CTO,GPON,-18.902,-48.248,Uberlandia,Tibery,Planejada,16,16\n';
-  csv+='CTO-UDI-TIB-003,CTO,GPON,-18.907,-48.245,Uberlandia,Tibery,Planejada,16,16\n';
-  csv+='CTO-UDI-LUI-001,CTO,GPON,-18.93,-48.305,Uberlandia,Luizote,Ativa,16,11\n';
-  csv+='OLT-FRA-01,OLT,GPON,-20.539,-47.4013,Franca,Centro,Ativa,64,20\n';
-  csv+='CTO-FRA-CT-001,CTO,GPON,-20.537,-47.399,Franca,Centro,Ativa,16,11\n';
-  csv+='CTO-UBE-CT-001,CTO,GPON,-19.7473,-47.9316,Uberaba,Centro,Ativa,16,5\n';
-  csv+='CTO-ITU-CT-001,CTO,GPON,-18.4191,-49.4637,Ituiutaba,Centro,Planejada,16,14\n';
-  document.getElementById('fileInfo').style.display='block';
-  document.getElementById('fileInfo').innerHTML='<div class="file-info"><span class="name">exemplo-algar-26assets.csv</span><span class="size">amostra</span></div>';
-  processCSV(csv);
-}
+ReactDOM.createRoot(document.getElementById('app')).render(e(Lab));
+
+/* === KML Converter Logic === */
+(function(){
+  var COLORS={Ativa:'#00b894',Lotada:'#fdcb6e',Planejada:'#6c5ce7'};
+  var parsedAssets=[],generatedKMLs=[];
+  var map=null,markersLayer=null;
+  function offsetM(lat,lng,dx,dy){return[lat+(dy/111320),lng+(dx/(111320*Math.cos(lat*Math.PI/180)))]}
+  function shapeAntena(lat,lng,s){s=s||100;return[offsetM(lat,lng,0,s*1.4),offsetM(lat,lng,-s*.5,-s*.3),offsetM(lat,lng,-s*.15,-s*.3),offsetM(lat,lng,-s*.15,-s*1.2),offsetM(lat,lng,s*.15,-s*1.2),offsetM(lat,lng,s*.15,-s*.3),offsetM(lat,lng,s*.5,-s*.3)]}
+  function shapeHex(lat,lng,s){s=s||200;var p=[];for(var i=0;i<6;i++){var a=Math.PI/6+(2*Math.PI*i/6);p.push(offsetM(lat,lng,s*Math.cos(a),s*Math.sin(a)))}return p}
+  function shapePoly(lat,lng,s){s=s||350;var p=[];for(var i=0;i<8;i++){var a=2*Math.PI*i/8;var r=s*(0.8+Math.random()*0.4);p.push(offsetM(lat,lng,r*Math.cos(a),r*Math.sin(a)))}return p}
+  function shapeDiam(lat,lng,s){s=s||150;return[offsetM(lat,lng,0,s),offsetM(lat,lng,s*.6,0),offsetM(lat,lng,0,-s),offsetM(lat,lng,-s*.6,0)]}
+  function getShape(a){if(a.type==='OLT')return shapeHex(a.lat,a.lng,180);if(a.type==='POP')return shapePoly(a.lat,a.lng,300);if(a.type==='Splitter')return shapeDiam(a.lat,a.lng,120);return shapeAntena(a.lat,a.lng,100)}
+  var KML_STYLES='<Style id="cto_ativa"><PolyStyle><color>3300CC00</color><outline>1</outline></PolyStyle><LineStyle><color>BB00CC00</color><width>1</width></LineStyle></Style>\n<Style id="cto_lotada"><PolyStyle><color>330080DD</color><outline>1</outline></PolyStyle><LineStyle><color>BB0080DD</color><width>2</width></LineStyle></Style>\n<Style id="cto_planejada"><PolyStyle><color>33E95090</color><outline>1</outline></PolyStyle><LineStyle><color>BBE95090</color><width>1</width></LineStyle></Style>\n<Style id="olt_ativa"><PolyStyle><color>4400FFFF</color><outline>1</outline></PolyStyle><LineStyle><color>FF00CCCC</color><width>2</width></LineStyle></Style>\n<Style id="pop_ativa"><PolyStyle><color>2200AAFF</color><outline>1</outline></PolyStyle><LineStyle><color>CC00AAFF</color><width>3</width></LineStyle></Style>';
+  function styleId(a){var p={CTO:'cto',OLT:'olt',POP:'pop',Splitter:'spl'}[a.type]||'cto';return p+'_'+(a.status||'Ativa').toLowerCase()}
+  function csvToAssets(csv){var lines=csv.trim().split('\n');var header=lines[0].split(',').map(function(h){return h.trim()});var assets=[];for(var i=1;i<lines.length;i++){var c=lines[i].split(',').map(function(x){return x.trim()});if(c.length<6)continue;var gi=function(n,fb){var idx=header.indexOf(n);return idx>=0?c[idx]:c[fb]};var a={id:gi('codigo',0),type:gi('tipo',1),tech:gi('tecnologia',2),lat:parseFloat(gi('latitude',3)),lng:parseFloat(gi('longitude',4)),city:gi('cidade',5),bairro:gi('bairro',6)||'',status:gi('status',7)||'Ativa',total:parseInt(gi('portas_total',8)||'0'),avail:parseInt(gi('portas_livres',9)||'0')};if(!isNaN(a.lat)&&!isNaN(a.lng))assets.push(a)}return assets}
+  function generateKML(assets,name){var kml='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n<name>'+name+'</name>\n'+KML_STYLES+'\n';for(var i=0;i<assets.length;i++){var a=assets[i],sh=getShape(a);sh.push(sh[0]);var coords=sh.map(function(p){return p[1].toFixed(6)+','+p[0].toFixed(6)+',0'}).join(' ');var occ=a.total>0?Math.round((a.total-a.avail)/a.total*100):0;var sid=styleId(a);kml+='<Placemark><name>'+a.id+'</name><description><![CDATA[<b>'+a.id+'</b><br/>'+a.type+' · '+a.tech+'<br/>'+a.bairro+', '+a.city+'<br/>'+a.status+(a.total>0?'<br/>Portas: '+(a.total-a.avail)+'/'+a.total+' ('+occ+'%)':'')+']]></description><styleUrl>#'+sid+'</styleUrl><Polygon><outerBoundaryIs><LinearRing><coordinates>'+coords+'</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>\n'}kml+='</Document>\n</kml>';return kml}
+  function generateKMLsByCity(assets){var cities={};for(var i=0;i<assets.length;i++){var c=assets[i].city||'?';if(!cities[c])cities[c]=[];cities[c].push(assets[i])}var result=[];for(var city in cities){var arr=cities[city];for(var j=0;j<arr.length;j+=1000){var chunk=arr.slice(j,j+1000);var slug=city.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'-');var fn='cobertura-'+slug+(arr.length>1000?'-pt'+(Math.floor(j/1000)+1):'')+'.kml';result.push({city:city,filename:fn,assets:chunk.length,kml:generateKML(chunk,'Cobertura '+city+' - Algar Telecom')})}}return result}
+  window.__processKmlCsv=function(csv){
+    parsedAssets=csvToAssets(csv);if(parsedAssets.length===0)return;
+    generatedKMLs=generateKMLsByCity(parsedAssets);
+    document.getElementById('kml-download-btn').style.display='inline-flex';
+    document.getElementById('kml-upload-sf-btn').style.display='inline-flex';
+    var st=document.getElementById('kml-stats');st.style.display='flex';st.style.gap='12px';st.style.margin='12px 0';
+    var ativa=0,lotada=0,plan=0,ports=0;for(var i=0;i<parsedAssets.length;i++){var a=parsedAssets[i];if(a.status==='Ativa')ativa++;if(a.status==='Lotada')lotada++;if(a.status==='Planejada')plan++;ports+=a.avail}
+    st.innerHTML='<div style="flex:1;background:#12122a;border:1px solid #1e1e3a;border-radius:8px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:#fff">'+parsedAssets.length+'</div><div style="font-size:11px;color:#94a3b8">Assets</div></div><div style="flex:1;background:#12122a;border:1px solid #1e1e3a;border-radius:8px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:#00b894">'+ativa+'</div><div style="font-size:11px;color:#94a3b8">Ativas</div></div><div style="flex:1;background:#12122a;border:1px solid #1e1e3a;border-radius:8px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:#fdcb6e">'+lotada+'</div><div style="font-size:11px;color:#94a3b8">Lotadas</div></div><div style="flex:1;background:#12122a;border:1px solid #1e1e3a;border-radius:8px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:#6C5CE7">'+plan+'</div><div style="font-size:11px;color:#94a3b8">Planejadas</div></div><div style="flex:1;background:#12122a;border:1px solid #1e1e3a;border-radius:8px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:700;color:#fff">'+ports+'</div><div style="font-size:11px;color:#94a3b8">Portas livres</div></div>';
+    var tbl='<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="text-align:left;padding:8px;border-bottom:1px solid #1e1e3a;color:#94a3b8;font-size:11px">Codigo</th><th style="text-align:left;padding:8px;border-bottom:1px solid #1e1e3a;color:#94a3b8;font-size:11px">Tipo</th><th style="text-align:left;padding:8px;border-bottom:1px solid #1e1e3a;color:#94a3b8;font-size:11px">Cidade</th><th style="text-align:left;padding:8px;border-bottom:1px solid #1e1e3a;color:#94a3b8;font-size:11px">Status</th></tr></thead><tbody>';
+    var show=Math.min(parsedAssets.length,50);for(var i=0;i<show;i++){var a=parsedAssets[i];var pc=a.status==='Ativa'?'#00b894':a.status==='Lotada'?'#fdcb6e':'#6C5CE7';tbl+='<tr><td style="padding:6px 8px;border-bottom:1px solid #1e1e3a">'+a.id+'</td><td style="padding:6px 8px;border-bottom:1px solid #1e1e3a">'+a.type+'</td><td style="padding:6px 8px;border-bottom:1px solid #1e1e3a">'+a.city+'</td><td style="padding:6px 8px;border-bottom:1px solid #1e1e3a"><span style="background:'+pc+';color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">'+a.status+'</span></td></tr>'}
+    tbl+='</tbody></table>';document.getElementById('kml-table').innerHTML=tbl;
+    var mapDiv=document.getElementById('kml-map');
+    if(!map&&typeof L!=='undefined'){map=L.map(mapDiv).setView([-18.92,-48.27],12);L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map)}
+    if(map){if(markersLayer)map.removeLayer(markersLayer);markersLayer=L.layerGroup().addTo(map);var bounds=[];for(var i=0;i<parsedAssets.length;i++){var a=parsedAssets[i];var r=a.type==='OLT'?9:a.type==='POP'?10:5;var m=L.circleMarker([a.lat,a.lng],{radius:r,fillColor:COLORS[a.status]||'#999',color:'#fff',weight:1,fillOpacity:.8});m.bindPopup('<b>'+a.id+'</b><br/>'+a.type+' · '+a.tech+'<br/>'+a.city);markersLayer.addLayer(m);bounds.push([a.lat,a.lng])}if(bounds.length)map.fitBounds(bounds,{padding:[20,20]})}
+  };
+  window.__downloadKml=function(){for(var i=0;i<generatedKMLs.length;i++){var k=generatedKMLs[i];var blob=new Blob([k.kml],{type:'application/vnd.google-earth.kml+xml'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=k.filename;a.click();URL.revokeObjectURL(url)}};
+  window.__uploadKmlSF=function(){var log=document.getElementById('kml-log');log.style.display='block';log.innerHTML='Enviando para org SalesMaps...\n';var idx=0;function next(){if(idx>=generatedKMLs.length){log.innerHTML+='\n✅ Concluido! '+generatedKMLs.length+' arquivo(s)\n';return}var k=generatedKMLs[idx];log.innerHTML+='Enviando '+k.filename+'...\n';fetch('/api/kml/upload-sf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kml:k.kml,filename:k.filename,title:k.city+' - Algar Telecom'})}).then(function(r){return r.json()}).then(function(d){log.innerHTML+=(d.status==='ok'?'  ✅ ':'  ❌ ')+k.filename+'\n';idx++;next()}).catch(function(e){log.innerHTML+='  ❌ Erro: '+e.message+'\n';idx++;next()})}next()};
+})();
+
 </script>
 </body>
 </html>
