@@ -10,6 +10,7 @@ import { registerSnowflakeRoutes } from "./snowflake.js";
 import { registerGitHubMultiRepoRoutes } from "./github-multi-repo.js";
 import { mountChatApp } from "./chat-app.js";
 import { registerMuleSyncRoutes } from "./mule-sync.js";
+import { registerKmlRoutes } from "./routes/kml.js";
 
 const app = express();
 app.use(express.json({ limit: "10mb" }));
@@ -2206,6 +2207,7 @@ app.get("/api/assign-record-types/:objectName", async (req, res) => {
 // --- Additional Routes ---
 registerSnowflakeRoutes(app);
 registerMuleSyncRoutes(app, sfClient);
+registerKmlRoutes(app);
   registerAdditionalRoutes(app, sfClient, connectToTargetOrg);
 
 // --- Everi9 Chat App ---
