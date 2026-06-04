@@ -224,7 +224,7 @@ function generateKMLsByCity(assets, maxPerFile) {
 // ============================================================
 // EXPORTS
 // ============================================================
-module.exports = {
+export {
   csvToAssets,
   generateKML,
   generateKMLsByCity,
