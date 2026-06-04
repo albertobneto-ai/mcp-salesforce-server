@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ever i9 — Ferramentas</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a1a;--card:#12122a;--border:#1e1e3a;--accent:#6C5CE7;--green:#00b894;--orange:#fdcb6e;--red:#d63031;--text:#e0e0e0;--muted:#888}
+html,body{height:100%;font-family:-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text)}
+#app{display:flex;height:100vh}
+.sidebar{width:220px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar header{padding:20px;border-bottom:1px solid var(--border)}
+.sidebar header h1{font-size:15px;font-weight:700;color:#fff}
+.sidebar header span{font-size:11px;color:var(--muted)}
+.nav-item{padding:12px 20px;font-size:13px;cursor:pointer;border-left:3px solid transparent;transition:.15s}
+.nav-item:hover{background:rgba(108,92,231,.1)}
+.nav-item.active{border-left-color:var(--accent);background:rgba(108,92,231,.15);color:#fff}
+.nav-section{padding:12px 20px 6px;font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted)}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:50px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px}
+.topbar h2{font-size:15px;font-weight:600;color:#fff}
+.badge{background:var(--accent);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px}
+.content{flex:1;overflow-y:auto;padding:24px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:20px}
+.card h3{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:14px}
+.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:40px;text-align:center;cursor:pointer;transition:.2s}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--accent);background:rgba(108,92,231,.05)}
+.upload-zone p{color:var(--muted);font-size:13px;margin-top:8px}
+.upload-zone .icon{font-size:36px;opacity:.5}
+.btn{padding:10px 20px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{opacity:.85}
+.btn-green{background:var(--green);color:#fff}.btn-green:hover{opacity:.85}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}.btn-outline:hover{border-color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.stats{display:flex;gap:16px;margin:16px 0}
+.stat{background:rgba(108,92,231,.1);border-radius:8px;padding:10px 16px;flex:1;text-align:center}
+.stat .n{font-size:22px;font-weight:700;color:#fff}
+.stat .l{font-size:11px;color:var(--muted);margin-top:2px}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px}
+th{text-align:left;padding:8px;border-bottom:1px solid var(--border);color:var(--muted);font-size:11px;text-transform:uppercase}
+td{padding:6px 8px;border-bottom:1px solid rgba(30,30,58,.5)}
+tr:hover{background:rgba(108,92,231,.05)}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;color:#fff}
+.pill-green{background:var(--green)}.pill-orange{background:var(--orange);color:#333}.pill-purple{background:var(--accent)}.pill-red{background:var(--red)}
+#map{height:350px;border-radius:8px;margin-top:12px}
+.log{background:#0d0d20;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:monospace;font-size:12px;max-height:200px;overflow-y:auto;margin-top:12px;color:var(--green)}
+.actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+input[type=file]{display:none}
+.file-info{display:flex;align-items:center;gap:10px;padding:10px;background:rgba(0,184,148,.1);border-radius:6px;margin-top:10px}
+.file-info .name{font-weight:600;color:var(--green)}
+.file-info .size{color:var(--muted);font-size:12px}
+.loading{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="sidebar">
+    <header><h1>Ever i9</h1><span>Ferramentas</span></header>
+    <div class="nav-section">CONVERSAO</div>
+    <div class="nav-item active">Conversao KML</div>
+    <div class="nav-section">EM BREVE</div>
+    <div class="nav-item" style="opacity:.4">Gerador de Dados</div>
+    <div class="nav-item" style="opacity:.4">Validador de Spec</div>
+  </div>
+  <div class="main">
+    <div class="topbar">
+      <h2>Conversao CSV para KML</h2>
+      <span class="badge">Network Coverage</span>
+    </div>
+    <div class="content">
+      <div class="card">
+        <h3>1. Upload do CSV</h3>
+        <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          <div class="icon">CSV</div>
+          <p>Arraste o CSV aqui ou clique para selecionar</p>
+          <p style="font-size:11px;margin-top:4px;color:var(--muted)">Colunas: codigo, tipo, tecnologia, latitude, longitude, cidade, bairro, status, portas_total, portas_livres</p>
+        </div>
+        <input type="file" id="fileInput" accept=".csv">
+        <div id="fileInfo" style="display:none"></div>
+        <div style="margin-top:12px">
+          <button class="btn btn-outline" onclick="loadSample()">Carregar CSV de exemplo (29 assets)</button>
+        </div>
+      </div>
+      <div id="resultsArea" style="display:none">
+        <div class="stats" id="statsBar"></div>
+        <div class="grid2">
+          <div class="card">
+            <h3>2. Preview dos dados</h3>
+            <div style="max-height:350px;overflow-y:auto" id="tableArea"></div>
+          </div>
+          <div class="card">
+            <h3>3. Preview no mapa</h3>
+            <div id="map"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>4. Exportar</h3>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px" id="kmlSummary"></p>
+          <div class="actions">
+            <button class="btn btn-primary" id="btnDownload" onclick="downloadKMLs()">Baixar KMLs (.zip)</button>
+            <button class="btn btn-green" id="btnUploadSF" onclick="uploadToSF()">Gravar na Org SalesMaps</button>
+          </div>
+          <div class="log" id="logArea" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var parsedAssets=[], generatedKMLs=[], map=null, markersLayer=null;
+var COLORS={Ativa:'#00b894',Lotada:'#fdcb6e',Planejada:'#6c5ce7',Inativa:'#636e72'};
+
+// Drag & Drop
+var dz=document.getElementById('dropZone');
+dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('dragover')});
+dz.addEventListener('dragleave',function(){dz.classList.remove('dragover')});
+dz.addEventListener('drop',function(e){e.preventDefault();dz.classList.remove('dragover');handleFile(e.dataTransfer.files[0])});
+document.getElementById('fileInput').addEventListener('change',function(e){handleFile(e.target.files[0])});
+
+function handleFile(file){
+  if(!file)return;
+  document.getElementById('fileInfo').style.display='block';
+  document.getElementById('fileInfo').innerHTML='<div class="file-info"><span class="name">'+file.name+'</span><span class="size">'+(file.size/1024).toFixed(1)+' KB</span></div>';
+  var reader=new FileReader();
+  reader.onload=function(e){processCSV(e.target.result)};
+  reader.readAsText(file);
+}
+
+// CSV Parser
+function csvToAssets(csv){
+  var lines=csv.trim().split('\n');
+  var header=lines[0].split(',').map(function(h){return h.trim()});
+  var assets=[];
+  for(var i=1;i<lines.length;i++){
+    var c=lines[i].split(',').map(function(x){return x.trim()});
+    if(c.length<6)continue;
+    var gi=function(name,fb){var idx=header.indexOf(name);return idx>=0?c[idx]:c[fb]};
+    var a={id:gi('codigo',0),type:gi('tipo',1),tech:gi('tecnologia',2),lat:parseFloat(gi('latitude',3)),lng:parseFloat(gi('longitude',4)),city:gi('cidade',5),bairro:gi('bairro',6)||'',status:gi('status',7)||'Ativa',total:parseInt(gi('portas_total',8)||'0'),avail:parseInt(gi('portas_livres',9)||'0')};
+    if(!isNaN(a.lat)&&!isNaN(a.lng))assets.push(a);
+  }
+  return assets;
+}
+
+// Geometria
+function offsetM(lat,lng,dx,dy){return[lat+(dy/111320),lng+(dx/(111320*Math.cos(lat*Math.PI/180)))]}
+function shapeAntena(lat,lng,s){s=s||100;return[offsetM(lat,lng,0,s*1.4),offsetM(lat,lng,-s*.5,-s*.3),offsetM(lat,lng,-s*.15,-s*.3),offsetM(lat,lng,-s*.15,-s*1.2),offsetM(lat,lng,s*.15,-s*1.2),offsetM(lat,lng,s*.15,-s*.3),offsetM(lat,lng,s*.5,-s*.3)]}
+function shapeHex(lat,lng,s){s=s||200;var p=[];for(var i=0;i<6;i++){var a=Math.PI/6+(2*Math.PI*i/6);p.push(offsetM(lat,lng,s*Math.cos(a),s*Math.sin(a)))}return p}
+function shapePoly(lat,lng,s){s=s||350;var p=[];for(var i=0;i<8;i++){var a=2*Math.PI*i/8;var r=s*(0.8+Math.random()*0.4);p.push(offsetM(lat,lng,r*Math.cos(a),r*Math.sin(a)))}return p}
+function shapeDiam(lat,lng,s){s=s||150;return[offsetM(lat,lng,0,s),offsetM(lat,lng,s*.6,0),offsetM(lat,lng,0,-s),offsetM(lat,lng,-s*.6,0)]}
+function getShape(a){if(a.type==='OLT')return shapeHex(a.lat,a.lng,180);if(a.type==='POP')return shapePoly(a.lat,a.lng,300);if(a.type==='Splitter')return shapeDiam(a.lat,a.lng,120);return shapeAntena(a.lat,a.lng,100)}
+
+// KML styles
+var KML_STYLES='<Style id="cto_ativa"><PolyStyle><color>3300CC00</color><outline>1</outline></PolyStyle><LineStyle><color>BB00CC00</color><width>1</width></LineStyle></Style>\n<Style id="cto_lotada"><PolyStyle><color>330080DD</color><outline>1</outline></PolyStyle><LineStyle><color>BB0080DD</color><width>2</width></LineStyle></Style>\n<Style id="cto_planejada"><PolyStyle><color>33E95090</color><outline>1</outline></PolyStyle><LineStyle><color>BBE95090</color><width>1</width></LineStyle></Style>\n<Style id="olt_ativa"><PolyStyle><color>4400FFFF</color><outline>1</outline></PolyStyle><LineStyle><color>FF00CCCC</color><width>2</width></LineStyle></Style>\n<Style id="olt_lotada"><PolyStyle><color>440055FF</color><outline>1</outline></PolyStyle><LineStyle><color>FF0055FF</color><width>2</width></LineStyle></Style>\n<Style id="olt_planejada"><PolyStyle><color>44FFAA00</color><outline>1</outline></PolyStyle><LineStyle><color>FFFFAA00</color><width>2</width></LineStyle></Style>\n<Style id="pop_ativa"><PolyStyle><color>2200AAFF</color><outline>1</outline></PolyStyle><LineStyle><color>CC00AAFF</color><width>3</width></LineStyle></Style>\n<Style id="pop_lotada"><PolyStyle><color>220000FF</color><outline>1</outline></PolyStyle><LineStyle><color>CC0000FF</color><width>3</width></LineStyle></Style>\n<Style id="pop_planejada"><PolyStyle><color>22FF8800</color><outline>1</outline></PolyStyle><LineStyle><color>CCFF8800</color><width>3</width></LineStyle></Style>\n<Style id="spl_ativa"><PolyStyle><color>3300DDAA</color><outline>1</outline></PolyStyle><LineStyle><color>BB00DDAA</color><width>1</width></LineStyle></Style>\n<Style id="spl_lotada"><PolyStyle><color>330088DD</color><outline>1</outline></PolyStyle><LineStyle><color>BB0088DD</color><width>2</width></LineStyle></Style>\n<Style id="spl_planejada"><PolyStyle><color>33DD88FF</color><outline>1</outline></PolyStyle><LineStyle><color>BBDD88FF</color><width>1</width></LineStyle></Style>';
+
+function styleId(a){var p={CTO:'cto',OLT:'olt',POP:'pop',Splitter:'spl'}[a.type]||'cto';return p+'_'+(a.status||'Ativa').toLowerCase()}
+
+function generateKML(assets,name){
+  var kml='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n<name>Cobertura '+name+' - Algar Telecom</name>\n<description>'+assets.length+' assets</description>\n'+KML_STYLES+'\n';
+  for(var i=0;i<assets.length;i++){
+    var a=assets[i],sh=getShape(a);sh.push(sh[0]);
+    var coords=sh.map(function(p){return p[1].toFixed(6)+','+p[0].toFixed(6)+',0'}).join(' ');
+    var occ=a.total>0?Math.round((a.total-a.avail)/a.total*100):0;
+    kml+='<Placemark><name>'+a.id+'</name><description><![CDATA[<b>'+a.id+'</b><br/>Tipo: '+a.type+'<br/>Bairro: '+a.bairro+'<br/>Tech: '+a.tech+'<br/>Status: '+a.status+'<br/>'+(a.total>0?'Portas: '+(a.total-a.avail)+'/'+a.total+' ('+occ+'%)<br/>Livres: '+a.avail:'Backbone')+']]></description><styleUrl>#'+styleId(a)+'</styleUrl><Polygon><outerBoundaryIs><LinearRing><coordinates>'+coords+'</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>\n';
+  }
+  kml+='</Document>\n</kml>';return kml;
+}
+
+function generateKMLsByCity(assets){
+  var cities={};
+  for(var i=0;i<assets.length;i++){var c=assets[i].city||'Sem Cidade';if(!cities[c])cities[c]=[];cities[c].push(assets[i])}
+  var result=[];
+  for(var city in cities){
+    var arr=cities[city];
+    for(var j=0;j<arr.length;j+=1000){
+      var chunk=arr.slice(j,j+1000);
+      var suffix=arr.length>1000?' Pt.'+(Math.floor(j/1000)+1):'';
+      var slug=city.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'-');
+      var fn='cobertura-'+slug+(arr.length>1000?'-pt'+(Math.floor(j/1000)+1):'')+'.kml';
+      result.push({city:city+suffix,filename:fn,assets:chunk.length,kml:generateKML(chunk,city+suffix)});
+    }
+  }
+  return result;
+}
+
+function processCSV(csv){
+  parsedAssets=csvToAssets(csv);
+  if(parsedAssets.length===0){alert('Nenhum asset valido encontrado no CSV');return}
+  generatedKMLs=generateKMLsByCity(parsedAssets);
+  renderResults();
+}
+
+function renderResults(){
+  document.getElementById('resultsArea').style.display='block';
+  // Stats
+  var ativa=0,lotada=0,plan=0,ports=0;
+  for(var i=0;i<parsedAssets.length;i++){var a=parsedAssets[i];if(a.status==='Ativa')ativa++;if(a.status==='Lotada')lotada++;if(a.status==='Planejada')plan++;ports+=a.avail}
+  var cities={};for(var i=0;i<parsedAssets.length;i++)cities[parsedAssets[i].city]=1;
+  document.getElementById('statsBar').innerHTML='<div class="stat"><div class="n">'+parsedAssets.length+'</div><div class="l">Assets</div></div><div class="stat"><div class="n">'+Object.keys(cities).length+'</div><div class="l">Cidades</div></div><div class="stat"><div class="n">'+ativa+'</div><div class="l">Ativas</div></div><div class="stat"><div class="n">'+lotada+'</div><div class="l">Lotadas</div></div><div class="stat"><div class="n">'+plan+'</div><div class="l">Planejadas</div></div><div class="stat"><div class="n">'+ports+'</div><div class="l">Portas livres</div></div>';
+  // Table
+  var html='<table><thead><tr><th>Codigo</th><th>Tipo</th><th>Tech</th><th>Cidade</th><th>Bairro</th><th>Status</th><th>Portas</th></tr></thead><tbody>';
+  var show=Math.min(parsedAssets.length,100);
+  for(var i=0;i<show;i++){var a=parsedAssets[i];var pc=a.status==='Ativa'?'pill-green':a.status==='Lotada'?'pill-orange':'pill-purple';html+='<tr><td>'+a.id+'</td><td>'+a.type+'</td><td>'+a.tech+'</td><td>'+a.city+'</td><td>'+a.bairro+'</td><td><span class="pill '+pc+'">'+a.status+'</span></td><td>'+(a.total>0?(a.total-a.avail)+'/'+a.total:'—')+'</td></tr>'}
+  if(parsedAssets.length>100)html+='<tr><td colspan="7" style="text-align:center;color:var(--muted)">... e mais '+(parsedAssets.length-100)+' registros</td></tr>';
+  html+='</tbody></table>';
+  document.getElementById('tableArea').innerHTML=html;
+  // Map
+  if(!map){map=L.map('map').setView([-18.92,-48.27],12);L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'CARTO',maxZoom:19}).addTo(map)}
+  if(markersLayer)map.removeLayer(markersLayer);
+  markersLayer=L.layerGroup().addTo(map);
+  var bounds=[];
+  for(var i=0;i<parsedAssets.length;i++){var a=parsedAssets[i];var r=a.type==='OLT'?9:a.type==='POP'?10:5;var m=L.circleMarker([a.lat,a.lng],{radius:r,fillColor:COLORS[a.status]||'#999',color:'#fff',weight:1,fillOpacity:.8});m.bindPopup('<b>'+a.id+'</b><br/>'+a.type+' · '+a.tech+'<br/>'+a.city+' · '+a.bairro+'<br/>Status: '+a.status);markersLayer.addLayer(m);bounds.push([a.lat,a.lng])}
+  if(bounds.length>0)map.fitBounds(bounds,{padding:[20,20]});
+  // KML summary
+  var totalKB=0;for(var i=0;i<generatedKMLs.length;i++)totalKB+=generatedKMLs[i].kml.length/1024;
+  document.getElementById('kmlSummary').innerHTML=generatedKMLs.length+' arquivo(s) KML gerado(s) — '+totalKB.toFixed(0)+' KB total';
+}
+
+// Download KMLs como ZIP ou individual
+function downloadKMLs(){
+  if(generatedKMLs.length===1){
+    var blob=new Blob([generatedKMLs[0].kml],{type:'application/vnd.google-earth.kml+xml'});
+    var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=generatedKMLs[0].filename;a.click();URL.revokeObjectURL(url);
+  }else{
+    for(var i=0;i<generatedKMLs.length;i++){
+      var blob=new Blob([generatedKMLs[i].kml],{type:'application/vnd.google-earth.kml+xml'});
+      var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=generatedKMLs[i].filename;a.click();URL.revokeObjectURL(url);
+    }
+  }
+}
+
+// Upload to SalesMaps org
+function uploadToSF(){
+  var btn=document.getElementById('btnUploadSF');
+  btn.disabled=true;btn.innerHTML='<span class="loading"></span> Enviando...';
+  var log=document.getElementById('logArea');log.style.display='block';log.innerHTML='';
+  function addLog(msg){log.innerHTML+=msg+'\\n';log.scrollTop=log.scrollHeight}
+  addLog('Iniciando upload para org SalesMaps...');
+
+  var idx=0;
+  function uploadNext(){
+    if(idx>=generatedKMLs.length){
+      addLog('\\n✅ '+generatedKMLs.length+' arquivo(s) enviado(s) com sucesso!');
+      addLog('Acesse SF Maps → ON THE MAP → Add Boundary → KML');
+      btn.disabled=false;btn.innerHTML='Gravar na Org SalesMaps';
+      return;
+    }
+    var k=generatedKMLs[idx];
+    addLog('Enviando '+k.filename+' ('+k.assets+' assets)...');
+    fetch(window.location.origin+'/api/kml/upload-sf',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({kml:k.kml,filename:k.filename,title:k.city+' - Algar Telecom'})
+    }).then(function(r){return r.json()}).then(function(d){
+      if(d.status==='ok'){addLog('  ✅ '+k.filename+' — '+d.message)}
+      else{addLog('  ❌ '+k.filename+' — '+(d.error||'erro'))}
+      idx++;uploadNext();
+    }).catch(function(err){addLog('  ❌ Erro: '+err.message);idx++;uploadNext()});
+  }
+  uploadNext();
+}
+
+// CSV de exemplo
+function loadSample(){
+  var csv='codigo,tipo,tecnologia,latitude,longitude,cidade,bairro,status,portas_total,portas_livres\n';
+  csv+='OLT-UDI-01,OLT,GPON,-18.9188,-48.2581,Uberlandia,Centro,Ativa,128,45\n';
+  csv+='OLT-UDI-02,OLT,XGS-PON,-18.9112,-48.2654,Uberlandia,Centro,Ativa,64,28\n';
+  csv+='CTO-UDI-SM-001,CTO,GPON,-18.9186,-48.2772,Uberlandia,Santa Monica,Ativa,16,7\n';
+  csv+='CTO-UDI-SM-002,CTO,GPON,-18.921,-48.279,Uberlandia,Santa Monica,Lotada,16,0\n';
+  csv+='CTO-UDI-CT-001,CTO,XGS-PON,-18.9145,-48.268,Uberlandia,Centro,Ativa,32,22\n';
+  csv+='POP-UDI-01,POP,Backbone,-18.919,-48.258,Uberlandia,Centro,Ativa,0,0\n';
+  csv+='CTO-UDI-CT-N01,CTO,GPON,-18.908,-48.27,Uberlandia,Centro,Ativa,16,10\n';
+  csv+='CTO-UDI-CT-N02,CTO,GPON,-18.908,-48.26,Uberlandia,Centro,Ativa,16,8\n';
+  csv+='CTO-UDI-CT-N03,CTO,GPON,-18.912,-48.255,Uberlandia,Centro,Ativa,16,4\n';
+  csv+='CTO-UDI-CT-N04,CTO,GPON,-18.917,-48.253,Uberlandia,Centro,Lotada,16,0\n';
+  csv+='CTO-UDI-CT-N05,CTO,GPON,-18.922,-48.255,Uberlandia,Centro,Ativa,16,12\n';
+  csv+='CTO-UDI-CT-N06,CTO,GPON,-18.925,-48.26,Uberlandia,Saraiva,Ativa,16,2\n';
+  csv+='CTO-UDI-CT-N07,CTO,GPON,-18.925,-48.27,Uberlandia,Saraiva,Ativa,16,6\n';
+  csv+='CTO-UDI-CT-N08,CTO,GPON,-18.92,-48.275,Uberlandia,Santa Monica,Lotada,16,0\n';
+  csv+='CTO-UDI-CT-M01,CTO,XGS-PON,-18.915,-48.265,Uberlandia,Centro,Ativa,32,15\n';
+  csv+='CTO-UDI-SM-010,CTO,GPON,-18.916,-48.28,Uberlandia,Santa Monica,Ativa,16,9\n';
+  csv+='CTO-UDI-SM-011,CTO,GPON,-18.92,-48.283,Uberlandia,Santa Monica,Ativa,16,3\n';
+  csv+='CTO-UDI-SM-012,CTO,GPON,-18.923,-48.281,Uberlandia,Santa Monica,Lotada,16,0\n';
+  csv+='CTO-UDI-TIB-001,CTO,GPON,-18.905,-48.25,Uberlandia,Tibery,Planejada,16,16\n';
+  csv+='CTO-UDI-TIB-002,CTO,GPON,-18.902,-48.248,Uberlandia,Tibery,Planejada,16,16\n';
+  csv+='CTO-UDI-TIB-003,CTO,GPON,-18.907,-48.245,Uberlandia,Tibery,Planejada,16,16\n';
+  csv+='CTO-UDI-LUI-001,CTO,GPON,-18.93,-48.305,Uberlandia,Luizote,Ativa,16,11\n';
+  csv+='OLT-FRA-01,OLT,GPON,-20.539,-47.4013,Franca,Centro,Ativa,64,20\n';
+  csv+='CTO-FRA-CT-001,CTO,GPON,-20.537,-47.399,Franca,Centro,Ativa,16,11\n';
+  csv+='CTO-UBE-CT-001,CTO,GPON,-19.7473,-47.9316,Uberaba,Centro,Ativa,16,5\n';
+  csv+='CTO-ITU-CT-001,CTO,GPON,-18.4191,-49.4637,Ituiutaba,Centro,Planejada,16,14\n';
+  document.getElementById('fileInfo').style.display='block';
+  document.getElementById('fileInfo').innerHTML='<div class="file-info"><span class="name">exemplo-algar-26assets.csv</span><span class="size">amostra</span></div>';
+  processCSV(csv);
+}
+</script>
+</body>
+</html>
