@@ -150,13 +150,16 @@ function Lab(){
   /* === KML Tab === */
   if(tab==='kml'){
     return e('div',null,
-      e('div',{className:'lab-header'},e('div',{className:'logo'},'i9'),e('h1',null,'Laboratório'),e('button',{className:'close-btn',onClick:function(){if(window.parent&&window.parent.__closeLabOverlay)window.parent.__closeLabOverlay();else window.close()}},'✕')),
-      e('div',{className:'tabs'},CATS.map(function(c){return e('button',{key:c.key,className:'tab'+(tab===c.key?' active':''),onClick:function(){setTab(c.key);window.location.hash=c.key}},c.icon+' '+c.label)})),
+      e('div',{className:'lab-header'},e('div',{className:'logo'},'i9'),e('h1',null,'Laboratorio'),e('button',{className:'close-btn',onClick:function(){if(window.parent&&window.parent.__closeLabOverlay)window.parent.__closeLabOverlay()}},'x')),
+      e('div',{className:'tabs'},CATS.map(function(c){return e('button',{key:c.key,className:'tab'+(tab===c.key?' active':''),onClick:function(){setTab(c.key);window.location.hash=c.key}},c.label)})),
       e('div',{className:'content'},
-        e('div',{className:'section-header'},e('div',{className:'section-title'},'UPLOAD DO CSV'),e('button',{className:'add-btn',onClick:function(){var csv="codigo,tipo,tecnologia,latitude,longitude,cidade,bairro,status,portas_total,portas_livres\nOLT-UDI-01,OLT,GPON,-18.9188,-48.2581,Uberlandia,Centro,Ativa,128,45\nCTO-UDI-01,CTO,GPON,-18.9186,-48.2772,Uberlandia,Santa Monica,Ativa,16,7\nCTO-UDI-02,CTO,GPON,-18.921,-48.279,Uberlandia,Santa Monica,Lotada,16,0\nCTO-UDI-03,CTO,XGS-PON,-18.9145,-48.268,Uberlandia,Centro,Ativa,32,22\nPOP-UDI-01,POP,Backbone,-18.919,-48.258,Uberlandia,Centro,Ativa,0,0\nCTO-FRA-01,CTO,GPON,-20.537,-47.399,Franca,Centro,Ativa,16,11\nCTO-UBE-01,CTO,GPON,-19.7473,-47.9316,Uberaba,Centro,Ativa,16,5\nCTO-ITU-01,CTO,GPON,-18.4191,-49.4637,Ituiutaba,Centro,Planejada,16,14";var ta=document.getElementById("kml-csv-input");if(ta)ta.value=csv;if(window.__processKmlCsv)window.__processKmlCsv(csv)}},'Exemplo')),
-        e('textarea',{id:'kml-csv-input',placeholder:'Cole o CSV aqui...\n\nColunas: codigo, tipo, tecnologia, latitude, longitude, cidade, bairro, status, portas_total, portas_livres',style:{width:'100%',minHeight:100,background:'#0a0a1a',border:'1.5px solid #2a2a3e',borderRadius:10,padding:12,color:'#e0e0e0',fontSize:12,fontFamily:'monospace',resize:'vertical'},onChange:function(ev){if(window.__processKmlCsv)window.__processKmlCsv(ev.target.value)}}),
+        e('div',{className:'section-header'},
+          e('div',{className:'section-title'},'UPLOAD DO CSV'),
+          e('button',{className:'add-btn',onClick:function(){if(window.__loadExample)window.__loadExample()}},'Exemplo')
+        ),
+        e('textarea',{id:'kml-csv-input',placeholder:'Cole o CSV aqui ou use o botao Exemplo',style:{width:'100%',minHeight:100,background:'#0a0a1a',border:'1.5px solid #2a2a3e',borderRadius:10,padding:12,color:'#e0e0e0',fontSize:12,fontFamily:'monospace',resize:'vertical'},onChange:function(ev){if(window.__processKmlCsv)window.__processKmlCsv(ev.target.value)}}),
         e('div',{style:{marginTop:8,display:'flex',gap:8}},
-          e('label',{style:{padding:'8px 16px',borderRadius:8,border:'1.5px solid #2a2a3e',background:'#12122a',color:'#94a3b8',fontSize:12,cursor:'pointer',fontFamily:'inherit',fontWeight:600}},'Upload CSV',e('input',{type:'file',accept:'.csv',style:{display:'none'},onChange:function(ev){var f=ev.target.files[0];if(!f)return;var reader=new FileReader();reader.onload=function(e){var ta=document.getElementById("kml-csv-input");if(ta)ta.value=e.target.result;if(window.__processKmlCsv)window.__processKmlCsv(e.target.result)};reader.readAsText(f)}})),
+          e('label',{style:{padding:'8px 16px',borderRadius:8,border:'1.5px solid #2a2a3e',background:'#12122a',color:'#94a3b8',fontSize:12,cursor:'pointer',fontFamily:'inherit',fontWeight:600}},'Upload CSV',e('input',{type:'file',accept:'.csv',style:{display:'none'},onChange:function(ev){var f=ev.target.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(e){var ta=document.getElementById('kml-csv-input');if(ta)ta.value=e.target.result;if(window.__processKmlCsv)window.__processKmlCsv(e.target.result)};rd.readAsText(f)}})),
           e('button',{id:'kml-download-btn',className:'add-btn',style:{background:'#6C5CE7',display:'none'},onClick:function(){if(window.__downloadKml)window.__downloadKml()}},'Baixar KML'),
           e('button',{id:'kml-upload-sf-btn',className:'add-btn',style:{background:'#00b894',display:'none'},onClick:function(){if(window.__uploadKmlSF)window.__uploadKmlSF()}},'Gravar na Org')
         ),
@@ -170,7 +173,6 @@ function Lab(){
       e(FloatingChat,null)
     );
   }
-
   return e('div',null,
     e('div',{className:'lab-header'},
       e('div',{className:'logo'},'i9'),
@@ -380,6 +382,19 @@ ReactDOM.createRoot(document.getElementById('app')).render(e(Lab));
   function generateKML(assets,name){var kml='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n<name>'+name+'</name>\n';var mk=window.__kmlMode==='markers';kml+=(mk?MKML:KML_STYLES)+'\n';for(var i=0;i<assets.length;i++){var a=assets[i];var occ=a.total>0?Math.round((a.total-a.avail)/a.total*100):0;var dd='<![CDATA[<b>'+a.id+'</b><br/>'+a.type+' - '+a.tech+'<br/>'+a.bairro+', '+a.city+'<br/>'+a.status+(a.total>0?'<br/>Portas: '+(a.total-a.avail)+'/'+a.total+' ('+occ+'%)':'')+']]>';if(mk){kml+='<Placemark><name>'+a.id+'</name><description>'+dd+'</description><styleUrl>#'+msid(a)+'</styleUrl><Point><coordinates>'+a.lng.toFixed(6)+','+a.lat.toFixed(6)+',0</coordinates></Point></Placemark>\n'}else{var sh=getShape(a);sh.push(sh[0]);var co=sh.map(function(p){return p[1].toFixed(6)+','+p[0].toFixed(6)+',0'}).join(' ');kml+='<Placemark><name>'+a.id+'</name><description>'+dd+'</description><styleUrl>#'+styleId(a)+'</styleUrl><Polygon><outerBoundaryIs><LinearRing><coordinates>'+co+'</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>\n'}}kml+='</Document>\n</kml>';return kml}
   function generateKMLsByCity(assets){var cities={};for(var i=0;i<assets.length;i++){var c=assets[i].city||'?';if(!cities[c])cities[c]=[];cities[c].push(assets[i])}var result=[];for(var city in cities){var arr=cities[city];for(var j=0;j<arr.length;j+=1000){var chunk=arr.slice(j,j+1000);var slug=city.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'-');var fn='cobertura-'+slug+(arr.length>1000?'-pt'+(Math.floor(j/1000)+1):'')+'.kml';result.push({city:city,filename:fn,assets:chunk.length,kml:generateKML(chunk,'Cobertura '+city+' - Algar Telecom')})}}return result}
   window.__kmlMode='polygons';
+  window.__loadExample=function(){var csv='codigo,tipo,tecnologia,latitude,longitude,cidade,bairro,status,portas_total,portas_livres';
+    csv+='\nOLT-UDI-01,OLT,GPON,-18.9188,-48.2581,Uberlandia,Centro,Ativa,128,45';
+    csv+='\nCTO-UDI-01,CTO,GPON,-18.9186,-48.2772,Uberlandia,Santa Monica,Ativa,16,7';
+    csv+='\nCTO-UDI-02,CTO,GPON,-18.921,-48.279,Uberlandia,Santa Monica,Lotada,16,0';
+    csv+='\nCTO-UDI-03,CTO,XGS-PON,-18.9145,-48.268,Uberlandia,Centro,Ativa,32,22';
+    csv+='\nPOP-UDI-01,POP,Backbone,-18.919,-48.258,Uberlandia,Centro,Ativa,0,0';
+    csv+='\nCTO-FRA-01,CTO,GPON,-20.537,-47.399,Franca,Centro,Ativa,16,11';
+    csv+='\nCTO-UBE-01,CTO,GPON,-19.7473,-47.9316,Uberaba,Centro,Ativa,16,5';
+    csv+='\nCTO-ITU-01,CTO,GPON,-18.4191,-49.4637,Ituiutaba,Centro,Planejada,16,14';
+    var ta=document.getElementById('kml-csv-input');if(ta)ta.value=csv;
+    if(window.__processKmlCsv)window.__processKmlCsv(csv);
+  };
+
   window.__processKmlCsv=function(csv){
     parsedAssets=csvToAssets(csv);if(parsedAssets.length===0)return;
     generatedKMLs=generateKMLsByCity(parsedAssets);
