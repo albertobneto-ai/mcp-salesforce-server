@@ -142,11 +142,6 @@
       ov4.style.display='block';ifr4.src='/lab.html';
     }));
 
-    /* Integration Studio */
-    inner.appendChild(mkApp('app-studio','Integration Studio','#0A84FF',function(){
-      ov4.style.display='block';ifr4.src='https://ever-i9-studio-4ef8dd93c531.herokuapp.com/';
-    }));
-
     /* External APIs */
     inner.appendChild(mkApp('app-extapi','External APIs','#9333ea',function(){
       ov4.style.display='block';ifr4.src='https://ever-i9-api-mgmt-9ffe0302261d.herokuapp.com/api/external/';
@@ -155,16 +150,6 @@
     /* API Gateway */
     inner.appendChild(mkApp('app-gateway','API Management','#6d28d9',function(){
       ov4.style.display='block';ifr4.src='https://ever-i9-api-mgmt-9ffe0302261d.herokuapp.com/';
-    }));
-
-    /* Revenue Cloud Studio */
-    inner.appendChild(mkApp('app-revenue','Revenue Cloud Studio','#1a3150',function(){
-      ov4.style.display='block';ifr4.src='https://ever-i9-revenue-cloud-b804dcab5bbe.herokuapp.com/';
-    }));
-
-    /* Sales Cloud Studio */
-    inner.appendChild(mkApp('app-sales-cloud','Sales Cloud Studio','#3B82F6',function(){
-      ov4.style.display='block';ifr4.src='https://ever-i9-sales-cloud-07d4df5f957b.herokuapp.com/';
     }));
 
     drawer.appendChild(inner);
@@ -181,6 +166,49 @@
       expanded=!expanded;
       drawer.style.maxHeight=expanded?(inner.scrollHeight+12)+'px':'0';
     },true);
+
+    /* === STUDIO SECTION === */
+    var studioNav=document.createElement('div');
+    studioNav.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;border-radius:10px;font-family:Outfit,sans-serif;font-size:14px;font-weight:500;color:#64748b;transition:all .15s;margin:4px 8px 0 8px;';
+    studioNav.innerHTML='\u25A3 Studio';
+    studioNav.onmouseenter=function(){this.style.background='#2a2a3e';this.style.color='#e2e8f0'};
+    studioNav.onmouseleave=function(){this.style.background='transparent';this.style.color='#64748b'};
+
+    var sDraw=document.createElement('div');sDraw.id='studio-drawer';
+    sDraw.style.cssText='max-height:0;overflow:hidden;transition:max-height .25s ease;margin:0 8px;';
+    var sInner=document.createElement('div');
+    sInner.style.cssText='display:flex;flex-direction:column;gap:2px;padding:4px 0;';
+
+    function mkStd(id,lbl,clr,url){
+      var b=document.createElement('div');b.id=id;
+      b.style.cssText='padding:8px 14px 8px 32px;border-radius:8px;font-size:12px;font-weight:500;color:#94a3b8;cursor:pointer;font-family:Outfit,sans-serif;transition:all .12s;';
+      b.textContent=lbl;
+      b.onmouseenter=function(){this.style.background='#2a2a3e';this.style.color='#e2e8f0'};
+      b.onmouseleave=function(){this.style.background='transparent';this.style.color='#94a3b8'};
+      b.onclick=function(ev){ev.stopPropagation();ev.preventDefault();ov4.style.display='block';ifr4.src=url;};
+      return b;
+    }
+
+    sInner.appendChild(mkStd('s-sales','Sales Cloud Studio','#3B82F6','https://ever-i9-sales-cloud-07d4df5f957b.herokuapp.com/'));
+    sInner.appendChild(mkStd('s-revenue','Revenue Cloud Studio','#1a3150','https://ever-i9-revenue-cloud-b804dcab5bbe.herokuapp.com/'));
+    sInner.appendChild(mkStd('s-integ','Integration Studio','#0A84FF','https://ever-i9-studio-4ef8dd93c531.herokuapp.com/'));
+    sDraw.appendChild(sInner);
+
+    var sExp=false;
+    studioNav.addEventListener('click',function(ev){
+      ev.stopImmediatePropagation();ev.preventDefault();ev.stopPropagation();
+      sExp=!sExp;
+      sDraw.style.maxHeight=sExp?(sInner.scrollHeight+12)+'px':'0';
+    },true);
+
+    /* Insert Studio after Aplicações drawer */
+    if(drawer.nextSibling){
+      drawer.parentNode.insertBefore(studioNav,drawer.nextSibling);
+      studioNav.parentNode.insertBefore(sDraw,studioNav.nextSibling);
+    }else{
+      drawer.parentNode.appendChild(studioNav);
+      drawer.parentNode.appendChild(sDraw);
+    }
 
   },800);
 
