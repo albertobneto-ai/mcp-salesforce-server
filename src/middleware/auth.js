@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import pool from '../config/db.js';
 
 const SECRET = process.env.JWT_SECRET || 'everi9-dev-secret';
+if (!process.env.JWT_SECRET) console.warn('⚠️  JWT_SECRET não configurado — usando fallback. Defina JWT_SECRET no Heroku para segurança em produção.');
 
 export async function authMiddleware(req, res, next) {
   const header = req.headers.authorization;
