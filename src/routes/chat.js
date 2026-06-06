@@ -422,6 +422,7 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
       res.setHeader('Transfer-Encoding', 'chunked');
       res.write(' ');
       const kaF = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+      res.on('close', () => clearInterval(kaF));
       try {
         const m = _prevAssist.match(/---SPECDEEP---\s*([\s\S]*?)\s*---FIM---/);
         const data = m ? JSON.parse(m[1]) : { requirement: '', orgName: '', conflicts: [] };
@@ -465,6 +466,7 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
       res.setHeader('Transfer-Encoding', 'chunked');
       res.write(' ');
       const keepAlive = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+      res.on('close', () => clearInterval(keepAlive));
       // Enriquecimento: KB interna + web Salesforce (se KB insuficiente)
       let specPromptKb = specPrompt;
       try {
@@ -510,6 +512,7 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
       res.setHeader('Transfer-Encoding', 'chunked');
       res.write(' ');
       const keepAliveSD = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+      res.on('close', () => clearInterval(keepAliveSD));
       try {
         const reqText = messages[messages.length - 1].content.replace(/\/spec[\s-]deep\s*/i, '').trim();
         const orgSD = await getSelectedOrg(req);
@@ -600,6 +603,7 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
         const augmented = reqText + '\n\n[CONTEXTO: validado contra a org ' + orgNameSD + ' (somente leitura) - nenhum campo conflitante encontrado.]';
         res.write(' ');
         const ka2 = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+        res.on('close', () => clearInterval(ka2));
         const readableSD = await claude.stream(specPromptKbSD, [{ role: 'user', content: augmented }], 48000);
         const specOut = await collectStream(readableSD);
         clearInterval(ka2);
@@ -620,6 +624,7 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
 
       const userReq = messages[messages.length - 1].content.replace(/\/deploy\s*/i, '').trim();
       const keepAlive = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+      res.on('close', () => clearInterval(keepAlive));
       const selectedOrgDeploy = await getSelectedOrg(req);
       const baseDeploy = 'http://localhost:' + (process.env.PORT || 3000);
 
@@ -722,6 +727,7 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
 
       const delReq = messages[messages.length - 1].content.replace(/\/del(ete)?\s*/i, '').trim();
       const kaDel = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+      res.on('close', () => clearInterval(kaDel));
       const baseDel = 'http://localhost:' + (process.env.PORT || 3000);
 
       // Ler contexto da org pra resolver nomes exatos
@@ -819,6 +825,7 @@ router.post('/', authMiddleware, usageContext, async (req, res) => {
       res.setHeader('Transfer-Encoding', 'chunked');
       res.write(' ');
       const kaApres = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+      res.on('close', () => clearInterval(kaApres));
 
       // Contexto: usa toda a conversa (o caso de uso / fluxo ja discutido)
       const convoContext = messages
@@ -895,6 +902,7 @@ REGRAS:
 
       const protoReq = messages[messages.length - 1].content.replace(/\/proto(tipo)?\s*/i, '').trim();
       const keepAlive = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+      res.on('close', () => clearInterval(keepAlive));
 
       let protoText;
       try {
@@ -997,6 +1005,7 @@ REGRAS:
         res.setHeader('Transfer-Encoding', 'chunked');
         res.write(' ');
         const kaConfirm = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+        res.on('close', () => clearInterval(kaConfirm));
 
         // Extrair plano embutido
         let plan = null;
@@ -1038,6 +1047,7 @@ REGRAS:
         res.setHeader('Transfer-Encoding', 'chunked');
         res.write(' ');
         const keepAliveArchF = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+        res.on('close', () => clearInterval(keepAliveArchF));
 
         if (lastUser === '1') {
           // Gerar Spec com base no gap
@@ -1070,6 +1080,7 @@ REGRAS:
         res.setHeader('Transfer-Encoding', 'chunked');
         res.write(' ');
         const keepAlive2 = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+        res.on('close', () => clearInterval(keepAlive2));
 
         // Extrair contexto do prototipo (resumos da mensagem anterior)
         const contexto = prevAssistant;
@@ -1133,6 +1144,7 @@ REGRAS:
         res.setHeader('Transfer-Encoding', 'chunked');
         res.write(' ');
         const keepAlive3 = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+        res.on('close', () => clearInterval(keepAlive3));
 
         // ── SMART DEPLOY: ler estado da org + IA decide o que fazer ──
         const selectedOrg = await getSelectedOrg(req);
@@ -1604,6 +1616,7 @@ REGRAS:
         res.setHeader('Transfer-Encoding', 'chunked');
         res.write(' ');
         const keepAliveArch = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+        res.on('close', () => clearInterval(keepAliveArch));
 
         const archReq = messages[messages.length - 1].content.replace(/\/arch\s*/i, '').trim();
         const selectedOrgArch = await getSelectedOrg(req);
@@ -1764,6 +1777,7 @@ REGRAS:
         res.setHeader('Transfer-Encoding', 'chunked');
         res.write(' ');
         const keepAliveDisc = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+        res.on('close', () => clearInterval(keepAliveDisc));
 
         const discArg = messages[messages.length - 1].content.replace(/\/(discovery|disc)\s*/i, '').trim();
         const discLower = discArg.toLowerCase().replace(/\s/g, '');
@@ -2316,6 +2330,7 @@ REGRAS:
           res.setHeader('Transfer-Encoding', 'chunked');
           res.write(' ');
           const kaHf = setInterval(() => { try { res.write(' '); } catch {} }, 10000);
+          res.on('close', () => clearInterval(kaHf));
           try {
             const fr = await openrouter.callWithDynamicPool(hfPromptKb, messages);
             clearInterval(kaHf);
