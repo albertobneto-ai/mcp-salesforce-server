@@ -147,6 +147,16 @@
       ov4.style.display='block';ifr4.src='https://ever-i9-studio-4ef8dd93c531.herokuapp.com/';
     }));
 
+    /* External APIs */
+    inner.appendChild(mkApp('app-extapi','External APIs','#9333ea',function(){
+      ov4.style.display='block';ifr4.src='https://ever-i9-studio-4ef8dd93c531.herokuapp.com/api/external/';
+    }));
+
+    /* API Gateway */
+    inner.appendChild(mkApp('app-gateway','API Gateway','#6d28d9',function(){
+      ov4.style.display='block';ifr4.src='https://ever-i9-studio-4ef8dd93c531.herokuapp.com/api/v1';
+    }));
+
     drawer.appendChild(inner);
 
     if(target.nextSibling){
