@@ -159,7 +159,7 @@ function Lab(){
         ),
         e('textarea',{id:'kml-csv-input',placeholder:'Cole o CSV aqui ou use o botão Exemplo',style:{width:'100%',minHeight:100,background:'#fff',border:'1.5px solid #e2e8f0',borderRadius:10,padding:12,color:'#1a1a2e',fontSize:12,fontFamily:'monospace',resize:'vertical'},onChange:function(ev){if(window.__processKmlCsv)window.__processKmlCsv(ev.target.value)}}),
         e('div',{style:{marginTop:8,display:'flex',gap:8}},
-          e('label',{style:{padding:'8px 16px',borderRadius:8,border:'1.5px solid #e2e8f0',background:'#fff',color:'#64748b',fontSize:12,cursor:'pointer',fontFamily:'inherit',fontWeight:600}},'Upload CSV',e('input',{type:'file',accept:'.csv',style:{display:'none'},onChange:function(ev){var f=ev.target.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(e){var ta=document.getElementById('kml-csv-input');if(ta)ta.value=e.target.result;if(window.__processKmlCsv)window.__processKmlCsv(e.target.result)};rd.readAsText(f)}})),
+          e('label',{style:{padding:'8px 16px',borderRadius:8,border:'1.5px solid #e2e8f0',background:'#fff',color:'#64748b',fontSize:12,cursor:'pointer',fontFamily:'inherit',fontWeight:600}},'Upload CSV',e('input',{type:'file',accept:'.csv',style:{position:'absolute',width:0,height:0,opacity:0,overflow:'hidden'},onChange:function(ev){var f=ev.target.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(e){var ta=document.getElementById('kml-csv-input');if(ta)ta.value=e.target.result;if(window.__processKmlCsv)window.__processKmlCsv(e.target.result)};rd.readAsText(f)}})),
           e('button',{id:'kml-download-btn',className:'add-btn',style:{background:'#6366f1',display:'none'},onClick:function(){if(window.__downloadKml)window.__downloadKml()}},'Baixar KML'),
           e('button',{id:'kml-upload-sf-btn',className:'add-btn',style:{background:'#22c55e',display:'none'},onClick:function(){if(window.__uploadKmlSF)window.__uploadKmlSF()}},'Gravar na Org')
         ),
@@ -248,7 +248,7 @@ function Lab(){
           e('div',{className:'file-drop'+(file?' has-file':''),onClick:function(){fileRef.current.click()}},
             file?('📎 '+file.name+' ('+fmtSize(file.size)+')'):('Clique para selecionar arquivo')
           ),
-          e('input',{ref:fileRef,type:'file',style:{display:'none'},onChange:function(ev){if(ev.target.files[0])setFile(ev.target.files[0])}})
+          e('input',{ref:fileRef,type:'file',style:{position:'absolute',width:0,height:0,opacity:0,overflow:'hidden'},onChange:function(ev){if(ev.target.files[0])setFile(ev.target.files[0])}})
         ),
         e('div',{className:'modal-foot'},
           e('button',{className:'save',onClick:doAdd,disabled:loading},loading?'SALVANDO...':'ADICIONAR'),
