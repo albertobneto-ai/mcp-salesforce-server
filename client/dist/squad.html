@@ -254,7 +254,7 @@ function InputModal({card,onConfirm,onCancel}){
           e('label',{style:{display:'flex',alignItems:'center',gap:6,padding:'8px 16px',borderRadius:8,border:'1px dashed #3a3a5e',cursor:uploading?'wait':'pointer',color:'#64748b',fontSize:12,fontWeight:600,transition:'all .15s',background:fileName?'rgba(139,92,246,.08)':'transparent'}},
             uploading?e('div',{className:'spinner',style:{width:14,height:14,borderWidth:2}}):null,
             uploading?'Extraindo texto...':fileName?('✓ '+fileName):'⬆ Upload arquivo (.txt, .docx, .pdf)',
-            e('input',{type:'file',accept:'.txt,.md,.docx,.pdf',style:{display:'none'},onChange:ev=>{if(ev.target.files[0])handleFile(ev.target.files[0]);ev.target.value='';}})),
+            e('input',{type:'file',accept:'.txt,.md,.docx,.pdf',style:{position:'absolute',width:0,height:0,opacity:0,overflow:'hidden'},onChange:ev=>{if(ev.target.files[0])handleFile(ev.target.files[0]);ev.target.value='';}})),
           txt.length>0&&e('span',{style:{fontSize:10,color:'#475569',marginLeft:'auto'}},txt.length.toLocaleString()+' caracteres'),
         ),
       ),
@@ -341,7 +341,7 @@ function DetailPanel({card,artifacts,runs,attachments,onClose,onRefresh}){
         isAnalise&&e('label',{style:{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',borderRadius:8,border:'1px dashed #d1d5db',cursor:uploading?'wait':'pointer',color:'#9ca3af',fontSize:12,fontWeight:500,marginTop:4}},
           uploading?e('div',{className:'spinner',style:{width:14,height:14,borderWidth:2}}):null,
           uploading?'Extraindo texto...':'⬆ Adicionar arquivo (.txt, .docx, .pdf, .xlsx)',
-          e('input',{type:'file',accept:'.txt,.md,.docx,.pdf,.xlsx,.xls,.csv',style:{display:'none'},onChange:ev=>{if(ev.target.files[0])uploadFile(ev.target.files[0]);ev.target.value='';}})),
+          e('input',{type:'file',accept:'.txt,.md,.docx,.pdf,.xlsx,.xls,.csv',style:{position:'absolute',width:0,height:0,opacity:0,overflow:'hidden'},onChange:ev=>{if(ev.target.files[0])uploadFile(ev.target.files[0]);ev.target.value='';}})),
         !isAnalise&&!atts.length&&e('div',{style:{color:'#9ca3af',fontSize:12,fontStyle:'italic'}},'Nenhum anexo'),
       ),
       // PIPELINE
