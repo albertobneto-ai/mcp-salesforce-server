@@ -43,6 +43,7 @@ router.post('/run', authMiddleware, async (req, res) => {
   res.setHeader('Transfer-Encoding', 'chunked');
   res.write(' ');
   const ka = setInterval(() => { try { res.write(' '); } catch {} }, 12000);
+  res.on('close', () => clearInterval(ka));
 
   try {
     const started = Date.now();
