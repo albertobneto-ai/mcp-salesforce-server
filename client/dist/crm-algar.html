@@ -112,7 +112,7 @@ a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}
 <div id="root"></div>
 <script type="text/babel">
 const {useState,useEffect,useCallback,useMemo}=React;
-const API="https://mcp-sf-provisioning-462dd29c2455.herokuapp.com/api/snowflake";
+const API="https://ever-i9-api-mgmt-9ffe0302261d.herokuapp.com/api/crm";
 const fmt=v=>{if(v==null)return"—";if(typeof v==="number")return v>=1e6?`R$ ${(v/1e6).toFixed(2)}M`:v>=1e3?`R$ ${(v/1e3).toFixed(0)}K`:`R$ ${v.toLocaleString("pt-BR")}`;return v};
 const fS=v=>v>=1e6?`${(v/1e6).toFixed(1)}M`:v>=1e3?`${(v/1e3).toFixed(0)}K`:v;
 const dt=s=>s?new Date(s).toLocaleDateString("pt-BR"):"—";
@@ -132,29 +132,17 @@ function App(){
   const [showCreate,setShowCreate]=useState(false);
   const [newAcc,setNewAcc]=useState({name:'',industry:'Telecommunications',type:'Customer - Direct',city:'',state:'MG',revenue:''});
   const [creating,setCreating]=useState(false);
-  const HEROKU="https://mcp-sf-provisioning-462dd29c2455.herokuapp.com";
+  const HEROKU="https://ever-i9-api-mgmt-9ffe0302261d.herokuapp.com";
   const createAccount=async()=>{
     if(!newAcc.name.trim())return alert("Nome é obrigatório");
     setCreating(true);
     try{
-      const crmId="ACR-"+Date.now().toString().slice(-10);
-      // 1. Criar no Salesforce primeiro (pegar SF Account Id)
-      const sfResp=await fetch(HEROKU+"/api/data/composite",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({steps:[{objectName:"Account",refPrefix:"acc",records:[{
-          Name:newAcc.name,Industry:newAcc.industry,Type:newAcc.type,
-          BillingCity:newAcc.city,BillingStateCode:newAcc.state,BillingCountryCode:"BR",
-          Legacy_CRM_Id__c:crmId}]}]})});
-      const sfData=await sfResp.json();
-      const sfId=sfData?.idMap?.acc_0;
-      if(!sfId){alert("Erro ao criar no Salesforce: "+JSON.stringify(sfData));setCreating(false);return}
-      // 2. Criar no CRM Algar + Snowflake (com SF_ID real)
-      const crmResp=await fetch(HEROKU+"/api/crm-algar/account",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({records:[{sf_id:sfId,name:newAcc.name,industry:newAcc.industry,type:newAcc.type,
-          city:newAcc.city,state:newAcc.state,annual_revenue:parseFloat(newAcc.revenue)||0,source_system:"CRM_ALGAR"}],
-          skipSalesforce:true})});
-      const crmData=await crmResp.json();
-      const rec=crmData.records?.[0]||{};
-      alert("Conta criada com sucesso!\n\n✅ Salesforce: "+sfId+"\n✅ CRM Algar: "+rec.crmId+"\n✅ Snowflake: Sincronizado\n\nLegacy_CRM_Id__c no SF: "+crmId);
+      const crmResp=await fetch(API+"/accounts",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({name:newAcc.name,industry:newAcc.industry,type:newAcc.type,
+          billing_city:newAcc.city,billing_state:newAcc.state,annual_revenue:parseFloat(newAcc.revenue)||0,
+          segment:"Mid-Market",sync_status:"NOT_SYNCED"})});
+      const rec=await crmResp.json();
+      alert("Conta criada no CRM Algar!\n\n✅ CRM ID: "+rec.legacy_id+"\n✅ Nome: "+rec.name+"\nSync: "+rec.sync_status);
       setShowCreate(false);setNewAcc({name:'',industry:'Telecommunications',type:'Customer - Direct',city:'',state:'MG',revenue:''});
       load();
     }catch(e){alert("Erro: "+e.message)}
@@ -164,15 +152,16 @@ function App(){
   const load=useCallback(async()=>{
     setLoading(true);
     try{
-      const ex=async sql=>{const r=await fetch(API+"/execute",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sql})});const d=await r.json();return d.status==="ok"?d.data:[]};
-      const o=await fetch(API+"/overview").then(r=>r.json());
-      const [la,lc,ll,lo,ca,cc,cl,co]=await Promise.all([
-        ex("SELECT * FROM LEGACY_ACCOUNTS ORDER BY NAME"),ex("SELECT * FROM LEGACY_CONTACTS ORDER BY LAST_NAME"),
-        ex("SELECT * FROM LEGACY_LEADS ORDER BY SCORE DESC"),ex("SELECT * FROM LEGACY_OPPORTUNITIES ORDER BY AMOUNT DESC"),
-        ex("SELECT * FROM CRM_ACCOUNTS ORDER BY NAME"),ex("SELECT * FROM CRM_CONTACTS LIMIT 30"),
-        ex("SELECT * FROM CRM_LEADS LIMIT 20"),ex("SELECT * FROM CRM_OPPORTUNITIES ORDER BY AMOUNT DESC")]);
-      setLeg({a:la,c:lc,l:ll,o:lo});setCrm({a:ca,c:cc,l:cl,o:co});setOv(o.data||o);
-      if(la.length>0)setSelClient(la[0]);
+      const toUpper=arr=>(arr||[]).map(r=>{const o={};Object.entries(r).forEach(([k,v])=>{o[k.toUpperCase()]=v});return o});
+      const [ov,acc,con,lea,opp]=await Promise.all([
+        fetch(API+"/overview").then(r=>r.json()),
+        fetch(API+"/accounts").then(r=>r.json()),
+        fetch(API+"/contacts").then(r=>r.json()),
+        fetch(API+"/leads").then(r=>r.json()),
+        fetch(API+"/opportunities").then(r=>r.json())]);
+      const ua=toUpper(acc.accounts);const uc=toUpper(con.contacts);const ul=toUpper(lea.leads);const uo=toUpper(opp.opportunities);
+      setLeg({a:ua,c:uc,l:ul,o:uo});setCrm({a:ua,c:uc,l:ul,o:uo});setOv(ov);
+      if(ua.length>0)setSelClient(ua[0]);
     }catch(e){console.error(e)}
     setLoading(false);
   },[]);
