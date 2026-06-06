@@ -245,10 +245,10 @@ function Lab(){
           e('label',null,'URL (LINK EXTERNO)'),
           e('input',{value:url,onChange:function(ev){setUrl(ev.target.value)},placeholder:'https://... (opcional)'}),
           e('label',null,'OU ARQUIVO'),
-          e('div',{className:'file-drop'+(file?' has-file':''),onClick:function(){fileRef.current.click()}},
+          e('label',{className:'file-drop'+(file?' has-file':''),htmlFor:'lab-file-input'},
             file?('📎 '+file.name+' ('+fmtSize(file.size)+')'):('Clique para selecionar arquivo')
           ),
-          e('input',{ref:fileRef,type:'file',style:{position:'absolute',width:0,height:0,opacity:0,overflow:'hidden'},onChange:function(ev){if(ev.target.files[0])setFile(ev.target.files[0])}})
+          e('input',{id:'lab-file-input',ref:fileRef,type:'file',style:{position:'absolute',width:0,height:0,opacity:0,overflow:'hidden'},onChange:function(ev){if(ev.target.files[0])setFile(ev.target.files[0])}})
         ),
         e('div',{className:'modal-foot'},
           e('button',{className:'save',onClick:doAdd,disabled:loading},loading?'SALVANDO...':'ADICIONAR'),
