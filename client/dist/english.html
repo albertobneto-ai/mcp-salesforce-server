@@ -278,6 +278,50 @@ kbd {
 .translator-context-entry .ctx-time { font-size: 10px; color: var(--text-3); font-family: var(--mono); margin-top: 3px; }
 .translator-actions { display: flex; justify-content: center; gap: 8px; padding-top: 0.5rem; }
 
+
+/* TRANSLATOR TIP POPUP */
+.translator-popup-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.3); z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn 0.15s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.translator-popup {
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: 16px;
+  width: 90%; max-width: 520px; max-height: 80vh; overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2); animation: fadeUp 0.2s ease;
+  padding: 1.5rem;
+}
+.translator-popup-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1rem; padding-bottom: 0.8rem; border-bottom: 1px solid var(--border);
+}
+.translator-popup-title { font-size: 15px; font-weight: 700; color: var(--accent); }
+.translator-popup-close {
+  width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg); cursor: pointer; font-size: 16px; display: flex;
+  align-items: center; justify-content: center; transition: all 0.15s;
+}
+.translator-popup-close:hover { border-color: var(--accent); background: var(--accent-dim); }
+.translator-popup-section { margin-bottom: 1rem; }
+.translator-popup-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-3); margin-bottom: 6px;
+}
+.translator-popup-text {
+  font-size: 14px; line-height: 1.7; color: var(--text); padding: 10px 14px;
+  background: var(--bg); border-radius: 10px; border: 1px solid var(--border);
+}
+.translator-popup-text.highlight {
+  border-color: var(--accent); border-left: 3px solid var(--accent);
+  background: var(--tip-bg);
+}
+.translator-popup-text.accent { color: var(--accent); font-weight: 500; }
+.translator-popup-loading {
+  text-align: center; padding: 1.5rem; color: var(--text-3); font-size: 13px;
+}
+
 /* ===== TRANSLATOR ===== */
 #view-translator { overflow-y: auto; background: var(--bg); }
 .translator-container {
@@ -1275,7 +1319,7 @@ Text: "${text.substring(0, 500)}"`;
     const entry = document.createElement('div');
     entry.className = 'translator-entry translating';
     entry.innerHTML = [
-      '<button class="translator-entry-speak" title="Listen">🔊</button>',
+      '<button class="translator-entry-speak" title="Context & Response">💬</button>',
       '<div class="translator-entry-source">' + this.escHtml(text) + '</div>',
       '<div class="translator-entry-target">Translating...</div>',
       '<div class="translator-entry-meta">',
@@ -1285,14 +1329,11 @@ Text: "${text.substring(0, 500)}"`;
     ].join('');
     feed.insertBefore(entry, feed.firstChild);
 
-    // Speak button
+    // Tip popup button
     entry.querySelector('.translator-entry-speak').addEventListener('click', () => {
       const target = entry.querySelector('.translator-entry-target').textContent;
       if (target && target !== 'Translating...') {
-        this.synth.cancel();
-        const u = new SpeechSynthesisUtterance(target);
-        u.lang = isEn ? 'pt-BR' : 'en-US'; u.rate = 0.9;
-        this.synth.speak(u);
+        this.openTranslatorTip(text, target, isEn);
       }
     });
 
@@ -1357,6 +1398,95 @@ Text: "${text.substring(0, 500)}"`;
     a.download = 'transcript-' + date.replace(/\//g, '-') + '.txt';
     a.click();
     URL.revokeObjectURL(url);
+  },
+
+
+  async openTranslatorTip(originalText, translatedText, isEn) {
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'translator-popup-overlay';
+
+    const popup = document.createElement('div');
+    popup.className = 'translator-popup';
+    popup.innerHTML = `
+      <div class="translator-popup-header">
+        <div class="translator-popup-title">💬 Context & Response</div>
+        <button class="translator-popup-close">✕</button>
+      </div>
+      <div class="translator-popup-section">
+        <div class="translator-popup-label">${isEn ? '🇺🇸 Original (English)' : '🇧🇷 Original (Portuguese)'}</div>
+        <div class="translator-popup-text">${this.escHtml(originalText)}</div>
+      </div>
+      <div class="translator-popup-section">
+        <div class="translator-popup-label">${isEn ? '🇧🇷 Contexto (Português)' : '🇺🇸 Context (English)'}</div>
+        <div class="translator-popup-text accent">${this.escHtml(translatedText)}</div>
+      </div>
+      <div class="translator-popup-section" id="tip-response-section">
+        <div class="translator-popup-loading">⏳ Generating suggested response...</div>
+      </div>
+    `;
+
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+
+    // Close handlers
+    const close = () => overlay.remove();
+    popup.querySelector('.translator-popup-close').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }});
+
+    // Generate response suggestion
+    try {
+      const prompt = isEn
+        ? `Someone said this in English during a meeting:
+"${originalText}"
+
+Provide:
+1. A suggested professional response in English (2-3 sentences, Salesforce architect level)
+2. The translation of that response in Portuguese
+
+Format EXACTLY as:
+RESPONSE: [your suggested response in English]
+TRADUÇÃO: [translation to Portuguese]`
+        : `Alguém disse isso em Português durante uma reunião:
+"${originalText}"
+
+Provide:
+1. A suggested professional response in English (2-3 sentences, Salesforce architect level)
+2. The translation of that response in Portuguese
+
+Format EXACTLY as:
+RESPONSE: [your suggested response in English]
+TRADUÇÃO: [translation to Portuguese]`;
+
+      const res = await fetch('/english/api/chat/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
+        body: JSON.stringify({ customPrompt: 'You are an English communication coach for a Salesforce Architect. Provide natural, professional responses. Follow the format exactly.', messages: [{ role: 'user', content: prompt }] })
+      });
+      const data = await res.json();
+      const reply = data.reply || '';
+
+      // Parse response
+      let responseEn = '', responsePt = '';
+      const lines = reply.split('\n');
+      for (const line of lines) {
+        if (line.startsWith('RESPONSE:')) responseEn = line.replace('RESPONSE:', '').trim();
+        else if (line.startsWith('TRADUÇÃO:')) responsePt = line.replace('TRADUÇÃO:', '').trim();
+        else if (responseEn && !responsePt) responseEn += ' ' + line.trim();
+        else if (responsePt) responsePt += ' ' + line.trim();
+      }
+      if (!responseEn) { responseEn = reply; responsePt = ''; }
+
+      const section = popup.querySelector('#tip-response-section');
+      section.innerHTML = `
+        <div class="translator-popup-label">🇺🇸 Suggested Response (English)</div>
+        <div class="translator-popup-text highlight">${this.escHtml(responseEn.trim())}</div>
+        ${responsePt ? '<div style="margin-top:8px"><div class="translator-popup-label">🇧🇷 Tradução da Resposta</div><div class="translator-popup-text accent">' + this.escHtml(responsePt.trim()) + '</div></div>' : ''}
+      `;
+    } catch (e) {
+      popup.querySelector('#tip-response-section').innerHTML = '<div class="translator-popup-text">Could not generate response</div>';
+    }
   },
 
   escHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); },
