@@ -1,1523 +1,414 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TechEnglish</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --bg: #f4f1fa;
-  --bg-2: #ffffff;
-  --bg-3: #ece8f6;
-  --bg-4: #e0daf0;
-  --border: #d4cce8;
-  --accent: #7c5ce0;
-  --accent-light: #6a4bd4;
-  --accent-dim: #ede8fc;
-  --accent-glow: rgba(124,92,224,0.08);
-  --text: #1e1638;
-  --text-2: #5a5078;
-  --text-3: #8b82a8;
-  --green: #22c55e;
-  --red: #ef4444;
-  --tip-bg: #f8f5ff;
-  --tip-border: #e0d8f4;
-  --lesson-accent: #9370f0;
-  --mono: 'JetBrains Mono', monospace;
-  --sans: 'Inter', -apple-system, sans-serif;
-  --radius: 12px;
-  --shadow-sm: 0 1px 3px rgba(30,22,56,0.06);
-  --shadow-md: 0 4px 16px rgba(30,22,56,0.08);
-  --shadow-lg: 0 8px 32px rgba(124,92,224,0.1);
-}
-html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
-#app { height: 100%; display: flex; flex-direction: column; }
-.screen { flex: 1; }
-.hidden { display: none !important; }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>TechEnglish</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f4f1fa;--bg2:#fff;--bg3:#ece8f6;--bg4:#e0daf0;--bdr:#d4cce8;--ac:#7c5ce0;--ac2:#6a4bd4;--acd:#ede8fc;--acg:rgba(124,92,224,.08);--tx:#1e1638;--tx2:#5a5078;--tx3:#8b82a8;--grn:#22c55e;--red:#ef4444;--mono:'JetBrains Mono',monospace;--sans:'Inter',-apple-system,sans-serif;--r:12px}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--sans)}
+#app{height:100%;display:flex;flex-direction:column}
+.hidden{display:none!important}
+.screen{flex:1}
 
 /* LOGIN */
-#login-screen {
-  display: flex; align-items: center; justify-content: center; height: 100vh;
-  background: linear-gradient(160deg, #f0ecfa 0%, #e8e0f8 50%, #f4f1fa 100%);
-}
-.login-box {
-  width: 100%; max-width: 380px; padding: 2.5rem;
-  background: var(--bg-2); border: 1px solid var(--border); border-radius: 20px;
-  display: flex; flex-direction: column; gap: 1.1rem;
-  box-shadow: var(--shadow-lg);
-}
-.logo { display: flex; align-items: center; gap: 10px; }
-.logo-icon { font-size: 26px; }
-.logo-text { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
-.logo.small .logo-text { font-size: 16px; }
-.logo.small .logo-icon { font-size: 18px; }
-.login-sub { font-size: 13px; color: var(--text-2); margin-top: -4px; letter-spacing: 0.02em; }
-
-input[type="password"], textarea {
-  width: 100%; padding: 13px 16px;
-  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
-  color: var(--text); font-family: var(--sans); font-size: 14px;
-  outline: none; transition: all 0.2s; resize: none;
-}
-input[type="password"]:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
-
-.btn-primary {
-  padding: 13px; background: linear-gradient(135deg, var(--accent), #6a4bd4);
-  color: #fff; border: none; border-radius: var(--radius); font-family: var(--sans);
-  font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;
-}
-.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124,92,224,0.25); }
-.error-msg { font-size: 12px; color: var(--red); min-height: 16px; }
+#login-screen{display:flex;align-items:center;justify-content:center;height:100vh;background:linear-gradient(160deg,#f0ecfa,#e8e0f8,#f4f1fa)}
+.login-box{width:100%;max-width:380px;padding:2.5rem;background:var(--bg2);border:1px solid var(--bdr);border-radius:20px;display:flex;flex-direction:column;gap:1.1rem;box-shadow:0 8px 32px rgba(124,92,224,.1)}
+.logo{display:flex;align-items:center;gap:10px}.logo-icon{font-size:26px}.logo-text{font-size:22px;font-weight:700;letter-spacing:-.5px}
+.logo.sm .logo-text{font-size:16px}.logo.sm .logo-icon{font-size:18px}
+.login-sub{font-size:13px;color:var(--tx2);margin-top:-4px}
+input[type=password],textarea{width:100%;padding:13px 16px;background:var(--bg);border:1px solid var(--bdr);border-radius:var(--r);color:var(--tx);font-family:var(--sans);font-size:14px;outline:none;resize:none;transition:all .2s}
+input:focus,textarea:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--acg)}
+.btn-p{padding:13px;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;border:none;border-radius:var(--r);font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-p:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(124,92,224,.25)}
+.btn-g{padding:7px 14px;background:none;border:1px solid var(--bdr);border-radius:8px;color:var(--tx2);font-family:var(--sans);font-size:13px;cursor:pointer;transition:all .15s}
+.btn-g:hover{color:var(--tx);border-color:var(--ac)}
+.err{font-size:12px;color:var(--red);min-height:16px}
 
 /* HEADER */
-#main-screen { display: flex; flex-direction: column; height: 100vh; }
-.header {
-  display: flex; align-items: center; gap: 1rem;
-  padding: 0 1.5rem; height: 58px; border-bottom: 1px solid var(--border);
-  background: var(--bg-2); flex-shrink: 0; box-shadow: var(--shadow-sm);
-}
-.nav { display: flex; gap: 2px; flex: 1; }
-.nav-btn {
-  padding: 7px 14px; background: none; border: none; border-radius: 8px;
-  color: var(--text-2); font-family: var(--sans); font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: all 0.15s;
-}
-.nav-btn:hover { color: var(--text); background: var(--bg-3); }
-.nav-btn.active { color: var(--accent); background: var(--accent-dim); }
+#main-screen{display:flex;flex-direction:column;height:100vh}
+.header{display:flex;align-items:center;gap:1rem;padding:0 1rem;height:54px;border-bottom:1px solid var(--bdr);background:var(--bg2);flex-shrink:0}
+.nav{display:flex;gap:2px;flex:1}
+.nav-btn{padding:7px 12px;background:none;border:none;border-radius:8px;color:var(--tx2);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.nav-btn:hover{color:var(--tx);background:var(--bg3)}
+.nav-btn.active{color:var(--ac);background:var(--acd)}
+.view{flex:1;overflow:hidden;display:flex;flex-direction:column}
 
-.btn-ghost {
-  padding: 7px 14px; background: none; border: 1px solid var(--border); border-radius: 8px;
-  color: var(--text-2); font-family: var(--sans); font-size: 13px; cursor: pointer; transition: all 0.15s;
-}
-.btn-ghost:hover { color: var(--text); border-color: var(--accent); }
+/* TRANSLATOR */
+#view-translator{overflow-y:auto;background:var(--bg);padding:1rem}
+.tr-head{text-align:center;margin-bottom:1rem}
+.tr-head h1{font-size:22px;font-weight:700;margin-bottom:4px}
+.tr-head p{font-size:13px;color:var(--tx2)}
+.tr-ctl{display:flex;flex-direction:column;align-items:center;gap:.8rem;margin-bottom:1rem}
+.lang-sel{display:flex;gap:4px}
+.lang-btn{padding:7px 14px;border-radius:8px;border:1px solid var(--bdr);background:var(--bg2);color:var(--tx2);font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.lang-btn.on{background:var(--acd);color:var(--ac);border-color:var(--ac)}
+.tr-mic{width:90px;height:90px;border-radius:50%;border:3px solid var(--bdr);background:var(--bg2);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:all .3s;box-shadow:0 4px 16px rgba(0,0,0,.06)}
+.tr-mic:hover{border-color:var(--ac)}
+.tr-mic.on{border-color:#e84393;background:linear-gradient(135deg,#fce4ec,#f8e8ff);animation:pmic 1.5s infinite}
+@keyframes pmic{0%,100%{box-shadow:0 0 0 0 rgba(232,67,147,.2)}50%{box-shadow:0 0 0 14px rgba(232,67,147,0)}}
+.tr-mic-i{font-size:28px}.tr-mic-l{font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase}
+.tr-mic.on .tr-mic-l{color:#e84393}
+.tr-status{font-size:11px;color:var(--tx3);text-align:center;min-height:16px}
+.tr-live{width:100%;padding:10px 14px;background:var(--bg2);border:1px solid var(--ac);border-radius:10px;box-shadow:0 0 0 3px var(--acg)}
+.tr-live-lbl{font-size:10px;font-weight:700;color:var(--ac);text-transform:uppercase;margin-bottom:4px}
+.tr-live-txt{font-size:14px;color:var(--tx);line-height:1.5;font-style:italic;min-height:20px}
+.tr-panels{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;flex:1;min-height:0}
+@media(max-width:768px){.tr-panels{grid-template-columns:1fr;grid-template-rows:1fr 1fr}}
+.tr-panel{display:flex;flex-direction:column;background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;overflow:hidden;min-height:200px}
+.tr-panel-h{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--bdr);background:var(--bg);flex-shrink:0}
+.tr-panel-t{font-size:12px;font-weight:700}
+.tr-cnt{font-size:10px;color:var(--tx3);font-family:var(--mono)}
+.tr-feed,.tr-ctx{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px;max-height:50vh}
+@media(max-width:768px){.tr-feed,.tr-ctx{max-height:30vh}}
 
-.view { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+/* Live entries */
+.tr-e{position:relative;background:var(--bg);border:1px solid var(--bdr);border-radius:10px;padding:10px 40px 10px 12px;animation:fu .2s ease;font-size:13px;line-height:1.5}
+@keyframes fu{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.tr-e-src{color:var(--tx);font-weight:500;margin-bottom:4px}
+.tr-e-tgt{color:var(--ac);font-weight:500;min-height:16px}
+.tr-e-tgt.loading{color:var(--tx3);font-style:italic}
+.tr-e-time{font-size:10px;color:var(--tx3);font-family:var(--mono);margin-top:4px}
+.tr-e-btn{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:6px;border:1px solid var(--bdr);background:var(--bg2);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.tr-e-btn:hover{border-color:var(--ac);background:var(--acd)}
 
-/* SCENARIO SELECT */
-.scenario-select {
-  flex: 1; overflow-y: auto; padding: 3rem 2rem;
-  display: flex; flex-direction: column; align-items: center;
-}
-.page-title { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px; color: var(--text); }
-.page-sub { font-size: 14px; color: var(--text-2); margin-bottom: 2.5rem; }
-.scenario-cards {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem; width: 100%; max-width: 750px;
-}
-.scenario-card {
-  background: var(--bg-2); border: 1px solid var(--border); border-radius: 16px;
-  padding: 1.5rem; cursor: pointer; transition: all 0.25s; text-align: left;
-  box-shadow: var(--shadow-sm);
-}
-.scenario-card:hover {
-  border-color: var(--accent); transform: translateY(-3px); box-shadow: var(--shadow-lg);
-}
-.scenario-icon { font-size: 30px; margin-bottom: 12px; display: block; }
-.scenario-name { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
-.scenario-desc { font-size: 13px; color: var(--text-2); line-height: 1.55; }
+/* Context lines */
+.ctx-l{font-size:13px;line-height:1.6;padding:2px 4px}
+.ctx-t{font-size:10px;color:var(--tx3);font-family:var(--mono);margin-right:4px}
 
-/* CHAT */
-.chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.chat-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 1.5rem; border-bottom: 1px solid var(--border);
-  background: var(--bg-2); flex-shrink: 0; gap: 10px; box-shadow: var(--shadow-sm);
-}
-.chat-meta { display: flex; align-items: center; gap: 12px; }
-.scenario-badge {
-  font-size: 12px; font-weight: 600; color: var(--accent);
-  background: var(--accent-dim); padding: 5px 12px; border-radius: 100px;
-}
-.timer { font-family: var(--mono); font-size: 13px; color: var(--text-2); }
-.btn-end {
-  padding: 8px 16px; background: none; border: 1px solid var(--accent);
-  border-radius: 8px; color: var(--accent); font-family: var(--sans);
-  font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s;
-}
-.btn-end:hover { background: var(--accent); color: #fff; }
+/* Actions */
+.tr-acts{display:flex;justify-content:center;gap:8px;padding:.5rem 0}
 
-/* MESSAGES */
-.messages {
-  flex: 1; overflow-y: auto; padding: 1.5rem;
-  display: flex; flex-direction: column; gap: 1.2rem;
-  background: var(--bg);
-}
-.message { max-width: 78%; display: flex; flex-direction: column; gap: 4px; animation: fadeUp 0.25s ease; }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-.message.assistant { align-self: flex-start; }
-.message.user { align-self: flex-end; }
-.message-role {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
-  text-transform: uppercase; color: var(--text-3); padding: 0 4px;
-}
-.message.user .message-role { text-align: right; }
-.message-bubble { padding: 14px 18px; border-radius: 14px; font-size: 14px; line-height: 1.7; }
-.message.assistant .message-bubble {
-  background: var(--bg-2); border: 1px solid var(--border); color: var(--text);
-  border-radius: 4px 14px 14px 14px; box-shadow: var(--shadow-sm);
-}
-.message.user .message-bubble {
-  background: linear-gradient(135deg, var(--accent), #6a4bd4); color: #fff;
-  border-radius: 14px 4px 14px 14px; box-shadow: var(--shadow-sm);
-}
-.message.feedback .message-bubble {
-  background: var(--bg-2); border: 1px solid var(--accent-dim);
-  color: var(--text); border-radius: 14px; max-width: 100%; box-shadow: var(--shadow-md);
-}
-.message.feedback { max-width: 100%; }
-.message.feedback .message-role { color: var(--accent); }
-.message-bubble strong { color: var(--accent); font-weight: 600; }
-.typing-indicator .message-bubble { color: var(--text-3); font-style: italic; font-size: 13px; }
+/* Popup */
+.popup-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.3);z-index:9999;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.popup{background:var(--bg2);border:1px solid var(--bdr);border-radius:16px;width:92%;max-width:500px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);padding:1.2rem;animation:fu .2s ease}
+.popup-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;padding-bottom:.6rem;border-bottom:1px solid var(--bdr)}
+.popup-ttl{font-size:14px;font-weight:700;color:var(--ac)}
+.popup-x{width:30px;height:30px;border-radius:8px;border:1px solid var(--bdr);background:var(--bg);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center}
+.popup-x:hover{border-color:var(--ac);background:var(--acd)}
+.popup-sec{margin-bottom:.8rem}
+.popup-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:4px}
+.popup-txt{font-size:13px;line-height:1.6;padding:8px 12px;background:var(--bg);border-radius:8px;border:1px solid var(--bdr)}
+.popup-txt.hi{border-color:var(--ac);border-left:3px solid var(--ac);background:#f8f5ff}
+.popup-txt.ac{color:var(--ac);font-weight:500}
+.popup-load{text-align:center;padding:1rem;color:var(--tx3);font-size:12px}
 
-/* TIP */
-.tip-btn {
-  margin-top: 6px; padding: 4px 10px; background: var(--tip-bg); border: 1px solid var(--tip-border);
-  border-radius: 6px; color: var(--text-3); font-size: 11px; font-family: var(--sans);
-  cursor: pointer; transition: all 0.15s; font-weight: 500; align-self: flex-start;
-}
-.message.user .tip-btn { align-self: flex-end; }
-.tip-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
-.tip-panel, .auto-tip {
-  margin-top: 6px; padding: 12px 14px; background: var(--tip-bg); border: 1px solid var(--tip-border);
-  border-radius: 10px; font-size: 13px; line-height: 1.65; color: var(--text-2);
-  animation: fadeUp 0.2s ease; max-width: 100%;
-}
+/* PRACTICE/LESSONS/HISTORY - desktop only */
+.scenario-select{flex:1;overflow-y:auto;padding:2rem;display:flex;flex-direction:column;align-items:center}
+.pg-t{font-size:24px;font-weight:700;margin-bottom:4px}.pg-s{font-size:13px;color:var(--tx2);margin-bottom:2rem}
+.sc-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.8rem;width:100%;max-width:700px}
+.sc-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:14px;padding:1.2rem;cursor:pointer;transition:all .2s}
+.sc-card:hover{border-color:var(--ac);transform:translateY(-2px);box-shadow:0 8px 24px rgba(124,92,224,.1)}
+.sc-icon{font-size:28px;margin-bottom:8px;display:block}.sc-name{font-size:15px;font-weight:700;margin-bottom:4px}.sc-desc{font-size:12px;color:var(--tx2);line-height:1.4}
 
-/* INPUT */
-.input-area {
-  padding: 1rem 1.5rem; border-top: 1px solid var(--border);
-  background: var(--bg-2); flex-shrink: 0;
-}
-textarea { display: block; margin-bottom: 10px; font-size: 14px; line-height: 1.6; }
-.input-actions { display: flex; align-items: center; justify-content: space-between; }
-.input-hint { font-size: 12px; color: var(--text-3); }
-kbd {
-  font-family: var(--mono); font-size: 11px; background: var(--bg-3);
-  border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; color: var(--text-2);
-}
-.input-right { display: flex; align-items: center; gap: 8px; }
-.btn-send {
-  padding: 10px 22px; background: linear-gradient(135deg, var(--accent), #6a4bd4); color: #fff;
-  border: none; border-radius: 10px; font-family: var(--sans);
-  font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s;
-}
-.btn-send:hover { box-shadow: 0 3px 12px rgba(124,92,224,0.25); }
-.btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+.chat-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.chat-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 1rem;border-bottom:1px solid var(--bdr);background:var(--bg2);gap:8px}
+.chat-badge{font-size:11px;font-weight:600;color:var(--ac);background:var(--acd);padding:4px 10px;border-radius:99px}
+.timer{font-family:var(--mono);font-size:12px;color:var(--tx2)}
+.btn-end{padding:7px 12px;background:none;border:1px solid var(--ac);border-radius:8px;color:var(--ac);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--sans)}
+.btn-end:hover{background:var(--ac);color:#fff}
+.msgs{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:1rem;background:var(--bg)}
+.msg{max-width:78%;display:flex;flex-direction:column;gap:3px;animation:fu .2s ease}
+.msg.a{align-self:flex-start}.msg.u{align-self:flex-end}
+.msg-role{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--tx3);padding:0 4px}
+.msg.u .msg-role{text-align:right}
+.msg-bbl{padding:12px 16px;border-radius:12px;font-size:13px;line-height:1.65}
+.msg.a .msg-bbl{background:var(--bg2);border:1px solid var(--bdr);border-radius:4px 12px 12px 12px}
+.msg.u .msg-bbl{background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;border-radius:12px 4px 12px 12px}
+.msg.fb .msg-bbl{background:var(--bg2);border:1px solid var(--acd);border-radius:12px;max-width:100%}
+.msg.fb{max-width:100%}.msg.fb .msg-role{color:var(--ac)}
+.msg-bbl strong{color:var(--ac);font-weight:600}
+.tip-btn{margin-top:4px;padding:3px 8px;background:var(--bg);border:1px solid var(--bdr);border-radius:5px;color:var(--tx3);font-size:10px;cursor:pointer;font-family:var(--sans);align-self:flex-start}
+.msg.u .tip-btn{align-self:flex-end}
+.tip-btn:hover{color:var(--ac);border-color:var(--ac)}
+.tip-panel{margin-top:4px;padding:10px;background:#f8f5ff;border:1px solid var(--bdr);border-radius:8px;font-size:12px;line-height:1.6;color:var(--tx2);border-left:3px solid var(--ac)}
+.auto-tip{border-left:3px solid var(--ac)}
+.input-area{padding:.8rem 1rem;border-top:1px solid var(--bdr);background:var(--bg2);flex-shrink:0}
+textarea{display:block;margin-bottom:8px;font-size:13px;line-height:1.5}
+.input-acts{display:flex;align-items:center;justify-content:space-between}
+.input-hint{font-size:11px;color:var(--tx3)}
+kbd{font-family:var(--mono);font-size:10px;background:var(--bg3);border:1px solid var(--bdr);border-radius:3px;padding:1px 4px;color:var(--tx2)}
+.input-r{display:flex;align-items:center;gap:6px}
+.btn-send{padding:9px 18px;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;border:none;border-radius:8px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer}
+.btn-send:disabled{opacity:.4;cursor:not-allowed}
+.btn-mic{width:40px;height:40px;border-radius:50%;border:1px solid var(--bdr);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.btn-mic.recording{background:linear-gradient(135deg,#e84393,var(--ac));border-color:transparent;animation:pmic 1.2s infinite;color:#fff}
+.mic-st{font-size:10px;color:var(--red);font-weight:500;display:none;align-items:center;gap:4px;margin-top:3px}
+.mic-st.active{display:flex}
+.mic-dot{width:5px;height:5px;border-radius:50%;background:var(--red);animation:pmic 1s infinite}
 
-/* MIC */
-.btn-mic {
-  width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border);
-  background: var(--bg); font-size: 20px; cursor: pointer; transition: all 0.2s;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.btn-mic:hover { border-color: var(--accent); background: var(--accent-dim); }
-.btn-mic.recording {
-  background: linear-gradient(135deg, #e84393, var(--accent)); border-color: transparent;
-  animation: pulse-mic 1.2s infinite; color: #fff;
-}
-@keyframes pulse-mic {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(232,67,147,0.3); }
-  50% { box-shadow: 0 0 0 10px rgba(232,67,147,0); }
-}
-.btn-mic.unsupported { opacity: 0.3; cursor: not-allowed; }
-.mic-status { font-size: 11px; color: var(--red); font-weight: 500; display: none; align-items: center; gap: 5px; margin-top: 4px; }
-.mic-status.active { display: flex; }
-.mic-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); animation: pulse-mic 1s infinite; }
+#view-history{overflow-y:auto;padding:1.5rem;background:var(--bg)}
+.hist-list{display:flex;flex-direction:column;gap:8px;max-width:600px}
+.hist-item{background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;padding:.8rem 1rem;display:flex;align-items:center;justify-content:space-between}
 
-/* TTS */
-.tts-on { color: var(--accent) !important; border-color: var(--accent) !important; }
+/* Lessons */
+#view-lessons{overflow-y:auto;padding:1.5rem;background:var(--bg)}
+.les-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.8rem;max-width:860px}
+.les-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:14px;padding:1.2rem;cursor:pointer;transition:all .2s}
+.les-card:hover{border-color:var(--ac);transform:translateY(-2px)}
+.les-card.done{border-left:4px solid var(--grn)}
+.les-hdr{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.les-num{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:var(--acd);color:var(--ac)}
+.les-card.done .les-num{background:#dcfce7;color:var(--grn)}
+.les-ttl{font-size:14px;font-weight:700;flex:1}
+.les-tag{font-size:9px;font-weight:600;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:var(--acd);color:var(--ac)}
+.les-desc{font-size:12px;color:var(--tx2);line-height:1.4}
+.les-detail{max-width:680px}
+.les-sec{background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;padding:1.2rem;margin-bottom:.8rem}
+.les-sec-t{font-size:13px;font-weight:700;color:var(--ac);margin-bottom:8px}
+.les-sec p,.les-sec li{font-size:13px;line-height:1.6;margin-bottom:4px}
+.les-sec ul{padding-left:1rem}
+.vtbl{width:100%;border-collapse:collapse}
+.vtbl th{text-align:left;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--bdr)}
+.vtbl td{padding:8px;font-size:13px;border-bottom:1px solid var(--bg3)}
+.vtbl td:first-child{font-weight:600;color:var(--ac);font-family:var(--mono);font-size:12px}
+.ex-box{background:var(--bg);border-left:3px solid var(--ac);padding:8px 12px;border-radius:0 8px 8px 0;margin:6px 0;font-size:12px;line-height:1.5}
+.ex-box .en{color:var(--tx);font-weight:500}.ex-box .pt{color:var(--tx3);font-style:italic;font-size:11px}
+.les-prac-btn{margin-top:.8rem;padding:10px 20px;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;border:none;border-radius:8px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer}
 
-/* HISTORY */
-#view-history { overflow-y: auto; padding: 2rem; background: var(--bg); }
-#view-history .page-title { margin-bottom: 1.5rem; }
-.history-list { display: flex; flex-direction: column; gap: 10px; max-width: 640px; }
-.history-item {
-  background: var(--bg-2); border: 1px solid var(--border); border-radius: 14px;
-  padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between;
-  cursor: pointer; transition: all 0.15s; box-shadow: var(--shadow-sm);
-}
-.history-item:hover { border-color: var(--accent); box-shadow: var(--shadow-md); }
-.history-meta { display: flex; flex-direction: column; gap: 4px; }
-.history-scenario { font-size: 14px; font-weight: 600; }
-.history-date { font-size: 12px; color: var(--text-2); font-family: var(--mono); }
-.history-stats { font-size: 12px; color: var(--text-3); }
-.history-empty { color: var(--text-2); font-size: 14px; padding: 2rem 0; }
-
-
-
-.translator-mic-row { display: flex; justify-content: center; }
-.translator-panels {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; flex: 1; min-height: 0;
-}
-@media (max-width: 768px) { .translator-panels { grid-template-columns: 1fr; } }
-.translator-panel-live, .translator-panel-context {
-  display: flex; flex-direction: column; min-height: 0;
-  background: var(--bg-2); border: 1px solid var(--border); border-radius: 14px;
-  overflow: hidden;
-}
-.translator-panel-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-  background: var(--bg);
-}
-.translator-panel-title { font-size: 13px; font-weight: 700; color: var(--text); }
-.translator-count { font-size: 11px; color: var(--text-3); font-family: var(--mono); }
-.translator-feed, .translator-context {
-  flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px;
-  max-height: 50vh;
-}
-.ctx-line { font-size: 13px; line-height: 1.65; padding: 2px 0; }
-.ctx-line.ctx-source { color: var(--text); font-weight: 500; }
-.ctx-line.ctx-target { color: var(--accent); font-style: italic; padding-left: 12px; border-left: 2px solid var(--accent-dim); margin-left: 4px; }
-.ctx-time-inline { font-size: 10px; color: var(--text-3); font-family: var(--mono); margin-right: 4px; }
-.translator-actions { display: flex; justify-content: center; gap: 8px; padding-top: 0.5rem; }
-
-
-/* TRANSLATOR TIP POPUP */
-.translator-popup-overlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.3); z-index: 9999;
-  display: flex; align-items: center; justify-content: center;
-  animation: fadeIn 0.15s ease;
-}
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-.translator-popup {
-  background: var(--bg-2); border: 1px solid var(--border); border-radius: 16px;
-  width: 90%; max-width: 520px; max-height: 80vh; overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.2); animation: fadeUp 0.2s ease;
-  padding: 1.5rem;
-}
-.translator-popup-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 1rem; padding-bottom: 0.8rem; border-bottom: 1px solid var(--border);
-}
-.translator-popup-title { font-size: 15px; font-weight: 700; color: var(--accent); }
-.translator-popup-close {
-  width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
-  background: var(--bg); cursor: pointer; font-size: 16px; display: flex;
-  align-items: center; justify-content: center; transition: all 0.15s;
-}
-.translator-popup-close:hover { border-color: var(--accent); background: var(--accent-dim); }
-.translator-popup-section { margin-bottom: 1rem; }
-.translator-popup-label {
-  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
-  color: var(--text-3); margin-bottom: 6px;
-}
-.translator-popup-text {
-  font-size: 14px; line-height: 1.7; color: var(--text); padding: 10px 14px;
-  background: var(--bg); border-radius: 10px; border: 1px solid var(--border);
-}
-.translator-popup-text.highlight {
-  border-color: var(--accent); border-left: 3px solid var(--accent);
-  background: var(--tip-bg);
-}
-.translator-popup-text.accent { color: var(--accent); font-weight: 500; }
-.translator-popup-loading {
-  text-align: center; padding: 1.5rem; color: var(--text-3); font-size: 13px;
-}
-
-/* ===== TRANSLATOR ===== */
-#view-translator { overflow-y: auto; background: var(--bg); }
-.translator-container {
-  max-width: 960px; margin: 0 auto; padding: 2rem;
-  display: flex; flex-direction: column; gap: 1.5rem;
-}
-.translator-controls {
-  display: flex; flex-direction: column; align-items: center; gap: 1rem;
-}
-.lang-selector { display: flex; gap: 6px; }
-.lang-btn {
-  padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);
-  background: var(--bg-2); color: var(--text-2); font-family: var(--sans);
-  font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s;
-}
-.lang-btn.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
-.lang-btn:hover { border-color: var(--accent); }
-
-.translator-mic-btn {
-  width: 120px; height: 120px; border-radius: 50%; border: 3px solid var(--border);
-  background: var(--bg-2); cursor: pointer; transition: all 0.3s;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  box-shadow: var(--shadow-md);
-}
-.translator-mic-btn:hover { border-color: var(--accent); box-shadow: var(--shadow-lg); transform: scale(1.03); }
-.translator-mic-btn.active {
-  border-color: #e84393; background: linear-gradient(135deg, #fce4ec, #f8e8ff);
-  animation: pulse-translator 1.5s infinite;
-}
-@keyframes pulse-translator {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(232,67,147,0.2); }
-  50% { box-shadow: 0 0 0 16px rgba(232,67,147,0); }
-}
-.translator-mic-icon { font-size: 36px; }
-.translator-mic-label { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; }
-.translator-mic-btn.active .translator-mic-label { color: #e84393; }
-.translator-mic-btn.active .translator-mic-icon::after { content: ''; }
-
-.translator-status {
-  font-size: 12px; color: var(--text-3); min-height: 18px; text-align: center;
-}
-
-.translator-live {
-  width: 100%; padding: 14px 18px; background: var(--bg-2); border: 1px solid var(--accent);
-  border-radius: 12px; box-shadow: 0 0 0 3px var(--accent-glow);
-}
-.translator-live-label {
-  font-size: 11px; font-weight: 600; color: var(--accent); text-transform: uppercase;
-  letter-spacing: 0.06em; margin-bottom: 6px;
-}
-.translator-live-text {
-  font-size: 15px; color: var(--text); line-height: 1.6; min-height: 24px;
-  font-style: italic;
-}
-
-.translator-feed {
-  display: flex; flex-direction: column; gap: 12px;
-}
-.translator-entry {
-  background: var(--bg-2); border: 1px solid var(--border); border-radius: 14px;
-  padding: 16px 18px; box-shadow: var(--shadow-sm); animation: fadeUp 0.3s ease;
-  position: relative;
-}
-.translator-entry-source {
-  font-size: 15px; font-weight: 500; color: var(--text); line-height: 1.6;
-  margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--bg-3);
-}
-.translator-entry-target {
-  font-size: 14px; color: var(--accent); line-height: 1.6; font-weight: 500;
-}
-.translator-entry-meta {
-  display: flex; align-items: center; gap: 8px; margin-top: 8px;
-}
-.translator-entry-time {
-  font-size: 11px; color: var(--text-3); font-family: var(--mono);
-}
-.translator-entry-lang {
-  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
-  padding: 2px 6px; border-radius: 4px; background: var(--accent-dim); color: var(--accent);
-}
-.translator-entry-speak {
-  width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border);
-  background: var(--bg); cursor: pointer; font-size: 14px; display: flex;
-  align-items: center; justify-content: center; transition: all 0.15s;
-  position: absolute; top: 14px; right: 14px;
-}
-.translator-entry-speak:hover { border-color: var(--accent); background: var(--accent-dim); }
-.translator-entry.translating .translator-entry-target {
-  color: var(--text-3); font-style: italic;
-}
-
-.translator-actions {
-  display: flex; justify-content: center; padding-top: 0.5rem;
-}
-
-/* ===== LESSONS ===== */
-#view-lessons { overflow-y: auto; padding: 2rem; background: var(--bg); }
-.lessons-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem; max-width: 900px;
-}
-.lesson-card {
-  background: var(--bg-2); border: 1px solid var(--border); border-radius: 16px;
-  padding: 1.4rem; cursor: pointer; transition: all 0.2s; box-shadow: var(--shadow-sm);
-}
-.lesson-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow-md); }
-.lesson-card.completed { border-left: 4px solid var(--green); }
-.lesson-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.lesson-number {
-  width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700; background: var(--accent-dim); color: var(--accent);
-}
-.lesson-card.completed .lesson-number { background: #dcfce7; color: var(--green); }
-.lesson-title { font-size: 15px; font-weight: 700; flex: 1; }
-.lesson-tag {
-  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
-  padding: 3px 8px; border-radius: 4px; background: var(--accent-dim); color: var(--accent);
-}
-.lesson-desc { font-size: 13px; color: var(--text-2); line-height: 1.5; margin-bottom: 10px; }
-.lesson-progress {
-  height: 4px; background: var(--bg-3); border-radius: 4px; overflow: hidden;
-}
-.lesson-progress-bar { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.3s; }
-
-/* Lesson detail */
-.lesson-detail { max-width: 720px; }
-.lesson-detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem; }
-.lesson-detail-title { font-size: 22px; font-weight: 700; }
-.lesson-section {
-  background: var(--bg-2); border: 1px solid var(--border); border-radius: 14px;
-  padding: 1.4rem; margin-bottom: 1rem; box-shadow: var(--shadow-sm);
-}
-.lesson-section-title { font-size: 14px; font-weight: 700; color: var(--accent); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
-.lesson-section p, .lesson-section li { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 6px; }
-.lesson-section ul { padding-left: 1.2rem; }
-.vocab-table { width: 100%; border-collapse: collapse; }
-.vocab-table th { text-align: left; font-size: 12px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 10px; border-bottom: 1px solid var(--border); }
-.vocab-table td { padding: 10px; font-size: 14px; border-bottom: 1px solid var(--bg-3); }
-.vocab-table td:first-child { font-weight: 600; color: var(--accent); font-family: var(--mono); font-size: 13px; }
-.vocab-table tr:last-child td { border-bottom: none; }
-.example-box {
-  background: var(--bg); border-left: 3px solid var(--accent); padding: 10px 14px;
-  border-radius: 0 8px 8px 0; margin: 8px 0; font-size: 13px; line-height: 1.6;
-}
-.example-box .en { color: var(--text); font-weight: 500; }
-.example-box .pt { color: var(--text-3); font-style: italic; font-size: 12px; }
-.lesson-practice-btn {
-  margin-top: 1rem; padding: 12px 24px; background: linear-gradient(135deg, var(--accent), #6a4bd4);
-  color: #fff; border: none; border-radius: 10px; font-family: var(--sans);
-  font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s;
-  display: inline-flex; align-items: center; gap: 8px;
-}
-.lesson-practice-btn:hover { box-shadow: 0 4px 16px rgba(124,92,224,0.3); }
-.lesson-check {
-  display: flex; align-items: center; gap: 8px; margin-top: 1rem; padding: 10px 14px;
-  background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px;
-  font-size: 13px; color: #166534; font-weight: 500;
-}
-
-
-.auto-tip { border-left: 3px solid var(--accent); background: var(--tip-bg); }
-/* SCROLLBAR */
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-  </style>
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:10px}
+</style>
 </head>
 <body>
-  <div id="app">
-    <div id="login-screen" class="screen">
-      <div class="login-box">
-        <div class="logo"><span class="logo-icon">⚡</span><span class="logo-text">TechEnglish</span></div>
-        <p class="login-sub">Conversation simulator for IT professionals</p>
-        <input type="password" id="password-input" placeholder="Password" autocomplete="current-password" />
-        <button id="login-btn" class="btn-primary">Enter</button>
-        <p id="login-error" class="error-msg"></p>
-      </div>
-    </div>
-
-    <div id="main-screen" class="screen hidden">
-      <header class="header">
-        <div class="logo small"><span class="logo-icon">⚡</span><span class="logo-text">TechEnglish</span></div>
-        <nav class="nav">
-          <button class="nav-btn" data-view="lessons">Lessons</button>
-          <button class="nav-btn active" data-view="practice">Practice</button>
-          <button class="nav-btn" data-view="translator">Translator</button>
-          <button class="nav-btn" data-view="history">History</button>
-        </nav>
-        <button id="logout-btn" class="btn-ghost">Logout</button>
-      </header>
-
-      <div id="view-lessons" class="view hidden">
-        <div id="lessons-list-view">
-          <h1 class="page-title">Lessons</h1>
-          <p class="page-sub">Structured learning path for Salesforce professionals</p>
-          <div id="lessons-grid" class="lessons-grid"></div>
-        </div>
-        <div id="lesson-detail-view" class="hidden" style="padding:0 2rem 2rem">
-          <div id="lesson-detail-content" class="lesson-detail"></div>
-        </div>
-      </div>
-
-      <div id="view-practice" class="view">
-        <div id="scenario-select" class="scenario-select">
-          <h1 class="page-title">Choose your scenario</h1>
-          <p class="page-sub">10–15 minute conversation session with voice support</p>
-          <div id="scenario-cards" class="scenario-cards"></div>
-        </div>
-        <div id="chat-area" class="chat-area hidden">
-          <div class="chat-header">
-            <button id="back-btn" class="btn-ghost">← Back</button>
-            <div class="chat-meta">
-              <span id="scenario-label" class="scenario-badge"></span>
-              <span id="session-timer" class="timer">00:00</span>
-            </div>
-            <button id="tts-toggle" class="btn-ghost tts-on" title="Toggle voice">🔊</button>
-            <button id="end-session-btn" class="btn-end">End & Get Feedback</button>
-          </div>
-          <div id="messages" class="messages"></div>
-          <div class="input-area">
-            <textarea id="user-input" placeholder="Type or hold the mic to speak in English..." rows="3"></textarea>
-            <div class="input-actions">
-              <div>
-                <span class="input-hint">Type <kbd>feedback</kbd> for evaluation</span>
-                <div id="mic-status" class="mic-status"><span class="mic-dot"></span> Listening...</div>
-              </div>
-              <div class="input-right">
-                <button id="mic-btn" class="btn-mic" title="Click to start/stop">🎤</button>
-                <button id="send-btn" class="btn-send">Send →</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-
-      <div id="view-translator" class="view hidden">
-        <div class="translator-container">
-          <div class="translator-header">
-            <h1 class="page-title">Live Translator</h1>
-            <p class="page-sub">Listen, transcribe, and translate in real time</p>
-          </div>
-          <div class="translator-controls">
-            <div class="lang-selector">
-              <button class="lang-btn active" data-lang="en" id="lang-en">🇺🇸 English → Portuguese</button>
-              <button class="lang-btn" data-lang="pt" id="lang-pt">🇧🇷 Portuguese → English</button>
-            </div>
-            <div class="translator-mic-row">
-              <button id="translator-mic" class="translator-mic-btn">
-                <span class="translator-mic-icon">🎤</span>
-                <span class="translator-mic-label">Start listening</span>
-              </button>
-            </div>
-            <div id="translator-status" class="translator-status"></div>
-            <div id="translator-live" class="translator-live hidden">
-              <div class="translator-live-label">Hearing...</div>
-              <div id="translator-live-text" class="translator-live-text"></div>
-            </div>
-          </div>
-          <div class="translator-panels">
-            <div class="translator-panel-live">
-              <div class="translator-panel-header">
-                <span class="translator-panel-title">⚡ Live Translation</span>
-              </div>
-              <div id="translator-feed" class="translator-feed"></div>
-            </div>
-            <div class="translator-panel-context">
-              <div class="translator-panel-header">
-                <span class="translator-panel-title">📄 Transcript</span>
-                <span id="translator-entry-count" class="translator-count">0 entries</span>
-              </div>
-              <div id="translator-context" class="translator-context"></div>
-            </div>
-          </div>
-          <div class="translator-actions" id="translator-actions">
-            <button class="btn-ghost" id="translator-download" style="display:none">📥 Download .txt</button>
-            <button class="btn-ghost" id="translator-clear">🗑 Clear all</button>
-          </div>
-        </div>
-      </div>
-
-      <div id="view-history" class="view hidden">
-        <h1 class="page-title">Session history</h1>
-        <div id="history-list" class="history-list"></div>
-      </div>
-    </div>
-  </div>
-
+<div id="app">
+<div id="login-screen" class="screen">
+<div class="login-box">
+<div class="logo"><span class="logo-icon">⚡</span><span class="logo-text">TechEnglish</span></div>
+<p class="login-sub">Conversation simulator for IT professionals</p>
+<input type="password" id="pw" placeholder="Password" autocomplete="current-password"/>
+<button id="login-btn" class="btn-p">Enter</button>
+<p id="login-err" class="err"></p>
+</div>
+</div>
+<div id="main-screen" class="screen hidden">
+<header class="header">
+<div class="logo sm"><span class="logo-icon">⚡</span><span class="logo-text">TechEnglish</span></div>
+<nav class="nav" id="nav"></nav>
+<button id="logout-btn" class="btn-g">Logout</button>
+</header>
+<div id="view-translator" class="view">
+<div class="tr-head"><h1>Translator</h1><p>Listen, transcribe and translate in real time</p></div>
+<div class="tr-ctl">
+<div class="lang-sel">
+<button class="lang-btn on" data-lang="en" id="lang-en">🇺🇸 EN → PT</button>
+<button class="lang-btn" data-lang="pt" id="lang-pt">🇧🇷 PT → EN</button>
+</div>
+<button id="tr-mic" class="tr-mic"><span class="tr-mic-i">🎤</span><span class="tr-mic-l">Start</span></button>
+<div id="tr-status" class="tr-status"></div>
+<div id="tr-live" class="tr-live hidden"><div class="tr-live-lbl">Hearing...</div><div id="tr-live-txt" class="tr-live-txt"></div></div>
+</div>
+<div class="tr-panels">
+<div class="tr-panel"><div class="tr-panel-h"><span class="tr-panel-t">⚡ Live Translation</span></div><div id="tr-feed" class="tr-feed"></div></div>
+<div class="tr-panel"><div class="tr-panel-h"><span class="tr-panel-t">📄 Transcript</span><span id="tr-cnt" class="tr-cnt">0</span></div><div id="tr-ctx" class="tr-ctx"></div></div>
+</div>
+<div class="tr-acts"><button class="btn-g" id="tr-dl" style="display:none">📥 Download .txt</button><button class="btn-g" id="tr-clr">🗑 Clear</button></div>
+</div>
+<div id="view-practice" class="view hidden">
+<div id="sc-sel" class="scenario-select"><h1 class="pg-t">Choose your scenario</h1><p class="pg-s">10-15 min conversation with voice</p><div id="sc-cards" class="sc-cards"></div></div>
+<div id="chat-area" class="chat-area hidden">
+<div class="chat-hdr"><button id="back-btn" class="btn-g">← Back</button><div style="display:flex;align-items:center;gap:10px"><span id="sc-label" class="chat-badge"></span><span id="timer" class="timer">00:00</span></div><button id="tts-tog" class="btn-g" style="color:var(--ac);border-color:var(--ac)">🔊</button><button id="end-btn" class="btn-end">End & Feedback</button></div>
+<div id="msgs" class="msgs"></div>
+<div class="input-area"><textarea id="user-in" placeholder="Type or use mic..." rows="2"></textarea><div class="input-acts"><div><span class="input-hint">Type <kbd>feedback</kbd> for eval</span><div id="mic-st" class="mic-st"><span class="mic-dot"></span> Listening...</div></div><div class="input-r"><button id="mic-btn" class="btn-mic">🎤</button><button id="send-btn" class="btn-send">Send →</button></div></div></div>
+</div>
+</div>
+<div id="view-lessons" class="view hidden"><div id="les-list"><h1 class="pg-t">Lessons</h1><p class="pg-s">Structured learning for Salesforce professionals</p><div id="les-grid" class="les-grid"></div></div><div id="les-det" class="hidden" style="padding:0 1.5rem"><div id="les-det-c" class="les-detail"></div></div></div>
+<div id="view-history" class="view hidden"><h1 class="pg-t">History</h1><div id="hist-list" class="hist-list"></div></div>
+</div>
+</div>
 <script>
 'use strict';
+const IS_MOBILE=/Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)||window.innerWidth<768;
 
-// ===== LESSONS DATA =====
-const LESSONS = [
-  {
-    id: 'l1', number: 1, title: 'Introducing Yourself & Your Role', tag: 'Basics',
-    desc: 'How to present yourself as a Salesforce professional in meetings and interviews.',
-    sections: [
-      { title: '📖 Key Phrases', type: 'vocab', items: [
-        ["I'm a Salesforce Architect", "Sou Arquiteto Salesforce"],
-        ["I specialize in Sales Cloud and Data Cloud", "Sou especialista em Sales Cloud e Data Cloud"],
-        ["I've been working with the platform for X years", "Trabalho com a plataforma há X anos"],
-        ["I lead the technical architecture for our CRM implementation", "Lidero a arquitetura técnica da implementação do nosso CRM"],
-        ["My role involves designing scalable solutions", "Meu papel envolve projetar soluções escaláveis"],
-        ["I work closely with stakeholders to align business and technical goals", "Trabalho próximo aos stakeholders para alinhar objetivos de negócio e técnicos"],
-      ]},
-      { title: '💬 Example Dialogue', type: 'examples', items: [
-        ["Hi, I'm Alberto. I'm a Salesforce Architect at Everymind, where I lead the technical design for our B2B CRM projects.", "Oi, sou Alberto. Sou Arquiteto Salesforce na Everymind, onde lidero o design técnico dos nossos projetos de CRM B2B."],
-        ["I have hands-on experience with Sales Cloud, Revenue Cloud, and Data Cloud, and I've recently been exploring Agentforce.", "Tenho experiência prática com Sales Cloud, Revenue Cloud e Data Cloud, e recentemente estou explorando Agentforce."],
-      ]},
-      { title: '🎯 Common Mistakes', type: 'tips', items: [
-        "Don't say \"I am responsible for\" too much — vary with \"I oversee\", \"I lead\", \"I handle\".",
-        "Avoid \"I work in Salesforce\" → say \"I work with Salesforce\" or \"on the Salesforce platform\".",
-        "\"Certification\" is /ˌsɜːrtɪfɪˈkeɪʃn/ — practice the stress on the third syllable.",
-      ]},
-    ]
-  },
-  {
-    id: 'l2', number: 2, title: 'Explaining Architecture Decisions', tag: 'Architecture',
-    desc: 'Justify technical choices using professional vocabulary for stakeholders and teams.',
-    sections: [
-      { title: '📖 Key Phrases', type: 'vocab', items: [
-        ["We chose this approach because...", "Escolhemos essa abordagem porque..."],
-        ["The trade-off here is...", "O trade-off aqui é..."],
-        ["This is an OOTB feature, so no custom code is needed", "Isso é funcionalidade nativa, sem necessidade de código customizado"],
-        ["We need to account for governor limits", "Precisamos considerar os governor limits"],
-        ["The data model supports future scalability", "O modelo de dados suporta escalabilidade futura"],
-        ["We're leveraging declarative tools before resorting to Apex", "Estamos aproveitando ferramentas declarativas antes de recorrer ao Apex"],
-      ]},
-      { title: '💬 Example Dialogue', type: 'examples', items: [
-        ["We went with a Flow-based approach instead of Apex triggers because it's more maintainable and our admins can support it post-go-live.", "Optamos por uma abordagem baseada em Flow em vez de Apex triggers porque é mais sustentável e nossos admins podem dar suporte pós-go-live."],
-        ["The key trade-off is between real-time sync and batch processing. Given our data volume, batch is more cost-effective.", "O trade-off principal é entre sincronização real-time e processamento em lote. Dado nosso volume de dados, batch é mais custo-efetivo."],
-      ]},
-      { title: '🎯 Common Mistakes', type: 'tips', items: [
-        "\"Approach\" not \"abordage\" — false cognate.",
-        "Say \"scalable\" /ˈskeɪləbl/, not \"escalable\".",
-        "\"Out of the box\" (OOTB) is commonly used — practice saying it naturally.",
-      ]},
-    ]
-  },
-  {
-    id: 'l3', number: 3, title: 'Running a Refinement Session', tag: 'Agile',
-    desc: 'Lead sprint refinement discussions, estimate stories, and negotiate scope in English.',
-    sections: [
-      { title: '📖 Key Phrases', type: 'vocab', items: [
-        ["Let's walk through the acceptance criteria", "Vamos percorrer os critérios de aceitação"],
-        ["What's the definition of done for this story?", "Qual é a definição de pronto para essa story?"],
-        ["I'd estimate this at X story points", "Eu estimaria isso em X story points"],
-        ["There's a dependency on the integration team", "Há uma dependência do time de integração"],
-        ["Can we break this into smaller stories?", "Podemos quebrar isso em stories menores?"],
-        ["This is a spike — we need to investigate before committing", "Isso é um spike — precisamos investigar antes de comprometer"],
-      ]},
-      { title: '💬 Example Dialogue', type: 'examples', items: [
-        ["Before we estimate, I'd like to clarify the scope. Are we including the approval process in this story, or should that be a separate one?", "Antes de estimarmos, gostaria de esclarecer o escopo. Estamos incluindo o processo de aprovação nessa story, ou deveria ser uma separada?"],
-        ["I think we're overcomplicating this. Let's stick to the happy path first and handle edge cases in a follow-up.", "Acho que estamos complicando demais. Vamos focar no happy path primeiro e tratar os edge cases em um follow-up."],
-      ]},
-      { title: '🎯 Common Mistakes', type: 'tips', items: [
-        "\"Criteria\" is plural — say \"the criteria are\", not \"the criteria is\".",
-        "\"Estimate\" as a verb: /ˈestɪmeɪt/. As a noun: /ˈestɪmət/.",
-        "Don't translate \"puxar\" as \"pull\" in every context — \"Let's pull in the PO\" ✓ but \"Let's address this\" ≠ \"Let's pull this\".",
-      ]},
-    ]
-  },
-  {
-    id: 'l4', number: 4, title: 'Data Cloud & Integration Vocabulary', tag: 'Data',
-    desc: 'Master the specific terminology for Data Cloud, MuleSoft, and integration patterns.',
-    sections: [
-      { title: '📖 Key Phrases', type: 'vocab', items: [
-        ["We ingest data from multiple sources into Data Cloud", "Ingerimos dados de múltiplas fontes no Data Cloud"],
-        ["The identity resolution matches records across systems", "A resolução de identidade associa registros entre sistemas"],
-        ["We use CDC events to trigger the sync", "Usamos eventos CDC para disparar a sincronização"],
-        ["The middleware handles transformation and routing", "O middleware lida com transformação e roteamento"],
-        ["We need to map the source schema to the target object", "Precisamos mapear o schema de origem para o objeto de destino"],
-        ["The data share eliminates the need for ETL", "O data share elimina a necessidade de ETL"],
-      ]},
-      { title: '💬 Example Dialogue', type: 'examples', items: [
-        ["Our architecture uses MuleSoft as the iPaaS layer to handle CDC events from Salesforce and route them to the data lake.", "Nossa arquitetura usa MuleSoft como camada iPaaS para lidar com eventos CDC do Salesforce e roteá-los para o data lake."],
-        ["Data Cloud's identity resolution is key here — it unifies customer profiles across CRM, billing, and marketing data.", "A resolução de identidade do Data Cloud é chave aqui — ela unifica perfis de clientes entre CRM, billing e dados de marketing."],
-      ]},
-      { title: '🎯 Common Mistakes', type: 'tips', items: [
-        "\"Schema\" is /ˈskiːmə/ in English, not \"esquema\".",
-        "\"Middleware\" — stress on first syllable: /ˈmɪdlwɛr/.",
-        "\"Throughput\" /ˈθruːpʊt/ — the \"th\" is important, not \"trupute\".",
-      ]},
-    ]
-  },
-  {
-    id: 'l5', number: 5, title: 'Presenting to Executives', tag: 'Communication',
-    desc: 'Communicate ROI, timelines, risks, and recommendations to C-level stakeholders.',
-    sections: [
-      { title: '📖 Key Phrases', type: 'vocab', items: [
-        ["The projected ROI is X% over 12 months", "O ROI projetado é de X% em 12 meses"],
-        ["We're on track to deliver by Q3", "Estamos no caminho para entregar até o Q3"],
-        ["The main risk is around data migration complexity", "O principal risco está na complexidade da migração de dados"],
-        ["I'd recommend a phased rollout", "Eu recomendaria um rollout em fases"],
-        ["This aligns with the company's digital transformation strategy", "Isso está alinhado com a estratégia de transformação digital da empresa"],
-        ["The bottom line is: we can reduce manual effort by 40%", "O resultado final é: podemos reduzir esforço manual em 40%"],
-      ]},
-      { title: '💬 Example Dialogue', type: 'examples', items: [
-        ["To summarize: we're proposing a three-phase approach. Phase one delivers core CRM in 8 weeks, phase two adds automation, and phase three integrates with your ERP.", "Para resumir: estamos propondo uma abordagem em três fases. A fase um entrega o CRM core em 8 semanas, a fase dois adiciona automação, e a fase três integra com o ERP de vocês."],
-        ["I understand the budget concern. Let me walk you through the cost-benefit analysis we've prepared.", "Entendo a preocupação com orçamento. Deixe-me apresentar a análise de custo-benefício que preparamos."],
-      ]},
-      { title: '🎯 Common Mistakes', type: 'tips', items: [
-        "Don't say \"in resume\" — say \"to summarize\" or \"in summary\".",
-        "\"Schedule\" in American English: /ˈskedʒuːl/, British: /ˈʃedjuːl/.",
-        "Avoid filler words like \"basically\" and \"actually\" — they weaken executive communication.",
-      ]},
-    ]
-  },
-  {
-    id: 'l6', number: 6, title: 'Handling Objections & Pushback', tag: 'Negotiation',
-    desc: 'Respond professionally when stakeholders challenge your proposals or timeline.',
-    sections: [
-      { title: '📖 Key Phrases', type: 'vocab', items: [
-        ["That's a fair point. Let me address that.", "É um ponto justo. Deixe-me abordar isso."],
-        ["I understand the concern, and here's how we mitigate it", "Entendo a preocupação, e aqui está como mitigamos"],
-        ["We considered that option, but...", "Consideramos essa opção, mas..."],
-        ["Let me provide some context on why we chose this path", "Deixe-me dar contexto sobre por que escolhemos esse caminho"],
-        ["I'd suggest we table that for now and revisit after phase one", "Eu sugeriria que deixemos isso por agora e revisitemos após a fase um"],
-        ["What would make you more comfortable with this approach?", "O que te deixaria mais confortável com essa abordagem?"],
-      ]},
-      { title: '💬 Example Dialogue', type: 'examples', items: [
-        ["I hear your concern about the timeline. What I'd propose is that we de-scope the reporting module from phase one and deliver it in a fast-follow sprint.", "Ouço sua preocupação com o prazo. O que eu proporia é que tiremos o módulo de relatórios da fase um e o entreguemos em um sprint de follow-up rápido."],
-        ["You're right that Apex adds maintenance overhead. However, in this specific case, Flow can't handle the complexity of the business rules without hitting platform limits.", "Você tem razão que Apex adiciona overhead de manutenção. No entanto, nesse caso específico, Flow não consegue lidar com a complexidade das regras de negócio sem bater nos limites da plataforma."],
-      ]},
-      { title: '🎯 Common Mistakes', type: 'tips', items: [
-        "Never say \"you're wrong\" — try \"I see it differently\" or \"There's another perspective\".",
-        "\"Mitigate\" /ˈmɪtɪɡeɪt/ — not \"metigate\". Practice this word.",
-        "\"Table\" means to postpone (US) but to discuss now (UK) — know your audience.",
-      ]},
-    ]
-  },
+const LESSONS=[
+{id:'l1',n:1,title:'Introducing Yourself & Your Role',tag:'Basics',desc:'Present yourself as a Salesforce professional.',sections:[{title:'📖 Key Phrases',type:'vocab',items:[["I'm a Salesforce Architect","Sou Arquiteto Salesforce"],["I specialize in Sales Cloud and Data Cloud","Sou especialista em Sales Cloud e Data Cloud"],["I've been working with the platform for X years","Trabalho com a plataforma há X anos"],["I lead the technical architecture","Lidero a arquitetura técnica"],["My role involves designing scalable solutions","Meu papel envolve projetar soluções escaláveis"]]},{title:'💬 Examples',type:'examples',items:[["Hi, I'm a Salesforce Architect at Everymind, where I lead the technical design for B2B CRM projects.","Sou Arquiteto Salesforce na Everymind, lidero o design técnico de projetos CRM B2B."]]},{title:'🎯 Tips',type:'tips',items:["Vary with \"I oversee\", \"I lead\", \"I handle\" instead of always \"I am responsible for\".","Say \"I work with Salesforce\", not \"I work in Salesforce\"."]}]},
+{id:'l2',n:2,title:'Explaining Architecture Decisions',tag:'Architecture',desc:'Justify technical choices professionally.',sections:[{title:'📖 Key Phrases',type:'vocab',items:[["We chose this approach because...","Escolhemos essa abordagem porque..."],["The trade-off here is...","O trade-off aqui é..."],["This is an OOTB feature","Isso é funcionalidade nativa"],["We need to account for governor limits","Precisamos considerar os governor limits"],["We're leveraging declarative tools before Apex","Aproveitamos ferramentas declarativas antes do Apex"]]},{title:'💬 Examples',type:'examples',items:[["We went with Flow instead of Apex triggers because it's more maintainable.","Optamos por Flow em vez de Apex triggers porque é mais sustentável."]]},{title:'🎯 Tips',type:'tips',items:["\"Approach\" not \"abordage\" — false cognate.","Say \"scalable\" /ˈskeɪləbl/, not \"escalable\"."]}]},
+{id:'l3',n:3,title:'Running a Refinement Session',tag:'Agile',desc:'Lead sprint refinements and estimate stories in English.',sections:[{title:'📖 Key Phrases',type:'vocab',items:[["Let's walk through the acceptance criteria","Vamos percorrer os critérios de aceitação"],["What's the definition of done?","Qual é a definição de pronto?"],["I'd estimate this at X story points","Eu estimaria em X story points"],["Can we break this into smaller stories?","Podemos quebrar em stories menores?"],["This is a spike — we need to investigate","Isso é um spike — precisamos investigar"]]},{title:'🎯 Tips',type:'tips',items:["\"Criteria\" is plural — say \"the criteria are\".","\"Estimate\" verb: /ˈestɪmeɪt/. Noun: /ˈestɪmət/."]}]},
+{id:'l4',n:4,title:'Data Cloud & Integration Vocabulary',tag:'Data',desc:'Master Data Cloud, MuleSoft and integration terminology.',sections:[{title:'📖 Key Phrases',type:'vocab',items:[["We ingest data from multiple sources","Ingerimos dados de múltiplas fontes"],["The identity resolution matches records","A resolução de identidade associa registros"],["We use CDC events to trigger the sync","Usamos eventos CDC para disparar a sincronização"],["The middleware handles transformation","O middleware lida com transformação"],["The data share eliminates ETL","O data share elimina a necessidade de ETL"]]},{title:'🎯 Tips',type:'tips',items:["\"Schema\" is /ˈskiːmə/, not \"esquema\".","\"Throughput\" /ˈθruːpʊt/ — the \"th\" matters."]}]},
+{id:'l5',n:5,title:'Presenting to Executives',tag:'Communication',desc:'Communicate ROI, timelines and risks to C-level.',sections:[{title:'📖 Key Phrases',type:'vocab',items:[["The projected ROI is X%","O ROI projetado é de X%"],["We're on track to deliver by Q3","Estamos no caminho para entregar até o Q3"],["I'd recommend a phased rollout","Eu recomendaria um rollout em fases"],["The bottom line is...","O resultado final é..."]]},{title:'🎯 Tips',type:'tips',items:["Don't say \"in resume\" — say \"to summarize\".","Avoid fillers like \"basically\" and \"actually\"."]}]},
+{id:'l6',n:6,title:'Handling Objections & Pushback',tag:'Negotiation',desc:'Respond professionally to challenges.',sections:[{title:'📖 Key Phrases',type:'vocab',items:[["That's a fair point. Let me address that.","É um ponto justo. Deixe-me abordar isso."],["I understand the concern","Entendo a preocupação"],["We considered that option, but...","Consideramos essa opção, mas..."],["What would make you more comfortable?","O que te deixaria mais confortável?"]]},{title:'🎯 Tips',type:'tips',items:["Never say \"you're wrong\" — try \"I see it differently\".","\"Mitigate\" /ˈmɪtɪɡeɪt/ — practice this word."]}]}
 ];
 
-// ===== APP =====
-const App = {
-  currentScenario: null, messages: [], timerInterval: null, secondsElapsed: 0,
-  token: null, ttsEnabled: true, recognition: null, synth: window.speechSynthesis,
-  completedLessons: JSON.parse(localStorage.getItem('te_lessons') || '[]'),
-
-  $: id => document.getElementById(id),
-
-  init() { this.checkAuth(); this.bindEvents(); this.initSpeech(); this.initTranslator(); },
-
-  // --- Speech ---
-  initSpeech() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SR) {
-      this.recognition = new SR();
-      this.recognition.lang = 'en-US';
-      this.recognition.interimResults = true;
-      this.recognition.continuous = true;
-      let finalT = '';
-      this.recognition.onresult = (e) => {
-        let interim = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          if (e.results[i].isFinal) finalT += e.results[i][0].transcript + ' ';
-          else interim = e.results[i][0].transcript;
-        }
-        this.$('user-input').value = finalT + interim;
-      };
-      this.recognition.onend = () => {
-        if (this.$('mic-btn').classList.contains('recording')) {
-          try { this.recognition.start(); } catch(e) {}
-        } else { this.$('mic-status').classList.remove('active'); }
-      };
-      this.recognition.onerror = (e) => {
-        if (e.error === 'no-speech') return;
-        this.$('mic-btn').classList.remove('recording');
-        this.$('mic-status').classList.remove('active');
-      };
-      this.$('mic-btn').addEventListener('click', () => {
-        const btn = this.$('mic-btn');
-        if (btn.classList.contains('recording')) {
-          btn.classList.remove('recording'); this.$('mic-status').classList.remove('active'); this.recognition.stop();
-        } else {
-          finalT = ''; this.$('user-input').value = '';
-          btn.classList.add('recording'); this.$('mic-status').classList.add('active'); this.recognition.start();
-        }
-      });
-    } else { this.$('mic-btn').classList.add('unsupported'); }
-    this.$('tts-toggle').addEventListener('click', () => {
-      this.ttsEnabled = !this.ttsEnabled;
-      this.$('tts-toggle').classList.toggle('tts-on', this.ttsEnabled);
-      this.$('tts-toggle').textContent = this.ttsEnabled ? '🔊' : '🔇';
-      if (!this.ttsEnabled) this.synth.cancel();
-    });
-  },
-
-  speak(text) {
-    if (!this.ttsEnabled || !this.synth) return;
-    this.synth.cancel();
-    const clean = text.replace(/\*\*/g, '').replace(/<[^>]+>/g, '');
-    const chunks = clean.match(/.{1,250}[.!?\n]|.{1,300}/g) || [clean];
-    const voices = this.synth.getVoices();
-    const voice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'))
-                || voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang.startsWith('en'));
-    chunks.forEach(c => {
-      const u = new SpeechSynthesisUtterance(c.trim());
-      u.lang = 'en-US'; u.rate = 0.92; if (voice) u.voice = voice;
-      this.synth.speak(u);
-    });
-  },
-
-  // --- Tips ---
-  async getTip(role, text, messageDiv) {
-    if (messageDiv.querySelector('.tip-panel')) {
-      const p = messageDiv.querySelector('.tip-panel');
-      p.style.display = p.style.display === 'none' ? 'block' : 'none'; return;
-    }
-    const btn = messageDiv.querySelector('.tip-btn');
-    btn.textContent = '⏳ Loading...'; btn.disabled = true;
-    const prompt = role === 'assistant'
-      ? `The following is a question from an English conversation partner in a Salesforce setting. Provide:\n1. TRANSLATION: Translate to Brazilian Portuguese\n2. SUGGESTED RESPONSE: A strong sample response in English (2-3 sentences, professional)\n3. RESPONSE TRANSLATION: Translate the suggested response to PT-BR\n\nFormat:\n**Tradução:** [translation]\n**Suggested response:** [response]\n**Tradução da resposta:** [translation]\n\nText: "${text}"`
-      : `The user said this in English during a Salesforce conversation. Provide:\n1. TRANSLATION to PT-BR\n2. IMPROVED VERSION in better English\n3. IMPROVED TRANSLATION to PT-BR\n\nFormat:\n**Tradução:** [translation]\n**Better way to say it:** [improved or "Your phrasing was good!"]\n**Tradução:** [translation]\n\nText: "${text}"`;
-    try {
-      const res = await fetch('/english/api/chat/message', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
-        body: JSON.stringify({ scenario: this.currentScenario.id, messages: [{ role: 'user', content: prompt }] })
-      });
-      const data = await res.json();
-      const panel = document.createElement('div');
-      panel.className = 'tip-panel'; panel.innerHTML = this.formatText(data.reply || 'Unavailable');
-      messageDiv.appendChild(panel);
-    } catch (e) {}
-    btn.textContent = '💡 Tip'; btn.disabled = false;
-  },
-
-  // --- Lessons ---
-  renderLessons() {
-    const grid = this.$('lessons-grid'); grid.innerHTML = '';
-    LESSONS.forEach(l => {
-      const done = this.completedLessons.includes(l.id);
-      const card = document.createElement('div');
-      card.className = 'lesson-card' + (done ? ' completed' : '');
-      card.innerHTML = `
-        <div class="lesson-header">
-          <div class="lesson-number">${done ? '✓' : l.number}</div>
-          <div class="lesson-title">${l.title}</div>
-          <span class="lesson-tag">${l.tag}</span>
-        </div>
-        <div class="lesson-desc">${l.desc}</div>
-        <div class="lesson-progress"><div class="lesson-progress-bar" style="width:${done ? 100 : 0}%"></div></div>
-      `;
-      card.addEventListener('click', () => this.openLesson(l));
-      grid.appendChild(card);
-    });
-  },
-
-  openLesson(l) {
-    this.$('lessons-list-view').classList.add('hidden');
-    this.$('lesson-detail-view').classList.remove('hidden');
-    const done = this.completedLessons.includes(l.id);
-    let html = `
-      <div class="lesson-detail-header">
-        <button class="btn-ghost" id="lesson-back-btn">← Back</button>
-        <div class="lesson-detail-title">${l.number}. ${l.title}</div>
-        <span class="lesson-tag">${l.tag}</span>
-      </div>
-    `;
-    l.sections.forEach(s => {
-      html += `<div class="lesson-section"><div class="lesson-section-title">${s.title}</div>`;
-      if (s.type === 'vocab') {
-        html += `<table class="vocab-table"><thead><tr><th>English</th><th>Português</th></tr></thead><tbody>`;
-        s.items.forEach(([en, pt]) => { html += `<tr><td>${en}</td><td>${pt}</td></tr>`; });
-        html += `</tbody></table>`;
-      } else if (s.type === 'examples') {
-        s.items.forEach(([en, pt]) => {
-          html += `<div class="example-box"><div class="en">"${en}"</div><div class="pt">${pt}</div></div>`;
-        });
-      } else if (s.type === 'tips') {
-        html += '<ul>'; s.items.forEach(t => { html += `<li>${t}</li>`; }); html += '</ul>';
-      }
-      html += `</div>`;
-    });
-    html += `<button class="lesson-practice-btn" id="lesson-practice-btn">🎯 Practice this topic</button>`;
-    if (!done) {
-      html += `<button class="btn-ghost" id="lesson-complete-btn" style="margin-top:0.5rem;margin-left:0.5rem">✓ Mark as completed</button>`;
-    } else {
-      html += `<div class="lesson-check">✅ Lesson completed</div>`;
-    }
-
-    const container = this.$('lesson-detail-content');
-    container.innerHTML = html;
-    this.$('lesson-back-btn').addEventListener('click', () => {
-      this.$('lesson-detail-view').classList.add('hidden');
-      this.$('lessons-list-view').classList.remove('hidden');
-      this.renderLessons();
-    });
-    this.$('lesson-practice-btn').addEventListener('click', () => {
-      this.startLessonPractice(l);
-    });
-    const completeBtn = this.$('lesson-complete-btn');
-    if (completeBtn) {
-      completeBtn.addEventListener('click', () => {
-        if (!this.completedLessons.includes(l.id)) {
-          this.completedLessons.push(l.id);
-          localStorage.setItem('te_lessons', JSON.stringify(this.completedLessons));
-        }
-        this.openLesson(l); // refresh
-      });
-    }
-  },
-
-
-  // --- Lesson Practice ---
-  async startLessonPractice(lesson) {
-    // Build vocabulary context for the AI
-    const vocabSection = lesson.sections.find(s => s.type === 'vocab');
-    const vocabList = vocabSection ? vocabSection.items.map(([en, pt]) => `- "${en}" (${pt})`).join('\n') : '';
-    
-    const exSection = lesson.sections.find(s => s.type === 'examples');
-    const exList = exSection ? exSection.items.map(([en, pt]) => `Example: "${en}"`).join('\n') : '';
-
-    const lessonScenario = {
-      id: 'lesson_' + lesson.id,
-      label: '📚 ' + lesson.title,
-      icon: '📚',
-      description: lesson.desc,
-      isLesson: true,
-      lessonData: lesson,
-      systemPrompt: `You are an English conversation partner helping a Brazilian Salesforce Architect practice the topic: "${lesson.title}".
-
-CONTEXT: This is lesson ${lesson.number} — ${lesson.desc}
-
-KEY VOCABULARY the student should practice:
-${vocabList}
-
-${exList ? 'EXAMPLE DIALOGUES:\n' + exList : ''}
-
-YOUR BEHAVIOR:
-- Start with a brief context-setting introduction related to the topic, then ask ONE question that requires the student to use vocabulary from this lesson
-- After each student response, react naturally AND ask a follow-up that pushes them to use MORE vocabulary from the list
-- If they use vocabulary from the list correctly, briefly acknowledge it ("Good use of...")
-- If they avoid key phrases, gently steer: "How would you describe the trade-off?" or "Can you elaborate on the approach?"
-- Keep it conversational and professional — simulate a real work scenario
-- Ask only ONE question at a time
-- After 8-10 exchanges or when the student types "feedback", provide:
-
-**Vocabulary used from this lesson:** [list which key phrases they used]
-**Vocabulary missed:** [which ones they should practice more]
-**Grammar/phrasing corrections:** [specific fixes with examples]
-**Pronunciation tips:** [any words they likely struggle with based on Portuguese speakers]
-**Overall:** [1 sentence assessment]
-
-IMPORTANT: English only. Never switch to Portuguese. Start now.`
-    };
-
-    // Switch to practice view and start session with this scenario
-    this.switchView('practice');
-    this.startSession(lessonScenario);
-  },
-
-  // --- Auto Tips ---
-  async loadAutoTip(text, messageDiv, role) {
-    const tipPanel = document.createElement('div');
-    tipPanel.className = 'tip-panel auto-tip';
-    tipPanel.innerHTML = '<span style="color:var(--text-3);font-size:12px">⏳ Loading tip...</span>';
-    messageDiv.appendChild(tipPanel);
-
-    const prompt = role === 'assistant'
-      ? `Translate this English text to Brazilian Portuguese, then provide a suggested response in English (2-3 sentences, professional Salesforce architect level), then translate the suggested response to PT-BR. Be concise.
-
-Format EXACTLY as (no extra text):
-**Tradução:** [translation]
-**Suggested response:** [response]  
-**Tradução da resposta:** [translation]
-
-Text: "${text.substring(0, 500)}"`
-      : `Translate what the user said to PT-BR, then provide an improved/more professional English version if needed. Be concise.
-
-Format EXACTLY as (no extra text):
-**Tradução:** [translation]
-**Better phrasing:** [improved English or "Your phrasing was good!"]
-**Tradução:** [translation]
-
-Text: "${text.substring(0, 500)}"`;
-
-    try {
-      const res = await fetch('/english/api/chat/message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
-        body: JSON.stringify({
-          scenario: this.currentScenario.id,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
-      const data = await res.json();
-      tipPanel.innerHTML = this.formatText(data.reply || 'Tip unavailable');
-    } catch (e) {
-      tipPanel.innerHTML = '<span style="color:var(--text-3);font-size:12px">Could not load tip</span>';
-    }
-  },
-
-  // --- Auth ---
-  async checkAuth() {
-    this.token = localStorage.getItem('te_token');
-    if (this.token) {
-      const res = await fetch('/english/api/auth/check', { headers: { 'Authorization': 'Bearer ' + this.token }});
-      const data = await res.json();
-      if (data.authenticated) { this.showMain(); return; }
-      localStorage.removeItem('te_token');
-    }
-    this.showLogin();
-  },
-
-  bindEvents() {
-    this.$('login-btn').addEventListener('click', () => this.login());
-    this.$('password-input').addEventListener('keydown', e => { if (e.key === 'Enter') this.login(); });
-    this.$('logout-btn').addEventListener('click', () => this.logout());
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-      btn.addEventListener('click', () => this.switchView(btn.dataset.view));
-    });
-    this.$('back-btn').addEventListener('click', () => this.backToScenarios());
-    this.$('end-session-btn').addEventListener('click', () => this.requestFeedback());
-    this.$('send-btn').addEventListener('click', () => this.sendMessage());
-    this.$('user-input').addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.sendMessage(); }
-    });
-  },
-
-  async login() {
-    const pw = this.$('password-input').value;
-    const res = await fetch('/english/api/auth/login', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pw })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      this.token = data.token; localStorage.setItem('te_token', this.token); this.showMain();
-    } else { this.$('login-error').textContent = 'Wrong password.'; }
-  },
-
-  async logout() {
-    await fetch('/english/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + this.token }});
-    localStorage.removeItem('te_token'); this.token = null; this.showLogin();
-  },
-
-  showLogin() { this.$('login-screen').classList.remove('hidden'); this.$('main-screen').classList.add('hidden'); },
-  showMain() { this.$('login-screen').classList.add('hidden'); this.$('main-screen').classList.remove('hidden'); this.loadScenarios(); this.renderLessons(); },
-
-  switchView(view) {
-    document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    this.$(`view-${view}`).classList.remove('hidden');
-    document.querySelector(`.nav-btn[data-view="${view}"]`).classList.add('active');
-    if (view === 'history') this.loadHistory();
-    if (view === 'translator') { /* nothing special */ }
-    if (view === 'lessons') { this.$('lesson-detail-view').classList.add('hidden'); this.$('lessons-list-view').classList.remove('hidden'); this.renderLessons(); }
-  },
-
-  async loadScenarios() {
-    const res = await fetch('/english/api/chat/scenarios', { headers: { 'Authorization': 'Bearer ' + this.token }});
-    const scenarios = await res.json();
-    const container = this.$('scenario-cards'); container.innerHTML = '';
-    scenarios.forEach(s => {
-      const card = document.createElement('div'); card.className = 'scenario-card';
-      card.innerHTML = `<span class="scenario-icon">${s.icon}</span><div class="scenario-name">${s.label}</div><div class="scenario-desc">${s.description}</div>`;
-      card.addEventListener('click', () => this.startSession(s));
-      container.appendChild(card);
-    });
-  },
-
-  startSession(s) {
-    this.currentScenario = s; this.messages = []; this.secondsElapsed = 0;
-    this.$('scenario-label').textContent = s.label; this.$('messages').innerHTML = '';
-    this.$('user-input').value = ''; this.$('scenario-select').classList.add('hidden');
-    this.$('chat-area').classList.remove('hidden');
-    this.$('end-session-btn').disabled = false; this.$('end-session-btn').textContent = 'End & Get Feedback';
-    this.startTimer(); this.getAssistantOpening();
-  },
-
-  startTimer() {
-    clearInterval(this.timerInterval);
-    this.timerInterval = setInterval(() => {
-      this.secondsElapsed++;
-      const m = String(Math.floor(this.secondsElapsed / 60)).padStart(2, '0');
-      const s = String(this.secondsElapsed % 60).padStart(2, '0');
-      this.$('session-timer').textContent = `${m}:${s}`;
-    }, 1000);
-  },
-
-  async getAssistantOpening() {
-    this.showTyping(); const reply = await this.callAPI([]); this.hideTyping();
-    if (!reply) return;
-    this.messages.push({ role: 'user', content: '[Session started]' });
-    this.messages.push({ role: 'assistant', content: reply });
-    this.renderMessage('assistant', reply);
-  },
-
-  async sendMessage() {
-    const input = this.$('user-input'); const text = input.value.trim(); if (!text) return;
-    if (this.$('mic-btn').classList.contains('recording')) {
-      this.$('mic-btn').classList.remove('recording'); this.$('mic-status').classList.remove('active');
-      if (this.recognition) this.recognition.stop();
-    }
-    input.value = ''; this.$('send-btn').disabled = true;
-    this.messages.push({ role: 'user', content: text }); this.renderMessage('user', text);
-    if (text.toLowerCase() === 'feedback') { await this.requestFeedback(); this.$('send-btn').disabled = false; return; }
-    this.showTyping(); this.synth.cancel();
-    const reply = await this.callAPI(this.messages); this.hideTyping();
-    if (reply) { this.messages.push({ role: 'assistant', content: reply }); this.renderMessage('assistant', reply); }
-    this.$('send-btn').disabled = false; input.focus();
-  },
-
-  async requestFeedback() {
-    clearInterval(this.timerInterval);
-    this.showTyping();
-    const feedback = await this.callAPI([...this.messages, { role: 'user', content: 'feedback' }]);
-    this.hideTyping();
-    if (feedback) { this.renderMessage('assistant', feedback, 'feedback'); await this.saveSession(feedback); }
-    this.$('end-session-btn').disabled = true; this.$('end-session-btn').textContent = 'Session saved ✓';
-  },
-
-  async callAPI(messages) {
-    try {
-      const body = { messages: messages.length ? messages : [{ role: 'user', content: 'Begin the session.' }] };
-      if (this.currentScenario?.isLesson) {
-        body.customPrompt = this.currentScenario.systemPrompt;
-        body.scenario = 'interview'; // fallback id
-      } else {
-        body.scenario = this.currentScenario.id;
-      }
-      const res = await fetch('/english/api/chat/message', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
-        body: JSON.stringify(body)
-      });
-      return (await res.json()).reply || null;
-    } catch (e) { return null; }
-  },
-
-  async saveSession(feedback) {
-    await fetch('/english/api/sessions/save', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
-      body: JSON.stringify({ scenario: this.currentScenario.id, messages: this.messages, feedback, duration_seconds: this.secondsElapsed })
-    });
-  },
-
-  renderMessage(role, text, extraClass = '') {
-    const container = this.$('messages'); const div = document.createElement('div');
-    div.className = `message ${role} ${extraClass}`.trim();
-    const label = role === 'user' ? 'You' : this.currentScenario?.label || 'Assistant';
-    const showTip = extraClass !== 'feedback' && text !== '[Session started]';
-    div.innerHTML = `<div class="message-role">${label}</div><div class="message-bubble">${this.formatText(text)}</div>${showTip ? '<button class="tip-btn">💡 Tip</button>' : ''}`;
-    if (showTip) div.querySelector('.tip-btn').addEventListener('click', () => this.getTip(role, text, div));
-    container.appendChild(div); container.scrollTop = container.scrollHeight;
-    if (role === 'assistant' && extraClass !== 'feedback') this.speak(text);
-    // Auto-tip for lesson practice
-    if (showTip && this.currentScenario?.isLesson) {
-      this.loadAutoTip(text, div, role);
-    }
-  },
-
-  formatText(t) {
-    return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
-  },
-
-  showTyping() {
-    const c = this.$('messages'); const d = document.createElement('div');
-    d.className = 'message assistant typing-indicator'; d.id = 'typing';
-    d.innerHTML = `<div class="message-role">${this.currentScenario?.label || 'Assistant'}</div><div class="message-bubble">typing...</div>`;
-    c.appendChild(d); c.scrollTop = c.scrollHeight;
-  },
-  hideTyping() { const el = this.$('typing'); if (el) el.remove(); },
-
-  backToScenarios() {
-    clearInterval(this.timerInterval); this.synth.cancel();
-    if (this.recognition && this.$('mic-btn').classList.contains('recording')) {
-      this.recognition.stop(); this.$('mic-btn').classList.remove('recording'); this.$('mic-status').classList.remove('active');
-    }
-    this.$('chat-area').classList.add('hidden'); this.$('scenario-select').classList.remove('hidden');
-  },
-
-
-
-  // ===== TRANSLATOR =====
-  translatorRecognition: null,
-  translatorLang: 'en',
-  translatorActive: false,
-
-  initTranslator() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-      this.$('translator-status').textContent = 'Speech recognition not supported. Use Chrome or Edge.';
-      this.$('translator-mic').style.opacity = '0.4';
-      this.$('translator-mic').style.cursor = 'not-allowed';
-      return;
-    }
-
-    // Language buttons
-    this.$('lang-en').addEventListener('click', () => { this.setTranslatorLang('en'); });
-    this.$('lang-pt').addEventListener('click', () => { this.setTranslatorLang('pt'); });
-
-    // Mic button
-    this.$('translator-mic').addEventListener('click', () => {
-      if (this.translatorActive) this.stopTranslator();
-      else this.startTranslator();
-    });
-
-    // Clear button
-    this.$('translator-clear').addEventListener('click', () => {
-      this.$('translator-feed').innerHTML = '';
-      this.$('translator-context').innerHTML = '';
-      this.translatorHistory = [];
-      this.$('translator-entry-count').textContent = '0 entries';
-      this.$('translator-download').style.display = 'none';
-    });
-    this.$('translator-download').addEventListener('click', () => this.downloadTranscript());
-  },
-
-  setTranslatorLang(lang) {
-    this.translatorLang = lang;
-    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-    this.$('lang-' + lang).classList.add('active');
-    if (this.translatorActive) {
-      this.stopTranslator();
-      setTimeout(() => this.startTranslator(), 300);
-    }
-  },
-
-  startTranslator() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    this.translatorRecognition = new SR();
-    this.translatorRecognition.lang = this.translatorLang === 'en' ? 'en-US' : 'pt-BR';
-    this.translatorRecognition.interimResults = true;
-    this.translatorRecognition.continuous = true;
-    this.translatorActive = true;
-
-    let finalTranscript = '';
-    let lastFinalLength = 0;
-
-    this.translatorRecognition.onresult = (e) => {
-      let interim = '';
-      finalTranscript = '';
-      for (let i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) {
-          finalTranscript += e.results[i][0].transcript;
-        } else {
-          interim += e.results[i][0].transcript;
-        }
-      }
-
-      // Show live text
-      this.$('translator-live').classList.remove('hidden');
-      this.$('translator-live-text').textContent = interim || '...';
-
-      // When we get new final text, translate it
-      if (finalTranscript.length > lastFinalLength) {
-        const newText = finalTranscript.substring(lastFinalLength).trim();
-        lastFinalLength = finalTranscript.length;
-        if (newText.length > 2) {
-          this.translateEntry(newText);
-          this.$('translator-live-text').textContent = '';
-        }
-      }
-    };
-
-    this.translatorRecognition.onend = () => {
-      if (this.translatorActive) {
-        try { this.translatorRecognition.start(); } catch(e) {}
-      }
-    };
-
-    this.translatorRecognition.onerror = (e) => {
-      if (e.error === 'no-speech') return;
-      this.$('translator-status').textContent = 'Error: ' + e.error;
-    };
-
-    this.translatorRecognition.start();
-    this.$('translator-mic').classList.add('active');
-    this.$('translator-mic').querySelector('.translator-mic-label').textContent = 'Listening...';
-    this.$('translator-status').textContent = this.translatorLang === 'en' ? 'Speak in English — translation to Portuguese' : 'Fale em Português — tradução para Inglês';
-  },
-
-  stopTranslator() {
-    this.translatorActive = false;
-    if (this.translatorRecognition) {
-      this.translatorRecognition.stop();
-      this.translatorRecognition = null;
-    }
-    this.$('translator-mic').classList.remove('active');
-    this.$('translator-mic').querySelector('.translator-mic-label').textContent = 'Start listening';
-    this.$('translator-live').classList.add('hidden');
-    this.$('translator-status').textContent = this.translatorHistory.length ? 'Session ended — ' + this.translatorHistory.length + ' entries captured' : '';
-  },
-
-  translatorHistory: [],
-
-  async translateEntry(text) {
-    const feed = this.$('translator-feed');
-    const isEn = this.translatorLang === 'en';
-    const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-    // ⚡ Live panel: translate each phrase
-    const entry = document.createElement('div');
-    entry.className = 'translator-entry translating';
-    entry.innerHTML = [
-      '<button class="translator-entry-speak" title="Context & Response">💬</button>',
-      '<div class="translator-entry-source">' + this.escHtml(text) + '</div>',
-      '<div class="translator-entry-target">⏳ Translating...</div>',
-      '<div class="translator-entry-meta">',
-      '  <span class="translator-entry-lang">' + (isEn ? 'EN → PT' : 'PT → EN') + '</span>',
-      '  <span class="translator-entry-time">' + time + '</span>',
-      '</div>',
-    ].join('');
-    feed.insertBefore(entry, feed.firstChild);
-
-    // 📄 Context panel: transcribe only (no translation)
-    this.addToContext(text, time);
-
-    // Translate for Live panel
-    let translation = '';
-    try {
-      const prompt = isEn
-        ? 'Translate to Brazilian Portuguese. ONLY the translation:\n' + text
-        : 'Translate to English. ONLY the translation:\n' + text;
-      const res = await fetch('/english/api/chat/message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
-        body: JSON.stringify({ customPrompt: 'Translator. Return ONLY the translation.', messages: [{ role: 'user', content: prompt }] })
-      });
-      const data = await res.json();
-      translation = (data.reply || 'Translation failed').trim();
-      entry.querySelector('.translator-entry-target').textContent = translation;
-      entry.classList.remove('translating');
-    } catch (e) {
-      entry.querySelector('.translator-entry-target').textContent = 'Translation error';
-      entry.classList.remove('translating');
-    }
-
-    // Store for download (source + translation)
-    this.translatorHistory.push({ source: text, target: translation || '[error]', time, dir: isEn ? 'EN→PT' : 'PT→EN' });
-    this.$('translator-download').style.display = 'inline-flex';
-
-    // 💬 popup uses the translated text
-    entry.querySelector('.translator-entry-speak').addEventListener('click', () => {
-      this.openTranslatorTip(text, translation || null, isEn);
-    });
-  },
-
-  addToContext(source, time) {
-    const ctx = this.$('translator-context');
-    const line = document.createElement('div');
-    line.className = 'ctx-line ctx-source';
-    line.innerHTML = '<span class="ctx-time-inline">' + time + '</span> ' + this.escHtml(source);
-    ctx.appendChild(line);
-    ctx.scrollTop = ctx.scrollHeight;
-
-    const count = ctx.querySelectorAll('.ctx-source').length;
-    this.$('translator-entry-count').textContent = count + ' entries';
-  },
-
-  downloadTranscript() {
-    if (!this.translatorHistory.length) return;
-    const date = new Date().toLocaleDateString('en-US', { year:'numeric', month:'2-digit', day:'2-digit' });
-    const timeNow = new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
-    let txt = 'TechEnglish — Live Translation Transcript\n';
-    txt += 'Date: ' + date + ' ' + timeNow + '\n';
-    txt += 'Entries: ' + this.translatorHistory.length + '\n';
-    txt += '═'.repeat(50) + '\n\n';
-    this.translatorHistory.forEach((h, i) => {
-      txt += '[' + h.time + '] (' + h.dir + ')\n';
-      txt += '  Original:  ' + h.source + '\n';
-      txt += '  Translated: ' + h.target + '\n\n';
-    });
-    const blob = new Blob([txt], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'transcript-' + date.replace(/\//g, '-') + '.txt';
-    a.click();
-    URL.revokeObjectURL(url);
-  },
-
-
-  async openTranslatorTip(originalText, translatedText, isEn) {
-    const overlay = document.createElement('div');
-    overlay.className = 'translator-popup-overlay';
-
-    const popup = document.createElement('div');
-    popup.className = 'translator-popup';
-    popup.innerHTML = `
-      <div class="translator-popup-header">
-        <div class="translator-popup-title">💬 Context & Response</div>
-        <button class="translator-popup-close">✕</button>
-      </div>
-      <div class="translator-popup-section">
-        <div class="translator-popup-label">${isEn ? '🇺🇸 Original (English)' : '🇧🇷 Original (Portuguese)'}</div>
-        <div class="translator-popup-text">${this.escHtml(originalText)}</div>
-      </div>
-      <div class="translator-popup-section" id="tip-context-section">
-        <div class="translator-popup-label">${isEn ? '🇧🇷 Contexto (Português)' : '🇺🇸 Context (English)'}</div>
-        <div class="translator-popup-text accent">${translatedText ? this.escHtml(translatedText) : '⏳ Translating...'}</div>
-      </div>
-      <div class="translator-popup-section" id="tip-response-section">
-        <div class="translator-popup-loading">⏳ Generating suggested response...</div>
-      </div>
-    `;
-
-    overlay.appendChild(popup);
-    document.body.appendChild(overlay);
-
-    // Close handlers
-    const close = () => overlay.remove();
-
-    // Fetch translation if not provided
-    if (!translatedText) {
-      try {
-        const tPrompt = isEn
-          ? 'Translate to Brazilian Portuguese. ONLY the translation:\n' + originalText
-          : 'Translate to English. ONLY the translation:\n' + originalText;
-        const tRes = await fetch('/english/api/chat/message', {
-          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
-          body: JSON.stringify({ customPrompt: 'Translator. Return ONLY the translation.', messages: [{ role: 'user', content: tPrompt }] })
-        });
-        const tData = await tRes.json();
-        translatedText = (tData.reply || 'Translation failed').trim();
-        const ctxSection = popup.querySelector('#tip-context-section .translator-popup-text');
-        if (ctxSection) ctxSection.textContent = translatedText;
-      } catch(e) { translatedText = '[error]'; }
-    }
-    popup.querySelector('.translator-popup-close').addEventListener('click', close);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-    document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }});
-
-    // Generate response suggestion
-    try {
-      const prompt = isEn
-        ? `Someone said this in English during a meeting:
-"${originalText}"
-
-Provide:
-1. A suggested professional response in English (2-3 sentences, Salesforce architect level)
-2. The translation of that response in Portuguese
-
-Format EXACTLY as:
-RESPONSE: [your suggested response in English]
-TRADUÇÃO: [translation to Portuguese]`
-        : `Alguém disse isso em Português durante uma reunião:
-"${originalText}"
-
-Provide:
-1. A suggested professional response in English (2-3 sentences, Salesforce architect level)
-2. The translation of that response in Portuguese
-
-Format EXACTLY as:
-RESPONSE: [your suggested response in English]
-TRADUÇÃO: [translation to Portuguese]`;
-
-      const res = await fetch('/english/api/chat/message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
-        body: JSON.stringify({ customPrompt: 'You are an English communication coach for a Salesforce Architect. Provide natural, professional responses. Follow the format exactly.', messages: [{ role: 'user', content: prompt }] })
-      });
-      const data = await res.json();
-      const reply = data.reply || '';
-
-      // Parse response
-      let responseEn = '', responsePt = '';
-      const lines = reply.split('\n');
-      for (const line of lines) {
-        if (line.startsWith('RESPONSE:')) responseEn = line.replace('RESPONSE:', '').trim();
-        else if (line.startsWith('TRADUÇÃO:')) responsePt = line.replace('TRADUÇÃO:', '').trim();
-        else if (responseEn && !responsePt) responseEn += ' ' + line.trim();
-        else if (responsePt) responsePt += ' ' + line.trim();
-      }
-      if (!responseEn) { responseEn = reply; responsePt = ''; }
-
-      const section = popup.querySelector('#tip-response-section');
-      section.innerHTML = `
-        <div class="translator-popup-label">🇺🇸 Suggested Response (English)</div>
-        <div class="translator-popup-text highlight">${this.escHtml(responseEn.trim())}</div>
-        ${responsePt ? '<div style="margin-top:8px"><div class="translator-popup-label">🇧🇷 Tradução da Resposta</div><div class="translator-popup-text accent">' + this.escHtml(responsePt.trim()) + '</div></div>' : ''}
-      `;
-    } catch (e) {
-      popup.querySelector('#tip-response-section').innerHTML = '<div class="translator-popup-text">Could not generate response</div>';
-    }
-  },
-
-  escHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); },
-
-  async loadHistory() {
-    const res = await fetch('/english/api/sessions/history', { headers: { 'Authorization': 'Bearer ' + this.token }});
-    const sessions = await res.json(); const list = this.$('history-list');
-    if (!sessions.length) { list.innerHTML = '<p class="history-empty">No sessions yet.</p>'; return; }
-    list.innerHTML = '';
-    const labels = { interview: '🎯 Interview', stakeholder: '📊 Stakeholder', technical: '⚙️ Tech Team' };
-    sessions.forEach(s => {
-      const date = new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-      const dur = s.duration_seconds ? `${Math.floor(s.duration_seconds / 60)}m ${s.duration_seconds % 60}s` : '—';
-      const item = document.createElement('div'); item.className = 'history-item';
-      item.innerHTML = `<div class="history-meta"><div class="history-scenario">${labels[s.scenario] || s.scenario}</div><div class="history-date">${date}</div><div class="history-stats">${s.message_count} messages · ${dur}</div></div><span style="color:var(--text-3)">→</span>`;
-      list.appendChild(item);
-    });
+const A={
+cs:null,ms:[],ti:null,sec:0,tk:null,tts:true,rec:null,syn:window.speechSynthesis,
+trRec:null,trLang:'en',trOn:false,trHist:[],
+done:JSON.parse(localStorage.getItem('te_les')||'[]'),
+$:id=>document.getElementById(id),
+esc:t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),
+fmt:t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>'),
+
+init(){
+  this.buildNav();this.checkAuth();this.bindEvents();this.initSpeech();this.initTranslator();
+},
+
+buildNav(){
+  const nav=this.$('nav');
+  const tabs=IS_MOBILE?[['translator','Translator']]:[['translator','Translator'],['lessons','Lessons'],['practice','Practice'],['history','History']];
+  tabs.forEach(([v,l])=>{const b=document.createElement('button');b.className='nav-btn'+(v==='translator'?' active':'');b.dataset.view=v;b.textContent=l;nav.appendChild(b);});
+},
+
+// === API ===
+async api(body){
+  try{const r=await fetch('/english/api/chat/message',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+this.tk},body:JSON.stringify(body)});return(await r.json()).reply||null;}catch(e){return null;}
+},
+
+// === TRANSLATOR ===
+initTranslator(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){this.$('tr-status').textContent='Speech not supported. Use Chrome/Edge.';return;}
+  this.$('lang-en').onclick=()=>this.setTrLang('en');
+  this.$('lang-pt').onclick=()=>this.setTrLang('pt');
+  this.$('tr-mic').onclick=()=>{if(this.trOn)this.stopTr();else this.startTr();};
+  this.$('tr-clr').onclick=()=>{this.$('tr-feed').innerHTML='';this.$('tr-ctx').innerHTML='';this.trHist=[];this.$('tr-cnt').textContent='0';this.$('tr-dl').style.display='none';};
+  this.$('tr-dl').onclick=()=>this.dlTranscript();
+},
+setTrLang(l){this.trLang=l;document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('on',b.dataset.lang===l));if(this.trOn){this.stopTr();setTimeout(()=>this.startTr(),300);}},
+startTr(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  this.trRec=new SR();this.trRec.lang=this.trLang==='en'?'en-US':'pt-BR';
+  this.trRec.interimResults=true;this.trRec.continuous=true;this.trOn=true;
+  let ft='',lastLen=0;
+  this.trRec.onresult=e=>{let interim='';ft='';
+    for(let i=0;i<e.results.length;i++){if(e.results[i].isFinal)ft+=e.results[i][0].transcript;else interim+=e.results[i][0].transcript;}
+    this.$('tr-live').classList.remove('hidden');this.$('tr-live-txt').textContent=interim||'...';
+    if(ft.length>lastLen){const nw=ft.substring(lastLen).trim();lastLen=ft.length;if(nw.length>2)this.trEntry(nw);}
+  };
+  this.trRec.onend=()=>{if(this.trOn)try{this.trRec.start();}catch(e){}};
+  this.trRec.onerror=e=>{if(e.error!=='no-speech')this.$('tr-status').textContent='Error: '+e.error;};
+  this.trRec.start();
+  this.$('tr-mic').classList.add('on');this.$('tr-mic').querySelector('.tr-mic-l').textContent='Stop';
+  this.$('tr-status').textContent=this.trLang==='en'?'Listening English → translating to Portuguese':'Ouvindo Português → traduzindo para Inglês';
+},
+stopTr(){
+  this.trOn=false;if(this.trRec){this.trRec.stop();this.trRec=null;}
+  this.$('tr-mic').classList.remove('on');this.$('tr-mic').querySelector('.tr-mic-l').textContent='Start';
+  this.$('tr-live').classList.add('hidden');
+  this.$('tr-status').textContent=this.trHist.length?this.trHist.length+' entries captured':'';
+},
+async trEntry(text){
+  const feed=this.$('tr-feed'),ctx=this.$('tr-ctx'),isEn=this.trLang==='en';
+  const time=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+  // Live panel: source + translation
+  const e=document.createElement('div');e.className='tr-e';
+  e.innerHTML='<button class="tr-e-btn" title="Context & Response">💬</button><div class="tr-e-src">'+this.esc(text)+'</div><div class="tr-e-tgt loading">⏳ Translating...</div><div class="tr-e-time">'+time+'</div>';
+  feed.insertBefore(e,feed.firstChild);
+
+  // Context panel: transcribe only
+  const cl=document.createElement('div');cl.className='ctx-l';cl.innerHTML='<span class="ctx-t">'+time+'</span> '+this.esc(text);
+  ctx.appendChild(cl);ctx.scrollTop=ctx.scrollHeight;
+  const cnt=ctx.querySelectorAll('.ctx-l').length;this.$('tr-cnt').textContent=cnt;
+
+  // Translate for Live
+  let translation='';
+  try{
+    const p=isEn?'Translate to Brazilian Portuguese. ONLY the translation:\n'+text:'Translate to English. ONLY the translation:\n'+text;
+    const reply=await this.api({customPrompt:'Translator. Return ONLY the translation, nothing else.',messages:[{role:'user',content:p}]});
+    translation=(reply||'').trim();
+    e.querySelector('.tr-e-tgt').textContent=translation||'...';
+    e.querySelector('.tr-e-tgt').classList.remove('loading');
+  }catch(x){e.querySelector('.tr-e-tgt').textContent='Error';e.querySelector('.tr-e-tgt').classList.remove('loading');}
+
+  this.trHist.push({source:text,target:translation,time,dir:isEn?'EN→PT':'PT→EN'});
+  this.$('tr-dl').style.display='inline-flex';
+
+  // 💬 button
+  e.querySelector('.tr-e-btn').onclick=()=>this.trTip(text,translation,isEn);
+},
+async trTip(orig,trans,isEn){
+  const ov=document.createElement('div');ov.className='popup-ov';
+  const p=document.createElement('div');p.className='popup';
+  p.innerHTML=`<div class="popup-hdr"><div class="popup-ttl">💬 Context & Response</div><button class="popup-x">✕</button></div>
+<div class="popup-sec"><div class="popup-lbl">${isEn?'🇺🇸 Original':'🇧🇷 Original'}</div><div class="popup-txt">${this.esc(orig)}</div></div>
+<div class="popup-sec"><div class="popup-lbl">${isEn?'🇧🇷 Tradução':'🇺🇸 Translation'}</div><div class="popup-txt ac">${trans?this.esc(trans):'⏳...'}</div></div>
+<div class="popup-sec" id="tip-resp"><div class="popup-load">⏳ Generating response...</div></div>`;
+  ov.appendChild(p);document.body.appendChild(ov);
+  const close=()=>ov.remove();
+  p.querySelector('.popup-x').onclick=close;ov.onclick=e=>{if(e.target===ov)close();};
+
+  if(!trans){
+    const tp=isEn?'Translate to Portuguese:\n'+orig:'Translate to English:\n'+orig;
+    trans=(await this.api({customPrompt:'Translator. ONLY translation.',messages:[{role:'user',content:tp}]}))||'...';
+    p.querySelector('.popup-txt.ac').textContent=trans;
   }
-};
 
-document.addEventListener('DOMContentLoaded', () => App.init());
-if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+  const rp=`Someone said: "${orig}"
+Provide a professional response (Salesforce architect level) and its Portuguese translation.
+Format:
+RESPONSE: [English response 2-3 sentences]
+TRADUÇÃO: [Portuguese translation]`;
+  const reply=await this.api({customPrompt:'English coach for a Salesforce Architect. Follow format exactly.',messages:[{role:'user',content:rp}]});
+  const sec=p.querySelector('#tip-resp');
+  if(reply){
+    let re='',rt='';reply.split('\n').forEach(l=>{if(l.startsWith('RESPONSE:'))re=l.replace('RESPONSE:','').trim();else if(l.startsWith('TRADUÇÃO:'))rt=l.replace('TRADUÇÃO:','').trim();else if(re&&!rt)re+=' '+l.trim();else if(rt)rt+=' '+l.trim();});
+    if(!re)re=reply;
+    sec.innerHTML=`<div class="popup-lbl">🇺🇸 Suggested Response</div><div class="popup-txt hi">${this.esc(re.trim())}</div>${rt?'<div style="margin-top:6px"><div class="popup-lbl">🇧🇷 Tradução</div><div class="popup-txt ac">'+this.esc(rt.trim())+'</div></div>':''}`;
+  }else sec.innerHTML='<div class="popup-txt">Could not generate</div>';
+},
+dlTranscript(){
+  if(!this.trHist.length)return;
+  const d=new Date().toLocaleDateString('en-US',{year:'numeric',month:'2-digit',day:'2-digit'});
+  let t='TechEnglish Transcript — '+d+'\nEntries: '+this.trHist.length+'\n'+'═'.repeat(50)+'\n\n';
+  this.trHist.forEach(h=>{t+='['+h.time+'] ('+h.dir+')\n  Original:  '+h.source+'\n  Translated: '+h.target+'\n\n';});
+  const b=new Blob([t],{type:'text/plain'});const u=URL.createObjectURL(b);
+  const a=document.createElement('a');a.href=u;a.download='transcript-'+d.replace(/\//g,'-')+'.txt';a.click();URL.revokeObjectURL(u);
+},
+
+// === SPEECH (Practice) ===
+initSpeech(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR||IS_MOBILE)return;
+  this.rec=new SR();this.rec.lang='en-US';this.rec.interimResults=true;this.rec.continuous=true;
+  let ft='';
+  this.rec.onresult=e=>{let i='';for(let x=e.resultIndex;x<e.results.length;x++){if(e.results[x].isFinal)ft+=e.results[x][0].transcript+' ';else i=e.results[x][0].transcript;}this.$('user-in').value=ft+i;};
+  this.rec.onend=()=>{if(this.$('mic-btn').classList.contains('recording'))try{this.rec.start();}catch(e){}else this.$('mic-st').classList.remove('active');};
+  this.rec.onerror=e=>{if(e.error==='no-speech')return;this.$('mic-btn').classList.remove('recording');this.$('mic-st').classList.remove('active');};
+  this.$('mic-btn').onclick=()=>{const b=this.$('mic-btn');if(b.classList.contains('recording')){b.classList.remove('recording');this.$('mic-st').classList.remove('active');this.rec.stop();}else{ft='';this.$('user-in').value='';b.classList.add('recording');this.$('mic-st').classList.add('active');this.rec.start();}};
+  this.$('tts-tog').onclick=()=>{this.tts=!this.tts;this.$('tts-tog').textContent=this.tts?'🔊':'🔇';this.$('tts-tog').style.color=this.tts?'var(--ac)':'var(--tx3)';this.$('tts-tog').style.borderColor=this.tts?'var(--ac)':'var(--bdr)';if(!this.tts)this.syn.cancel();};
+},
+speak(t){if(!this.tts||!this.syn||IS_MOBILE)return;this.syn.cancel();const c=t.replace(/\*\*/g,'').replace(/<[^>]+>/g,'');const ch=c.match(/.{1,250}[.!?\n]|.{1,300}/g)||[c];const vs=this.syn.getVoices();const v=vs.find(x=>x.lang.startsWith('en')&&x.name.includes('Google'))||vs.find(x=>x.lang==='en-US')||vs.find(x=>x.lang.startsWith('en'));ch.forEach(s=>{const u=new SpeechSynthesisUtterance(s.trim());u.lang='en-US';u.rate=.92;if(v)u.voice=v;this.syn.speak(u);});},
+
+// === AUTH ===
+async checkAuth(){this.tk=localStorage.getItem('te_tk');if(this.tk){const r=await fetch('/english/api/auth/check',{headers:{'Authorization':'Bearer '+this.tk}});const d=await r.json();if(d.authenticated){this.showMain();return;}localStorage.removeItem('te_tk');}this.showLogin();},
+bindEvents(){
+  this.$('login-btn').onclick=()=>this.login();this.$('pw').onkeydown=e=>{if(e.key==='Enter')this.login();};
+  this.$('logout-btn').onclick=()=>this.logout();
+  document.addEventListener('click',e=>{if(e.target.classList.contains('nav-btn'))this.switchView(e.target.dataset.view);});
+  if(!IS_MOBILE){this.$('back-btn').onclick=()=>this.backToSc();this.$('end-btn').onclick=()=>this.reqFeedback();this.$('send-btn').onclick=()=>this.sendMsg();this.$('user-in').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();this.sendMsg();}};}
+},
+async login(){const r=await fetch('/english/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:this.$('pw').value})});if(r.ok){const d=await r.json();this.tk=d.token;localStorage.setItem('te_tk',this.tk);this.showMain();}else this.$('login-err').textContent='Wrong password.';},
+async logout(){await fetch('/english/api/auth/logout',{method:'POST',headers:{'Authorization':'Bearer '+this.tk}});localStorage.removeItem('te_tk');this.tk=null;this.showLogin();},
+showLogin(){this.$('login-screen').classList.remove('hidden');this.$('main-screen').classList.add('hidden');},
+showMain(){this.$('login-screen').classList.add('hidden');this.$('main-screen').classList.remove('hidden');if(!IS_MOBILE){this.loadSc();this.renderLes();}},
+switchView(v){document.querySelectorAll('.view').forEach(x=>x.classList.add('hidden'));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));const el=this.$('view-'+v);if(el)el.classList.remove('hidden');const nb=document.querySelector('.nav-btn[data-view="'+v+'"]');if(nb)nb.classList.add('active');if(v==='history')this.loadHist();if(v==='lessons'){this.$('les-det').classList.add('hidden');this.$('les-list').classList.remove('hidden');this.renderLes();}},
+
+// === PRACTICE ===
+async loadSc(){if(IS_MOBILE)return;const r=await fetch('/english/api/chat/scenarios',{headers:{'Authorization':'Bearer '+this.tk}});const sc=await r.json();const c=this.$('sc-cards');c.innerHTML='';sc.forEach(s=>{const d=document.createElement('div');d.className='sc-card';d.innerHTML='<span class="sc-icon">'+s.icon+'</span><div class="sc-name">'+s.label+'</div><div class="sc-desc">'+s.description+'</div>';d.onclick=()=>this.startSess(s);c.appendChild(d);});},
+startSess(s){this.cs=s;this.ms=[];this.sec=0;this.$('sc-label').textContent=s.label;this.$('msgs').innerHTML='';this.$('user-in').value='';this.$('sc-sel').classList.add('hidden');this.$('chat-area').classList.remove('hidden');this.$('end-btn').disabled=false;this.$('end-btn').textContent='End & Feedback';this.startTimer();this.getOpening();},
+startTimer(){clearInterval(this.ti);this.ti=setInterval(()=>{this.sec++;this.$('timer').textContent=String(Math.floor(this.sec/60)).padStart(2,'0')+':'+String(this.sec%60).padStart(2,'0');},1000);},
+async getOpening(){this.showTyp();const r=await this.api({scenario:this.cs.id,messages:[{role:'user',content:'Begin the session.'}]});this.hideTyp();if(r){this.ms.push({role:'user',content:'[Session started]'},{role:'assistant',content:r});this.renderMsg('a',r);}},
+async sendMsg(){const t=this.$('user-in').value.trim();if(!t)return;if(this.$('mic-btn').classList.contains('recording')){this.$('mic-btn').classList.remove('recording');this.$('mic-st').classList.remove('active');if(this.rec)this.rec.stop();}this.$('user-in').value='';this.$('send-btn').disabled=true;this.ms.push({role:'user',content:t});this.renderMsg('u',t);if(t.toLowerCase()==='feedback'){await this.reqFeedback();this.$('send-btn').disabled=false;return;}this.showTyp();this.syn.cancel();const r=await this.api({scenario:this.cs?.isLesson?'interview':'',customPrompt:this.cs?.systemPrompt||undefined,...(!this.cs?.isLesson?{scenario:this.cs.id}:{}),messages:this.ms});this.hideTyp();if(r){this.ms.push({role:'assistant',content:r});this.renderMsg('a',r);}this.$('send-btn').disabled=false;this.$('user-in').focus();},
+async reqFeedback(){clearInterval(this.ti);this.showTyp();const fb=await this.api({scenario:this.cs.id,messages:[...this.ms,{role:'user',content:'feedback'}]});this.hideTyp();if(fb){this.renderMsg('a',fb,'fb');await this.saveSess(fb);}this.$('end-btn').disabled=true;this.$('end-btn').textContent='Saved ✓';},
+async saveSess(fb){await fetch('/english/api/sessions/save',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+this.tk},body:JSON.stringify({scenario:this.cs.id,messages:this.ms,feedback:fb,duration_seconds:this.sec})});},
+renderMsg(role,text,extra=''){const c=this.$('msgs');const d=document.createElement('div');d.className='msg '+role+' '+extra;const lbl=role==='u'?'You':this.cs?.label||'Assistant';const showTip=extra!=='fb'&&text!=='[Session started]';d.innerHTML='<div class="msg-role">'+lbl+'</div><div class="msg-bbl">'+this.fmt(text)+'</div>'+(showTip?'<button class="tip-btn">💡 Tip</button>':'');if(showTip)d.querySelector('.tip-btn').onclick=()=>this.getTip(role,text,d);c.appendChild(d);c.scrollTop=c.scrollHeight;if(role==='a'&&extra!=='fb')this.speak(text);if(showTip&&this.cs?.isLesson)this.autoTip(text,d,role);},
+async getTip(role,text,div){if(div.querySelector('.tip-panel')){const p=div.querySelector('.tip-panel');p.style.display=p.style.display==='none'?'block':'none';return;}const btn=div.querySelector('.tip-btn');btn.textContent='⏳';btn.disabled=true;const pr=role==='a'?`Translate to PT-BR, suggest a response, translate response.\nFormat:\n**Tradução:** []\n**Suggested response:** []\n**Tradução da resposta:** []\n\nText: "${text.substring(0,500)}"`:`Translate to PT-BR, improve phrasing.\nFormat:\n**Tradução:** []\n**Better phrasing:** []\n**Tradução:** []\n\nText: "${text.substring(0,500)}"`;const reply=await this.api({customPrompt:'English coach. Follow format.',messages:[{role:'user',content:pr}]});const panel=document.createElement('div');panel.className='tip-panel';panel.innerHTML=this.fmt(reply||'Unavailable');div.appendChild(panel);btn.textContent='💡 Tip';btn.disabled=false;},
+async autoTip(text,div,role){const panel=document.createElement('div');panel.className='tip-panel auto-tip';panel.innerHTML='<span style="color:var(--tx3);font-size:11px">⏳ Loading tip...</span>';div.appendChild(panel);const pr=role==='a'?`Translate to PT-BR + suggest response + translate response. Concise.\n**Tradução:**\n**Suggested response:**\n**Tradução da resposta:**\nText: "${text.substring(0,400)}"`:`Translate + improve. Concise.\n**Tradução:**\n**Better phrasing:**\n**Tradução:**\nText: "${text.substring(0,400)}"`;const r=await this.api({customPrompt:'Coach. Format exactly.',messages:[{role:'user',content:pr}]});panel.innerHTML=this.fmt(r||'...');},
+showTyp(){const c=this.$('msgs');const d=document.createElement('div');d.className='msg a';d.id='typ';d.innerHTML='<div class="msg-role">'+(this.cs?.label||'')+'</div><div class="msg-bbl" style="color:var(--tx3);font-style:italic;font-size:12px">typing...</div>';c.appendChild(d);c.scrollTop=c.scrollHeight;},
+hideTyp(){const e=this.$('typ');if(e)e.remove();},
+backToSc(){clearInterval(this.ti);this.syn.cancel();this.$('chat-area').classList.add('hidden');this.$('sc-sel').classList.remove('hidden');},
+
+// === LESSONS ===
+renderLes(){if(IS_MOBILE)return;const g=this.$('les-grid');g.innerHTML='';LESSONS.forEach(l=>{const d=this.done.includes(l.id);const c=document.createElement('div');c.className='les-card'+(d?' done':'');c.innerHTML='<div class="les-hdr"><div class="les-num">'+(d?'✓':l.n)+'</div><div class="les-ttl">'+l.title+'</div><span class="les-tag">'+l.tag+'</span></div><div class="les-desc">'+l.desc+'</div>';c.onclick=()=>this.openLes(l);g.appendChild(c);});},
+openLes(l){this.$('les-list').classList.add('hidden');this.$('les-det').classList.remove('hidden');const d=this.done.includes(l.id);let h='<div style="display:flex;align-items:center;gap:10px;margin-bottom:1.2rem"><button class="btn-g" id="les-back">← Back</button><div style="font-size:20px;font-weight:700">'+l.n+'. '+l.title+'</div><span class="les-tag">'+l.tag+'</span></div>';l.sections.forEach(s=>{h+='<div class="les-sec"><div class="les-sec-t">'+s.title+'</div>';if(s.type==='vocab'){h+='<table class="vtbl"><thead><tr><th>English</th><th>Português</th></tr></thead><tbody>';s.items.forEach(([e,p])=>h+='<tr><td>'+e+'</td><td>'+p+'</td></tr>');h+='</tbody></table>';}else if(s.type==='examples'){s.items.forEach(([e,p])=>h+='<div class="ex-box"><div class="en">"'+e+'"</div><div class="pt">'+p+'</div></div>');}else if(s.type==='tips'){h+='<ul>';s.items.forEach(t=>h+='<li>'+t+'</li>');h+='</ul>';}h+='</div>';});h+='<button class="les-prac-btn" id="les-prac">🎯 Practice this topic</button>';if(!d)h+=' <button class="btn-g" id="les-done" style="margin-top:.5rem">✓ Mark completed</button>';else h+='<div style="margin-top:.5rem;padding:8px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;color:#166534">✅ Completed</div>';const c=this.$('les-det-c');c.innerHTML=h;this.$('les-back').onclick=()=>{this.$('les-det').classList.add('hidden');this.$('les-list').classList.remove('hidden');this.renderLes();};this.$('les-prac').onclick=()=>this.startLesPrac(l);const db=this.$('les-done');if(db)db.onclick=()=>{if(!this.done.includes(l.id)){this.done.push(l.id);localStorage.setItem('te_les',JSON.stringify(this.done));}this.openLes(l);};},
+startLesPrac(l){const voc=l.sections.find(s=>s.type==='vocab');const vl=voc?voc.items.map(([e,p])=>'- "'+e+'" ('+p+')').join('\n'):'';this.switchView('practice');this.startSess({id:'les_'+l.id,label:'📚 '+l.title,icon:'📚',description:l.desc,isLesson:true,systemPrompt:'You are an English conversation partner helping practice: "'+l.title+'".\n\nVOCABULARY:\n'+vl+'\n\nBEHAVIOR:\n- Ask ONE question requiring vocabulary from this lesson\n- After each response, push them to use MORE vocabulary\n- If they use it correctly, acknowledge briefly\n- After 8-10 exchanges or "feedback", provide evaluation\n- English only. Start now.'});},
+
+// === HISTORY ===
+async loadHist(){if(IS_MOBILE)return;const r=await fetch('/english/api/sessions/history',{headers:{'Authorization':'Bearer '+this.tk}});const ss=await r.json();const l=this.$('hist-list');if(!ss.length){l.innerHTML='<p style="color:var(--tx2)">No sessions yet.</p>';return;}l.innerHTML='';const lb={interview:'🎯 Interview',stakeholder:'📊 Stakeholder',technical:'⚙️ Tech Team'};ss.forEach(s=>{const dt=new Date(s.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});const dur=s.duration_seconds?Math.floor(s.duration_seconds/60)+'m':'—';const i=document.createElement('div');i.className='hist-item';i.innerHTML='<div><div style="font-weight:600;font-size:13px">'+(lb[s.scenario]||s.scenario)+'</div><div style="font-size:11px;color:var(--tx2);font-family:var(--mono)">'+dt+' · '+s.message_count+' msgs · '+dur+'</div></div>';l.appendChild(i);});}
+};
+document.addEventListener('DOMContentLoaded',()=>A.init());
+if(window.speechSynthesis)window.speechSynthesis.onvoiceschanged=()=>window.speechSynthesis.getVoices();
 </script>
 </body>
 </html>
