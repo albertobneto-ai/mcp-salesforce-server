@@ -8,29 +8,31 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 :root {
-  --bg: #0d0b1a;
-  --bg-2: #151228;
-  --bg-3: #1e1a36;
-  --bg-4: #28234a;
-  --border: #2e2854;
-  --accent: #8b7cf6;
-  --accent-light: #a89dfa;
-  --accent-dim: #2d2660;
-  --accent-glow: rgba(139,124,246,0.15);
-  --text: #eae8f5;
-  --text-2: #9e99c2;
-  --text-3: #6b6590;
-  --green: #6ee7a0;
-  --red: #f87171;
-  --tip-bg: #1a1640;
-  --tip-border: #352e6a;
+  --bg: #f4f1fa;
+  --bg-2: #ffffff;
+  --bg-3: #ece8f6;
+  --bg-4: #e0daf0;
+  --border: #d4cce8;
+  --accent: #7c5ce0;
+  --accent-light: #6a4bd4;
+  --accent-dim: #ede8fc;
+  --accent-glow: rgba(124,92,224,0.08);
+  --text: #1e1638;
+  --text-2: #5a5078;
+  --text-3: #8b82a8;
+  --green: #22c55e;
+  --red: #ef4444;
+  --tip-bg: #f8f5ff;
+  --tip-border: #e0d8f4;
+  --lesson-accent: #9370f0;
   --mono: 'JetBrains Mono', monospace;
   --sans: 'Inter', -apple-system, sans-serif;
   --radius: 12px;
+  --shadow-sm: 0 1px 3px rgba(30,22,56,0.06);
+  --shadow-md: 0 4px 16px rgba(30,22,56,0.08);
+  --shadow-lg: 0 8px 32px rgba(124,92,224,0.1);
 }
-
 html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
 #app { height: 100%; display: flex; flex-direction: column; }
 .screen { flex: 1; }
@@ -39,13 +41,13 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 /* LOGIN */
 #login-screen {
   display: flex; align-items: center; justify-content: center; height: 100vh;
-  background: linear-gradient(160deg, var(--bg) 0%, #12102a 50%, #18143a 100%);
+  background: linear-gradient(160deg, #f0ecfa 0%, #e8e0f8 50%, #f4f1fa 100%);
 }
 .login-box {
   width: 100%; max-width: 380px; padding: 2.5rem;
   background: var(--bg-2); border: 1px solid var(--border); border-radius: 20px;
   display: flex; flex-direction: column; gap: 1.1rem;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 80px var(--accent-glow);
+  box-shadow: var(--shadow-lg);
 }
 .logo { display: flex; align-items: center; gap: 10px; }
 .logo-icon { font-size: 26px; }
@@ -56,44 +58,42 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 
 input[type="password"], textarea {
   width: 100%; padding: 13px 16px;
-  background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
   color: var(--text); font-family: var(--sans); font-size: 14px;
-  outline: none; transition: border-color 0.2s; resize: none;
+  outline: none; transition: all 0.2s; resize: none;
 }
 input[type="password"]:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
 
 .btn-primary {
-  padding: 13px; background: linear-gradient(135deg, var(--accent), #7060e8);
+  padding: 13px; background: linear-gradient(135deg, var(--accent), #6a4bd4);
   color: #fff; border: none; border-radius: var(--radius); font-family: var(--sans);
   font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;
-  letter-spacing: 0.02em;
 }
-.btn-primary:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(139,124,246,0.3); }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124,92,224,0.25); }
 .error-msg { font-size: 12px; color: var(--red); min-height: 16px; }
 
 /* HEADER */
 #main-screen { display: flex; flex-direction: column; height: 100vh; }
 .header {
-  display: flex; align-items: center; gap: 1.5rem;
+  display: flex; align-items: center; gap: 1rem;
   padding: 0 1.5rem; height: 58px; border-bottom: 1px solid var(--border);
-  background: var(--bg-2); flex-shrink: 0;
+  background: var(--bg-2); flex-shrink: 0; box-shadow: var(--shadow-sm);
 }
-.nav { display: flex; gap: 4px; flex: 1; }
+.nav { display: flex; gap: 2px; flex: 1; }
 .nav-btn {
-  padding: 7px 16px; background: none; border: none; border-radius: 8px;
+  padding: 7px 14px; background: none; border: none; border-radius: 8px;
   color: var(--text-2); font-family: var(--sans); font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: all 0.15s; letter-spacing: 0.01em;
+  cursor: pointer; transition: all 0.15s;
 }
 .nav-btn:hover { color: var(--text); background: var(--bg-3); }
-.nav-btn.active { color: var(--accent-light); background: var(--accent-dim); }
+.nav-btn.active { color: var(--accent); background: var(--accent-dim); }
 
 .btn-ghost {
   padding: 7px 14px; background: none; border: 1px solid var(--border); border-radius: 8px;
   color: var(--text-2); font-family: var(--sans); font-size: 13px; cursor: pointer; transition: all 0.15s;
 }
-.btn-ghost:hover { color: var(--text); border-color: var(--text-3); }
+.btn-ghost:hover { color: var(--text); border-color: var(--accent); }
 
-/* VIEWS */
 .view { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
 
 /* SCENARIO SELECT */
@@ -101,7 +101,7 @@ input[type="password"]:focus, textarea:focus { border-color: var(--accent); box-
   flex: 1; overflow-y: auto; padding: 3rem 2rem;
   display: flex; flex-direction: column; align-items: center;
 }
-.page-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px; }
+.page-title { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px; color: var(--text); }
 .page-sub { font-size: 14px; color: var(--text-2); margin-bottom: 2.5rem; }
 .scenario-cards {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -110,13 +110,13 @@ input[type="password"]:focus, textarea:focus { border-color: var(--accent); box-
 .scenario-card {
   background: var(--bg-2); border: 1px solid var(--border); border-radius: 16px;
   padding: 1.5rem; cursor: pointer; transition: all 0.25s; text-align: left;
+  box-shadow: var(--shadow-sm);
 }
 .scenario-card:hover {
-  border-color: var(--accent); background: var(--bg-3);
-  transform: translateY(-3px); box-shadow: 0 8px 30px rgba(139,124,246,0.12);
+  border-color: var(--accent); transform: translateY(-3px); box-shadow: var(--shadow-lg);
 }
 .scenario-icon { font-size: 30px; margin-bottom: 12px; display: block; }
-.scenario-name { font-size: 16px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.01em; }
+.scenario-name { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
 .scenario-desc { font-size: 13px; color: var(--text-2); line-height: 1.55; }
 
 /* CHAT */
@@ -124,17 +124,17 @@ input[type="password"]:focus, textarea:focus { border-color: var(--accent); box-
 .chat-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 1.5rem; border-bottom: 1px solid var(--border);
-  background: var(--bg-2); flex-shrink: 0; gap: 10px;
+  background: var(--bg-2); flex-shrink: 0; gap: 10px; box-shadow: var(--shadow-sm);
 }
 .chat-meta { display: flex; align-items: center; gap: 12px; }
 .scenario-badge {
-  font-size: 12px; font-weight: 600; color: var(--accent-light);
+  font-size: 12px; font-weight: 600; color: var(--accent);
   background: var(--accent-dim); padding: 5px 12px; border-radius: 100px;
 }
 .timer { font-family: var(--mono); font-size: 13px; color: var(--text-2); }
 .btn-end {
   padding: 8px 16px; background: none; border: 1px solid var(--accent);
-  border-radius: 8px; color: var(--accent-light); font-family: var(--sans);
+  border-radius: 8px; color: var(--accent); font-family: var(--sans);
   font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s;
 }
 .btn-end:hover { background: var(--accent); color: #fff; }
@@ -143,15 +143,10 @@ input[type="password"]:focus, textarea:focus { border-color: var(--accent); box-
 .messages {
   flex: 1; overflow-y: auto; padding: 1.5rem;
   display: flex; flex-direction: column; gap: 1.2rem;
+  background: var(--bg);
 }
-.message {
-  max-width: 78%; display: flex; flex-direction: column; gap: 4px;
-  animation: fadeUp 0.25s ease;
-}
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+.message { max-width: 78%; display: flex; flex-direction: column; gap: 4px; animation: fadeUp 0.25s ease; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 .message.assistant { align-self: flex-start; }
 .message.user { align-self: flex-end; }
 .message-role {
@@ -159,46 +154,37 @@ input[type="password"]:focus, textarea:focus { border-color: var(--accent); box-
   text-transform: uppercase; color: var(--text-3); padding: 0 4px;
 }
 .message.user .message-role { text-align: right; }
-.message-bubble {
-  padding: 14px 18px; border-radius: 14px; font-size: 14px; line-height: 1.7;
-}
+.message-bubble { padding: 14px 18px; border-radius: 14px; font-size: 14px; line-height: 1.7; }
 .message.assistant .message-bubble {
-  background: var(--bg-3); border: 1px solid var(--border); color: var(--text);
-  border-radius: 4px 14px 14px 14px;
+  background: var(--bg-2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 4px 14px 14px 14px; box-shadow: var(--shadow-sm);
 }
 .message.user .message-bubble {
-  background: linear-gradient(135deg, var(--accent), #7060e8); color: #fff;
-  border-radius: 14px 4px 14px 14px;
+  background: linear-gradient(135deg, var(--accent), #6a4bd4); color: #fff;
+  border-radius: 14px 4px 14px 14px; box-shadow: var(--shadow-sm);
 }
 .message.feedback .message-bubble {
   background: var(--bg-2); border: 1px solid var(--accent-dim);
-  color: var(--text); border-radius: 14px; max-width: 100%;
+  color: var(--text); border-radius: 14px; max-width: 100%; box-shadow: var(--shadow-md);
 }
 .message.feedback { max-width: 100%; }
-.message.feedback .message-role { color: var(--accent-light); }
-.message-bubble strong { color: var(--accent-light); font-weight: 600; }
+.message.feedback .message-role { color: var(--accent); }
+.message-bubble strong { color: var(--accent); font-weight: 600; }
 .typing-indicator .message-bubble { color: var(--text-3); font-style: italic; font-size: 13px; }
 
-/* TIP BUTTON & PANEL */
+/* TIP */
 .tip-btn {
-  margin-top: 6px; padding: 4px 10px; background: var(--bg-4); border: 1px solid var(--tip-border);
+  margin-top: 6px; padding: 4px 10px; background: var(--tip-bg); border: 1px solid var(--tip-border);
   border-radius: 6px; color: var(--text-3); font-size: 11px; font-family: var(--sans);
-  cursor: pointer; transition: all 0.15s; font-weight: 500; letter-spacing: 0.03em;
-  align-self: flex-start;
+  cursor: pointer; transition: all 0.15s; font-weight: 500; align-self: flex-start;
 }
 .message.user .tip-btn { align-self: flex-end; }
-.tip-btn:hover { color: var(--accent-light); border-color: var(--accent); background: var(--accent-dim); }
+.tip-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
 .tip-panel {
   margin-top: 6px; padding: 12px 14px; background: var(--tip-bg); border: 1px solid var(--tip-border);
   border-radius: 10px; font-size: 13px; line-height: 1.65; color: var(--text-2);
   animation: fadeUp 0.2s ease; max-width: 100%;
 }
-.tip-panel .tip-label {
-  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--accent); margin-bottom: 4px;
-}
-.tip-panel .tip-section { margin-bottom: 8px; }
-.tip-panel .tip-section:last-child { margin-bottom: 0; }
 
 /* INPUT */
 .input-area {
@@ -214,17 +200,17 @@ kbd {
 }
 .input-right { display: flex; align-items: center; gap: 8px; }
 .btn-send {
-  padding: 10px 22px; background: linear-gradient(135deg, var(--accent), #7060e8); color: #fff;
+  padding: 10px 22px; background: linear-gradient(135deg, var(--accent), #6a4bd4); color: #fff;
   border: none; border-radius: 10px; font-family: var(--sans);
   font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s;
 }
-.btn-send:hover { opacity: 0.9; }
+.btn-send:hover { box-shadow: 0 3px 12px rgba(124,92,224,0.25); }
 .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* MIC */
 .btn-mic {
   width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border);
-  background: var(--bg-3); font-size: 20px; cursor: pointer; transition: all 0.2s;
+  background: var(--bg); font-size: 20px; cursor: pointer; transition: all 0.2s;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .btn-mic:hover { border-color: var(--accent); background: var(--accent-dim); }
@@ -233,35 +219,96 @@ kbd {
   animation: pulse-mic 1.2s infinite; color: #fff;
 }
 @keyframes pulse-mic {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(232,67,147,0.4); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232,67,147,0.3); }
   50% { box-shadow: 0 0 0 10px rgba(232,67,147,0); }
 }
 .btn-mic.unsupported { opacity: 0.3; cursor: not-allowed; }
-.mic-status {
-  font-size: 11px; color: var(--red); font-weight: 500; letter-spacing: 0.03em;
-  display: none; align-items: center; gap: 5px;
-}
+.mic-status { font-size: 11px; color: var(--red); font-weight: 500; display: none; align-items: center; gap: 5px; margin-top: 4px; }
 .mic-status.active { display: flex; }
 .mic-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); animation: pulse-mic 1s infinite; }
 
 /* TTS */
-.tts-on { color: var(--accent-light) !important; border-color: var(--accent) !important; }
+.tts-on { color: var(--accent) !important; border-color: var(--accent) !important; }
 
 /* HISTORY */
-#view-history { overflow-y: auto; padding: 2rem; }
+#view-history { overflow-y: auto; padding: 2rem; background: var(--bg); }
 #view-history .page-title { margin-bottom: 1.5rem; }
 .history-list { display: flex; flex-direction: column; gap: 10px; max-width: 640px; }
 .history-item {
   background: var(--bg-2); border: 1px solid var(--border); border-radius: 14px;
   padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between;
-  cursor: pointer; transition: border-color 0.15s;
+  cursor: pointer; transition: all 0.15s; box-shadow: var(--shadow-sm);
 }
-.history-item:hover { border-color: var(--accent); }
+.history-item:hover { border-color: var(--accent); box-shadow: var(--shadow-md); }
 .history-meta { display: flex; flex-direction: column; gap: 4px; }
 .history-scenario { font-size: 14px; font-weight: 600; }
 .history-date { font-size: 12px; color: var(--text-2); font-family: var(--mono); }
 .history-stats { font-size: 12px; color: var(--text-3); }
 .history-empty { color: var(--text-2); font-size: 14px; padding: 2rem 0; }
+
+/* ===== LESSONS ===== */
+#view-lessons { overflow-y: auto; padding: 2rem; background: var(--bg); }
+.lessons-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem; max-width: 900px;
+}
+.lesson-card {
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: 16px;
+  padding: 1.4rem; cursor: pointer; transition: all 0.2s; box-shadow: var(--shadow-sm);
+}
+.lesson-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.lesson-card.completed { border-left: 4px solid var(--green); }
+.lesson-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.lesson-number {
+  width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; background: var(--accent-dim); color: var(--accent);
+}
+.lesson-card.completed .lesson-number { background: #dcfce7; color: var(--green); }
+.lesson-title { font-size: 15px; font-weight: 700; flex: 1; }
+.lesson-tag {
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 3px 8px; border-radius: 4px; background: var(--accent-dim); color: var(--accent);
+}
+.lesson-desc { font-size: 13px; color: var(--text-2); line-height: 1.5; margin-bottom: 10px; }
+.lesson-progress {
+  height: 4px; background: var(--bg-3); border-radius: 4px; overflow: hidden;
+}
+.lesson-progress-bar { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.3s; }
+
+/* Lesson detail */
+.lesson-detail { max-width: 720px; }
+.lesson-detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem; }
+.lesson-detail-title { font-size: 22px; font-weight: 700; }
+.lesson-section {
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: 14px;
+  padding: 1.4rem; margin-bottom: 1rem; box-shadow: var(--shadow-sm);
+}
+.lesson-section-title { font-size: 14px; font-weight: 700; color: var(--accent); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.lesson-section p, .lesson-section li { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 6px; }
+.lesson-section ul { padding-left: 1.2rem; }
+.vocab-table { width: 100%; border-collapse: collapse; }
+.vocab-table th { text-align: left; font-size: 12px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.vocab-table td { padding: 10px; font-size: 14px; border-bottom: 1px solid var(--bg-3); }
+.vocab-table td:first-child { font-weight: 600; color: var(--accent); font-family: var(--mono); font-size: 13px; }
+.vocab-table tr:last-child td { border-bottom: none; }
+.example-box {
+  background: var(--bg); border-left: 3px solid var(--accent); padding: 10px 14px;
+  border-radius: 0 8px 8px 0; margin: 8px 0; font-size: 13px; line-height: 1.6;
+}
+.example-box .en { color: var(--text); font-weight: 500; }
+.example-box .pt { color: var(--text-3); font-style: italic; font-size: 12px; }
+.lesson-practice-btn {
+  margin-top: 1rem; padding: 12px 24px; background: linear-gradient(135deg, var(--accent), #6a4bd4);
+  color: #fff; border: none; border-radius: 10px; font-family: var(--sans);
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.lesson-practice-btn:hover { box-shadow: 0 4px 16px rgba(124,92,224,0.3); }
+.lesson-check {
+  display: flex; align-items: center; gap: 8px; margin-top: 1rem; padding: 10px 14px;
+  background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px;
+  font-size: 13px; color: #166534; font-weight: 500;
+}
 
 /* SCROLLBAR */
 ::-webkit-scrollbar { width: 5px; }
@@ -273,10 +320,7 @@ kbd {
   <div id="app">
     <div id="login-screen" class="screen">
       <div class="login-box">
-        <div class="logo">
-          <span class="logo-icon">⚡</span>
-          <span class="logo-text">TechEnglish</span>
-        </div>
+        <div class="logo"><span class="logo-icon">⚡</span><span class="logo-text">TechEnglish</span></div>
         <p class="login-sub">Conversation simulator for IT professionals</p>
         <input type="password" id="password-input" placeholder="Password" autocomplete="current-password" />
         <button id="login-btn" class="btn-primary">Enter</button>
@@ -286,16 +330,25 @@ kbd {
 
     <div id="main-screen" class="screen hidden">
       <header class="header">
-        <div class="logo small">
-          <span class="logo-icon">⚡</span>
-          <span class="logo-text">TechEnglish</span>
-        </div>
+        <div class="logo small"><span class="logo-icon">⚡</span><span class="logo-text">TechEnglish</span></div>
         <nav class="nav">
+          <button class="nav-btn" data-view="lessons">Lessons</button>
           <button class="nav-btn active" data-view="practice">Practice</button>
           <button class="nav-btn" data-view="history">History</button>
         </nav>
         <button id="logout-btn" class="btn-ghost">Logout</button>
       </header>
+
+      <div id="view-lessons" class="view hidden">
+        <div id="lessons-list-view">
+          <h1 class="page-title">Lessons</h1>
+          <p class="page-sub">Structured learning path for Salesforce professionals</p>
+          <div id="lessons-grid" class="lessons-grid"></div>
+        </div>
+        <div id="lesson-detail-view" class="hidden" style="padding:0 2rem 2rem">
+          <div id="lesson-detail-content" class="lesson-detail"></div>
+        </div>
+      </div>
 
       <div id="view-practice" class="view">
         <div id="scenario-select" class="scenario-select">
@@ -303,7 +356,6 @@ kbd {
           <p class="page-sub">10–15 minute conversation session with voice support</p>
           <div id="scenario-cards" class="scenario-cards"></div>
         </div>
-
         <div id="chat-area" class="chat-area hidden">
           <div class="chat-header">
             <button id="back-btn" class="btn-ghost">← Back</button>
@@ -311,12 +363,10 @@ kbd {
               <span id="scenario-label" class="scenario-badge"></span>
               <span id="session-timer" class="timer">00:00</span>
             </div>
-            <button id="tts-toggle" class="btn-ghost tts-on" title="Toggle voice readout">🔊</button>
+            <button id="tts-toggle" class="btn-ghost tts-on" title="Toggle voice">🔊</button>
             <button id="end-session-btn" class="btn-end">End & Get Feedback</button>
           </div>
-
           <div id="messages" class="messages"></div>
-
           <div class="input-area">
             <textarea id="user-input" placeholder="Type or hold the mic to speak in English..." rows="3"></textarea>
             <div class="input-actions">
@@ -325,7 +375,7 @@ kbd {
                 <div id="mic-status" class="mic-status"><span class="mic-dot"></span> Listening...</div>
               </div>
               <div class="input-right">
-                <button id="mic-btn" class="btn-mic" title="Click to start/stop recording">🎤</button>
+                <button id="mic-btn" class="btn-mic" title="Click to start/stop">🎤</button>
                 <button id="send-btn" class="btn-send">Send →</button>
               </div>
             </div>
@@ -343,23 +393,157 @@ kbd {
 <script>
 'use strict';
 
+// ===== LESSONS DATA =====
+const LESSONS = [
+  {
+    id: 'l1', number: 1, title: 'Introducing Yourself & Your Role', tag: 'Basics',
+    desc: 'How to present yourself as a Salesforce professional in meetings and interviews.',
+    sections: [
+      { title: '📖 Key Phrases', type: 'vocab', items: [
+        ["I'm a Salesforce Architect", "Sou Arquiteto Salesforce"],
+        ["I specialize in Sales Cloud and Data Cloud", "Sou especialista em Sales Cloud e Data Cloud"],
+        ["I've been working with the platform for X years", "Trabalho com a plataforma há X anos"],
+        ["I lead the technical architecture for our CRM implementation", "Lidero a arquitetura técnica da implementação do nosso CRM"],
+        ["My role involves designing scalable solutions", "Meu papel envolve projetar soluções escaláveis"],
+        ["I work closely with stakeholders to align business and technical goals", "Trabalho próximo aos stakeholders para alinhar objetivos de negócio e técnicos"],
+      ]},
+      { title: '💬 Example Dialogue', type: 'examples', items: [
+        ["Hi, I'm Alberto. I'm a Salesforce Architect at Everymind, where I lead the technical design for our B2B CRM projects.", "Oi, sou Alberto. Sou Arquiteto Salesforce na Everymind, onde lidero o design técnico dos nossos projetos de CRM B2B."],
+        ["I have hands-on experience with Sales Cloud, Revenue Cloud, and Data Cloud, and I've recently been exploring Agentforce.", "Tenho experiência prática com Sales Cloud, Revenue Cloud e Data Cloud, e recentemente estou explorando Agentforce."],
+      ]},
+      { title: '🎯 Common Mistakes', type: 'tips', items: [
+        "Don't say \"I am responsible for\" too much — vary with \"I oversee\", \"I lead\", \"I handle\".",
+        "Avoid \"I work in Salesforce\" → say \"I work with Salesforce\" or \"on the Salesforce platform\".",
+        "\"Certification\" is /ˌsɜːrtɪfɪˈkeɪʃn/ — practice the stress on the third syllable.",
+      ]},
+    ]
+  },
+  {
+    id: 'l2', number: 2, title: 'Explaining Architecture Decisions', tag: 'Architecture',
+    desc: 'Justify technical choices using professional vocabulary for stakeholders and teams.',
+    sections: [
+      { title: '📖 Key Phrases', type: 'vocab', items: [
+        ["We chose this approach because...", "Escolhemos essa abordagem porque..."],
+        ["The trade-off here is...", "O trade-off aqui é..."],
+        ["This is an OOTB feature, so no custom code is needed", "Isso é funcionalidade nativa, sem necessidade de código customizado"],
+        ["We need to account for governor limits", "Precisamos considerar os governor limits"],
+        ["The data model supports future scalability", "O modelo de dados suporta escalabilidade futura"],
+        ["We're leveraging declarative tools before resorting to Apex", "Estamos aproveitando ferramentas declarativas antes de recorrer ao Apex"],
+      ]},
+      { title: '💬 Example Dialogue', type: 'examples', items: [
+        ["We went with a Flow-based approach instead of Apex triggers because it's more maintainable and our admins can support it post-go-live.", "Optamos por uma abordagem baseada em Flow em vez de Apex triggers porque é mais sustentável e nossos admins podem dar suporte pós-go-live."],
+        ["The key trade-off is between real-time sync and batch processing. Given our data volume, batch is more cost-effective.", "O trade-off principal é entre sincronização real-time e processamento em lote. Dado nosso volume de dados, batch é mais custo-efetivo."],
+      ]},
+      { title: '🎯 Common Mistakes', type: 'tips', items: [
+        "\"Approach\" not \"abordage\" — false cognate.",
+        "Say \"scalable\" /ˈskeɪləbl/, not \"escalable\".",
+        "\"Out of the box\" (OOTB) is commonly used — practice saying it naturally.",
+      ]},
+    ]
+  },
+  {
+    id: 'l3', number: 3, title: 'Running a Refinement Session', tag: 'Agile',
+    desc: 'Lead sprint refinement discussions, estimate stories, and negotiate scope in English.',
+    sections: [
+      { title: '📖 Key Phrases', type: 'vocab', items: [
+        ["Let's walk through the acceptance criteria", "Vamos percorrer os critérios de aceitação"],
+        ["What's the definition of done for this story?", "Qual é a definição de pronto para essa story?"],
+        ["I'd estimate this at X story points", "Eu estimaria isso em X story points"],
+        ["There's a dependency on the integration team", "Há uma dependência do time de integração"],
+        ["Can we break this into smaller stories?", "Podemos quebrar isso em stories menores?"],
+        ["This is a spike — we need to investigate before committing", "Isso é um spike — precisamos investigar antes de comprometer"],
+      ]},
+      { title: '💬 Example Dialogue', type: 'examples', items: [
+        ["Before we estimate, I'd like to clarify the scope. Are we including the approval process in this story, or should that be a separate one?", "Antes de estimarmos, gostaria de esclarecer o escopo. Estamos incluindo o processo de aprovação nessa story, ou deveria ser uma separada?"],
+        ["I think we're overcomplicating this. Let's stick to the happy path first and handle edge cases in a follow-up.", "Acho que estamos complicando demais. Vamos focar no happy path primeiro e tratar os edge cases em um follow-up."],
+      ]},
+      { title: '🎯 Common Mistakes', type: 'tips', items: [
+        "\"Criteria\" is plural — say \"the criteria are\", not \"the criteria is\".",
+        "\"Estimate\" as a verb: /ˈestɪmeɪt/. As a noun: /ˈestɪmət/.",
+        "Don't translate \"puxar\" as \"pull\" in every context — \"Let's pull in the PO\" ✓ but \"Let's address this\" ≠ \"Let's pull this\".",
+      ]},
+    ]
+  },
+  {
+    id: 'l4', number: 4, title: 'Data Cloud & Integration Vocabulary', tag: 'Data',
+    desc: 'Master the specific terminology for Data Cloud, MuleSoft, and integration patterns.',
+    sections: [
+      { title: '📖 Key Phrases', type: 'vocab', items: [
+        ["We ingest data from multiple sources into Data Cloud", "Ingerimos dados de múltiplas fontes no Data Cloud"],
+        ["The identity resolution matches records across systems", "A resolução de identidade associa registros entre sistemas"],
+        ["We use CDC events to trigger the sync", "Usamos eventos CDC para disparar a sincronização"],
+        ["The middleware handles transformation and routing", "O middleware lida com transformação e roteamento"],
+        ["We need to map the source schema to the target object", "Precisamos mapear o schema de origem para o objeto de destino"],
+        ["The data share eliminates the need for ETL", "O data share elimina a necessidade de ETL"],
+      ]},
+      { title: '💬 Example Dialogue', type: 'examples', items: [
+        ["Our architecture uses MuleSoft as the iPaaS layer to handle CDC events from Salesforce and route them to the data lake.", "Nossa arquitetura usa MuleSoft como camada iPaaS para lidar com eventos CDC do Salesforce e roteá-los para o data lake."],
+        ["Data Cloud's identity resolution is key here — it unifies customer profiles across CRM, billing, and marketing data.", "A resolução de identidade do Data Cloud é chave aqui — ela unifica perfis de clientes entre CRM, billing e dados de marketing."],
+      ]},
+      { title: '🎯 Common Mistakes', type: 'tips', items: [
+        "\"Schema\" is /ˈskiːmə/ in English, not \"esquema\".",
+        "\"Middleware\" — stress on first syllable: /ˈmɪdlwɛr/.",
+        "\"Throughput\" /ˈθruːpʊt/ — the \"th\" is important, not \"trupute\".",
+      ]},
+    ]
+  },
+  {
+    id: 'l5', number: 5, title: 'Presenting to Executives', tag: 'Communication',
+    desc: 'Communicate ROI, timelines, risks, and recommendations to C-level stakeholders.',
+    sections: [
+      { title: '📖 Key Phrases', type: 'vocab', items: [
+        ["The projected ROI is X% over 12 months", "O ROI projetado é de X% em 12 meses"],
+        ["We're on track to deliver by Q3", "Estamos no caminho para entregar até o Q3"],
+        ["The main risk is around data migration complexity", "O principal risco está na complexidade da migração de dados"],
+        ["I'd recommend a phased rollout", "Eu recomendaria um rollout em fases"],
+        ["This aligns with the company's digital transformation strategy", "Isso está alinhado com a estratégia de transformação digital da empresa"],
+        ["The bottom line is: we can reduce manual effort by 40%", "O resultado final é: podemos reduzir esforço manual em 40%"],
+      ]},
+      { title: '💬 Example Dialogue', type: 'examples', items: [
+        ["To summarize: we're proposing a three-phase approach. Phase one delivers core CRM in 8 weeks, phase two adds automation, and phase three integrates with your ERP.", "Para resumir: estamos propondo uma abordagem em três fases. A fase um entrega o CRM core em 8 semanas, a fase dois adiciona automação, e a fase três integra com o ERP de vocês."],
+        ["I understand the budget concern. Let me walk you through the cost-benefit analysis we've prepared.", "Entendo a preocupação com orçamento. Deixe-me apresentar a análise de custo-benefício que preparamos."],
+      ]},
+      { title: '🎯 Common Mistakes', type: 'tips', items: [
+        "Don't say \"in resume\" — say \"to summarize\" or \"in summary\".",
+        "\"Schedule\" in American English: /ˈskedʒuːl/, British: /ˈʃedjuːl/.",
+        "Avoid filler words like \"basically\" and \"actually\" — they weaken executive communication.",
+      ]},
+    ]
+  },
+  {
+    id: 'l6', number: 6, title: 'Handling Objections & Pushback', tag: 'Negotiation',
+    desc: 'Respond professionally when stakeholders challenge your proposals or timeline.',
+    sections: [
+      { title: '📖 Key Phrases', type: 'vocab', items: [
+        ["That's a fair point. Let me address that.", "É um ponto justo. Deixe-me abordar isso."],
+        ["I understand the concern, and here's how we mitigate it", "Entendo a preocupação, e aqui está como mitigamos"],
+        ["We considered that option, but...", "Consideramos essa opção, mas..."],
+        ["Let me provide some context on why we chose this path", "Deixe-me dar contexto sobre por que escolhemos esse caminho"],
+        ["I'd suggest we table that for now and revisit after phase one", "Eu sugeriria que deixemos isso por agora e revisitemos após a fase um"],
+        ["What would make you more comfortable with this approach?", "O que te deixaria mais confortável com essa abordagem?"],
+      ]},
+      { title: '💬 Example Dialogue', type: 'examples', items: [
+        ["I hear your concern about the timeline. What I'd propose is that we de-scope the reporting module from phase one and deliver it in a fast-follow sprint.", "Ouço sua preocupação com o prazo. O que eu proporia é que tiremos o módulo de relatórios da fase um e o entreguemos em um sprint de follow-up rápido."],
+        ["You're right that Apex adds maintenance overhead. However, in this specific case, Flow can't handle the complexity of the business rules without hitting platform limits.", "Você tem razão que Apex adiciona overhead de manutenção. No entanto, nesse caso específico, Flow não consegue lidar com a complexidade das regras de negócio sem bater nos limites da plataforma."],
+      ]},
+      { title: '🎯 Common Mistakes', type: 'tips', items: [
+        "Never say \"you're wrong\" — try \"I see it differently\" or \"There's another perspective\".",
+        "\"Mitigate\" /ˈmɪtɪɡeɪt/ — not \"metigate\". Practice this word.",
+        "\"Table\" means to postpone (US) but to discuss now (UK) — know your audience.",
+      ]},
+    ]
+  },
+];
+
+// ===== APP =====
 const App = {
-  currentScenario: null,
-  messages: [],
-  timerInterval: null,
-  secondsElapsed: 0,
-  token: null,
-  ttsEnabled: true,
-  recognition: null,
-  synth: window.speechSynthesis,
+  currentScenario: null, messages: [], timerInterval: null, secondsElapsed: 0,
+  token: null, ttsEnabled: true, recognition: null, synth: window.speechSynthesis,
+  completedLessons: JSON.parse(localStorage.getItem('te_lessons') || '[]'),
 
   $: id => document.getElementById(id),
 
-  init() {
-    this.checkAuth();
-    this.bindEvents();
-    this.initSpeech();
-  },
+  init() { this.checkAuth(); this.bindEvents(); this.initSpeech(); },
 
   // --- Speech ---
   initSpeech() {
@@ -369,54 +553,35 @@ const App = {
       this.recognition.lang = 'en-US';
       this.recognition.interimResults = true;
       this.recognition.continuous = true;
-      this.recognition.maxAlternatives = 1;
-
-      let finalTranscript = '';
-
+      let finalT = '';
       this.recognition.onresult = (e) => {
         let interim = '';
         for (let i = e.resultIndex; i < e.results.length; i++) {
-          const t = e.results[i][0].transcript;
-          if (e.results[i].isFinal) { finalTranscript += t + ' '; } else { interim = t; }
+          if (e.results[i].isFinal) finalT += e.results[i][0].transcript + ' ';
+          else interim = e.results[i][0].transcript;
         }
-        this.$('user-input').value = finalTranscript + interim;
+        this.$('user-input').value = finalT + interim;
       };
-
       this.recognition.onend = () => {
-        // If still recording, restart (browser may auto-stop)
         if (this.$('mic-btn').classList.contains('recording')) {
           try { this.recognition.start(); } catch(e) {}
-        } else {
-          this.$('mic-status').classList.remove('active');
-        }
+        } else { this.$('mic-status').classList.remove('active'); }
       };
-
       this.recognition.onerror = (e) => {
-        if (e.error === 'no-speech') return; // ignore silence
-        console.error('Speech error:', e.error);
+        if (e.error === 'no-speech') return;
         this.$('mic-btn').classList.remove('recording');
         this.$('mic-status').classList.remove('active');
       };
-
       this.$('mic-btn').addEventListener('click', () => {
         const btn = this.$('mic-btn');
         if (btn.classList.contains('recording')) {
-          btn.classList.remove('recording');
-          this.$('mic-status').classList.remove('active');
-          this.recognition.stop();
+          btn.classList.remove('recording'); this.$('mic-status').classList.remove('active'); this.recognition.stop();
         } else {
-          finalTranscript = '';
-          this.$('user-input').value = '';
-          btn.classList.add('recording');
-          this.$('mic-status').classList.add('active');
-          this.recognition.start();
+          finalT = ''; this.$('user-input').value = '';
+          btn.classList.add('recording'); this.$('mic-status').classList.add('active'); this.recognition.start();
         }
       });
-    } else {
-      this.$('mic-btn').classList.add('unsupported');
-      this.$('mic-btn').title = 'Speech not supported — use Chrome or Edge';
-    }
-
+    } else { this.$('mic-btn').classList.add('unsupported'); }
     this.$('tts-toggle').addEventListener('click', () => {
       this.ttsEnabled = !this.ttsEnabled;
       this.$('tts-toggle').classList.toggle('tts-on', this.ttsEnabled);
@@ -429,79 +594,115 @@ const App = {
     if (!this.ttsEnabled || !this.synth) return;
     this.synth.cancel();
     const clean = text.replace(/\*\*/g, '').replace(/<[^>]+>/g, '');
-    // Split long text into chunks (browser has ~300 char limit on some platforms)
     const chunks = clean.match(/.{1,250}[.!?\n]|.{1,300}/g) || [clean];
     const voices = this.synth.getVoices();
     const voice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'))
-                || voices.find(v => v.lang === 'en-US')
-                || voices.find(v => v.lang.startsWith('en'));
-    chunks.forEach(chunk => {
-      const u = new SpeechSynthesisUtterance(chunk.trim());
-      u.lang = 'en-US'; u.rate = 0.92;
-      if (voice) u.voice = voice;
+                || voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang.startsWith('en'));
+    chunks.forEach(c => {
+      const u = new SpeechSynthesisUtterance(c.trim());
+      u.lang = 'en-US'; u.rate = 0.92; if (voice) u.voice = voice;
       this.synth.speak(u);
     });
   },
 
   // --- Tips ---
   async getTip(role, text, messageDiv) {
-    // Check if tip already shown
     if (messageDiv.querySelector('.tip-panel')) {
-      const panel = messageDiv.querySelector('.tip-panel');
-      panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-      return;
+      const p = messageDiv.querySelector('.tip-panel');
+      p.style.display = p.style.display === 'none' ? 'block' : 'none'; return;
     }
-
     const btn = messageDiv.querySelector('.tip-btn');
-    btn.textContent = '⏳ Loading...';
-    btn.disabled = true;
-
+    btn.textContent = '⏳ Loading...'; btn.disabled = true;
     const prompt = role === 'assistant'
-      ? `The following is a question/statement from an English conversation partner in a Salesforce professional setting. Provide:
-1. TRANSLATION: Translate to Brazilian Portuguese
-2. SUGGESTED RESPONSE: Write a strong sample response in English (2-3 sentences, professional, Salesforce architect level)
-3. RESPONSE TRANSLATION: Translate the suggested response to Brazilian Portuguese
-
-Format exactly as:
-**Tradução:** [translation]
-**Suggested response:** [response in English]
-**Tradução da resposta:** [response translation]
-
-Text: "${text}"`
-      : `The following is something the user said in English during a Salesforce professional conversation. Provide:
-1. TRANSLATION: Translate what the user said to Brazilian Portuguese
-2. IMPROVED VERSION: Rewrite it in better/more professional English if needed, or confirm it's good
-3. IMPROVED TRANSLATION: Translate the improved version to Brazilian Portuguese
-
-Format exactly as:
-**Tradução:** [translation]
-**Better way to say it:** [improved English or "Your phrasing was good!"]
-**Tradução:** [translation of improved]
-
-Text: "${text}"`;
-
+      ? `The following is a question from an English conversation partner in a Salesforce setting. Provide:\n1. TRANSLATION: Translate to Brazilian Portuguese\n2. SUGGESTED RESPONSE: A strong sample response in English (2-3 sentences, professional)\n3. RESPONSE TRANSLATION: Translate the suggested response to PT-BR\n\nFormat:\n**Tradução:** [translation]\n**Suggested response:** [response]\n**Tradução da resposta:** [translation]\n\nText: "${text}"`
+      : `The user said this in English during a Salesforce conversation. Provide:\n1. TRANSLATION to PT-BR\n2. IMPROVED VERSION in better English\n3. IMPROVED TRANSLATION to PT-BR\n\nFormat:\n**Tradução:** [translation]\n**Better way to say it:** [improved or "Your phrasing was good!"]\n**Tradução:** [translation]\n\nText: "${text}"`;
     try {
       const res = await fetch('/english/api/chat/message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
-        body: JSON.stringify({
-          scenario: this.currentScenario.id,
-          messages: [{ role: 'user', content: prompt }]
-        })
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
+        body: JSON.stringify({ scenario: this.currentScenario.id, messages: [{ role: 'user', content: prompt }] })
       });
       const data = await res.json();
-      const tipHtml = this.formatText(data.reply || 'Tip unavailable');
-
       const panel = document.createElement('div');
-      panel.className = 'tip-panel';
-      panel.innerHTML = tipHtml;
+      panel.className = 'tip-panel'; panel.innerHTML = this.formatText(data.reply || 'Unavailable');
       messageDiv.appendChild(panel);
-    } catch (e) {
-      console.error('Tip error:', e);
+    } catch (e) {}
+    btn.textContent = '💡 Tip'; btn.disabled = false;
+  },
+
+  // --- Lessons ---
+  renderLessons() {
+    const grid = this.$('lessons-grid'); grid.innerHTML = '';
+    LESSONS.forEach(l => {
+      const done = this.completedLessons.includes(l.id);
+      const card = document.createElement('div');
+      card.className = 'lesson-card' + (done ? ' completed' : '');
+      card.innerHTML = `
+        <div class="lesson-header">
+          <div class="lesson-number">${done ? '✓' : l.number}</div>
+          <div class="lesson-title">${l.title}</div>
+          <span class="lesson-tag">${l.tag}</span>
+        </div>
+        <div class="lesson-desc">${l.desc}</div>
+        <div class="lesson-progress"><div class="lesson-progress-bar" style="width:${done ? 100 : 0}%"></div></div>
+      `;
+      card.addEventListener('click', () => this.openLesson(l));
+      grid.appendChild(card);
+    });
+  },
+
+  openLesson(l) {
+    this.$('lessons-list-view').classList.add('hidden');
+    this.$('lesson-detail-view').classList.remove('hidden');
+    const done = this.completedLessons.includes(l.id);
+    let html = `
+      <div class="lesson-detail-header">
+        <button class="btn-ghost" id="lesson-back-btn">← Back</button>
+        <div class="lesson-detail-title">${l.number}. ${l.title}</div>
+        <span class="lesson-tag">${l.tag}</span>
+      </div>
+    `;
+    l.sections.forEach(s => {
+      html += `<div class="lesson-section"><div class="lesson-section-title">${s.title}</div>`;
+      if (s.type === 'vocab') {
+        html += `<table class="vocab-table"><thead><tr><th>English</th><th>Português</th></tr></thead><tbody>`;
+        s.items.forEach(([en, pt]) => { html += `<tr><td>${en}</td><td>${pt}</td></tr>`; });
+        html += `</tbody></table>`;
+      } else if (s.type === 'examples') {
+        s.items.forEach(([en, pt]) => {
+          html += `<div class="example-box"><div class="en">"${en}"</div><div class="pt">${pt}</div></div>`;
+        });
+      } else if (s.type === 'tips') {
+        html += '<ul>'; s.items.forEach(t => { html += `<li>${t}</li>`; }); html += '</ul>';
+      }
+      html += `</div>`;
+    });
+    html += `<button class="lesson-practice-btn" id="lesson-practice-btn">🎯 Practice this topic</button>`;
+    if (!done) {
+      html += `<button class="btn-ghost" id="lesson-complete-btn" style="margin-top:0.5rem;margin-left:0.5rem">✓ Mark as completed</button>`;
+    } else {
+      html += `<div class="lesson-check">✅ Lesson completed</div>`;
     }
 
-    btn.textContent = '💡 Tip';
-    btn.disabled = false;
+    const container = this.$('lesson-detail-content');
+    container.innerHTML = html;
+    this.$('lesson-back-btn').addEventListener('click', () => {
+      this.$('lesson-detail-view').classList.add('hidden');
+      this.$('lessons-list-view').classList.remove('hidden');
+      this.renderLessons();
+    });
+    this.$('lesson-practice-btn').addEventListener('click', () => {
+      this.switchView('practice');
+    });
+    const completeBtn = this.$('lesson-complete-btn');
+    if (completeBtn) {
+      completeBtn.addEventListener('click', () => {
+        if (!this.completedLessons.includes(l.id)) {
+          this.completedLessons.push(l.id);
+          localStorage.setItem('te_lessons', JSON.stringify(this.completedLessons));
+        }
+        this.openLesson(l); // refresh
+      });
+    }
   },
 
   // --- Auth ---
@@ -539,30 +740,17 @@ Text: "${text}"`;
     });
     if (res.ok) {
       const data = await res.json();
-      this.token = data.token;
-      localStorage.setItem('te_token', this.token);
-      this.showMain();
-    } else {
-      this.$('login-error').textContent = 'Wrong password.';
-    }
+      this.token = data.token; localStorage.setItem('te_token', this.token); this.showMain();
+    } else { this.$('login-error').textContent = 'Wrong password.'; }
   },
 
   async logout() {
     await fetch('/english/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + this.token }});
-    localStorage.removeItem('te_token'); this.token = null;
-    this.showLogin();
+    localStorage.removeItem('te_token'); this.token = null; this.showLogin();
   },
 
-  showLogin() {
-    this.$('login-screen').classList.remove('hidden');
-    this.$('main-screen').classList.add('hidden');
-  },
-
-  showMain() {
-    this.$('login-screen').classList.add('hidden');
-    this.$('main-screen').classList.remove('hidden');
-    this.loadScenarios();
-  },
+  showLogin() { this.$('login-screen').classList.remove('hidden'); this.$('main-screen').classList.add('hidden'); },
+  showMain() { this.$('login-screen').classList.add('hidden'); this.$('main-screen').classList.remove('hidden'); this.loadScenarios(); this.renderLessons(); },
 
   switchView(view) {
     document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
@@ -570,35 +758,28 @@ Text: "${text}"`;
     this.$(`view-${view}`).classList.remove('hidden');
     document.querySelector(`.nav-btn[data-view="${view}"]`).classList.add('active');
     if (view === 'history') this.loadHistory();
+    if (view === 'lessons') { this.$('lesson-detail-view').classList.add('hidden'); this.$('lessons-list-view').classList.remove('hidden'); this.renderLessons(); }
   },
 
   async loadScenarios() {
     const res = await fetch('/english/api/chat/scenarios', { headers: { 'Authorization': 'Bearer ' + this.token }});
     const scenarios = await res.json();
-    const container = this.$('scenario-cards');
-    container.innerHTML = '';
+    const container = this.$('scenario-cards'); container.innerHTML = '';
     scenarios.forEach(s => {
-      const card = document.createElement('div');
-      card.className = 'scenario-card';
+      const card = document.createElement('div'); card.className = 'scenario-card';
       card.innerHTML = `<span class="scenario-icon">${s.icon}</span><div class="scenario-name">${s.label}</div><div class="scenario-desc">${s.description}</div>`;
       card.addEventListener('click', () => this.startSession(s));
       container.appendChild(card);
     });
   },
 
-  startSession(scenario) {
-    this.currentScenario = scenario;
-    this.messages = [];
-    this.secondsElapsed = 0;
-    this.$('scenario-label').textContent = scenario.label;
-    this.$('messages').innerHTML = '';
-    this.$('user-input').value = '';
-    this.$('scenario-select').classList.add('hidden');
+  startSession(s) {
+    this.currentScenario = s; this.messages = []; this.secondsElapsed = 0;
+    this.$('scenario-label').textContent = s.label; this.$('messages').innerHTML = '';
+    this.$('user-input').value = ''; this.$('scenario-select').classList.add('hidden');
     this.$('chat-area').classList.remove('hidden');
-    this.$('end-session-btn').disabled = false;
-    this.$('end-session-btn').textContent = 'End & Get Feedback';
-    this.startTimer();
-    this.getAssistantOpening();
+    this.$('end-session-btn').disabled = false; this.$('end-session-btn').textContent = 'End & Get Feedback';
+    this.startTimer(); this.getAssistantOpening();
   },
 
   startTimer() {
@@ -612,9 +793,7 @@ Text: "${text}"`;
   },
 
   async getAssistantOpening() {
-    this.showTyping();
-    const reply = await this.callAPI([]);
-    this.hideTyping();
+    this.showTyping(); const reply = await this.callAPI([]); this.hideTyping();
     if (!reply) return;
     this.messages.push({ role: 'user', content: '[Session started]' });
     this.messages.push({ role: 'assistant', content: reply });
@@ -622,154 +801,95 @@ Text: "${text}"`;
   },
 
   async sendMessage() {
-    const input = this.$('user-input');
-    const text = input.value.trim();
-    if (!text) return;
-
-    // Stop mic if recording
+    const input = this.$('user-input'); const text = input.value.trim(); if (!text) return;
     if (this.$('mic-btn').classList.contains('recording')) {
-      this.$('mic-btn').classList.remove('recording');
-      this.$('mic-status').classList.remove('active');
+      this.$('mic-btn').classList.remove('recording'); this.$('mic-status').classList.remove('active');
       if (this.recognition) this.recognition.stop();
     }
-
-    input.value = '';
-    this.$('send-btn').disabled = true;
-    this.messages.push({ role: 'user', content: text });
-    this.renderMessage('user', text);
-
-    if (text.toLowerCase() === 'feedback') {
-      await this.requestFeedback();
-      this.$('send-btn').disabled = false;
-      return;
-    }
-
-    this.showTyping();
-    this.synth.cancel(); // stop any TTS
-    const reply = await this.callAPI(this.messages);
-    this.hideTyping();
-    if (reply) {
-      this.messages.push({ role: 'assistant', content: reply });
-      this.renderMessage('assistant', reply);
-    }
-    this.$('send-btn').disabled = false;
-    input.focus();
+    input.value = ''; this.$('send-btn').disabled = true;
+    this.messages.push({ role: 'user', content: text }); this.renderMessage('user', text);
+    if (text.toLowerCase() === 'feedback') { await this.requestFeedback(); this.$('send-btn').disabled = false; return; }
+    this.showTyping(); this.synth.cancel();
+    const reply = await this.callAPI(this.messages); this.hideTyping();
+    if (reply) { this.messages.push({ role: 'assistant', content: reply }); this.renderMessage('assistant', reply); }
+    this.$('send-btn').disabled = false; input.focus();
   },
 
   async requestFeedback() {
     clearInterval(this.timerInterval);
-    const feedbackMessages = [...this.messages, { role: 'user', content: 'feedback' }];
     this.showTyping();
-    const feedback = await this.callAPI(feedbackMessages);
+    const feedback = await this.callAPI([...this.messages, { role: 'user', content: 'feedback' }]);
     this.hideTyping();
-    if (feedback) {
-      this.renderMessage('assistant', feedback, 'feedback');
-      await this.saveSession(feedback);
-    }
-    this.$('end-session-btn').disabled = true;
-    this.$('end-session-btn').textContent = 'Session saved ✓';
+    if (feedback) { this.renderMessage('assistant', feedback, 'feedback'); await this.saveSession(feedback); }
+    this.$('end-session-btn').disabled = true; this.$('end-session-btn').textContent = 'Session saved ✓';
   },
 
   async callAPI(messages) {
     try {
       const res = await fetch('/english/api/chat/message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
-        body: JSON.stringify({
-          scenario: this.currentScenario.id,
-          messages: messages.length ? messages : [{ role: 'user', content: 'Begin the session.' }]
-        })
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
+        body: JSON.stringify({ scenario: this.currentScenario.id, messages: messages.length ? messages : [{ role: 'user', content: 'Begin the session.' }] })
       });
-      const data = await res.json();
-      return data.reply || null;
-    } catch (err) { console.error('API error:', err); return null; }
+      return (await res.json()).reply || null;
+    } catch (e) { return null; }
   },
 
   async saveSession(feedback) {
     await fetch('/english/api/sessions/save', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
-      body: JSON.stringify({
-        scenario: this.currentScenario.id, messages: this.messages,
-        feedback, duration_seconds: this.secondsElapsed
-      })
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
+      body: JSON.stringify({ scenario: this.currentScenario.id, messages: this.messages, feedback, duration_seconds: this.secondsElapsed })
     });
   },
 
   renderMessage(role, text, extraClass = '') {
-    const container = this.$('messages');
-    const div = document.createElement('div');
+    const container = this.$('messages'); const div = document.createElement('div');
     div.className = `message ${role} ${extraClass}`.trim();
-
-    const roleLabel = role === 'user' ? 'You' : this.currentScenario?.label || 'Assistant';
+    const label = role === 'user' ? 'You' : this.currentScenario?.label || 'Assistant';
     const showTip = extraClass !== 'feedback' && text !== '[Session started]';
-
-    div.innerHTML = `
-      <div class="message-role">${roleLabel}</div>
-      <div class="message-bubble">${this.formatText(text)}</div>
-      ${showTip ? '<button class="tip-btn">💡 Tip</button>' : ''}
-    `;
-
-    if (showTip) {
-      div.querySelector('.tip-btn').addEventListener('click', () => this.getTip(role, text, div));
-    }
-
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
+    div.innerHTML = `<div class="message-role">${label}</div><div class="message-bubble">${this.formatText(text)}</div>${showTip ? '<button class="tip-btn">💡 Tip</button>' : ''}`;
+    if (showTip) div.querySelector('.tip-btn').addEventListener('click', () => this.getTip(role, text, div));
+    container.appendChild(div); container.scrollTop = container.scrollHeight;
     if (role === 'assistant' && extraClass !== 'feedback') this.speak(text);
   },
 
-  formatText(text) {
-    return text
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n/g, '<br>');
+  formatText(t) {
+    return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
   },
 
   showTyping() {
-    const container = this.$('messages');
-    const div = document.createElement('div');
-    div.className = 'message assistant typing-indicator'; div.id = 'typing';
-    div.innerHTML = `<div class="message-role">${this.currentScenario?.label || 'Assistant'}</div><div class="message-bubble">typing...</div>`;
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
+    const c = this.$('messages'); const d = document.createElement('div');
+    d.className = 'message assistant typing-indicator'; d.id = 'typing';
+    d.innerHTML = `<div class="message-role">${this.currentScenario?.label || 'Assistant'}</div><div class="message-bubble">typing...</div>`;
+    c.appendChild(d); c.scrollTop = c.scrollHeight;
   },
-
   hideTyping() { const el = this.$('typing'); if (el) el.remove(); },
 
   backToScenarios() {
-    clearInterval(this.timerInterval);
-    this.synth.cancel();
+    clearInterval(this.timerInterval); this.synth.cancel();
     if (this.recognition && this.$('mic-btn').classList.contains('recording')) {
-      this.recognition.stop();
-      this.$('mic-btn').classList.remove('recording');
-      this.$('mic-status').classList.remove('active');
+      this.recognition.stop(); this.$('mic-btn').classList.remove('recording'); this.$('mic-status').classList.remove('active');
     }
-    this.$('chat-area').classList.add('hidden');
-    this.$('scenario-select').classList.remove('hidden');
-    this.currentScenario = null; this.messages = [];
+    this.$('chat-area').classList.add('hidden'); this.$('scenario-select').classList.remove('hidden');
   },
 
   async loadHistory() {
     const res = await fetch('/english/api/sessions/history', { headers: { 'Authorization': 'Bearer ' + this.token }});
-    const sessions = await res.json();
-    const list = this.$('history-list');
-    if (!sessions.length) { list.innerHTML = '<p class="history-empty">No sessions yet. Start practicing!</p>'; return; }
+    const sessions = await res.json(); const list = this.$('history-list');
+    if (!sessions.length) { list.innerHTML = '<p class="history-empty">No sessions yet.</p>'; return; }
     list.innerHTML = '';
     const labels = { interview: '🎯 Interview', stakeholder: '📊 Stakeholder', technical: '⚙️ Tech Team' };
     sessions.forEach(s => {
       const date = new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       const dur = s.duration_seconds ? `${Math.floor(s.duration_seconds / 60)}m ${s.duration_seconds % 60}s` : '—';
-      const item = document.createElement('div');
-      item.className = 'history-item';
-      item.innerHTML = `<div class="history-meta"><div class="history-scenario">${labels[s.scenario] || s.scenario}</div><div class="history-date">${date}</div><div class="history-stats">${s.message_count} messages · ${dur}</div></div><span style="color:var(--text-3);font-size:18px">→</span>`;
+      const item = document.createElement('div'); item.className = 'history-item';
+      item.innerHTML = `<div class="history-meta"><div class="history-scenario">${labels[s.scenario] || s.scenario}</div><div class="history-date">${date}</div><div class="history-stats">${s.message_count} messages · ${dur}</div></div><span style="color:var(--text-3)">→</span>`;
       list.appendChild(item);
     });
   }
 };
 
 document.addEventListener('DOMContentLoaded', () => App.init());
-// Preload voices
 if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 </script>
 </body>
