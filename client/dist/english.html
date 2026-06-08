@@ -5,96 +5,91 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TechEnglish</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #0e0e10;
-  --bg-2: #16161a;
-  --bg-3: #1e1e24;
-  --border: #2a2a32;
-  --accent: #7c6dfa;
-  --accent-dim: #3d3580;
-  --text: #e8e8f0;
-  --text-2: #9090a8;
-  --text-3: #55556a;
-  --green: #4ade80;
+  --bg: #0d0b1a;
+  --bg-2: #151228;
+  --bg-3: #1e1a36;
+  --bg-4: #28234a;
+  --border: #2e2854;
+  --accent: #8b7cf6;
+  --accent-light: #a89dfa;
+  --accent-dim: #2d2660;
+  --accent-glow: rgba(139,124,246,0.15);
+  --text: #eae8f5;
+  --text-2: #9e99c2;
+  --text-3: #6b6590;
+  --green: #6ee7a0;
   --red: #f87171;
-  --mono: 'DM Mono', monospace;
-  --sans: 'Syne', sans-serif;
-  --radius: 10px;
+  --tip-bg: #1a1640;
+  --tip-border: #352e6a;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Inter', -apple-system, sans-serif;
+  --radius: 12px;
 }
 
 html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
-
 #app { height: 100%; display: flex; flex-direction: column; }
-
 .screen { flex: 1; }
 .hidden { display: none !important; }
 
 /* LOGIN */
 #login-screen {
   display: flex; align-items: center; justify-content: center; height: 100vh;
-  background: var(--bg);
+  background: linear-gradient(160deg, var(--bg) 0%, #12102a 50%, #18143a 100%);
 }
-
 .login-box {
-  width: 100%; max-width: 360px; padding: 2.5rem;
-  background: var(--bg-2); border: 1px solid var(--border); border-radius: 16px;
-  display: flex; flex-direction: column; gap: 1rem;
+  width: 100%; max-width: 380px; padding: 2.5rem;
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: 20px;
+  display: flex; flex-direction: column; gap: 1.1rem;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 80px var(--accent-glow);
 }
-
-.logo {
-  display: flex; align-items: center; gap: 10px;
-}
-.logo-icon { font-size: 24px; }
-.logo-text { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-icon { font-size: 26px; }
+.logo-text { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
 .logo.small .logo-text { font-size: 16px; }
 .logo.small .logo-icon { font-size: 18px; }
-
-.login-sub { font-size: 13px; color: var(--text-2); margin-top: -4px; }
+.login-sub { font-size: 13px; color: var(--text-2); margin-top: -4px; letter-spacing: 0.02em; }
 
 input[type="password"], textarea {
-  width: 100%; padding: 12px 14px;
+  width: 100%; padding: 13px 16px;
   background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--radius);
-  color: var(--text); font-family: var(--mono); font-size: 14px;
-  outline: none; transition: border-color 0.2s;
-  resize: none;
+  color: var(--text); font-family: var(--sans); font-size: 14px;
+  outline: none; transition: border-color 0.2s; resize: none;
 }
-input[type="password"]:focus, textarea:focus { border-color: var(--accent); }
+input[type="password"]:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
 
 .btn-primary {
-  padding: 12px; background: var(--accent); color: #fff;
-  border: none; border-radius: var(--radius); font-family: var(--sans);
-  font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+  padding: 13px; background: linear-gradient(135deg, var(--accent), #7060e8);
+  color: #fff; border: none; border-radius: var(--radius); font-family: var(--sans);
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  letter-spacing: 0.02em;
 }
-.btn-primary:hover { opacity: 0.85; }
-
+.btn-primary:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(139,124,246,0.3); }
 .error-msg { font-size: 12px; color: var(--red); min-height: 16px; }
 
 /* HEADER */
 #main-screen { display: flex; flex-direction: column; height: 100vh; }
-
 .header {
   display: flex; align-items: center; gap: 1.5rem;
-  padding: 0 1.5rem; height: 56px; border-bottom: 1px solid var(--border);
+  padding: 0 1.5rem; height: 58px; border-bottom: 1px solid var(--border);
   background: var(--bg-2); flex-shrink: 0;
 }
-
 .nav { display: flex; gap: 4px; flex: 1; }
 .nav-btn {
-  padding: 6px 14px; background: none; border: none; border-radius: 6px;
+  padding: 7px 16px; background: none; border: none; border-radius: 8px;
   color: var(--text-2); font-family: var(--sans); font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: all 0.15s;
+  cursor: pointer; transition: all 0.15s; letter-spacing: 0.01em;
 }
 .nav-btn:hover { color: var(--text); background: var(--bg-3); }
-.nav-btn.active { color: var(--accent); background: var(--bg-3); }
+.nav-btn.active { color: var(--accent-light); background: var(--accent-dim); }
 
 .btn-ghost {
-  padding: 6px 12px; background: none; border: 1px solid var(--border); border-radius: 6px;
-  color: var(--text-2); font-family: var(--sans); font-size: 13px; cursor: pointer;
-  transition: all 0.15s;
+  padding: 7px 14px; background: none; border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text-2); font-family: var(--sans); font-size: 13px; cursor: pointer; transition: all 0.15s;
 }
 .btn-ghost:hover { color: var(--text); border-color: var(--text-3); }
 
@@ -106,51 +101,40 @@ input[type="password"]:focus, textarea:focus { border-color: var(--accent); }
   flex: 1; overflow-y: auto; padding: 3rem 2rem;
   display: flex; flex-direction: column; align-items: center;
 }
-
 .page-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px; }
 .page-sub { font-size: 14px; color: var(--text-2); margin-bottom: 2.5rem; }
-
 .scenario-cards {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem; width: 100%; max-width: 720px;
+  gap: 1rem; width: 100%; max-width: 750px;
 }
-
 .scenario-card {
-  background: var(--bg-2); border: 1px solid var(--border); border-radius: 14px;
-  padding: 1.5rem; cursor: pointer; transition: all 0.2s; text-align: left;
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: 16px;
+  padding: 1.5rem; cursor: pointer; transition: all 0.25s; text-align: left;
 }
 .scenario-card:hover {
   border-color: var(--accent); background: var(--bg-3);
-  transform: translateY(-2px);
+  transform: translateY(-3px); box-shadow: 0 8px 30px rgba(139,124,246,0.12);
 }
-
-.scenario-icon { font-size: 28px; margin-bottom: 12px; display: block; }
-.scenario-name { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
-.scenario-desc { font-size: 13px; color: var(--text-2); line-height: 1.5; }
+.scenario-icon { font-size: 30px; margin-bottom: 12px; display: block; }
+.scenario-name { font-size: 16px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.01em; }
+.scenario-desc { font-size: 13px; color: var(--text-2); line-height: 1.55; }
 
 /* CHAT */
 .chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-
 .chat-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 1.5rem; border-bottom: 1px solid var(--border);
-  background: var(--bg-2); flex-shrink: 0;
+  background: var(--bg-2); flex-shrink: 0; gap: 10px;
 }
-
 .chat-meta { display: flex; align-items: center; gap: 12px; }
-
 .scenario-badge {
-  font-size: 12px; font-weight: 600; color: var(--accent);
-  background: var(--accent-dim); padding: 4px 10px; border-radius: 100px;
+  font-size: 12px; font-weight: 600; color: var(--accent-light);
+  background: var(--accent-dim); padding: 5px 12px; border-radius: 100px;
 }
-
-.timer {
-  font-family: var(--mono); font-size: 13px; color: var(--text-2);
-}
-
+.timer { font-family: var(--mono); font-size: 13px; color: var(--text-2); }
 .btn-end {
-  padding: 7px 14px; background: none; border: 1px solid var(--accent);
-  border-radius: 7px; color: var(--accent); font-family: var(--sans);
+  padding: 8px 16px; background: none; border: 1px solid var(--accent);
+  border-radius: 8px; color: var(--accent-light); font-family: var(--sans);
   font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s;
 }
 .btn-end:hover { background: var(--accent); color: #fff; }
@@ -158,122 +142,132 @@ input[type="password"]:focus, textarea:focus { border-color: var(--accent); }
 /* MESSAGES */
 .messages {
   flex: 1; overflow-y: auto; padding: 1.5rem;
-  display: flex; flex-direction: column; gap: 1rem;
+  display: flex; flex-direction: column; gap: 1.2rem;
 }
-
 .message {
-  max-width: 75%; display: flex; flex-direction: column; gap: 4px;
-  animation: fadeUp 0.2s ease;
+  max-width: 78%; display: flex; flex-direction: column; gap: 4px;
+  animation: fadeUp 0.25s ease;
 }
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
 .message.assistant { align-self: flex-start; }
 .message.user { align-self: flex-end; }
-
 .message-role {
   font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
   text-transform: uppercase; color: var(--text-3); padding: 0 4px;
 }
 .message.user .message-role { text-align: right; }
-
 .message-bubble {
-  padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.65;
+  padding: 14px 18px; border-radius: 14px; font-size: 14px; line-height: 1.7;
 }
 .message.assistant .message-bubble {
   background: var(--bg-3); border: 1px solid var(--border); color: var(--text);
-  border-radius: 4px 12px 12px 12px;
+  border-radius: 4px 14px 14px 14px;
 }
 .message.user .message-bubble {
-  background: var(--accent); color: #fff;
-  border-radius: 12px 4px 12px 12px;
+  background: linear-gradient(135deg, var(--accent), #7060e8); color: #fff;
+  border-radius: 14px 4px 14px 14px;
 }
-
 .message.feedback .message-bubble {
   background: var(--bg-2); border: 1px solid var(--accent-dim);
-  color: var(--text); border-radius: 12px; max-width: 100%;
+  color: var(--text); border-radius: 14px; max-width: 100%;
 }
 .message.feedback { max-width: 100%; }
-.message.feedback .message-role { color: var(--accent); }
+.message.feedback .message-role { color: var(--accent-light); }
+.message-bubble strong { color: var(--accent-light); font-weight: 600; }
+.typing-indicator .message-bubble { color: var(--text-3); font-style: italic; font-size: 13px; }
 
-.message-bubble strong { color: var(--accent); font-weight: 600; }
-
-.typing-indicator .message-bubble {
-  color: var(--text-3); font-style: italic; font-size: 13px;
+/* TIP BUTTON & PANEL */
+.tip-btn {
+  margin-top: 6px; padding: 4px 10px; background: var(--bg-4); border: 1px solid var(--tip-border);
+  border-radius: 6px; color: var(--text-3); font-size: 11px; font-family: var(--sans);
+  cursor: pointer; transition: all 0.15s; font-weight: 500; letter-spacing: 0.03em;
+  align-self: flex-start;
 }
+.message.user .tip-btn { align-self: flex-end; }
+.tip-btn:hover { color: var(--accent-light); border-color: var(--accent); background: var(--accent-dim); }
+.tip-panel {
+  margin-top: 6px; padding: 12px 14px; background: var(--tip-bg); border: 1px solid var(--tip-border);
+  border-radius: 10px; font-size: 13px; line-height: 1.65; color: var(--text-2);
+  animation: fadeUp 0.2s ease; max-width: 100%;
+}
+.tip-panel .tip-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--accent); margin-bottom: 4px;
+}
+.tip-panel .tip-section { margin-bottom: 8px; }
+.tip-panel .tip-section:last-child { margin-bottom: 0; }
 
 /* INPUT */
 .input-area {
   padding: 1rem 1.5rem; border-top: 1px solid var(--border);
   background: var(--bg-2); flex-shrink: 0;
 }
-
-textarea {
-  display: block; margin-bottom: 10px;
-}
-
+textarea { display: block; margin-bottom: 10px; font-size: 14px; line-height: 1.6; }
 .input-actions { display: flex; align-items: center; justify-content: space-between; }
-
 .input-hint { font-size: 12px; color: var(--text-3); }
 kbd {
   font-family: var(--mono); font-size: 11px; background: var(--bg-3);
   border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; color: var(--text-2);
 }
-
+.input-right { display: flex; align-items: center; gap: 8px; }
 .btn-send {
-  padding: 9px 20px; background: var(--accent); color: #fff;
-  border: none; border-radius: 8px; font-family: var(--sans);
-  font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.15s;
+  padding: 10px 22px; background: linear-gradient(135deg, var(--accent), #7060e8); color: #fff;
+  border: none; border-radius: 10px; font-family: var(--sans);
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s;
 }
-.btn-send:hover { opacity: 0.85; }
+.btn-send:hover { opacity: 0.9; }
 .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* MIC */
+.btn-mic {
+  width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border);
+  background: var(--bg-3); font-size: 20px; cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.btn-mic:hover { border-color: var(--accent); background: var(--accent-dim); }
+.btn-mic.recording {
+  background: linear-gradient(135deg, #e84393, var(--accent)); border-color: transparent;
+  animation: pulse-mic 1.2s infinite; color: #fff;
+}
+@keyframes pulse-mic {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232,67,147,0.4); }
+  50% { box-shadow: 0 0 0 10px rgba(232,67,147,0); }
+}
+.btn-mic.unsupported { opacity: 0.3; cursor: not-allowed; }
+.mic-status {
+  font-size: 11px; color: var(--red); font-weight: 500; letter-spacing: 0.03em;
+  display: none; align-items: center; gap: 5px;
+}
+.mic-status.active { display: flex; }
+.mic-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); animation: pulse-mic 1s infinite; }
+
+/* TTS */
+.tts-on { color: var(--accent-light) !important; border-color: var(--accent) !important; }
 
 /* HISTORY */
 #view-history { overflow-y: auto; padding: 2rem; }
 #view-history .page-title { margin-bottom: 1.5rem; }
-
 .history-list { display: flex; flex-direction: column; gap: 10px; max-width: 640px; }
-
 .history-item {
-  background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px;
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: 14px;
   padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between;
   cursor: pointer; transition: border-color 0.15s;
 }
 .history-item:hover { border-color: var(--accent); }
-
 .history-meta { display: flex; flex-direction: column; gap: 4px; }
 .history-scenario { font-size: 14px; font-weight: 600; }
 .history-date { font-size: 12px; color: var(--text-2); font-family: var(--mono); }
 .history-stats { font-size: 12px; color: var(--text-3); }
-
 .history-empty { color: var(--text-2); font-size: 14px; padding: 2rem 0; }
-
-
-/* MIC & TTS */
-.btn-mic {
-  width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--border);
-  background: var(--bg-3); font-size: 18px; cursor: pointer; transition: all 0.2s;
-  display: flex; align-items: center; justify-content: center;
-}
-.btn-mic:hover { border-color: var(--accent); }
-.btn-mic.recording {
-  background: var(--red); border-color: var(--red); animation: pulse-mic 1s infinite;
-}
-@keyframes pulse-mic {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(248,113,113,0.4); }
-  50% { box-shadow: 0 0 0 8px rgba(248,113,113,0); }
-}
-.tts-on { color: var(--accent) !important; border-color: var(--accent) !important; }
-.btn-mic.unsupported { opacity: 0.3; cursor: not-allowed; }
 
 /* SCROLLBAR */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-
-</style>
+  </style>
 </head>
 <body>
   <div id="app">
@@ -283,7 +277,7 @@ kbd {
           <span class="logo-icon">⚡</span>
           <span class="logo-text">TechEnglish</span>
         </div>
-        <p class="login-sub">IT English conversation simulator</p>
+        <p class="login-sub">Conversation simulator for IT professionals</p>
         <input type="password" id="password-input" placeholder="Password" autocomplete="current-password" />
         <button id="login-btn" class="btn-primary">Enter</button>
         <p id="login-error" class="error-msg"></p>
@@ -306,7 +300,7 @@ kbd {
       <div id="view-practice" class="view">
         <div id="scenario-select" class="scenario-select">
           <h1 class="page-title">Choose your scenario</h1>
-          <p class="page-sub">10–15 minute conversation session</p>
+          <p class="page-sub">10–15 minute conversation session with voice support</p>
           <div id="scenario-cards" class="scenario-cards"></div>
         </div>
 
@@ -317,22 +311,23 @@ kbd {
               <span id="scenario-label" class="scenario-badge"></span>
               <span id="session-timer" class="timer">00:00</span>
             </div>
-            <button id="tts-toggle" class="btn-ghost tts-on" title="Toggle voice">🔊</button>
+            <button id="tts-toggle" class="btn-ghost tts-on" title="Toggle voice readout">🔊</button>
             <button id="end-session-btn" class="btn-end">End & Get Feedback</button>
           </div>
 
           <div id="messages" class="messages"></div>
 
           <div class="input-area">
-            <textarea
-              id="user-input"
-              placeholder="Type your response in English... (Enter to send, Shift+Enter for new line)"
-              rows="3"
-            ></textarea>
+            <textarea id="user-input" placeholder="Type or hold the mic to speak in English..." rows="3"></textarea>
             <div class="input-actions">
-              <span class="input-hint">Or type <kbd>feedback</kbd> to get feedback anytime</span>
-              <button id="mic-btn" class="btn-mic" title="Hold to speak">🎤</button>
-              <button id="send-btn" class="btn-send">Send →</button>
+              <div>
+                <span class="input-hint">Type <kbd>feedback</kbd> for evaluation</span>
+                <div id="mic-status" class="mic-status"><span class="mic-dot"></span> Listening...</div>
+              </div>
+              <div class="input-right">
+                <button id="mic-btn" class="btn-mic" title="Click to start/stop recording">🎤</button>
+                <button id="send-btn" class="btn-send">Send →</button>
+              </div>
             </div>
           </div>
         </div>
@@ -345,7 +340,7 @@ kbd {
     </div>
   </div>
 
-  <script>
+<script>
 'use strict';
 
 const App = {
@@ -353,80 +348,11 @@ const App = {
   messages: [],
   timerInterval: null,
   secondsElapsed: 0,
-  sessionStartTime: null,
-
-
-
-  // --- Speech ---
+  token: null,
   ttsEnabled: true,
   recognition: null,
   synth: window.speechSynthesis,
 
-  initSpeech() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      this.recognition = new SpeechRecognition();
-      this.recognition.lang = 'en-US';
-      this.recognition.interimResults = true;
-      this.recognition.continuous = false;
-
-      this.recognition.onresult = (e) => {
-        const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
-        this.$('user-input').value = transcript;
-      };
-      this.recognition.onend = () => {
-        this.$('mic-btn').classList.remove('recording');
-      };
-      this.recognition.onerror = (e) => {
-        console.error('Speech error:', e.error);
-        this.$('mic-btn').classList.remove('recording');
-      };
-    } else {
-      this.$('mic-btn').classList.add('unsupported');
-      this.$('mic-btn').title = 'Speech not supported in this browser';
-    }
-
-    // TTS toggle
-    this.$('tts-toggle').addEventListener('click', () => {
-      this.ttsEnabled = !this.ttsEnabled;
-      this.$('tts-toggle').classList.toggle('tts-on', this.ttsEnabled);
-      this.$('tts-toggle').textContent = this.ttsEnabled ? '🔊' : '🔇';
-      if (!this.ttsEnabled) this.synth.cancel();
-    });
-
-    // Mic button
-    const micBtn = this.$('mic-btn');
-    if (this.recognition) {
-      micBtn.addEventListener('click', () => {
-        if (micBtn.classList.contains('recording')) {
-          this.recognition.stop();
-        } else {
-          this.$('user-input').value = '';
-          micBtn.classList.add('recording');
-          this.recognition.start();
-        }
-      });
-    }
-  },
-
-  speak(text) {
-    if (!this.ttsEnabled || !this.synth) return;
-    this.synth.cancel();
-    // Clean markdown
-    const clean = text.replace(/\*\*/g, '').replace(/<[^>]+>/g, '');
-    const utterance = new SpeechSynthesisUtterance(clean);
-    utterance.lang = 'en-US';
-    utterance.rate = 0.95;
-    // Try to pick a good English voice
-    const voices = this.synth.getVoices();
-    const english = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google')) 
-                 || voices.find(v => v.lang.startsWith('en-US'))
-                 || voices.find(v => v.lang.startsWith('en'));
-    if (english) utterance.voice = english;
-    this.synth.speak(utterance);
-  },
-
-  // --- DOM refs ---
   $: id => document.getElementById(id),
 
   init() {
@@ -435,6 +361,150 @@ const App = {
     this.initSpeech();
   },
 
+  // --- Speech ---
+  initSpeech() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SR) {
+      this.recognition = new SR();
+      this.recognition.lang = 'en-US';
+      this.recognition.interimResults = true;
+      this.recognition.continuous = true;
+      this.recognition.maxAlternatives = 1;
+
+      let finalTranscript = '';
+
+      this.recognition.onresult = (e) => {
+        let interim = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const t = e.results[i][0].transcript;
+          if (e.results[i].isFinal) { finalTranscript += t + ' '; } else { interim = t; }
+        }
+        this.$('user-input').value = finalTranscript + interim;
+      };
+
+      this.recognition.onend = () => {
+        // If still recording, restart (browser may auto-stop)
+        if (this.$('mic-btn').classList.contains('recording')) {
+          try { this.recognition.start(); } catch(e) {}
+        } else {
+          this.$('mic-status').classList.remove('active');
+        }
+      };
+
+      this.recognition.onerror = (e) => {
+        if (e.error === 'no-speech') return; // ignore silence
+        console.error('Speech error:', e.error);
+        this.$('mic-btn').classList.remove('recording');
+        this.$('mic-status').classList.remove('active');
+      };
+
+      this.$('mic-btn').addEventListener('click', () => {
+        const btn = this.$('mic-btn');
+        if (btn.classList.contains('recording')) {
+          btn.classList.remove('recording');
+          this.$('mic-status').classList.remove('active');
+          this.recognition.stop();
+        } else {
+          finalTranscript = '';
+          this.$('user-input').value = '';
+          btn.classList.add('recording');
+          this.$('mic-status').classList.add('active');
+          this.recognition.start();
+        }
+      });
+    } else {
+      this.$('mic-btn').classList.add('unsupported');
+      this.$('mic-btn').title = 'Speech not supported — use Chrome or Edge';
+    }
+
+    this.$('tts-toggle').addEventListener('click', () => {
+      this.ttsEnabled = !this.ttsEnabled;
+      this.$('tts-toggle').classList.toggle('tts-on', this.ttsEnabled);
+      this.$('tts-toggle').textContent = this.ttsEnabled ? '🔊' : '🔇';
+      if (!this.ttsEnabled) this.synth.cancel();
+    });
+  },
+
+  speak(text) {
+    if (!this.ttsEnabled || !this.synth) return;
+    this.synth.cancel();
+    const clean = text.replace(/\*\*/g, '').replace(/<[^>]+>/g, '');
+    // Split long text into chunks (browser has ~300 char limit on some platforms)
+    const chunks = clean.match(/.{1,250}[.!?\n]|.{1,300}/g) || [clean];
+    const voices = this.synth.getVoices();
+    const voice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'))
+                || voices.find(v => v.lang === 'en-US')
+                || voices.find(v => v.lang.startsWith('en'));
+    chunks.forEach(chunk => {
+      const u = new SpeechSynthesisUtterance(chunk.trim());
+      u.lang = 'en-US'; u.rate = 0.92;
+      if (voice) u.voice = voice;
+      this.synth.speak(u);
+    });
+  },
+
+  // --- Tips ---
+  async getTip(role, text, messageDiv) {
+    // Check if tip already shown
+    if (messageDiv.querySelector('.tip-panel')) {
+      const panel = messageDiv.querySelector('.tip-panel');
+      panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+      return;
+    }
+
+    const btn = messageDiv.querySelector('.tip-btn');
+    btn.textContent = '⏳ Loading...';
+    btn.disabled = true;
+
+    const prompt = role === 'assistant'
+      ? `The following is a question/statement from an English conversation partner in a Salesforce professional setting. Provide:
+1. TRANSLATION: Translate to Brazilian Portuguese
+2. SUGGESTED RESPONSE: Write a strong sample response in English (2-3 sentences, professional, Salesforce architect level)
+3. RESPONSE TRANSLATION: Translate the suggested response to Brazilian Portuguese
+
+Format exactly as:
+**Tradução:** [translation]
+**Suggested response:** [response in English]
+**Tradução da resposta:** [response translation]
+
+Text: "${text}"`
+      : `The following is something the user said in English during a Salesforce professional conversation. Provide:
+1. TRANSLATION: Translate what the user said to Brazilian Portuguese
+2. IMPROVED VERSION: Rewrite it in better/more professional English if needed, or confirm it's good
+3. IMPROVED TRANSLATION: Translate the improved version to Brazilian Portuguese
+
+Format exactly as:
+**Tradução:** [translation]
+**Better way to say it:** [improved English or "Your phrasing was good!"]
+**Tradução:** [translation of improved]
+
+Text: "${text}"`;
+
+    try {
+      const res = await fetch('/english/api/chat/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
+        body: JSON.stringify({
+          scenario: this.currentScenario.id,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await res.json();
+      const tipHtml = this.formatText(data.reply || 'Tip unavailable');
+
+      const panel = document.createElement('div');
+      panel.className = 'tip-panel';
+      panel.innerHTML = tipHtml;
+      messageDiv.appendChild(panel);
+    } catch (e) {
+      console.error('Tip error:', e);
+    }
+
+    btn.textContent = '💡 Tip';
+    btn.disabled = false;
+  },
+
+  // --- Auth ---
   async checkAuth() {
     this.token = localStorage.getItem('te_token');
     if (this.token) {
@@ -447,37 +517,24 @@ const App = {
   },
 
   bindEvents() {
-    // Login
     this.$('login-btn').addEventListener('click', () => this.login());
-    this.$('password-input').addEventListener('keydown', e => {
-      if (e.key === 'Enter') this.login();
-    });
-
-    // Logout
+    this.$('password-input').addEventListener('keydown', e => { if (e.key === 'Enter') this.login(); });
     this.$('logout-btn').addEventListener('click', () => this.logout());
-
-    // Nav
     document.querySelectorAll('.nav-btn').forEach(btn => {
       btn.addEventListener('click', () => this.switchView(btn.dataset.view));
     });
-
-    // Chat controls
     this.$('back-btn').addEventListener('click', () => this.backToScenarios());
     this.$('end-session-btn').addEventListener('click', () => this.requestFeedback());
     this.$('send-btn').addEventListener('click', () => this.sendMessage());
     this.$('user-input').addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        this.sendMessage();
-      }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.sendMessage(); }
     });
   },
 
   async login() {
     const pw = this.$('password-input').value;
     const res = await fetch('/english/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: pw })
     });
     if (res.ok) {
@@ -491,7 +548,8 @@ const App = {
   },
 
   async logout() {
-    await fetch('/english/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + this.token }}); localStorage.removeItem('te_token'); this.token = null;
+    await fetch('/english/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + this.token }});
+    localStorage.removeItem('te_token'); this.token = null;
     this.showLogin();
   },
 
@@ -522,11 +580,7 @@ const App = {
     scenarios.forEach(s => {
       const card = document.createElement('div');
       card.className = 'scenario-card';
-      card.innerHTML = `
-        <span class="scenario-icon">${s.icon}</span>
-        <div class="scenario-name">${s.label}</div>
-        <div class="scenario-desc">${s.description}</div>
-      `;
+      card.innerHTML = `<span class="scenario-icon">${s.icon}</span><div class="scenario-name">${s.label}</div><div class="scenario-desc">${s.description}</div>`;
       card.addEventListener('click', () => this.startSession(s));
       container.appendChild(card);
     });
@@ -536,15 +590,13 @@ const App = {
     this.currentScenario = scenario;
     this.messages = [];
     this.secondsElapsed = 0;
-    this.sessionStartTime = Date.now();
-
     this.$('scenario-label').textContent = scenario.label;
     this.$('messages').innerHTML = '';
     this.$('user-input').value = '';
-
     this.$('scenario-select').classList.add('hidden');
     this.$('chat-area').classList.remove('hidden');
-
+    this.$('end-session-btn').disabled = false;
+    this.$('end-session-btn').textContent = 'End & Get Feedback';
     this.startTimer();
     this.getAssistantOpening();
   },
@@ -564,7 +616,6 @@ const App = {
     const reply = await this.callAPI([]);
     this.hideTyping();
     if (!reply) return;
-
     this.messages.push({ role: 'user', content: '[Session started]' });
     this.messages.push({ role: 'assistant', content: reply });
     this.renderMessage('assistant', reply);
@@ -575,9 +626,15 @@ const App = {
     const text = input.value.trim();
     if (!text) return;
 
+    // Stop mic if recording
+    if (this.$('mic-btn').classList.contains('recording')) {
+      this.$('mic-btn').classList.remove('recording');
+      this.$('mic-status').classList.remove('active');
+      if (this.recognition) this.recognition.stop();
+    }
+
     input.value = '';
     this.$('send-btn').disabled = true;
-
     this.messages.push({ role: 'user', content: text });
     this.renderMessage('user', text);
 
@@ -588,35 +645,27 @@ const App = {
     }
 
     this.showTyping();
+    this.synth.cancel(); // stop any TTS
     const reply = await this.callAPI(this.messages);
     this.hideTyping();
-
     if (reply) {
       this.messages.push({ role: 'assistant', content: reply });
       this.renderMessage('assistant', reply);
     }
-
     this.$('send-btn').disabled = false;
     input.focus();
   },
 
   async requestFeedback() {
     clearInterval(this.timerInterval);
-
-    const feedbackMessages = [
-      ...this.messages,
-      { role: 'user', content: 'feedback' }
-    ];
-
+    const feedbackMessages = [...this.messages, { role: 'user', content: 'feedback' }];
     this.showTyping();
     const feedback = await this.callAPI(feedbackMessages);
     this.hideTyping();
-
     if (feedback) {
       this.renderMessage('assistant', feedback, 'feedback');
       await this.saveSession(feedback);
     }
-
     this.$('end-session-btn').disabled = true;
     this.$('end-session-btn').textContent = 'Session saved ✓';
   },
@@ -633,10 +682,7 @@ const App = {
       });
       const data = await res.json();
       return data.reply || null;
-    } catch (err) {
-      console.error('API error:', err);
-      return null;
-    }
+    } catch (err) { console.error('API error:', err); return null; }
   },
 
   async saveSession(feedback) {
@@ -644,10 +690,8 @@ const App = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
       body: JSON.stringify({
-        scenario: this.currentScenario.id,
-        messages: this.messages,
-        feedback,
-        duration_seconds: this.secondsElapsed
+        scenario: this.currentScenario.id, messages: this.messages,
+        feedback, duration_seconds: this.secondsElapsed
       })
     });
   },
@@ -658,13 +702,21 @@ const App = {
     div.className = `message ${role} ${extraClass}`.trim();
 
     const roleLabel = role === 'user' ? 'You' : this.currentScenario?.label || 'Assistant';
+    const showTip = extraClass !== 'feedback' && text !== '[Session started]';
+
     div.innerHTML = `
       <div class="message-role">${roleLabel}</div>
       <div class="message-bubble">${this.formatText(text)}</div>
+      ${showTip ? '<button class="tip-btn">💡 Tip</button>' : ''}
     `;
+
+    if (showTip) {
+      div.querySelector('.tip-btn').addEventListener('click', () => this.getTip(role, text, div));
+    }
+
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
-    if (role === 'assistant') this.speak(text);
+    if (role === 'assistant' && extraClass !== 'feedback') this.speak(text);
   },
 
   formatText(text) {
@@ -677,68 +729,48 @@ const App = {
   showTyping() {
     const container = this.$('messages');
     const div = document.createElement('div');
-    div.className = 'message assistant typing-indicator';
-    div.id = 'typing';
-    div.innerHTML = `
-      <div class="message-role">${this.currentScenario?.label || 'Assistant'}</div>
-      <div class="message-bubble">typing...</div>
-    `;
+    div.className = 'message assistant typing-indicator'; div.id = 'typing';
+    div.innerHTML = `<div class="message-role">${this.currentScenario?.label || 'Assistant'}</div><div class="message-bubble">typing...</div>`;
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
   },
 
-  hideTyping() {
-    const el = this.$('typing');
-    if (el) el.remove();
-  },
+  hideTyping() { const el = this.$('typing'); if (el) el.remove(); },
 
   backToScenarios() {
     clearInterval(this.timerInterval);
+    this.synth.cancel();
+    if (this.recognition && this.$('mic-btn').classList.contains('recording')) {
+      this.recognition.stop();
+      this.$('mic-btn').classList.remove('recording');
+      this.$('mic-status').classList.remove('active');
+    }
     this.$('chat-area').classList.add('hidden');
     this.$('scenario-select').classList.remove('hidden');
-    this.$('end-session-btn').disabled = false;
-    this.$('end-session-btn').textContent = 'End & Get Feedback';
-    this.currentScenario = null;
-    this.messages = [];
+    this.currentScenario = null; this.messages = [];
   },
 
   async loadHistory() {
     const res = await fetch('/english/api/sessions/history', { headers: { 'Authorization': 'Bearer ' + this.token }});
     const sessions = await res.json();
     const list = this.$('history-list');
-
-    if (!sessions.length) {
-      list.innerHTML = '<p class="history-empty">No sessions yet. Start practicing!</p>';
-      return;
-    }
-
+    if (!sessions.length) { list.innerHTML = '<p class="history-empty">No sessions yet. Start practicing!</p>'; return; }
     list.innerHTML = '';
+    const labels = { interview: '🎯 Interview', stakeholder: '📊 Stakeholder', technical: '⚙️ Tech Team' };
     sessions.forEach(s => {
-      const date = new Date(s.created_at).toLocaleDateString('en-US', {
-        month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
-      });
-      const duration = s.duration_seconds
-        ? `${Math.floor(s.duration_seconds / 60)}m ${s.duration_seconds % 60}s`
-        : '—';
-
-      const labels = { interview: '🎯 Interview', stakeholder: '📊 Stakeholder', technical: '⚙️ Tech Team' };
+      const date = new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const dur = s.duration_seconds ? `${Math.floor(s.duration_seconds / 60)}m ${s.duration_seconds % 60}s` : '—';
       const item = document.createElement('div');
       item.className = 'history-item';
-      item.innerHTML = `
-        <div class="history-meta">
-          <div class="history-scenario">${labels[s.scenario] || s.scenario}</div>
-          <div class="history-date">${date}</div>
-          <div class="history-stats">${s.message_count} messages · ${duration}</div>
-        </div>
-        <span style="color: var(--text-3); font-size: 18px;">→</span>
-      `;
+      item.innerHTML = `<div class="history-meta"><div class="history-scenario">${labels[s.scenario] || s.scenario}</div><div class="history-date">${date}</div><div class="history-stats">${s.message_count} messages · ${dur}</div></div><span style="color:var(--text-3);font-size:18px">→</span>`;
       list.appendChild(item);
     });
   }
 };
 
 document.addEventListener('DOMContentLoaded', () => App.init());
-
+// Preload voices
+if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 </script>
 </body>
 </html>
