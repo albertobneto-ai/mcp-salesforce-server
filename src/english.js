@@ -1,4 +1,4 @@
-// src/english.js — TechEnglish conversation simulator
+// src/english.js — rebuild-v2 — TechEnglish conversation simulator
 import express from 'express';
 import pg from 'pg';
 import crypto from 'crypto';
