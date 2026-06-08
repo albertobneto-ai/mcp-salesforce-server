@@ -344,13 +344,14 @@ const App = {
   },
 
   async checkAuth() {
-    const res = await fetch('/english/api/auth/check');
-    const data = await res.json();
-    if (data.authenticated) {
-      this.showMain();
-    } else {
-      this.showLogin();
+    this.token = localStorage.getItem('te_token');
+    if (this.token) {
+      const res = await fetch('/english/api/auth/check', { headers: { 'Authorization': 'Bearer ' + this.token }});
+      const data = await res.json();
+      if (data.authenticated) { this.showMain(); return; }
+      localStorage.removeItem('te_token');
     }
+    this.showLogin();
   },
 
   bindEvents() {
@@ -388,6 +389,9 @@ const App = {
       body: JSON.stringify({ password: pw })
     });
     if (res.ok) {
+      const data = await res.json();
+      this.token = data.token;
+      localStorage.setItem('te_token', this.token);
       this.showMain();
     } else {
       this.$('login-error').textContent = 'Wrong password.';
@@ -395,7 +399,7 @@ const App = {
   },
 
   async logout() {
-    await fetch('/english/api/auth/logout', { method: 'POST' });
+    await fetch('/english/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + this.token }}); localStorage.removeItem('te_token'); this.token = null;
     this.showLogin();
   },
 
@@ -419,7 +423,7 @@ const App = {
   },
 
   async loadScenarios() {
-    const res = await fetch('/english/api/chat/scenarios');
+    const res = await fetch('/english/api/chat/scenarios', { headers: { 'Authorization': 'Bearer ' + this.token }});
     const scenarios = await res.json();
     const container = this.$('scenario-cards');
     container.innerHTML = '';
@@ -529,7 +533,7 @@ const App = {
     try {
       const res = await fetch('/english/api/chat/message', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
         body: JSON.stringify({
           scenario: this.currentScenario.id,
           messages: messages.length ? messages : [{ role: 'user', content: 'Begin the session.' }]
@@ -546,7 +550,7 @@ const App = {
   async saveSession(feedback) {
     await fetch('/english/api/sessions/save', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
       body: JSON.stringify({
         scenario: this.currentScenario.id,
         messages: this.messages,
@@ -606,7 +610,7 @@ const App = {
   },
 
   async loadHistory() {
-    const res = await fetch('/english/api/sessions/history');
+    const res = await fetch('/english/api/sessions/history', { headers: { 'Authorization': 'Bearer ' + this.token }});
     const sessions = await res.json();
     const list = this.$('history-list');
 
