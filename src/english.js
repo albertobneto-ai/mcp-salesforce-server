@@ -78,7 +78,7 @@ async function callOpenRouter(systemPrompt, messages) {
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.OPENROUTER_KEY}` },
-    body: JSON.stringify({ model: 'anthropic/claude-sonnet-4', max_tokens: 1024, messages: [{ role: 'system', content: systemPrompt }, ...messages] })
+    body: JSON.stringify({ model: 'deepseek/deepseek-chat-v3-0324', max_tokens: 1024, messages: [{ role: 'system', content: systemPrompt }, ...messages] })
   });
   if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${await res.text()}`);
   const data = await res.json();
@@ -113,10 +113,17 @@ router.get('/api/chat/scenarios', authMiddleware, (req, res) => {
 
 // Chat
 router.post('/api/chat/message', authMiddleware, async (req, res) => {
-  const { scenario, messages } = req.body;
-  if (!SCENARIOS[scenario]) return res.status(400).json({ error: 'Invalid scenario' });
+  const { scenario, messages, customPrompt } = req.body;
+  let sysPrompt;
+  if (customPrompt) {
+    sysPrompt = customPrompt;
+  } else if (SCENARIOS[scenario]) {
+    sysPrompt = SCENARIOS[scenario].systemPrompt;
+  } else {
+    return res.status(400).json({ error: 'Invalid scenario' });
+  }
   try {
-    const reply = await callOpenRouter(SCENARIOS[scenario].systemPrompt, messages);
+    const reply = await callOpenRouter(sysPrompt, messages);
     res.json({ reply });
   } catch (err) {
     console.error('[english] Error:', err.message);
