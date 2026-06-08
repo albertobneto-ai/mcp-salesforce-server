@@ -11,6 +11,7 @@ import { registerGitHubMultiRepoRoutes } from "./github-multi-repo.js";
 import { mountChatApp } from "./chat-app.js";
 import { registerMuleSyncRoutes } from "./mule-sync.js";
 import { registerKmlRoutes } from "./routes/kml.js";
+import { englishRouter, initEnglishDB } from "./english.js";
 
 const app = express();
 app.use(express.json({ limit: "10mb" }));
@@ -2208,6 +2209,11 @@ app.get("/api/assign-record-types/:objectName", async (req, res) => {
 registerSnowflakeRoutes(app);
 registerMuleSyncRoutes(app, sfClient);
 registerKmlRoutes(app);
+  
+  // TechEnglish
+  app.use('/english', englishRouter);
+  initEnglishDB(pool);
+  console.log('[english] Mounted at /english');
   registerAdditionalRoutes(app, sfClient, connectToTargetOrg);
 
 // --- Everi9 Chat App ---
