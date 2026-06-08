@@ -80,7 +80,7 @@ async function callOpenRouter(systemPrompt, messages) {
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.OPENROUTER_KEY}` },
     body: JSON.stringify({ model: 'anthropic/claude-sonnet-4', max_tokens: 1024, messages: [{ role: 'system', content: systemPrompt }, ...messages] })
   });
-  if (!res.ok) { const errText = await res.text(); console.error('[english] OpenRouter error body:', errText.substring(0,300)); throw new Error(`OpenRouter ${res.status}: ${errText.substring(0,200)}`); }
+  if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${await res.text()}`);
   const data = await res.json();
   return data.choices[0].message.content;
 }
