@@ -246,6 +246,102 @@ kbd {
 .history-stats { font-size: 12px; color: var(--text-3); }
 .history-empty { color: var(--text-2); font-size: 14px; padding: 2rem 0; }
 
+
+/* ===== TRANSLATOR ===== */
+#view-translator { overflow-y: auto; background: var(--bg); }
+.translator-container {
+  max-width: 720px; margin: 0 auto; padding: 2rem;
+  display: flex; flex-direction: column; gap: 1.5rem;
+}
+.translator-controls {
+  display: flex; flex-direction: column; align-items: center; gap: 1rem;
+}
+.lang-selector { display: flex; gap: 6px; }
+.lang-btn {
+  padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg-2); color: var(--text-2); font-family: var(--sans);
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+}
+.lang-btn.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+.lang-btn:hover { border-color: var(--accent); }
+
+.translator-mic-btn {
+  width: 120px; height: 120px; border-radius: 50%; border: 3px solid var(--border);
+  background: var(--bg-2); cursor: pointer; transition: all 0.3s;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  box-shadow: var(--shadow-md);
+}
+.translator-mic-btn:hover { border-color: var(--accent); box-shadow: var(--shadow-lg); transform: scale(1.03); }
+.translator-mic-btn.active {
+  border-color: #e84393; background: linear-gradient(135deg, #fce4ec, #f8e8ff);
+  animation: pulse-translator 1.5s infinite;
+}
+@keyframes pulse-translator {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232,67,147,0.2); }
+  50% { box-shadow: 0 0 0 16px rgba(232,67,147,0); }
+}
+.translator-mic-icon { font-size: 36px; }
+.translator-mic-label { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; }
+.translator-mic-btn.active .translator-mic-label { color: #e84393; }
+.translator-mic-btn.active .translator-mic-icon::after { content: ''; }
+
+.translator-status {
+  font-size: 12px; color: var(--text-3); min-height: 18px; text-align: center;
+}
+
+.translator-live {
+  width: 100%; padding: 14px 18px; background: var(--bg-2); border: 1px solid var(--accent);
+  border-radius: 12px; box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.translator-live-label {
+  font-size: 11px; font-weight: 600; color: var(--accent); text-transform: uppercase;
+  letter-spacing: 0.06em; margin-bottom: 6px;
+}
+.translator-live-text {
+  font-size: 15px; color: var(--text); line-height: 1.6; min-height: 24px;
+  font-style: italic;
+}
+
+.translator-feed {
+  display: flex; flex-direction: column; gap: 12px;
+}
+.translator-entry {
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: 14px;
+  padding: 16px 18px; box-shadow: var(--shadow-sm); animation: fadeUp 0.3s ease;
+  position: relative;
+}
+.translator-entry-source {
+  font-size: 15px; font-weight: 500; color: var(--text); line-height: 1.6;
+  margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--bg-3);
+}
+.translator-entry-target {
+  font-size: 14px; color: var(--accent); line-height: 1.6; font-weight: 500;
+}
+.translator-entry-meta {
+  display: flex; align-items: center; gap: 8px; margin-top: 8px;
+}
+.translator-entry-time {
+  font-size: 11px; color: var(--text-3); font-family: var(--mono);
+}
+.translator-entry-lang {
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 2px 6px; border-radius: 4px; background: var(--accent-dim); color: var(--accent);
+}
+.translator-entry-speak {
+  width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border);
+  background: var(--bg); cursor: pointer; font-size: 14px; display: flex;
+  align-items: center; justify-content: center; transition: all 0.15s;
+  position: absolute; top: 14px; right: 14px;
+}
+.translator-entry-speak:hover { border-color: var(--accent); background: var(--accent-dim); }
+.translator-entry.translating .translator-entry-target {
+  color: var(--text-3); font-style: italic;
+}
+
+.translator-actions {
+  display: flex; justify-content: center; padding-top: 0.5rem;
+}
+
 /* ===== LESSONS ===== */
 #view-lessons { overflow-y: auto; padding: 2rem; background: var(--bg); }
 .lessons-grid {
@@ -336,6 +432,7 @@ kbd {
         <nav class="nav">
           <button class="nav-btn" data-view="lessons">Lessons</button>
           <button class="nav-btn active" data-view="practice">Practice</button>
+          <button class="nav-btn" data-view="translator">Translator</button>
           <button class="nav-btn" data-view="history">History</button>
         </nav>
         <button id="logout-btn" class="btn-ghost">Logout</button>
@@ -381,6 +478,35 @@ kbd {
                 <button id="send-btn" class="btn-send">Send →</button>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+
+      <div id="view-translator" class="view hidden">
+        <div class="translator-container">
+          <div class="translator-header">
+            <h1 class="page-title">Live Translator</h1>
+            <p class="page-sub">Listen, transcribe, and translate in real time</p>
+          </div>
+          <div class="translator-controls">
+            <div class="lang-selector">
+              <button class="lang-btn active" data-lang="en" id="lang-en">🇺🇸 English → Portuguese</button>
+              <button class="lang-btn" data-lang="pt" id="lang-pt">🇧🇷 Portuguese → English</button>
+            </div>
+            <button id="translator-mic" class="translator-mic-btn">
+              <span class="translator-mic-icon">🎤</span>
+              <span class="translator-mic-label">Start listening</span>
+            </button>
+            <div id="translator-status" class="translator-status"></div>
+            <div id="translator-live" class="translator-live hidden">
+              <div class="translator-live-label">Hearing...</div>
+              <div id="translator-live-text" class="translator-live-text"></div>
+            </div>
+          </div>
+          <div id="translator-feed" class="translator-feed"></div>
+          <div class="translator-actions hidden" id="translator-actions">
+            <button class="btn-ghost" id="translator-clear">🗑 Clear all</button>
           </div>
         </div>
       </div>
@@ -545,7 +671,7 @@ const App = {
 
   $: id => document.getElementById(id),
 
-  init() { this.checkAuth(); this.bindEvents(); this.initSpeech(); },
+  init() { this.checkAuth(); this.bindEvents(); this.initSpeech(); this.initTranslator(); },
 
   // --- Speech ---
   initSpeech() {
@@ -850,6 +976,7 @@ Text: "${text.substring(0, 500)}"`;
     this.$(`view-${view}`).classList.remove('hidden');
     document.querySelector(`.nav-btn[data-view="${view}"]`).classList.add('active');
     if (view === 'history') this.loadHistory();
+    if (view === 'translator') { /* nothing special */ }
     if (view === 'lessons') { this.$('lesson-detail-view').classList.add('hidden'); this.$('lessons-list-view').classList.remove('hidden'); this.renderLessons(); }
   },
 
@@ -975,6 +1102,169 @@ Text: "${text.substring(0, 500)}"`;
     }
     this.$('chat-area').classList.add('hidden'); this.$('scenario-select').classList.remove('hidden');
   },
+
+
+
+  // ===== TRANSLATOR =====
+  translatorRecognition: null,
+  translatorLang: 'en',
+  translatorActive: false,
+
+  initTranslator() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      this.$('translator-status').textContent = 'Speech recognition not supported. Use Chrome or Edge.';
+      this.$('translator-mic').style.opacity = '0.4';
+      this.$('translator-mic').style.cursor = 'not-allowed';
+      return;
+    }
+
+    // Language buttons
+    this.$('lang-en').addEventListener('click', () => { this.setTranslatorLang('en'); });
+    this.$('lang-pt').addEventListener('click', () => { this.setTranslatorLang('pt'); });
+
+    // Mic button
+    this.$('translator-mic').addEventListener('click', () => {
+      if (this.translatorActive) this.stopTranslator();
+      else this.startTranslator();
+    });
+
+    // Clear button
+    this.$('translator-clear').addEventListener('click', () => {
+      this.$('translator-feed').innerHTML = '';
+      this.$('translator-actions').classList.add('hidden');
+    });
+  },
+
+  setTranslatorLang(lang) {
+    this.translatorLang = lang;
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+    this.$('lang-' + lang).classList.add('active');
+    if (this.translatorActive) {
+      this.stopTranslator();
+      setTimeout(() => this.startTranslator(), 300);
+    }
+  },
+
+  startTranslator() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    this.translatorRecognition = new SR();
+    this.translatorRecognition.lang = this.translatorLang === 'en' ? 'en-US' : 'pt-BR';
+    this.translatorRecognition.interimResults = true;
+    this.translatorRecognition.continuous = true;
+    this.translatorActive = true;
+
+    let finalTranscript = '';
+    let lastFinalLength = 0;
+
+    this.translatorRecognition.onresult = (e) => {
+      let interim = '';
+      finalTranscript = '';
+      for (let i = 0; i < e.results.length; i++) {
+        if (e.results[i].isFinal) {
+          finalTranscript += e.results[i][0].transcript;
+        } else {
+          interim += e.results[i][0].transcript;
+        }
+      }
+
+      // Show live text
+      this.$('translator-live').classList.remove('hidden');
+      this.$('translator-live-text').textContent = interim || '...';
+
+      // When we get new final text, translate it
+      if (finalTranscript.length > lastFinalLength) {
+        const newText = finalTranscript.substring(lastFinalLength).trim();
+        lastFinalLength = finalTranscript.length;
+        if (newText.length > 2) {
+          this.translateEntry(newText);
+          this.$('translator-live-text').textContent = '';
+        }
+      }
+    };
+
+    this.translatorRecognition.onend = () => {
+      if (this.translatorActive) {
+        try { this.translatorRecognition.start(); } catch(e) {}
+      }
+    };
+
+    this.translatorRecognition.onerror = (e) => {
+      if (e.error === 'no-speech') return;
+      this.$('translator-status').textContent = 'Error: ' + e.error;
+    };
+
+    this.translatorRecognition.start();
+    this.$('translator-mic').classList.add('active');
+    this.$('translator-mic').querySelector('.translator-mic-label').textContent = 'Listening...';
+    this.$('translator-status').textContent = this.translatorLang === 'en' ? 'Speak in English — translation to Portuguese' : 'Fale em Português — tradução para Inglês';
+  },
+
+  stopTranslator() {
+    this.translatorActive = false;
+    if (this.translatorRecognition) {
+      this.translatorRecognition.stop();
+      this.translatorRecognition = null;
+    }
+    this.$('translator-mic').classList.remove('active');
+    this.$('translator-mic').querySelector('.translator-mic-label').textContent = 'Start listening';
+    this.$('translator-live').classList.add('hidden');
+    this.$('translator-status').textContent = '';
+  },
+
+  async translateEntry(text) {
+    const feed = this.$('translator-feed');
+    const isEn = this.translatorLang === 'en';
+    const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    const entry = document.createElement('div');
+    entry.className = 'translator-entry translating';
+    entry.innerHTML = [
+      '<button class="translator-entry-speak" title="Listen">🔊</button>',
+      '<div class="translator-entry-source">' + this.escHtml(text) + '</div>',
+      '<div class="translator-entry-target">Translating...</div>',
+      '<div class="translator-entry-meta">',
+      '  <span class="translator-entry-lang">' + (isEn ? 'EN → PT' : 'PT → EN') + '</span>',
+      '  <span class="translator-entry-time">' + time + '</span>',
+      '</div>',
+    ].join('');
+
+    feed.insertBefore(entry, feed.firstChild);
+    this.$('translator-actions').classList.remove('hidden');
+
+    // Speak button
+    entry.querySelector('.translator-entry-speak').addEventListener('click', () => {
+      const target = entry.querySelector('.translator-entry-target').textContent;
+      if (target && target !== 'Translating...') {
+        this.synth.cancel();
+        const u = new SpeechSynthesisUtterance(target);
+        u.lang = isEn ? 'pt-BR' : 'en-US'; u.rate = 0.9;
+        this.synth.speak(u);
+      }
+    });
+
+    // Call API for translation
+    try {
+      const prompt = isEn
+        ? 'Translate the following English text to Brazilian Portuguese. Return ONLY the translation, nothing else:\n\n' + text
+        : 'Translate the following Portuguese text to English. Return ONLY the translation, nothing else:\n\n' + text;
+
+      const res = await fetch('/english/api/chat/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
+        body: JSON.stringify({ customPrompt: 'You are a professional translator. Translate accurately and naturally. Return ONLY the translation text, no explanations.', messages: [{ role: 'user', content: prompt }] })
+      });
+      const data = await res.json();
+      const translation = (data.reply || 'Translation failed').trim();
+      entry.querySelector('.translator-entry-target').textContent = translation;
+      entry.classList.remove('translating');
+    } catch (e) {
+      entry.querySelector('.translator-entry-target').textContent = 'Translation error';
+      entry.classList.remove('translating');
+    }
+  },
+
+  escHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); },
 
   async loadHistory() {
     const res = await fetch('/english/api/sessions/history', { headers: { 'Authorization': 'Bearer ' + this.token }});
