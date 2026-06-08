@@ -113,10 +113,17 @@ router.get('/api/chat/scenarios', authMiddleware, (req, res) => {
 
 // Chat
 router.post('/api/chat/message', authMiddleware, async (req, res) => {
-  const { scenario, messages } = req.body;
-  if (!SCENARIOS[scenario]) return res.status(400).json({ error: 'Invalid scenario' });
+  const { scenario, messages, customPrompt } = req.body;
+  let systemPrompt;
+  if (customPrompt) {
+    systemPrompt = customPrompt;
+  } else if (SCENARIOS[scenario]) {
+    systemPrompt = SCENARIOS[scenario].systemPrompt;
+  } else {
+    return res.status(400).json({ error: 'Invalid scenario' });
+  }
   try {
-    const reply = await callOpenRouter(SCENARIOS[scenario].systemPrompt, messages);
+    const reply = await callOpenRouter(systemPrompt, messages);
     res.json({ reply });
   } catch (err) {
     console.error('[english] Error:', err.message);
