@@ -247,10 +247,41 @@ kbd {
 .history-empty { color: var(--text-2); font-size: 14px; padding: 2rem 0; }
 
 
+
+.translator-mic-row { display: flex; justify-content: center; }
+.translator-panels {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; flex: 1; min-height: 0;
+}
+@media (max-width: 768px) { .translator-panels { grid-template-columns: 1fr; } }
+.translator-panel-live, .translator-panel-context {
+  display: flex; flex-direction: column; min-height: 0;
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: 14px;
+  overflow: hidden;
+}
+.translator-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+  background: var(--bg);
+}
+.translator-panel-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.translator-count { font-size: 11px; color: var(--text-3); font-family: var(--mono); }
+.translator-feed, .translator-context {
+  flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px;
+  max-height: 50vh;
+}
+.translator-context-entry {
+  padding: 8px 12px; border-radius: 8px; font-size: 13px; line-height: 1.6;
+  border-left: 3px solid var(--accent); background: var(--bg);
+}
+.translator-context-entry .ctx-source { font-weight: 500; color: var(--text); }
+.translator-context-entry .ctx-target { color: var(--accent); margin-top: 2px; }
+.translator-context-entry .ctx-time { font-size: 10px; color: var(--text-3); font-family: var(--mono); margin-top: 3px; }
+.translator-actions { display: flex; justify-content: center; gap: 8px; padding-top: 0.5rem; }
+
 /* ===== TRANSLATOR ===== */
 #view-translator { overflow-y: auto; background: var(--bg); }
 .translator-container {
-  max-width: 720px; margin: 0 auto; padding: 2rem;
+  max-width: 960px; margin: 0 auto; padding: 2rem;
   display: flex; flex-direction: column; gap: 1.5rem;
 }
 .translator-controls {
@@ -494,18 +525,35 @@ kbd {
               <button class="lang-btn active" data-lang="en" id="lang-en">🇺🇸 English → Portuguese</button>
               <button class="lang-btn" data-lang="pt" id="lang-pt">🇧🇷 Portuguese → English</button>
             </div>
-            <button id="translator-mic" class="translator-mic-btn">
-              <span class="translator-mic-icon">🎤</span>
-              <span class="translator-mic-label">Start listening</span>
-            </button>
+            <div class="translator-mic-row">
+              <button id="translator-mic" class="translator-mic-btn">
+                <span class="translator-mic-icon">🎤</span>
+                <span class="translator-mic-label">Start listening</span>
+              </button>
+            </div>
             <div id="translator-status" class="translator-status"></div>
             <div id="translator-live" class="translator-live hidden">
               <div class="translator-live-label">Hearing...</div>
               <div id="translator-live-text" class="translator-live-text"></div>
             </div>
           </div>
-          <div id="translator-feed" class="translator-feed"></div>
-          <div class="translator-actions hidden" id="translator-actions">
+          <div class="translator-panels">
+            <div class="translator-panel-live">
+              <div class="translator-panel-header">
+                <span class="translator-panel-title">⚡ Live Translation</span>
+              </div>
+              <div id="translator-feed" class="translator-feed"></div>
+            </div>
+            <div class="translator-panel-context">
+              <div class="translator-panel-header">
+                <span class="translator-panel-title">📄 Full Transcript</span>
+                <span id="translator-entry-count" class="translator-count">0 entries</span>
+              </div>
+              <div id="translator-context" class="translator-context"></div>
+            </div>
+          </div>
+          <div class="translator-actions" id="translator-actions">
+            <button class="btn-ghost" id="translator-download" style="display:none">📥 Download .txt</button>
             <button class="btn-ghost" id="translator-clear">🗑 Clear all</button>
           </div>
         </div>
@@ -1132,8 +1180,12 @@ Text: "${text.substring(0, 500)}"`;
     // Clear button
     this.$('translator-clear').addEventListener('click', () => {
       this.$('translator-feed').innerHTML = '';
-      this.$('translator-actions').classList.add('hidden');
+      this.$('translator-context').innerHTML = '';
+      this.translatorHistory = [];
+      this.$('translator-entry-count').textContent = '0 entries';
+      this.$('translator-download').style.display = 'none';
     });
+    this.$('translator-download').addEventListener('click', () => this.downloadTranscript());
   },
 
   setTranslatorLang(lang) {
@@ -1209,14 +1261,17 @@ Text: "${text.substring(0, 500)}"`;
     this.$('translator-mic').classList.remove('active');
     this.$('translator-mic').querySelector('.translator-mic-label').textContent = 'Start listening';
     this.$('translator-live').classList.add('hidden');
-    this.$('translator-status').textContent = '';
+    this.$('translator-status').textContent = this.translatorHistory.length ? 'Session ended — ' + this.translatorHistory.length + ' entries captured' : '';
   },
+
+  translatorHistory: [],
 
   async translateEntry(text) {
     const feed = this.$('translator-feed');
     const isEn = this.translatorLang === 'en';
     const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
+    // Live panel entry
     const entry = document.createElement('div');
     entry.className = 'translator-entry translating';
     entry.innerHTML = [
@@ -1228,9 +1283,7 @@ Text: "${text.substring(0, 500)}"`;
       '  <span class="translator-entry-time">' + time + '</span>',
       '</div>',
     ].join('');
-
     feed.insertBefore(entry, feed.firstChild);
-    this.$('translator-actions').classList.remove('hidden');
 
     // Speak button
     entry.querySelector('.translator-entry-speak').addEventListener('click', () => {
@@ -1243,7 +1296,7 @@ Text: "${text.substring(0, 500)}"`;
       }
     });
 
-    // Call API for translation
+    // Translate
     try {
       const prompt = isEn
         ? 'Translate the following English text to Brazilian Portuguese. Return ONLY the translation, nothing else:\n\n' + text
@@ -1258,10 +1311,52 @@ Text: "${text.substring(0, 500)}"`;
       const translation = (data.reply || 'Translation failed').trim();
       entry.querySelector('.translator-entry-target').textContent = translation;
       entry.classList.remove('translating');
+
+      // Add to context panel
+      this.addToContext(text, translation, time, isEn);
     } catch (e) {
       entry.querySelector('.translator-entry-target').textContent = 'Translation error';
       entry.classList.remove('translating');
+      this.addToContext(text, '[translation error]', time, isEn);
     }
+  },
+
+  addToContext(source, target, time, isEn) {
+    const ctx = this.$('translator-context');
+    const entry = document.createElement('div');
+    entry.className = 'translator-context-entry';
+    entry.innerHTML = '<div class="ctx-source">' + this.escHtml(source) + '</div>'
+      + '<div class="ctx-target">' + this.escHtml(target) + '</div>'
+      + '<div class="ctx-time">' + time + '</div>';
+    ctx.appendChild(entry);
+    ctx.scrollTop = ctx.scrollHeight;
+
+    // Store for download
+    this.translatorHistory.push({ source, target, time, dir: isEn ? 'EN→PT' : 'PT→EN' });
+    this.$('translator-entry-count').textContent = this.translatorHistory.length + ' entries';
+    this.$('translator-download').style.display = 'inline-flex';
+  },
+
+  downloadTranscript() {
+    if (!this.translatorHistory.length) return;
+    const date = new Date().toLocaleDateString('en-US', { year:'numeric', month:'2-digit', day:'2-digit' });
+    const timeNow = new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+    let txt = 'TechEnglish — Live Translation Transcript\n';
+    txt += 'Date: ' + date + ' ' + timeNow + '\n';
+    txt += 'Entries: ' + this.translatorHistory.length + '\n';
+    txt += '═'.repeat(50) + '\n\n';
+    this.translatorHistory.forEach((h, i) => {
+      txt += '[' + h.time + '] (' + h.dir + ')\n';
+      txt += '  Original:  ' + h.source + '\n';
+      txt += '  Translated: ' + h.target + '\n\n';
+    });
+    const blob = new Blob([txt], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'transcript-' + date.replace(/\//g, '-') + '.txt';
+    a.click();
+    URL.revokeObjectURL(url);
   },
 
   escHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); },
