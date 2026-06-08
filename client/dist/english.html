@@ -180,7 +180,7 @@ input[type="password"]:focus, textarea:focus { border-color: var(--accent); box-
 }
 .message.user .tip-btn { align-self: flex-end; }
 .tip-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
-.tip-panel {
+.tip-panel, .auto-tip {
   margin-top: 6px; padding: 12px 14px; background: var(--tip-bg); border: 1px solid var(--tip-border);
   border-radius: 10px; font-size: 13px; line-height: 1.65; color: var(--text-2);
   animation: fadeUp 0.2s ease; max-width: 100%;
@@ -310,6 +310,8 @@ kbd {
   font-size: 13px; color: #166534; font-weight: 500;
 }
 
+
+.auto-tip { border-left: 3px solid var(--accent); background: var(--tip-bg); }
 /* SCROLLBAR */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -691,7 +693,7 @@ const App = {
       this.renderLessons();
     });
     this.$('lesson-practice-btn').addEventListener('click', () => {
-      this.switchView('practice');
+      this.startLessonPractice(l);
     });
     const completeBtn = this.$('lesson-complete-btn');
     if (completeBtn) {
@@ -702,6 +704,96 @@ const App = {
         }
         this.openLesson(l); // refresh
       });
+    }
+  },
+
+
+  // --- Lesson Practice ---
+  async startLessonPractice(lesson) {
+    // Build vocabulary context for the AI
+    const vocabSection = lesson.sections.find(s => s.type === 'vocab');
+    const vocabList = vocabSection ? vocabSection.items.map(([en, pt]) => `- "${en}" (${pt})`).join('\n') : '';
+    
+    const exSection = lesson.sections.find(s => s.type === 'examples');
+    const exList = exSection ? exSection.items.map(([en, pt]) => `Example: "${en}"`).join('\n') : '';
+
+    const lessonScenario = {
+      id: 'lesson_' + lesson.id,
+      label: '📚 ' + lesson.title,
+      icon: '📚',
+      description: lesson.desc,
+      isLesson: true,
+      lessonData: lesson,
+      systemPrompt: `You are an English conversation partner helping a Brazilian Salesforce Architect practice the topic: "${lesson.title}".
+
+CONTEXT: This is lesson ${lesson.number} — ${lesson.desc}
+
+KEY VOCABULARY the student should practice:
+${vocabList}
+
+${exList ? 'EXAMPLE DIALOGUES:\n' + exList : ''}
+
+YOUR BEHAVIOR:
+- Start with a brief context-setting introduction related to the topic, then ask ONE question that requires the student to use vocabulary from this lesson
+- After each student response, react naturally AND ask a follow-up that pushes them to use MORE vocabulary from the list
+- If they use vocabulary from the list correctly, briefly acknowledge it ("Good use of...")
+- If they avoid key phrases, gently steer: "How would you describe the trade-off?" or "Can you elaborate on the approach?"
+- Keep it conversational and professional — simulate a real work scenario
+- Ask only ONE question at a time
+- After 8-10 exchanges or when the student types "feedback", provide:
+
+**Vocabulary used from this lesson:** [list which key phrases they used]
+**Vocabulary missed:** [which ones they should practice more]
+**Grammar/phrasing corrections:** [specific fixes with examples]
+**Pronunciation tips:** [any words they likely struggle with based on Portuguese speakers]
+**Overall:** [1 sentence assessment]
+
+IMPORTANT: English only. Never switch to Portuguese. Start now.`
+    };
+
+    // Switch to practice view and start session with this scenario
+    this.switchView('practice');
+    this.startSession(lessonScenario);
+  },
+
+  // --- Auto Tips ---
+  async loadAutoTip(text, messageDiv, role) {
+    const tipPanel = document.createElement('div');
+    tipPanel.className = 'tip-panel auto-tip';
+    tipPanel.innerHTML = '<span style="color:var(--text-3);font-size:12px">⏳ Loading tip...</span>';
+    messageDiv.appendChild(tipPanel);
+
+    const prompt = role === 'assistant'
+      ? `Translate this English text to Brazilian Portuguese, then provide a suggested response in English (2-3 sentences, professional Salesforce architect level), then translate the suggested response to PT-BR. Be concise.
+
+Format EXACTLY as (no extra text):
+**Tradução:** [translation]
+**Suggested response:** [response]  
+**Tradução da resposta:** [translation]
+
+Text: "${text.substring(0, 500)}"`
+      : `Translate what the user said to PT-BR, then provide an improved/more professional English version if needed. Be concise.
+
+Format EXACTLY as (no extra text):
+**Tradução:** [translation]
+**Better phrasing:** [improved English or "Your phrasing was good!"]
+**Tradução:** [translation]
+
+Text: "${text.substring(0, 500)}"`;
+
+    try {
+      const res = await fetch('/english/api/chat/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
+        body: JSON.stringify({
+          scenario: this.currentScenario.id,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await res.json();
+      tipPanel.innerHTML = this.formatText(data.reply || 'Tip unavailable');
+    } catch (e) {
+      tipPanel.innerHTML = '<span style="color:var(--text-3);font-size:12px">Could not load tip</span>';
     }
   },
 
@@ -826,9 +918,16 @@ const App = {
 
   async callAPI(messages) {
     try {
+      const body = { messages: messages.length ? messages : [{ role: 'user', content: 'Begin the session.' }] };
+      if (this.currentScenario?.isLesson) {
+        body.customPrompt = this.currentScenario.systemPrompt;
+        body.scenario = 'interview'; // fallback id
+      } else {
+        body.scenario = this.currentScenario.id;
+      }
       const res = await fetch('/english/api/chat/message', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
-        body: JSON.stringify({ scenario: this.currentScenario.id, messages: messages.length ? messages : [{ role: 'user', content: 'Begin the session.' }] })
+        body: JSON.stringify(body)
       });
       return (await res.json()).reply || null;
     } catch (e) { return null; }
@@ -850,6 +949,10 @@ const App = {
     if (showTip) div.querySelector('.tip-btn').addEventListener('click', () => this.getTip(role, text, div));
     container.appendChild(div); container.scrollTop = container.scrollHeight;
     if (role === 'assistant' && extraClass !== 'feedback') this.speak(text);
+    // Auto-tip for lesson practice
+    if (showTip && this.currentScenario?.isLesson) {
+      this.loadAutoTip(text, div, role);
+    }
   },
 
   formatText(t) {
