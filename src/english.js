@@ -1,10 +1,20 @@
 // src/english.js — TechEnglish conversation simulator
 import express from 'express';
 import pg from 'pg';
+import crypto from 'crypto';
 const { Pool } = pg;
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
 const router = express.Router();
+
+// Simple token auth (no express-session needed)
+const tokens = new Set();
+
+function authMiddleware(req, res, next) {
+  const token = (req.headers.authorization || '').replace('Bearer ', '');
+  if (!token || !tokens.has(token)) return res.status(401).json({ error: 'Unauthorized' });
+  next();
+}
 
 const SCENARIOS = {
   interview: {
@@ -79,24 +89,30 @@ async function callOpenRouter(systemPrompt, messages) {
 router.post('/api/auth/login', (req, res) => {
   const { password } = req.body;
   if (password === (process.env.ENGLISH_PASSWORD || 'english2026')) {
-    req.session.english_auth = true;
-    res.json({ ok: true });
+    const token = crypto.randomBytes(32).toString('hex');
+    tokens.add(token);
+    res.json({ ok: true, token });
   } else {
     res.status(401).json({ error: 'Wrong password' });
   }
 });
-router.post('/api/auth/logout', (req, res) => { req.session.english_auth = false; res.json({ ok: true }); });
-router.get('/api/auth/check', (req, res) => { res.json({ authenticated: !!req.session?.english_auth }); });
+router.post('/api/auth/logout', authMiddleware, (req, res) => {
+  const token = (req.headers.authorization || '').replace('Bearer ', '');
+  tokens.delete(token);
+  res.json({ ok: true });
+});
+router.get('/api/auth/check', (req, res) => {
+  const token = (req.headers.authorization || '').replace('Bearer ', '');
+  res.json({ authenticated: tokens.has(token) });
+});
 
 // Scenarios
-router.get('/api/chat/scenarios', (req, res) => {
-  if (!req.session?.english_auth) return res.status(401).json({ error: 'Unauthorized' });
+router.get('/api/chat/scenarios', authMiddleware, (req, res) => {
   res.json(Object.entries(SCENARIOS).map(([k, v]) => ({ id: k, label: v.label, icon: v.icon, description: v.description })));
 });
 
 // Chat
-router.post('/api/chat/message', async (req, res) => {
-  if (!req.session?.english_auth) return res.status(401).json({ error: 'Unauthorized' });
+router.post('/api/chat/message', authMiddleware, async (req, res) => {
   const { scenario, messages } = req.body;
   if (!SCENARIOS[scenario]) return res.status(400).json({ error: 'Invalid scenario' });
   try {
@@ -109,8 +125,7 @@ router.post('/api/chat/message', async (req, res) => {
 });
 
 // Sessions
-router.post('/api/sessions/save', async (req, res) => {
-  if (!req.session?.english_auth) return res.status(401).json({ error: 'Unauthorized' });
+router.post('/api/sessions/save', authMiddleware, async (req, res) => {
   const { scenario, messages, feedback, duration_seconds } = req.body;
   try {
     const r = await pool.query(
@@ -121,8 +136,7 @@ router.post('/api/sessions/save', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Failed to save' }); }
 });
 
-router.get('/api/sessions/history', async (req, res) => {
-  if (!req.session?.english_auth) return res.status(401).json({ error: 'Unauthorized' });
+router.get('/api/sessions/history', authMiddleware, async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT id, scenario, feedback, duration_seconds, created_at, jsonb_array_length(messages) as message_count
