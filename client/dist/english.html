@@ -269,23 +269,38 @@ startTr(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   this.trRec=new SR();this.trRec.lang=this.trLang==='en'?'en-US':'pt-BR';
   this.trRec.interimResults=true;this.trRec.continuous=true;this.trOn=true;
-  let ft='',lastLen=0;
-  this.trRec.onresult=e=>{let interim='';ft='';
-    for(let i=0;i<e.results.length;i++){if(e.results[i].isFinal)ft+=e.results[i][0].transcript;else interim+=e.results[i][0].transcript;}
-    this.$('tr-live').classList.remove('hidden');this.$('tr-live-txt').textContent=interim||'...';
-    if(ft.length>lastLen){const nw=ft.substring(lastLen).trim();lastLen=ft.length;if(nw.length>2)this.trEntry(nw);}
+  this._trProcessed=0;this._trDebounce=null;this._trPending='';this._trBusy=false;
+  this.trRec.onresult=e=>{
+    let interim='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal){
+        const txt=e.results[i][0].transcript.trim();
+        if(txt.length>2&&i>=this._trProcessed){this._trProcessed=i+1;this._queueEntry(txt);}
+      }else{interim=e.results[i][0].transcript;}
+    }
+    if(interim){this.$('tr-live').classList.remove('hidden');this.$('tr-live-txt').textContent=interim;}
   };
-  this.trRec.onend=()=>{if(this.trOn)try{this.trRec.start();}catch(e){}};
-  this.trRec.onerror=e=>{if(e.error!=='no-speech')this.$('tr-status').textContent='Error: '+e.error;};
+  this.trRec.onend=()=>{if(this.trOn){this._trProcessed=0;try{this.trRec.start();}catch(e){}}};
+  this.trRec.onerror=e=>{if(e.error!=='no-speech'&&e.error!=='aborted')this.$('tr-status').textContent='Error: '+e.error;};
   this.trRec.start();
   this.$('tr-mic').classList.add('on');this.$('tr-mic').querySelector('.tr-mic-l').textContent='Stop';
-  this.$('tr-status').textContent=this.trLang==='en'?'Listening English → translating to Portuguese':'Ouvindo Português → traduzindo para Inglês';
+  this.$('tr-status').textContent=this.trLang==='en'?'EN → PT':'PT → EN';
+},
+_queueEntry(txt){
+  this._trPending+=(this._trPending?' ':'')+txt;
+  clearTimeout(this._trDebounce);
+  this._trDebounce=setTimeout(()=>{
+    const batch=this._trPending.trim();this._trPending='';
+    if(batch.length>2)this.trEntry(batch);
+  },1500);
 },
 stopTr(){
   this.trOn=false;if(this.trRec){this.trRec.stop();this.trRec=null;}
+  clearTimeout(this._trDebounce);
+  if(this._trPending&&this._trPending.trim().length>2){this.trEntry(this._trPending.trim());this._trPending='';}
   this.$('tr-mic').classList.remove('on');this.$('tr-mic').querySelector('.tr-mic-l').textContent='Start';
   this.$('tr-live').classList.add('hidden');
-  this.$('tr-status').textContent=this.trHist.length?this.trHist.length+' entries captured':'';
+  this.$('tr-status').textContent=this.trHist.length?this.trHist.length+' entries':'';
 },
 async trEntry(text){
   const feed=this.$('tr-feed'),ctx=this.$('tr-ctx'),isEn=this.trLang==='en';
