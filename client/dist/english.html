@@ -269,13 +269,10 @@ kbd {
   flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px;
   max-height: 50vh;
 }
-.translator-context-entry {
-  padding: 8px 12px; border-radius: 8px; font-size: 13px; line-height: 1.6;
-  border-left: 3px solid var(--accent); background: var(--bg);
-}
-.translator-context-entry .ctx-source { font-weight: 500; color: var(--text); }
-.translator-context-entry .ctx-target { color: var(--accent); margin-top: 2px; }
-.translator-context-entry .ctx-time { font-size: 10px; color: var(--text-3); font-family: var(--mono); margin-top: 3px; }
+.ctx-line { font-size: 13px; line-height: 1.65; padding: 2px 0; }
+.ctx-line.ctx-source { color: var(--text); font-weight: 500; }
+.ctx-line.ctx-target { color: var(--accent); font-style: italic; padding-left: 12px; border-left: 2px solid var(--accent-dim); margin-left: 4px; }
+.ctx-time-inline { font-size: 10px; color: var(--text-3); font-family: var(--mono); margin-right: 4px; }
 .translator-actions { display: flex; justify-content: center; gap: 8px; padding-top: 0.5rem; }
 
 
@@ -584,13 +581,13 @@ kbd {
           <div class="translator-panels">
             <div class="translator-panel-live">
               <div class="translator-panel-header">
-                <span class="translator-panel-title">⚡ Live Translation</span>
+                <span class="translator-panel-title">⚡ Live</span>
               </div>
               <div id="translator-feed" class="translator-feed"></div>
             </div>
             <div class="translator-panel-context">
               <div class="translator-panel-header">
-                <span class="translator-panel-title">📄 Full Transcript</span>
+                <span class="translator-panel-title">📄 Full Context</span>
                 <span id="translator-entry-count" class="translator-count">0 entries</span>
               </div>
               <div id="translator-context" class="translator-context"></div>
@@ -1315,65 +1312,71 @@ Text: "${text.substring(0, 500)}"`;
     const isEn = this.translatorLang === 'en';
     const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-    // Live panel entry
+    // Live panel: source only, no auto-translate
     const entry = document.createElement('div');
-    entry.className = 'translator-entry translating';
+    entry.className = 'translator-entry';
     entry.innerHTML = [
-      '<button class="translator-entry-speak" title="Context & Response">💬</button>',
+      '<button class="translator-entry-speak" title="Pause & Translate">💬</button>',
       '<div class="translator-entry-source">' + this.escHtml(text) + '</div>',
-      '<div class="translator-entry-target">Translating...</div>',
       '<div class="translator-entry-meta">',
-      '  <span class="translator-entry-lang">' + (isEn ? 'EN → PT' : 'PT → EN') + '</span>',
       '  <span class="translator-entry-time">' + time + '</span>',
       '</div>',
     ].join('');
     feed.insertBefore(entry, feed.firstChild);
 
-    // Tip popup button
+    // 💬 button opens popup with translation + suggested response
     entry.querySelector('.translator-entry-speak').addEventListener('click', () => {
-      const target = entry.querySelector('.translator-entry-target').textContent;
-      if (target && target !== 'Translating...') {
-        this.openTranslatorTip(text, target, isEn);
-      }
+      this.openTranslatorTip(text, null, isEn);
     });
 
-    // Translate
+    // Context panel: auto-translate in background
+    this.addToContext(text, time, isEn);
+  },
+
+  async addToContext(source, time, isEn) {
+    const ctx = this.$('translator-context');
+
+    // Add source line immediately
+    const srcSpan = document.createElement('div');
+    srcSpan.className = 'ctx-line ctx-source';
+    srcSpan.innerHTML = '<span class="ctx-time-inline">' + time + '</span> ' + this.escHtml(source);
+    ctx.appendChild(srcSpan);
+
+    // Translate in background
     try {
       const prompt = isEn
-        ? 'Translate the following English text to Brazilian Portuguese. Return ONLY the translation, nothing else:\n\n' + text
-        : 'Translate the following Portuguese text to English. Return ONLY the translation, nothing else:\n\n' + text;
+        ? 'Translate to Brazilian Portuguese. ONLY the translation:\n' + source
+        : 'Translate to English. ONLY the translation:\n' + source;
 
       const res = await fetch('/english/api/chat/message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
-        body: JSON.stringify({ customPrompt: 'You are a professional translator. Translate accurately and naturally. Return ONLY the translation text, no explanations.', messages: [{ role: 'user', content: prompt }] })
+        body: JSON.stringify({ customPrompt: 'You are a translator. Return ONLY the translation, nothing else.', messages: [{ role: 'user', content: prompt }] })
       });
       const data = await res.json();
-      const translation = (data.reply || 'Translation failed').trim();
-      entry.querySelector('.translator-entry-target').textContent = translation;
-      entry.classList.remove('translating');
+      const translation = (data.reply || '...').trim();
 
-      // Add to context panel
-      this.addToContext(text, translation, time, isEn);
+      const tgtSpan = document.createElement('div');
+      tgtSpan.className = 'ctx-line ctx-target';
+      tgtSpan.textContent = translation;
+      ctx.appendChild(tgtSpan);
+
+      // Spacer
+      const spacer = document.createElement('div');
+      spacer.style.height = '6px';
+      ctx.appendChild(spacer);
+
+      ctx.scrollTop = ctx.scrollHeight;
+
+      this.translatorHistory.push({ source, target: translation, time, dir: isEn ? 'EN→PT' : 'PT→EN' });
     } catch (e) {
-      entry.querySelector('.translator-entry-target').textContent = 'Translation error';
-      entry.classList.remove('translating');
-      this.addToContext(text, '[translation error]', time, isEn);
+      const tgtSpan = document.createElement('div');
+      tgtSpan.className = 'ctx-line ctx-target';
+      tgtSpan.textContent = '[error]';
+      ctx.appendChild(tgtSpan);
+      this.translatorHistory.push({ source, target: '[error]', time, dir: isEn ? 'EN→PT' : 'PT→EN' });
     }
-  },
 
-  addToContext(source, target, time, isEn) {
-    const ctx = this.$('translator-context');
-    const entry = document.createElement('div');
-    entry.className = 'translator-context-entry';
-    entry.innerHTML = '<div class="ctx-source">' + this.escHtml(source) + '</div>'
-      + '<div class="ctx-target">' + this.escHtml(target) + '</div>'
-      + '<div class="ctx-time">' + time + '</div>';
-    ctx.appendChild(entry);
-    ctx.scrollTop = ctx.scrollHeight;
-
-    // Store for download
-    this.translatorHistory.push({ source, target, time, dir: isEn ? 'EN→PT' : 'PT→EN' });
     this.$('translator-entry-count').textContent = this.translatorHistory.length + ' entries';
     this.$('translator-download').style.display = 'inline-flex';
   },
@@ -1402,7 +1405,6 @@ Text: "${text.substring(0, 500)}"`;
 
 
   async openTranslatorTip(originalText, translatedText, isEn) {
-    // Create overlay
     const overlay = document.createElement('div');
     overlay.className = 'translator-popup-overlay';
 
@@ -1417,9 +1419,9 @@ Text: "${text.substring(0, 500)}"`;
         <div class="translator-popup-label">${isEn ? '🇺🇸 Original (English)' : '🇧🇷 Original (Portuguese)'}</div>
         <div class="translator-popup-text">${this.escHtml(originalText)}</div>
       </div>
-      <div class="translator-popup-section">
+      <div class="translator-popup-section" id="tip-context-section">
         <div class="translator-popup-label">${isEn ? '🇧🇷 Contexto (Português)' : '🇺🇸 Context (English)'}</div>
-        <div class="translator-popup-text accent">${this.escHtml(translatedText)}</div>
+        <div class="translator-popup-text accent">${translatedText ? this.escHtml(translatedText) : '⏳ Translating...'}</div>
       </div>
       <div class="translator-popup-section" id="tip-response-section">
         <div class="translator-popup-loading">⏳ Generating suggested response...</div>
@@ -1431,6 +1433,23 @@ Text: "${text.substring(0, 500)}"`;
 
     // Close handlers
     const close = () => overlay.remove();
+
+    // Fetch translation if not provided
+    if (!translatedText) {
+      try {
+        const tPrompt = isEn
+          ? 'Translate to Brazilian Portuguese. ONLY the translation:\n' + originalText
+          : 'Translate to English. ONLY the translation:\n' + originalText;
+        const tRes = await fetch('/english/api/chat/message', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.token },
+          body: JSON.stringify({ customPrompt: 'Translator. Return ONLY the translation.', messages: [{ role: 'user', content: tPrompt }] })
+        });
+        const tData = await tRes.json();
+        translatedText = (tData.reply || 'Translation failed').trim();
+        const ctxSection = popup.querySelector('#tip-context-section .translator-popup-text');
+        if (ctxSection) ctxSection.textContent = translatedText;
+      } catch(e) { translatedText = '[error]'; }
+    }
     popup.querySelector('.translator-popup-close').addEventListener('click', close);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
     document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }});
