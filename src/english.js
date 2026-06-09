@@ -75,23 +75,11 @@ IMPORTANT: English only. One question/comment at a time. Use real dev jargon. St
 };
 
 
-async function callHaiku(systemPrompt, messages, maxTk) {
-  const msgs = [{ role: 'system', content: systemPrompt }, ...messages];
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + process.env.OPENROUTER_KEY },
-    body: JSON.stringify({ model: 'anthropic/claude-3.5-haiku', max_tokens: maxTk || 1500, messages: msgs })
-  });
-  if (!res.ok) { const err = await res.text(); console.error('[english] Haiku error:', err.substring(0,200)); throw new Error('Haiku ' + res.status); }
-  const data = await res.json();
-  return data.choices[0].message.content;
-}
-
-async function callOpenRouter(systemPrompt, messages, maxTk) {
+async function callOpenRouter(systemPrompt, messages, maxTk, model) {
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.OPENROUTER_KEY}` },
-    body: JSON.stringify({ model: 'deepseek/deepseek-chat-v3-0324', max_tokens: maxTk || 1500, messages: [{ role: 'system', content: systemPrompt }, ...messages] })
+    body: JSON.stringify({ model: model || 'deepseek/deepseek-chat-v3-0324', max_tokens: maxTk || 1500, messages: [{ role: 'system', content: systemPrompt }, ...messages] })
   });
   if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${await res.text()}`);
   const data = await res.json();
@@ -136,7 +124,7 @@ router.post('/api/chat/message', authMiddleware, async (req, res) => {
     return res.status(400).json({ error: 'Invalid scenario' });
   }
   try {
-    const reply = useGrok ? await callHaiku(sysPrompt, messages, max_tokens) : await callOpenRouter(sysPrompt, messages, max_tokens);
+    const reply = await callOpenRouter(sysPrompt, messages, max_tokens, useGrok ? 'anthropic/claude-3.5-haiku' : undefined);
     res.json({ reply });
   } catch (err) {
     console.error('[english] Error:', err.message);
