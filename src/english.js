@@ -74,6 +74,19 @@ IMPORTANT: English only. One question/comment at a time. Use real dev jargon. St
   }
 };
 
+
+async function callGrok(systemPrompt, messages, maxTk) {
+  const grokMessages = [{ role: 'system', content: systemPrompt }, ...messages];
+  const res = await fetch('https://api.x.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (process.env.GROK_KEY || '') },
+    body: JSON.stringify({ model: 'grok-3-mini', max_tokens: maxTk || 800, messages: grokMessages })
+  });
+  if (!res.ok) { const err = await res.text(); console.error('[english] Grok error:', err.substring(0,200)); throw new Error('Grok ' + res.status); }
+  const data = await res.json();
+  return data.choices[0].message.content;
+}
+
 async function callOpenRouter(systemPrompt, messages, maxTk) {
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -113,7 +126,7 @@ router.get('/api/chat/scenarios', authMiddleware, (req, res) => {
 
 // Chat
 router.post('/api/chat/message', authMiddleware, async (req, res) => {
-  const { scenario, messages, customPrompt, max_tokens } = req.body;
+  const { scenario, messages, customPrompt, max_tokens, useGrok } = req.body;
   let sysPrompt;
   if (customPrompt) {
     sysPrompt = customPrompt;
@@ -123,7 +136,7 @@ router.post('/api/chat/message', authMiddleware, async (req, res) => {
     return res.status(400).json({ error: 'Invalid scenario' });
   }
   try {
-    const reply = await callOpenRouter(sysPrompt, messages, max_tokens);
+    const reply = useGrok ? await callGrok(sysPrompt, messages, max_tokens) : await callOpenRouter(sysPrompt, messages, max_tokens);
     res.json({ reply });
   } catch (err) {
     console.error('[english] Error:', err.message);
