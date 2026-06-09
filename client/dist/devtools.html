@@ -7,27 +7,27 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg-primary: #0f0a1a;
-    --bg-secondary: #1a1128;
-    --bg-tertiary: #241a35;
-    --bg-card: #1e1530;
-    --bg-input: #160f22;
-    --border: #3d2d5c;
-    --border-focus: #8b5cf6;
-    --accent: #8b5cf6;
-    --accent-light: #a78bfa;
-    --accent-dim: #6d28d9;
-    --accent-glow: rgba(139, 92, 246, 0.15);
-    --accent-glow-strong: rgba(139, 92, 246, 0.3);
-    --success: #34d399;
-    --success-bg: rgba(52, 211, 153, 0.1);
-    --error: #f87171;
-    --error-bg: rgba(248, 113, 113, 0.1);
-    --warning: #fbbf24;
-    --warning-bg: rgba(251, 191, 36, 0.1);
-    --text-primary: #e8e0f0;
-    --text-secondary: #a89bc2;
-    --text-muted: #6b5a8a;
+    --bg-primary: #f5f3f7;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #ece8f1;
+    --bg-card: #ffffff;
+    --bg-input: #f9f7fb;
+    --border: #d6cfe0;
+    --border-focus: #7c3aed;
+    --accent: #7c3aed;
+    --accent-light: #6d28d9;
+    --accent-dim: #5b21b6;
+    --accent-glow: rgba(124, 58, 237, 0.08);
+    --accent-glow-strong: rgba(124, 58, 237, 0.14);
+    --success: #059669;
+    --success-bg: rgba(5, 150, 105, 0.08);
+    --error: #dc2626;
+    --error-bg: rgba(220, 38, 38, 0.06);
+    --warning: #d97706;
+    --warning-bg: rgba(217, 119, 6, 0.08);
+    --text-primary: #1e1433;
+    --text-secondary: #4a3d5e;
+    --text-muted: #8c7ea3;
     --font-body: 'Inter', -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
@@ -43,8 +43,8 @@
 
   /* Header */
   .header {
-    background: var(--bg-secondary);
-    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, #6b21a8, #7c3aed);
+    border-bottom: none;
     padding: 0 24px;
     height: 56px;
     display: flex;
@@ -58,15 +58,15 @@
   .header-logo {
     font-size: 18px;
     font-weight: 700;
-    color: var(--accent-light);
+    color: #ffffff;
     letter-spacing: -0.5px;
   }
-  .header-logo span { color: var(--text-muted); font-weight: 400; font-size: 14px; margin-left: 8px; }
+  .header-logo span { color: rgba(255,255,255,0.7); font-weight: 400; font-size: 14px; margin-left: 8px; }
   .conn-status {
     display: flex; align-items: center; gap: 8px;
-    font-size: 12px; color: var(--text-secondary);
-    background: var(--bg-tertiary); padding: 6px 14px; border-radius: 20px;
-    border: 1px solid var(--border);
+    font-size: 12px; color: #fff;
+    background: rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.25);
   }
   .conn-dot { width: 8px; height: 8px; border-radius: 50%; }
   .conn-dot.ok { background: var(--success); box-shadow: 0 0 6px var(--success); }
@@ -84,6 +84,7 @@
     border-right: 1px solid var(--border);
     padding: 16px 0;
     flex-shrink: 0;
+    box-shadow: 1px 0 4px rgba(0,0,0,0.03);
   }
   .sidebar-section { padding: 0 12px; margin-bottom: 8px; }
   .sidebar-label {
@@ -118,6 +119,7 @@
     border-radius: 12px;
     padding: 20px;
     margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   }
   .card-title {
     font-size: 14px; font-weight: 600; color: var(--accent-light);
@@ -158,6 +160,7 @@
   }
   .btn-primary {
     background: var(--accent); color: #fff;
+    box-shadow: 0 1px 3px rgba(124,58,237,0.3);
   }
   .btn-primary:hover { background: var(--accent-dim); transform: translateY(-1px); }
   .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
@@ -225,8 +228,8 @@
   /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
+  ::-webkit-scrollbar-thumb { background: #c4bbd3; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
   /* Responsive */
   @media (max-width: 768px) {
