@@ -368,7 +368,7 @@ async trEntry(text){
     const p=isEn
       ?'"'+text+'"\nTRADUÇÃO: [pt-br]\nRESPOSTA: [english, 1-2 sentences, architecture-level if SF topic, use specific SF terms]\nTRADUÇÃO DA RESPOSTA: [pt-br]'
       :'"'+text+'"\nTRANSLATION: [english]\nRESPONSE: [english, 1-2 sentences, architecture-level if SF topic]\nTRADUÇÃO: [pt-br]';
-    const r=await self.api({customPrompt:'SF Architect translator. Translate + suggest response. For SF/tech: name specific objects, features, patterns, limits. Decisive, 1-2 sentences. Follow format.',messages:[{role:'user',content:p}]},350);
+    const r=await self.api({customPrompt:'SF Architect translator. Translate + suggest response. For SF/tech: name specific objects, features, patterns, limits. Decisive, 1-2 sentences. Follow format.',messages:[{role:'user',content:p}]},800);
     const reply=(r||'').trim();
     res.innerHTML='<div class="tr-r-sf">'+self.fmt(reply)+'</div>';
     res.style.display='block';this.textContent='✓';
@@ -379,7 +379,7 @@ async trEntry(text){
     const res=e.querySelector('.tr-e-result');
     const recentCtx=Array.from(ctx.querySelectorAll('.ctx-l')).slice(-8).map(x=>x.textContent).join('\n');
     const prompt='Contexto:\n'+recentCtx+'\n\n"'+text+'"\n\nEM PORTUGUÊS. Solução SF específica.\nSOLUÇÃO: [nome]\nDETALHE: [como resolve, objetos e features específicos]\nCOMPONENTES: [features SF exatas]';
-    const r=await self.api({customPrompt:'SF Architect. Português. Cite objetos específicos (Account, OpportunityLineItem), features (Flow, CDC, Apex Trigger), patterns. Direto, sem enrolação.',messages:[{role:'user',content:prompt}]},400);
+    const r=await self.api({customPrompt:'SF Architect. Português. Cite objetos específicos (Account, OpportunityLineItem), features (Flow, CDC, Apex Trigger), patterns. Direto, sem enrolação.',messages:[{role:'user',content:prompt}]},800);
     res.innerHTML='<div class="tr-r-lbl">☁️ SF Solution</div><div class="tr-r-sf">'+self.fmt((r||'...').trim())+'</div>';
     res.style.display='block';this.textContent='✓';
   };
