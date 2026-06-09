@@ -75,14 +75,14 @@ IMPORTANT: English only. One question/comment at a time. Use real dev jargon. St
 };
 
 
-async function callGrok(systemPrompt, messages, maxTk) {
-  const grokMessages = [{ role: 'system', content: systemPrompt }, ...messages];
-  const res = await fetch('https://api.x.ai/v1/chat/completions', {
+async function callHaiku(systemPrompt, messages, maxTk) {
+  const msgs = [{ role: 'system', content: systemPrompt }, ...messages];
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (process.env.GROK_KEY || '') },
-    body: JSON.stringify({ model: 'grok-3-mini', max_tokens: maxTk || 1500, messages: grokMessages })
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + process.env.OPENROUTER_KEY },
+    body: JSON.stringify({ model: 'anthropic/claude-3.5-haiku', max_tokens: maxTk || 1500, messages: msgs })
   });
-  if (!res.ok) { const err = await res.text(); console.error('[english] Grok error:', err.substring(0,200)); throw new Error('Grok ' + res.status); }
+  if (!res.ok) { const err = await res.text(); console.error('[english] Haiku error:', err.substring(0,200)); throw new Error('Haiku ' + res.status); }
   const data = await res.json();
   return data.choices[0].message.content;
 }
