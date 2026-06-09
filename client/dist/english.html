@@ -379,7 +379,20 @@ async trEntry(text){
     const res=e.querySelector('.tr-e-result');
     const recentCtx=Array.from(ctx.querySelectorAll('.ctx-l')).slice(-8).map(x=>x.textContent).join('\n');
     const prompt='Contexto:\n'+recentCtx+'\n\n"'+text+'"\n\nEM PORTUGUÊS. Solução SF específica.\nSOLUÇÃO: [nome]\nDETALHE: [como resolve, objetos e features específicos]\nCOMPONENTES: [features SF exatas]';
-    const r=await self.api({customPrompt:'SF Architect. Português. Cite objetos específicos (Account, OpportunityLineItem), features (Flow, CDC, Apex Trigger), patterns. Direto, sem enrolação.',messages:[{role:'user',content:prompt}]},800);
+    const r=await self.api({customPrompt:`SF Solution Architect. Sempre em Português Brasileiro.
+
+REGRAS SALESFORCE INVIOLÁVEIS:
+- Roll-Up Summary SOMENTE no objeto PAI (master), nunca no filho
+- Master-Detail: filho tem o campo, pai ganha Roll-Up Summary
+- Validation Rules são declarativas (Setup), NÃO são Triggers
+- Process Builder e Workflow Rules são APOSENTADOS — use Flow
+- SOQL: não existe SELECT *, listar campos; limite 50K rows
+- Governor Limits: 100 SOQL, 150 DML, 6MB heap, 10s CPU
+- Lookup=opcional, Master-Detail=obrigatório+cascade delete+Roll-Up
+- Permission Sets substituem Profiles (best practice)
+- Data Cloud = CDP/perfis unificados, NÃO é Data Loader
+
+Cite objetos, features e patterns específicos. Direto, sem enrolação. Verifique contra as regras antes de responder.`,messages:[{role:'user',content:prompt}]},800);
     res.innerHTML='<div class="tr-r-lbl">☁️ SF Solution</div><div class="tr-r-sf">'+self.fmt((r||'...').trim())+'</div>';
     res.style.display='block';this.textContent='✓';
   };
@@ -419,12 +432,12 @@ async _selAction(type){
       const batchP=isEn
         ?'Translate these English statements to Portuguese, then suggest what I could respond (in English + Portuguese translation):\n\n'+combined+'\n\nFormat:\nTRADUÇÃO:\n[full translation]\n\nRESPOSTA SUGERIDA:\n[response in English]\n\nTRADUÇÃO DA RESPOSTA:\n[response in Portuguese]'
         :'Translate these Portuguese statements to English, then suggest what I could respond (in English + Portuguese translation):\n\n'+combined+'\n\nFormat:\nTRANSLATION:\n[full translation]\n\nSUGGESTED RESPONSE:\n[response in English]\n\nTRADUÇÃO:\n[response in Portuguese]';
-      reply=await this.api({customPrompt:'SF Architect translator. Translate + suggest architecture-level response with specific SF terms. Concise. Follow format.',messages:[{role:'user',content:batchP}]});
+      reply=await this.api({customPrompt:`SF Architect translator. Translate + suggest response. REGRAS SF: Roll-Up só no PAI, Validation Rules≠Triggers, Process Builder aposentado→Flow, SOQL sem SELECT*, Governor Limits (100 SOQL/150 DML). Verifique antes de responder. Follow format.`,messages:[{role:'user',content:batchP}]});
       res.innerHTML='<div class="tr-r-lbl">'+(isEn?'🇧🇷 Translation + Response ('+texts.length+' blocks)':'🇺🇸 Translation + Response ('+texts.length+' blocks)')+'</div><div class="tr-r-sf">'+this.fmt((reply||'...').trim())+'</div>';
     }else{
       const recentCtx=Array.from(this.$('tr-ctx').querySelectorAll('.ctx-l')).slice(-12).map(x=>x.textContent).join('\n');
       const prompt='Senior Salesforce Architect (Sales/Service/Data/Revenue Cloud, Agentforce, MuleSoft, Apex, Flows, LWC).\n\nContexto da conversa:\n'+recentCtx+'\n\nBlocos selecionados:\n'+combined+'\n\nAnalise o contexto combinado e sugira soluções Salesforce em PORTUGUÊS BRASILEIRO. Seja específico com produtos, features, objetos e abordagem de implementação.';
-      reply=await this.api({customPrompt:'SF Solution Architect. Always respond in Brazilian Portuguese. Detailed, actionable.',messages:[{role:'user',content:prompt}]});
+      reply=await this.api({customPrompt:`SF Solution Architect. Português Brasileiro. REGRAS: Roll-Up Summary só no PAI. Validation Rules ≠ Triggers. Process Builder/Workflow aposentados, use Flow. SOQL sem SELECT *, 50K limit. Governor Limits: 100 SOQL, 150 DML. Lookup≠Master-Detail. Verifique antes de responder. Detalhado, acionável.`,messages:[{role:'user',content:prompt}]});
       res.innerHTML='<div class="tr-r-lbl">☁️ SF Solution ('+texts.length+' blocks)</div><div class="tr-r-sf">'+this.fmt((reply||'...').trim())+'</div>';
     }
   }catch(x){res.innerHTML='<div class="tr-r-lbl">Error</div>';}
