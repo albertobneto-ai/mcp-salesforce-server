@@ -322,32 +322,43 @@ async trEntry(text){
   const feed=this.$('tr-feed'),ctx=this.$('tr-ctx'),isEn=this.trLang==='en';
   const time=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 
-  // Live panel: source + translation
-  const e=document.createElement('div');e.className='tr-e';
-  e.innerHTML='<button class="tr-e-btn" title="Context & Response">💬</button><div class="tr-e-src">'+this.esc(text)+'</div><div class="tr-e-tgt loading">⏳ Translating...</div><div class="tr-e-time">'+time+'</div>';
-  feed.insertBefore(e,feed.firstChild);
-
-  // Context panel: transcribe only
+  // Transcript: raw text only
   const cl=document.createElement('div');cl.className='ctx-l';cl.innerHTML='<span class="ctx-t">'+time+'</span> '+this.esc(text);
   ctx.appendChild(cl);ctx.scrollTop=ctx.scrollHeight;
-  const cnt=ctx.querySelectorAll('.ctx-l').length;this.$('tr-cnt').textContent=cnt;
-
-  // Translate for Live
-  let translation='';
-  try{
-    const p=isEn?'Translate to Brazilian Portuguese. ONLY the translation:\n'+text:'Translate to English. ONLY the translation:\n'+text;
-    const reply=await this.api({customPrompt:'Translator. Return ONLY the translation, nothing else.',messages:[{role:'user',content:p}]});
-    translation=(reply||'').trim();
-    e.querySelector('.tr-e-tgt').textContent=translation||'...';
-    e.querySelector('.tr-e-tgt').classList.remove('loading');
-  }catch(x){e.querySelector('.tr-e-tgt').textContent='Error';e.querySelector('.tr-e-tgt').classList.remove('loading');}
-
-  this.trHist.push({source:text,target:translation,time,dir:isEn?'EN→PT':'PT→EN'});
+  this.$('tr-cnt').textContent=ctx.children.length;
   this.$('tr-dl').style.display='inline-flex';
+  this.trHist.push({source:text,time});
 
-  // 💬 button
-  e.querySelector('.tr-e-btn').onclick=()=>this.trTip(text,translation,isEn);
+  // Live Insights: card with 3 action buttons
+  const e=document.createElement('div');e.className='tr-e';
+  e.innerHTML='<div class="tr-e-src">'+this.esc(text)+'</div><div class="tr-e-time">'+time+'</div><div class="tr-e-acts"><button class="tr-ab tr-ab-tr">🌐 Translate</button><button class="tr-ab tr-ab-sf">☁️ SF Solution</button><button class="tr-ab tr-ab-tip">💬 Respond</button></div><div class="tr-e-result" style="display:none"></div>';
+  feed.insertBefore(e,feed.firstChild);
+  if(feed.children.length>30)feed.removeChild(feed.lastChild);
+
+  const self=this;
+  // Translate
+  e.querySelector('.tr-ab-tr').onclick=async function(){
+    this.disabled=true;this.textContent='⏳...';
+    const res=e.querySelector('.tr-e-result');
+    const p=isEn?'Translate to Brazilian Portuguese. ONLY the translation:\n'+text:'Translate to English. ONLY the translation:\n'+text;
+    const r=await self.api({customPrompt:'Translator. ONLY translation.',messages:[{role:'user',content:p}]});
+    res.innerHTML='<div class="tr-r-lbl">'+(isEn?'🇧🇷 Português':'🇺🇸 English')+'</div><div class="tr-r-txt">'+self.esc((r||'...').trim())+'</div>';
+    res.style.display='block';this.textContent='✓ Done';
+  };
+  // SF Solution
+  e.querySelector('.tr-ab-sf').onclick=async function(){
+    this.disabled=true;this.textContent='⏳ Analyzing...';
+    const res=e.querySelector('.tr-e-result');
+    const recentCtx=Array.from(ctx.querySelectorAll('.ctx-l')).slice(-8).map(x=>x.textContent).join('\n');
+    const prompt='You are a senior Salesforce Architect (Sales Cloud, Service Cloud, Data Cloud, Revenue Cloud, Agentforce, MuleSoft). Context:\n'+recentCtx+'\n\nLatest: "'+text+'"\n\nSuggest the Salesforce solution. Be specific. 3-5 lines.\nSOLUTION: [name]\nDETAIL: [how]\nCOMPONENTS: [SF features]';
+    const r=await self.api({customPrompt:'Salesforce Solution Architect. Concise, specific.',messages:[{role:'user',content:prompt}]});
+    res.innerHTML='<div class="tr-r-lbl">☁️ Salesforce Solution</div><div class="tr-r-sf">'+self.fmt((r||'No suggestion').trim())+'</div>';
+    res.style.display='block';this.textContent='✓ Done';
+  };
+  // Respond
+  e.querySelector('.tr-ab-tip').onclick=()=>this.trTip(text,null,isEn);
 },
+
 async trTip(orig,trans,isEn){
   const ov=document.createElement('div');ov.className='popup-ov';
   const p=document.createElement('div');p.className='popup';
