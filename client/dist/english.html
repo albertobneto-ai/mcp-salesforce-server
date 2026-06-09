@@ -375,8 +375,8 @@ async trEntry(text){
     this.disabled=true;this.textContent='⏳';
     const res=e.querySelector('.tr-e-result');
     const recentCtx=Array.from(ctx.querySelectorAll('.ctx-l')).slice(-8).map(x=>x.textContent).join('\n');
-    const prompt='Senior Salesforce Architect (Sales/Service/Data/Revenue Cloud, Agentforce, MuleSoft).\nContext:\n'+recentCtx+'\n\nLatest: "'+text+'"\n\nSuggest Salesforce solution. Specific. 3-5 lines.\nSOLUTION: [name]\nDETAIL: [how]\nCOMPONENTS: [SF features]';
-    const r=await self.api({customPrompt:'SF Solution Architect. Concise.',messages:[{role:'user',content:prompt}]});
+    const prompt='Senior Salesforce Architect (Sales/Service/Data/Revenue Cloud, Agentforce, MuleSoft).\nContext:\n'+recentCtx+'\n\nLatest: "'+text+'"\n\nSuggest Salesforce solution in BRAZILIAN PORTUGUESE. Be specific. 3-5 lines.\nSOLUÇÃO: [nome]\nDETALHE: [como resolve]\nCOMPONENTES: [features SF]';
+    const r=await self.api({customPrompt:'SF Solution Architect. Always respond in Brazilian Portuguese. Concise, specific.',messages:[{role:'user',content:prompt}]});
     res.innerHTML='<div class="tr-r-lbl">☁️ SF Solution</div><div class="tr-r-sf">'+self.fmt((r||'...').trim())+'</div>';
     res.style.display='block';this.textContent='✓';
   };
@@ -417,8 +417,8 @@ async _selAction(type){
       res.innerHTML='<div class="tr-r-lbl">'+(isEn?'🇧🇷 Translation ('+texts.length+' blocks)':'🇺🇸 Translation ('+texts.length+' blocks)')+'</div><div class="tr-r-txt">'+this.esc((reply||'...').trim())+'</div>';
     }else{
       const recentCtx=Array.from(this.$('tr-ctx').querySelectorAll('.ctx-l')).slice(-12).map(x=>x.textContent).join('\n');
-      const prompt='Senior Salesforce Architect (Sales/Service/Data/Revenue Cloud, Agentforce, MuleSoft, Apex, Flows, LWC).\n\nFull conversation context:\n'+recentCtx+'\n\nSelected blocks for analysis:\n'+combined+'\n\nAnalyze the combined context and suggest comprehensive Salesforce solution(s). Be specific with products, features, objects, and implementation approach.';
-      reply=await this.api({customPrompt:'SF Solution Architect. Detailed, actionable.',messages:[{role:'user',content:prompt}]});
+      const prompt='Senior Salesforce Architect (Sales/Service/Data/Revenue Cloud, Agentforce, MuleSoft, Apex, Flows, LWC).\n\nContexto da conversa:\n'+recentCtx+'\n\nBlocos selecionados:\n'+combined+'\n\nAnalise o contexto combinado e sugira soluções Salesforce em PORTUGUÊS BRASILEIRO. Seja específico com produtos, features, objetos e abordagem de implementação.';
+      reply=await this.api({customPrompt:'SF Solution Architect. Always respond in Brazilian Portuguese. Detailed, actionable.',messages:[{role:'user',content:prompt}]});
       res.innerHTML='<div class="tr-r-lbl">☁️ SF Solution ('+texts.length+' blocks)</div><div class="tr-r-sf">'+this.fmt((reply||'...').trim())+'</div>';
     }
   }catch(x){res.innerHTML='<div class="tr-r-lbl">Error</div>';}
