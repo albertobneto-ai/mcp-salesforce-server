@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ever i9 — DevTools</title>
+<title>Ever i9 — DevTools AI</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -13,230 +13,180 @@
     --bg-card: #ffffff;
     --bg-input: #f9f7fb;
     --border: #d6cfe0;
-    --border-focus: #7c3aed;
     --accent: #7c3aed;
     --accent-light: #6d28d9;
     --accent-dim: #5b21b6;
-    --accent-glow: rgba(124, 58, 237, 0.08);
-    --accent-glow-strong: rgba(124, 58, 237, 0.14);
+    --accent-soft: #ede9fe;
+    --accent-glow: rgba(124,58,237,0.08);
+    --accent-glow-strong: rgba(124,58,237,0.14);
     --success: #059669;
-    --success-bg: rgba(5, 150, 105, 0.08);
+    --success-bg: rgba(5,150,105,0.08);
+    --success-border: rgba(5,150,105,0.25);
     --error: #dc2626;
-    --error-bg: rgba(220, 38, 38, 0.06);
+    --error-bg: rgba(220,38,38,0.06);
+    --error-border: rgba(220,38,38,0.2);
     --warning: #d97706;
-    --warning-bg: rgba(217, 119, 6, 0.08);
+    --warning-bg: rgba(217,119,6,0.08);
+    --info: #2563eb;
+    --info-bg: rgba(37,99,235,0.06);
     --text-primary: #1e1433;
     --text-secondary: #4a3d5e;
     --text-muted: #8c7ea3;
     --font-body: 'Inter', -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:var(--font-body); background:var(--bg-primary); color:var(--text-primary); min-height:100vh; }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    font-family: var(--font-body);
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    min-height: 100vh;
-  }
-
-  /* Header */
   .header {
-    background: linear-gradient(135deg, #6b21a8, #7c3aed);
-    border-bottom: none;
-    padding: 0 24px;
-    height: 56px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
+    background: linear-gradient(135deg, #6b21a8, #7c3aed, #8b5cf6);
+    padding:0 24px; height:56px; display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:100;
   }
-  .header-left { display: flex; align-items: center; gap: 16px; }
-  .header-logo {
-    font-size: 18px;
-    font-weight: 700;
-    color: #ffffff;
-    letter-spacing: -0.5px;
+  .header-logo { font-size:18px; font-weight:700; color:#fff; letter-spacing:-0.5px; }
+  .header-logo span { color:rgba(255,255,255,0.65); font-weight:400; font-size:14px; margin-left:8px; }
+  .header-right { display:flex; align-items:center; gap:12px; }
+  .conn-badge {
+    display:flex; align-items:center; gap:6px; font-size:11px; color:#fff;
+    background:rgba(255,255,255,0.15); padding:5px 12px; border-radius:16px;
+    border:1px solid rgba(255,255,255,0.2);
   }
-  .header-logo span { color: rgba(255,255,255,0.7); font-weight: 400; font-size: 14px; margin-left: 8px; }
-  .conn-status {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 12px; color: #fff;
-    background: rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.25);
-  }
-  .conn-dot { width: 8px; height: 8px; border-radius: 50%; }
-  .conn-dot.ok { background: var(--success); box-shadow: 0 0 6px var(--success); }
-  .conn-dot.err { background: var(--error); box-shadow: 0 0 6px var(--error); }
-  .conn-dot.loading { background: var(--warning); animation: pulse 1s infinite; }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .conn-dot { width:7px; height:7px; border-radius:50%; }
+  .conn-dot.ok { background:#34d399; box-shadow:0 0 6px #34d399; }
+  .conn-dot.err { background:#f87171; }
+  .conn-dot.loading { background:#fbbf24; animation:pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
 
-  /* Layout */
-  .app-layout { display: flex; min-height: calc(100vh - 56px); }
+  .tab-bar {
+    background:var(--bg-secondary); border-bottom:1px solid var(--border);
+    display:flex; padding:0 24px; gap:0;
+  }
+  .tab-btn {
+    padding:12px 20px; font-size:13px; font-weight:500; color:var(--text-muted);
+    cursor:pointer; border:none; background:none; font-family:var(--font-body);
+    border-bottom:2px solid transparent; transition:all .15s;
+  }
+  .tab-btn:hover { color:var(--text-secondary); }
+  .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
 
-  /* Sidebar */
-  .sidebar {
-    width: 220px;
-    background: var(--bg-secondary);
-    border-right: 1px solid var(--border);
-    padding: 16px 0;
-    flex-shrink: 0;
-    box-shadow: 1px 0 4px rgba(0,0,0,0.03);
-  }
-  .sidebar-section { padding: 0 12px; margin-bottom: 8px; }
-  .sidebar-label {
-    font-size: 10px; font-weight: 600; text-transform: uppercase;
-    letter-spacing: 1.2px; color: var(--text-muted); padding: 8px 12px;
-  }
-  .sidebar-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 12px; border-radius: 8px; cursor: pointer;
-    font-size: 13px; color: var(--text-secondary);
-    transition: all 0.15s;
-  }
-  .sidebar-item:hover { background: var(--accent-glow); color: var(--text-primary); }
-  .sidebar-item.active {
-    background: var(--accent-glow-strong); color: var(--accent-light);
-    font-weight: 500;
-  }
-  .sidebar-icon { font-size: 16px; width: 20px; text-align: center; }
+  .main { max-width:900px; margin:0 auto; padding:24px; }
 
-  /* Main */
-  .main { flex: 1; padding: 24px; overflow-y: auto; }
-  .page-title {
-    font-size: 22px; font-weight: 700; color: var(--text-primary);
-    margin-bottom: 4px; letter-spacing: -0.5px;
-  }
-  .page-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+  .ai-intro { text-align:center; padding:40px 20px 30px; }
+  .ai-intro h1 { font-size:26px; font-weight:700; color:var(--text-primary); margin-bottom:8px; }
+  .ai-intro p { font-size:14px; color:var(--text-muted); max-width:500px; margin:0 auto; line-height:1.6; }
 
-  /* Cards */
-  .card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 16px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  .prompt-box {
+    background:var(--bg-secondary); border:1.5px solid var(--border); border-radius:14px;
+    padding:4px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);
+    transition:border-color .2s;
   }
-  .card-title {
-    font-size: 14px; font-weight: 600; color: var(--accent-light);
-    margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+  .prompt-box:focus-within { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-glow); }
+  .prompt-textarea {
+    width:100%; border:none; outline:none; resize:none; padding:14px 16px;
+    font-size:14px; font-family:var(--font-body); color:var(--text-primary);
+    background:transparent; min-height:60px; max-height:200px; line-height:1.5;
   }
+  .prompt-textarea::placeholder { color:var(--text-muted); }
+  .prompt-footer { display:flex; justify-content:space-between; align-items:center; padding:8px 12px 8px 16px; }
+  .prompt-hint { font-size:11px; color:var(--text-muted); }
 
-  /* Forms */
-  .form-group { margin-bottom: 14px; }
-  .form-label {
-    display: block; font-size: 12px; font-weight: 500;
-    color: var(--text-secondary); margin-bottom: 6px;
-  }
-  .form-input, .form-select, .form-textarea {
-    width: 100%; padding: 10px 14px; border-radius: 8px;
-    border: 1px solid var(--border); background: var(--bg-input);
-    color: var(--text-primary); font-size: 13px; font-family: var(--font-body);
-    transition: border-color 0.2s;
-    outline: none;
-  }
-  .form-input:focus, .form-select:focus, .form-textarea:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow);
-  }
-  .form-textarea {
-    font-family: var(--font-mono); font-size: 12px;
-    resize: vertical; min-height: 120px; line-height: 1.6;
-  }
-  .form-select { cursor: pointer; }
-  .form-row { display: flex; gap: 12px; }
-  .form-row > * { flex: 1; }
-
-  /* Buttons */
   .btn {
-    padding: 10px 20px; border-radius: 8px; font-size: 13px;
-    font-weight: 600; cursor: pointer; border: none;
-    transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
-    font-family: var(--font-body);
+    padding:9px 18px; border-radius:8px; font-size:13px; font-weight:600;
+    cursor:pointer; border:none; transition:all .15s; display:inline-flex;
+    align-items:center; gap:6px; font-family:var(--font-body);
   }
-  .btn-primary {
-    background: var(--accent); color: #fff;
-    box-shadow: 0 1px 3px rgba(124,58,237,0.3);
-  }
-  .btn-primary:hover { background: var(--accent-dim); transform: translateY(-1px); }
-  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-  .btn-secondary {
-    background: var(--bg-tertiary); color: var(--text-secondary);
-    border: 1px solid var(--border);
-  }
-  .btn-secondary:hover { border-color: var(--accent); color: var(--text-primary); }
-  .btn-sm { padding: 6px 14px; font-size: 12px; }
+  .btn-primary { background:var(--accent); color:#fff; box-shadow:0 1px 3px rgba(124,58,237,0.3); }
+  .btn-primary:hover { background:var(--accent-dim); transform:translateY(-1px); }
+  .btn-primary:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+  .btn-secondary { background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border); }
+  .btn-secondary:hover { border-color:var(--accent); color:var(--accent); }
+  .btn-sm { padding:6px 12px; font-size:12px; }
 
-  /* Output */
+  .examples { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:28px; }
+  .example-chip {
+    padding:7px 14px; border-radius:20px; font-size:12px; color:var(--accent);
+    background:var(--accent-soft); cursor:pointer; border:1px solid transparent; transition:all .15s;
+  }
+  .example-chip:hover { border-color:var(--accent); background:#ddd6fe; }
+
+  .plan-card {
+    background:var(--bg-secondary); border:1px solid var(--border); border-radius:12px;
+    padding:20px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,0.04);
+  }
+  .plan-title { font-size:15px; font-weight:600; color:var(--text-primary); margin-bottom:4px; display:flex; align-items:center; gap:8px; }
+  .plan-desc { font-size:13px; color:var(--text-secondary); margin-bottom:16px; line-height:1.6; }
+
+  .step-list { display:flex; flex-direction:column; gap:8px; }
+  .step-item {
+    display:flex; align-items:flex-start; gap:12px; padding:12px 14px;
+    background:var(--bg-input); border-radius:10px; border:1px solid var(--border); transition:all .2s;
+  }
+  .step-item.running { border-color:var(--accent); background:var(--accent-glow); }
+  .step-item.done { border-color:var(--success-border); background:var(--success-bg); }
+  .step-item.failed { border-color:var(--error-border); background:var(--error-bg); }
+  .step-icon {
+    width:28px; height:28px; border-radius:50%; display:flex; align-items:center;
+    justify-content:center; font-size:13px; flex-shrink:0; font-weight:600;
+    background:var(--bg-tertiary); color:var(--text-muted);
+  }
+  .step-item.done .step-icon { background:var(--success); color:#fff; }
+  .step-item.failed .step-icon { background:var(--error); color:#fff; }
+  .step-item.running .step-icon { background:var(--accent); color:#fff; }
+  .step-body { flex:1; min-width:0; }
+  .step-name { font-size:13px; font-weight:600; color:var(--text-primary); }
+  .step-detail { font-size:12px; color:var(--text-muted); margin-top:2px; font-family:var(--font-mono); }
+  .step-error { font-size:12px; color:var(--error); margin-top:4px; }
+
+  .spinner { width:14px; height:14px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .6s linear infinite; display:inline-block; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  .results-bar { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
+  .manual-steps { background:var(--info-bg); border:1px solid rgba(37,99,235,0.2); border-radius:10px; padding:16px; margin-top:16px; }
+  .manual-steps h3 { font-size:14px; font-weight:600; color:var(--info); margin-bottom:10px; }
+  .manual-steps ol { padding-left:20px; font-size:13px; color:var(--text-secondary); line-height:1.8; }
+
+  .tool-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }
+  .tool-card {
+    background:var(--bg-secondary); border:1px solid var(--border); border-radius:12px;
+    padding:16px; cursor:pointer; transition:all .15s; box-shadow:0 1px 3px rgba(0,0,0,0.04);
+  }
+  .tool-card:hover { border-color:var(--accent); transform:translateY(-2px); box-shadow:0 4px 12px rgba(124,58,237,0.1); }
+  .tool-card-icon { font-size:24px; margin-bottom:8px; }
+  .tool-card-title { font-size:14px; font-weight:600; color:var(--text-primary); margin-bottom:4px; }
+  .tool-card-desc { font-size:12px; color:var(--text-muted); line-height:1.4; }
+
+  .form-group { margin-bottom:14px; }
+  .form-label { display:block; font-size:12px; font-weight:500; color:var(--text-secondary); margin-bottom:6px; }
+  .form-input, .form-select, .form-textarea {
+    width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border);
+    background:var(--bg-input); color:var(--text-primary); font-size:13px;
+    font-family:var(--font-body); transition:border-color .2s; outline:none;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-glow); }
+  .form-textarea { font-family:var(--font-mono); font-size:12px; resize:vertical; min-height:120px; line-height:1.6; }
+  .form-row { display:flex; gap:12px; }
+  .form-row > * { flex:1; }
+
   .output-panel {
-    background: var(--bg-input); border: 1px solid var(--border);
-    border-radius: 8px; padding: 14px; margin-top: 12px;
-    font-family: var(--font-mono); font-size: 12px;
-    line-height: 1.6; max-height: 400px; overflow-y: auto;
-    white-space: pre-wrap; word-break: break-word;
-    color: var(--text-secondary);
+    background:var(--bg-input); border:1px solid var(--border); border-radius:8px;
+    padding:14px; margin-top:12px; font-family:var(--font-mono); font-size:12px;
+    line-height:1.6; max-height:400px; overflow-y:auto; white-space:pre-wrap; word-break:break-word;
+    color:var(--text-secondary);
   }
-  .output-panel.success { border-color: var(--success); background: var(--success-bg); color: var(--success); }
-  .output-panel.error { border-color: var(--error); background: var(--error-bg); color: var(--error); }
+  .output-panel.success { border-color:var(--success-border); background:var(--success-bg); color:var(--success); }
+  .output-panel.error { border-color:var(--error-border); background:var(--error-bg); color:var(--error); }
 
-  /* Status badges */
-  .badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
-  }
-  .badge-success { background: var(--success-bg); color: var(--success); border: 1px solid rgba(52,211,153,0.3); }
-  .badge-error { background: var(--error-bg); color: var(--error); border: 1px solid rgba(248,113,113,0.3); }
-  .badge-warning { background: var(--warning-bg); color: var(--warning); border: 1px solid rgba(251,191,36,0.3); }
+  .badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:600; }
+  .badge-success { background:var(--success-bg); color:var(--success); border:1px solid var(--success-border); }
+  .badge-error { background:var(--error-bg); color:var(--error); border:1px solid var(--error-border); }
 
-  /* Table */
-  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .data-table th {
-    text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted);
-    border-bottom: 1px solid var(--border);
-  }
-  .data-table td {
-    padding: 10px 14px; border-bottom: 1px solid rgba(61,45,92,0.4);
-    color: var(--text-secondary);
-  }
-  .data-table tr:hover td { background: var(--accent-glow); }
-  .data-table .mono { font-family: var(--font-mono); font-size: 12px; }
+  .data-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .data-table th { text-align:left; padding:10px 14px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.8px; color:var(--text-muted); border-bottom:1px solid var(--border); }
+  .data-table td { padding:10px 14px; border-bottom:1px solid rgba(214,207,224,0.5); color:var(--text-secondary); }
+  .data-table tr:hover td { background:var(--accent-glow); }
+  .mono { font-family:var(--font-mono); font-size:12px; }
 
-  /* Tabs */
-  .tabs { display: flex; gap: 2px; margin-bottom: 20px; background: var(--bg-secondary); border-radius: 10px; padding: 3px; }
-  .tab {
-    padding: 8px 18px; border-radius: 8px; font-size: 13px;
-    font-weight: 500; cursor: pointer; color: var(--text-muted);
-    transition: all 0.15s; border: none; background: none;
-    font-family: var(--font-body);
-  }
-  .tab:hover { color: var(--text-secondary); }
-  .tab.active { background: var(--accent-glow-strong); color: var(--accent-light); }
-
-  /* Loading spinner */
-  .spinner {
-    width: 16px; height: 16px; border: 2px solid var(--border);
-    border-top-color: var(--accent); border-radius: 50%;
-    animation: spin 0.6s linear infinite; display: inline-block;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #c4bbd3; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
-
-  /* Responsive */
-  @media (max-width: 768px) {
-    .sidebar { display: none; }
-    .main { padding: 16px; }
-    .form-row { flex-direction: column; }
-  }
+  @media(max-width:768px) { .main{padding:16px;} .form-row{flex-direction:column;} .tool-grid{grid-template-columns:1fr;} }
 </style>
 </head>
 <body>
@@ -245,907 +195,356 @@
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script type="text/babel">
-const { useState, useEffect, useCallback, useRef } = React;
-
+const { useState, useEffect, useRef } = React;
 const BASE = 'https://mcp-sf-provisioning-462dd29c2455.herokuapp.com';
 
-// ─── API Helper ───────────────────────────────────────────────
 async function api(path, opts = {}) {
-  const url = path.startsWith('http') ? path : `${BASE}${path}`;
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...opts.headers },
-    ...opts,
-  });
+  const url = path.startsWith('http') ? path : BASE + path;
+  const res = await fetch(url, { headers:{'Content-Type':'application/json',...opts.headers}, ...opts });
   return res.json();
 }
 
-// ─── SIDEBAR ITEMS ────────────────────────────────────────────
-const MENU = [
-  { id: 'connection', icon: '⚡', label: 'Conexão', section: 'Geral' },
-  { id: 'soql', icon: '🔍', label: 'SOQL Query', section: 'Consulta' },
-  { id: 'describe', icon: '📋', label: 'Describe Object', section: 'Consulta' },
-  { id: 'apex-deploy', icon: '🚀', label: 'Deploy Apex', section: 'Deploy' },
-  { id: 'fields', icon: '🏗️', label: 'Criar Campo', section: 'Metadata' },
-  { id: 'metadata-read', icon: '📖', label: 'Ler Metadata', section: 'Metadata' },
-  { id: 'metadata-update', icon: '✏️', label: 'Atualizar Metadata', section: 'Metadata' },
-  { id: 'fls', icon: '🔐', label: 'Field-Level Security', section: 'Metadata' },
-  { id: 'layout', icon: '🖼️', label: 'Layouts', section: 'Metadata' },
-  { id: 'anonymous', icon: '▶️', label: 'Execute Anonymous', section: 'Apex' },
-  { id: 'data', icon: '💾', label: 'Inserir Dados', section: 'Dados' },
-];
+const SYS = `Você é um arquiteto Salesforce expert integrado ao Ever i9 DevTools.
+O usuário descreve o que precisa e você gera um PLANO DE EXECUÇÃO em JSON.
 
-// ─── CONNECTION PAGE ──────────────────────────────────────────
-function ConnectionPage() {
-  const [status, setStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
+Endpoints disponíveis no MCP Server (${BASE}):
 
-  const check = useCallback(async () => {
-    setLoading(true);
-    try {
-      const d = await api('/test-connection');
-      setStatus(d);
-    } catch (e) {
-      setStatus({ status: 'error', message: e.message });
+CRIAR CAMPO: POST /api/metadata-create/CustomField
+  Body: { fullName: "Object.Field__c", label, type, length?, required?, valueSet? }
+  Picklist valueSet: { restricted:false, valueSetDefinition:{ sorted:false, value:[{fullName,default:false,label}] } }
+
+DEPLOY APEX: POST /api/deploy-code
+  Body: { apexClasses:[{name,body}], apexTriggers:[{name,body}] }
+  IMPORTANTE: classes e triggers vão juntos no mesmo request
+
+ATUALIZAR FLS: POST /api/metadata-update/Profile
+  Body: { fullName:"Admin", fieldPermissions:[{field:"Obj.Field__c",editable:true,readable:true}] }
+
+ATUALIZAR LAYOUT: POST /api/metadata-update/Layout
+  Body: { fullName:"Object-Layout Name", layoutSections:[...] }
+
+ATUALIZAR QUICK ACTION: POST /api/metadata-update/QuickAction
+  Body: { fullName:"ActionName", quickActionLayout:{...}, targetObject, type:"Create" }
+
+EXECUTE ANONYMOUS: POST /api/execute-anonymous Body: { code:"..." }
+
+REGRAS IMPORTANTES:
+- FLS SEMPRE deve ser atualizado após criar campos (readable+editable=true para Admin)
+- Apex: gerar código completo, compilável, com @description @author Everymind @date 2026
+- Triggers: especificar objeto e eventos corretos
+- Sempre gerar classe de teste com boa cobertura (cenários positivos e negativos)
+- deploy_apex: colocar classes E triggers no MESMO step quando relacionados
+- Para campo Picklist usar valueSet com valueSetDefinition (não picklistValues)
+
+RESPONDA APENAS JSON válido, sem markdown, sem backticks:
+{
+  "plan_name": "Nome curto",
+  "description": "O que será feito",
+  "steps": [
+    {
+      "type": "create_field|deploy_apex|update_fls|update_layout|update_quickaction|execute_anonymous",
+      "label": "Descrição curta",
+      "detail": "Detalhe técnico",
+      "config": { ...payload do endpoint... }
     }
-    setLoading(false);
-  }, []);
+  ],
+  "manual_steps": ["Passo manual se necessário (limpar cache Lightning, etc)"],
+  "export_metadata": {
+    "objects_affected": ["Lead"],
+    "components": ["CustomField","ApexClass"],
+    "summary": "Resumo para documentação"
+  }
+}`;
 
-  useEffect(() => { check(); }, []);
-
-  return (
-    <div>
-      <div className="page-title">Conexão com Org</div>
-      <div className="page-subtitle">Status da conexão com a org Salesforce via MCP Server</div>
-      <div className="card">
-        <div className="card-title">⚡ Status</div>
-        {loading ? <div className="spinner"></div> : status?.status === 'connected' ? (
-          <div>
-            <span className="badge badge-success">● Conectado</span>
-            <table className="data-table" style={{marginTop:16}}>
-              <tbody>
-                <tr><td style={{fontWeight:600,width:150}}>Org ID</td><td className="mono">{status.orgId}</td></tr>
-                <tr><td style={{fontWeight:600}}>Username</td><td className="mono">{status.username}</td></tr>
-                <tr><td style={{fontWeight:600}}>Display Name</td><td>{status.displayName}</td></tr>
-                <tr><td style={{fontWeight:600}}>Instance URL</td><td className="mono">{status.instanceUrl}</td></tr>
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div>
-            <span className="badge badge-error">● Desconectado</span>
-            <div className="output-panel error" style={{marginTop:12}}>{status?.message || 'Erro desconhecido'}</div>
-          </div>
-        )}
-        <div style={{marginTop:16}}>
-          <button className="btn btn-secondary btn-sm" onClick={check} disabled={loading}>
-            {loading ? <span className="spinner"></span> : '↻'} Verificar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── SOQL PAGE ────────────────────────────────────────────────
-function SoqlPage() {
-  const [query, setQuery] = useState('SELECT Id, Name FROM Lead LIMIT 10');
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const run = async () => {
-    setLoading(true);
-    try {
-      const b64 = btoa(unescape(encodeURIComponent(query)));
-      const d = await api(`/api/soql-b64/${b64}`);
-      setResult(d);
-    } catch (e) {
-      setResult({ status: 'error', message: e.message });
-    }
-    setLoading(false);
-  };
-
-  const records = result?.records || [];
-  const columns = records.length > 0 ? Object.keys(records[0]).filter(k => k !== 'attributes') : [];
-
-  return (
-    <div>
-      <div className="page-title">SOQL Query</div>
-      <div className="page-subtitle">Execute consultas SOQL diretamente na org</div>
-      <div className="card">
-        <div className="form-group">
-          <label className="form-label">Query SOQL</label>
-          <textarea className="form-textarea" value={query} onChange={e => setQuery(e.target.value)}
-            onKeyDown={e => { if (e.ctrlKey && e.key === 'Enter') run(); }}
-            placeholder="SELECT Id, Name FROM Account LIMIT 10" />
-        </div>
-        <div style={{display:'flex',gap:8,alignItems:'center'}}>
-          <button className="btn btn-primary" onClick={run} disabled={loading}>
-            {loading ? <span className="spinner"></span> : '🔍'} Executar
-          </button>
-          <span style={{fontSize:12,color:'var(--text-muted)'}}>Ctrl+Enter para executar</span>
-        </div>
-      </div>
-      {result && (
-        <div className="card">
-          <div className="card-title">
-            Resultado
-            {result.totalSize !== undefined && (
-              <span className="badge badge-success">{result.totalSize} registros</span>
-            )}
-            {result.status === 'error' && <span className="badge badge-error">Erro</span>}
-          </div>
-          {result.status === 'error' ? (
-            <div className="output-panel error">{result.message}</div>
-          ) : columns.length > 0 ? (
-            <div style={{overflowX:'auto'}}>
-              <table className="data-table">
-                <thead><tr>{columns.map(c => <th key={c}>{c}</th>)}</tr></thead>
-                <tbody>
-                  {records.map((r, i) => (
-                    <tr key={i}>{columns.map(c => (
-                      <td key={c} className="mono">{typeof r[c] === 'object' ? JSON.stringify(r[c]) : String(r[c] ?? '')}</td>
-                    ))}</tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="output-panel">{JSON.stringify(result, null, 2)}</div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── DESCRIBE PAGE ────────────────────────────────────────────
-function DescribePage() {
-  const [obj, setObj] = useState('Lead');
-  const [result, setResult] = useState(null);
-  const [filter, setFilter] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const run = async () => {
-    setLoading(true);
-    try {
-      const d = await api(`/api/describe/${obj}`);
-      setResult(d);
-    } catch (e) {
-      setResult({ error: e.message });
-    }
-    setLoading(false);
-  };
-
-  const fields = (result?.fields || []).filter(f =>
-    !filter || f.name.toLowerCase().includes(filter.toLowerCase()) ||
-    (f.label || '').toLowerCase().includes(filter.toLowerCase())
-  );
-
-  return (
-    <div>
-      <div className="page-title">Describe Object</div>
-      <div className="page-subtitle">Schema completo de qualquer objeto da org</div>
-      <div className="card">
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Objeto</label>
-            <input className="form-input" value={obj} onChange={e => setObj(e.target.value)}
-              placeholder="Account, Lead, Opportunity..." />
-          </div>
-          <div className="form-group" style={{flex:'0 0 auto',display:'flex',alignItems:'flex-end'}}>
-            <button className="btn btn-primary" onClick={run} disabled={loading}>
-              {loading ? <span className="spinner"></span> : '📋'} Describe
-            </button>
-          </div>
-        </div>
-      </div>
-      {result?.fields && (
-        <div className="card">
-          <div className="card-title">
-            Campos de {obj}
-            <span className="badge badge-success">{result.fields.length} campos</span>
-          </div>
-          <div className="form-group">
-            <input className="form-input" placeholder="Filtrar campos..." value={filter}
-              onChange={e => setFilter(e.target.value)} />
-          </div>
-          <div style={{overflowX:'auto',maxHeight:500,overflowY:'auto'}}>
-            <table className="data-table">
-              <thead><tr><th>API Name</th><th>Label</th><th>Tipo</th><th>Custom</th></tr></thead>
-              <tbody>
-                {fields.map(f => (
-                  <tr key={f.name}>
-                    <td className="mono">{f.name}</td>
-                    <td>{f.label}</td>
-                    <td><span className="badge badge-warning">{f.type}</span></td>
-                    <td>{f.custom ? '✓' : ''}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-      {result?.error && <div className="output-panel error">{result.error}</div>}
-    </div>
-  );
-}
-
-// ─── DEPLOY APEX PAGE ─────────────────────────────────────────
-function ApexDeployPage() {
-  const [tab, setTab] = useState('class');
-  const [name, setName] = useState('');
-  const [body, setBody] = useState('');
-  const [objectName, setObjectName] = useState('');
-  const [result, setResult] = useState(null);
-  const [deployStatus, setDeployStatus] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const deploy = async () => {
-    if (!name || !body) return;
-    setLoading(true);
-    setDeployStatus(null);
-    try {
-      const payload = {};
-      if (tab === 'class') {
-        payload.apexClasses = [{ name, body }];
-      } else {
-        payload.apexTriggers = [{ name, body, objectName }];
-      }
-      const d = await api('/api/deploy-code', { method: 'POST', body: JSON.stringify(payload) });
-      setResult(d);
-      if (d.deployId) {
-        pollStatus(d.deployId);
-      }
-    } catch (e) {
-      setResult({ error: e.message });
-    }
-    setLoading(false);
-  };
-
-  const pollStatus = async (deployId) => {
-    let tries = 0;
-    const interval = setInterval(async () => {
-      tries++;
-      try {
-        const s = await api(`/api/deploy-status/${deployId}`);
-        setDeployStatus(s);
-        if (s.done || tries > 20) clearInterval(interval);
-      } catch (e) {
-        clearInterval(interval);
-      }
-    }, 3000);
-  };
-
-  return (
-    <div>
-      <div className="page-title">Deploy Apex</div>
-      <div className="page-subtitle">Deploy de classes e triggers Apex na org</div>
-      <div className="tabs">
-        <button className={`tab ${tab==='class'?'active':''}`} onClick={()=>setTab('class')}>Classe Apex</button>
-        <button className={`tab ${tab==='trigger'?'active':''}`} onClick={()=>setTab('trigger')}>Trigger</button>
-      </div>
-      <div className="card">
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Nome</label>
-            <input className="form-input" value={name} onChange={e => setName(e.target.value)}
-              placeholder={tab === 'class' ? 'MinhaClasse' : 'MeuTrigger'} />
-          </div>
-          {tab === 'trigger' && (
-            <div className="form-group">
-              <label className="form-label">Objeto</label>
-              <input className="form-input" value={objectName} onChange={e => setObjectName(e.target.value)}
-                placeholder="Lead, Account..." />
-            </div>
-          )}
-        </div>
-        <div className="form-group">
-          <label className="form-label">Código</label>
-          <textarea className="form-textarea" style={{minHeight:250}} value={body}
-            onChange={e => setBody(e.target.value)}
-            placeholder={tab === 'class' ? 'public with sharing class MinhaClasse {\n  // ...\n}' :
-              'trigger MeuTrigger on Lead (before insert) {\n  // ...\n}'} />
-        </div>
-        <button className="btn btn-primary" onClick={deploy} disabled={loading || !name || !body}>
-          {loading ? <span className="spinner"></span> : '🚀'} Deployar
-        </button>
-      </div>
-      {result && (
-        <div className="card">
-          <div className="card-title">Resultado do Deploy</div>
-          {result.deployId ? (
-            <div>
-              <div style={{marginBottom:8}}>Deploy ID: <code className="mono">{result.deployId}</code></div>
-              {deployStatus ? (
-                <div>
-                  <span className={`badge ${deployStatus.success ? 'badge-success' : deployStatus.done ? 'badge-error' : 'badge-warning'}`}>
-                    {deployStatus.status || (deployStatus.done ? 'Concluído' : 'Em progresso...')}
-                  </span>
-                  <div style={{marginTop:8,fontSize:13,color:'var(--text-secondary)'}}>
-                    Componentes: {deployStatus.numberComponentsDeployed}/{deployStatus.numberComponentsTotal} |
-                    Erros: {deployStatus.numberComponentErrors}
-                  </div>
-                  {deployStatus.componentFailures?.length > 0 && (
-                    <div className="output-panel error" style={{marginTop:8}}>
-                      {deployStatus.componentFailures.map((f,i) => (
-                        <div key={i}>{f.fullName}: {f.problem}</div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div><span className="spinner"></span> Aguardando status...</div>
-              )}
-            </div>
-          ) : (
-            <div className="output-panel error">{JSON.stringify(result, null, 2)}</div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── CREATE FIELD PAGE ────────────────────────────────────────
-function CreateFieldPage() {
-  const [obj, setObj] = useState('Lead');
-  const [fieldName, setFieldName] = useState('');
-  const [label, setLabel] = useState('');
-  const [type, setType] = useState('Text');
-  const [length, setLength] = useState('255');
-  const [precision, setPrecision] = useState('10');
-  const [scale, setScale] = useState('2');
-  const [picklistValues, setPicklistValues] = useState('');
-  const [referenceTo, setReferenceTo] = useState('');
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const create = async () => {
-    setLoading(true);
-    try {
-      const meta = {
-        fullName: `${obj}.${fieldName}`,
-        label: label || fieldName.replace('__c',''),
-        type,
-        required: false,
-      };
-      if (['Text'].includes(type)) meta.length = parseInt(length) || 255;
-      if (['LongTextArea','RichTextArea'].includes(type)) { meta.length = parseInt(length) || 32768; meta.visibleLines = 4; }
-      if (['Number','Currency','Percent'].includes(type)) { meta.precision = parseInt(precision); meta.scale = parseInt(scale); }
-      if (['Picklist','MultiselectPicklist'].includes(type) && picklistValues) {
-        const vals = picklistValues.split('\n').filter(v=>v.trim());
-        meta.valueSet = {
-          restricted: false,
-          valueSetDefinition: {
-            sorted: false,
-            value: vals.map(v => ({ fullName: v.trim(), default: false, label: v.trim() }))
-          }
-        };
-      }
-      if (type === 'Lookup' && referenceTo) {
-        meta.referenceTo = referenceTo;
-        meta.relationshipLabel = label || fieldName.replace('__c','');
-        meta.relationshipName = fieldName.replace('__c','');
-      }
-      const d = await api('/api/metadata-create/CustomField', { method: 'POST', body: JSON.stringify(meta) });
-      setResult(d);
-
-      // Auto FLS
-      if (d.success) {
-        await api('/api/metadata-update/Profile', {
-          method: 'POST',
-          body: JSON.stringify({
-            fullName: 'Admin',
-            fieldPermissions: [{ field: `${obj}.${fieldName}`, editable: true, readable: true }]
-          })
-        });
-      }
-    } catch (e) {
-      setResult({ error: e.message });
-    }
-    setLoading(false);
-  };
-
-  const TYPES = ['Text','LongTextArea','RichTextArea','Number','Currency','Percent','Picklist','MultiselectPicklist',
-    'Checkbox','Date','DateTime','Email','Phone','Url','TextArea','Lookup'];
-
-  const needsLength = ['Text','LongTextArea','RichTextArea'].includes(type);
-  const needsPrecision = ['Number','Currency','Percent'].includes(type);
-  const needsPicklist = ['Picklist','MultiselectPicklist'].includes(type);
-  const needsRef = type === 'Lookup';
-
-  return (
-    <div>
-      <div className="page-title">Criar Campo</div>
-      <div className="page-subtitle">Criar custom field em qualquer objeto (com FLS automático para Admin)</div>
-      <div className="card">
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Objeto</label>
-            <input className="form-input" value={obj} onChange={e => setObj(e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">API Name (com __c)</label>
-            <input className="form-input" value={fieldName} onChange={e => setFieldName(e.target.value)}
-              placeholder="Meu_Campo__c" />
-          </div>
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Label</label>
-            <input className="form-input" value={label} onChange={e => setLabel(e.target.value)}
-              placeholder="Meu Campo" />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Tipo</label>
-            <select className="form-select" value={type} onChange={e => setType(e.target.value)}>
-              {TYPES.map(t => <option key={t}>{t}</option>)}
-            </select>
-          </div>
-        </div>
-        {needsLength && (
-          <div className="form-group">
-            <label className="form-label">Comprimento</label>
-            <input className="form-input" value={length} onChange={e => setLength(e.target.value)} type="number" />
-          </div>
-        )}
-        {needsPrecision && (
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Precision</label>
-              <input className="form-input" value={precision} onChange={e => setPrecision(e.target.value)} type="number" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Scale</label>
-              <input className="form-input" value={scale} onChange={e => setScale(e.target.value)} type="number" />
-            </div>
-          </div>
-        )}
-        {needsPicklist && (
-          <div className="form-group">
-            <label className="form-label">Valores (um por linha)</label>
-            <textarea className="form-textarea" style={{fontFamily:'var(--font-body)',minHeight:80}}
-              value={picklistValues} onChange={e => setPicklistValues(e.target.value)}
-              placeholder={"Valor 1\nValor 2\nValor 3"} />
-          </div>
-        )}
-        {needsRef && (
-          <div className="form-group">
-            <label className="form-label">Reference To (objeto pai)</label>
-            <input className="form-input" value={referenceTo} onChange={e => setReferenceTo(e.target.value)}
-              placeholder="Account" />
-          </div>
-        )}
-        <button className="btn btn-primary" onClick={create} disabled={loading || !fieldName}>
-          {loading ? <span className="spinner"></span> : '🏗️'} Criar Campo
-        </button>
-      </div>
-      {result && (
-        <div className={`output-panel ${result.success ? 'success' : 'error'}`}>
-          {result.success
-            ? `✅ Campo ${result.fullName} criado com sucesso!\nFLS Admin atualizado automaticamente.`
-            : JSON.stringify(result, null, 2)}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── METADATA READ PAGE ──────────────────────────────────────
-function MetadataReadPage() {
-  const [type, setType] = useState('CustomField');
-  const [fullName, setFullName] = useState('Lead.CNPJ__c');
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const read = async () => {
-    setLoading(true);
-    try {
-      const d = await api(`/api/metadata-read/${type}/${encodeURIComponent(fullName)}`);
-      setResult(d);
-    } catch (e) {
-      setResult({ error: e.message });
-    }
-    setLoading(false);
-  };
-
-  const TYPES = ['CustomField','CustomObject','Layout','Profile','PermissionSet','QuickAction',
-    'RecordType','ValidationRule','Flow','ApexClass','ApexTrigger'];
-
-  return (
-    <div>
-      <div className="page-title">Ler Metadata</div>
-      <div className="page-subtitle">Consulta qualquer componente de metadata da org</div>
-      <div className="card">
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Tipo</label>
-            <select className="form-select" value={type} onChange={e => setType(e.target.value)}>
-              {TYPES.map(t => <option key={t}>{t}</option>)}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Full Name</label>
-            <input className="form-input" value={fullName} onChange={e => setFullName(e.target.value)}
-              placeholder="Lead.CNPJ__c" />
-          </div>
-        </div>
-        <button className="btn btn-primary" onClick={read} disabled={loading}>
-          {loading ? <span className="spinner"></span> : '📖'} Ler
-        </button>
-      </div>
-      {result && (
-        <div className="output-panel">{JSON.stringify(result, null, 2)}</div>
-      )}
-    </div>
-  );
-}
-
-// ─── METADATA UPDATE PAGE ────────────────────────────────────
-function MetadataUpdatePage() {
-  const [type, setType] = useState('CustomField');
-  const [payload, setPayload] = useState('{\n  "fullName": "Lead.CNPJ__c",\n  "label": "CNPJ"\n}');
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const update = async () => {
-    setLoading(true);
-    try {
-      const data = JSON.parse(payload);
-      const d = await api(`/api/metadata-update/${type}`, { method: 'POST', body: JSON.stringify(data) });
-      setResult(d);
-    } catch (e) {
-      setResult({ error: e.message });
-    }
-    setLoading(false);
-  };
-
-  const TYPES = ['CustomField','Layout','Profile','PermissionSet','QuickAction','RecordType','ValidationRule'];
-
-  return (
-    <div>
-      <div className="page-title">Atualizar Metadata</div>
-      <div className="page-subtitle">Atualiza componentes de metadata existentes</div>
-      <div className="card">
-        <div className="form-group">
-          <label className="form-label">Tipo</label>
-          <select className="form-select" value={type} onChange={e => setType(e.target.value)}>
-            {TYPES.map(t => <option key={t}>{t}</option>)}
-          </select>
-        </div>
-        <div className="form-group">
-          <label className="form-label">Payload JSON</label>
-          <textarea className="form-textarea" style={{minHeight:200}} value={payload}
-            onChange={e => setPayload(e.target.value)} />
-        </div>
-        <button className="btn btn-primary" onClick={update} disabled={loading}>
-          {loading ? <span className="spinner"></span> : '✏️'} Atualizar
-        </button>
-      </div>
-      {result && (
-        <div className={`output-panel ${result.success ? 'success' : 'error'}`}>
-          {JSON.stringify(result, null, 2)}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── FLS PAGE ─────────────────────────────────────────────────
-function FlsPage() {
-  const [profile, setProfile] = useState('Admin');
-  const [field, setField] = useState('Lead.CNPJ__c');
-  const [readable, setReadable] = useState(true);
-  const [editable, setEditable] = useState(true);
-  const [result, setResult] = useState(null);
-  const [currentFls, setCurrentFls] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const checkFls = async () => {
-    setLoading(true);
-    try {
-      const d = await api(`/api/metadata-read/Profile/${profile}`);
-      const fps = (d.fieldPermissions || []).filter(f => f.field === field);
-      setCurrentFls(fps.length > 0 ? fps[0] : { field, editable: false, readable: false });
-    } catch (e) {
-      setCurrentFls({ error: e.message });
-    }
-    setLoading(false);
-  };
-
-  const updateFls = async () => {
-    setLoading(true);
-    try {
-      const d = await api('/api/metadata-update/Profile', {
-        method: 'POST',
-        body: JSON.stringify({
-          fullName: profile,
-          fieldPermissions: [{ field, editable, readable }]
-        })
-      });
-      setResult(d);
-      if (d.success) checkFls();
-    } catch (e) {
-      setResult({ error: e.message });
-    }
-    setLoading(false);
-  };
-
-  return (
-    <div>
-      <div className="page-title">Field-Level Security</div>
-      <div className="page-subtitle">Verificar e atualizar permissões de campo por perfil</div>
-      <div className="card">
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Perfil</label>
-            <input className="form-input" value={profile} onChange={e => setProfile(e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Campo (Object.Field__c)</label>
-            <input className="form-input" value={field} onChange={e => setField(e.target.value)}
-              placeholder="Lead.CNPJ__c" />
-          </div>
-        </div>
-        <button className="btn btn-secondary btn-sm" onClick={checkFls} disabled={loading} style={{marginBottom:16}}>
-          {loading ? <span className="spinner"></span> : '🔍'} Verificar FLS Atual
-        </button>
-        {currentFls && !currentFls.error && (
-          <div style={{marginBottom:16,padding:12,background:'var(--bg-tertiary)',borderRadius:8,fontSize:13}}>
-            <strong>FLS Atual:</strong> Readable = <span className={`badge ${currentFls.readable?'badge-success':'badge-error'}`}>
-              {currentFls.readable ? 'true' : 'false'}</span>{' '}
-            Editable = <span className={`badge ${currentFls.editable?'badge-success':'badge-error'}`}>
-              {currentFls.editable ? 'true' : 'false'}</span>
-          </div>
-        )}
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label" style={{display:'flex',gap:8,alignItems:'center'}}>
-              <input type="checkbox" checked={readable} onChange={e => setReadable(e.target.checked)} /> Readable
-            </label>
-          </div>
-          <div className="form-group">
-            <label className="form-label" style={{display:'flex',gap:8,alignItems:'center'}}>
-              <input type="checkbox" checked={editable} onChange={e => setEditable(e.target.checked)} /> Editable
-            </label>
-          </div>
-        </div>
-        <button className="btn btn-primary" onClick={updateFls} disabled={loading}>
-          {loading ? <span className="spinner"></span> : '🔐'} Atualizar FLS
-        </button>
-      </div>
-      {result && (
-        <div className={`output-panel ${result.success ? 'success' : 'error'}`}>
-          {result.success ? '✅ FLS atualizado com sucesso!' : JSON.stringify(result, null, 2)}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── LAYOUT PAGE ──────────────────────────────────────────────
-function LayoutPage() {
-  const [obj, setObj] = useState('Lead');
-  const [layouts, setLayouts] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const d = await api(`/api/describe-layouts/${obj}`);
-      setLayouts(d);
-    } catch (e) {
-      setLayouts({ error: e.message });
-    }
-    setLoading(false);
-  };
-
-  return (
-    <div>
-      <div className="page-title">Layouts</div>
-      <div className="page-subtitle">Visualizar layouts e seções de qualquer objeto</div>
-      <div className="card">
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Objeto</label>
-            <input className="form-input" value={obj} onChange={e => setObj(e.target.value)} />
-          </div>
-          <div className="form-group" style={{flex:'0 0 auto',display:'flex',alignItems:'flex-end'}}>
-            <button className="btn btn-primary" onClick={load} disabled={loading}>
-              {loading ? <span className="spinner"></span> : '🖼️'} Carregar
-            </button>
-          </div>
-        </div>
-      </div>
-      {layouts?.layouts?.map((l, idx) => (
-        <div className="card" key={idx}>
-          <div className="card-title">{decodeURIComponent(l.fullName)}</div>
-          {l.sections?.map((s, si) => (
-            <div key={si} style={{marginBottom:12}}>
-              <div style={{fontSize:12,fontWeight:600,color:'var(--accent-light)',marginBottom:6}}>
-                📁 {s.label} ({s.style}, {s.columns} col)
-              </div>
-              <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
-                {s.fields?.map((f, fi) => (
-                  <span key={fi} style={{
-                    padding:'3px 8px',borderRadius:6,fontSize:11,
-                    background:'var(--bg-tertiary)',border:'1px solid var(--border)',
-                    fontFamily:'var(--font-mono)',color:'var(--text-secondary)'
-                  }}>{f}</span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── EXECUTE ANONYMOUS PAGE ───────────────────────────────────
-function AnonymousPage() {
-  const [code, setCode] = useState("System.debug('Hello from DevTools!');");
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const run = async () => {
-    setLoading(true);
-    try {
-      const d = await api('/api/execute-anonymous', {
-        method: 'POST', body: JSON.stringify({ code })
-      });
-      setResult(d);
-    } catch (e) {
-      setResult({ error: e.message });
-    }
-    setLoading(false);
-  };
-
-  return (
-    <div>
-      <div className="page-title">Execute Anonymous</div>
-      <div className="page-subtitle">Executar Apex anônimo diretamente na org</div>
-      <div className="card">
-        <div className="form-group">
-          <label className="form-label">Código Apex</label>
-          <textarea className="form-textarea" style={{minHeight:200}} value={code}
-            onChange={e => setCode(e.target.value)}
-            onKeyDown={e => { if (e.ctrlKey && e.key === 'Enter') run(); }} />
-        </div>
-        <div style={{display:'flex',gap:8,alignItems:'center'}}>
-          <button className="btn btn-primary" onClick={run} disabled={loading}>
-            {loading ? <span className="spinner"></span> : '▶️'} Executar
-          </button>
-          <span style={{fontSize:12,color:'var(--text-muted)'}}>Ctrl+Enter</span>
-        </div>
-      </div>
-      {result && (
-        <div className={`output-panel ${result.success ? 'success' : 'error'}`}>
-          {result.success
-            ? '✅ Executado com sucesso!' + (result.compileProblem ? `\nCompile: ${result.compileProblem}` : '')
-            : `❌ ${result.compileProblem || result.exceptionMessage || JSON.stringify(result, null, 2)}`}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── DATA INSERT PAGE ─────────────────────────────────────────
-function DataPage() {
-  const [payload, setPayload] = useState(JSON.stringify({
-    steps: [
-      { objectName: "Lead", refPrefix: "lead", records: [
-        { LastName: "Silva", Company: "Empresa Teste", Status: "Open - Not Contacted" }
-      ]}
-    ]
-  }, null, 2));
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const insert = async () => {
-    setLoading(true);
-    try {
-      const data = JSON.parse(payload);
-      const d = await api('/api/data/composite', { method: 'POST', body: JSON.stringify(data) });
-      setResult(d);
-    } catch (e) {
-      setResult({ error: e.message });
-    }
-    setLoading(false);
-  };
-
-  return (
-    <div>
-      <div className="page-title">Inserir Dados</div>
-      <div className="page-subtitle">Insert de registros via Composite API (multi-objeto)</div>
-      <div className="card">
-        <div className="form-group">
-          <label className="form-label">Payload JSON (formato composite)</label>
-          <textarea className="form-textarea" style={{minHeight:250}} value={payload}
-            onChange={e => setPayload(e.target.value)} />
-        </div>
-        <button className="btn btn-primary" onClick={insert} disabled={loading}>
-          {loading ? <span className="spinner"></span> : '💾'} Inserir
-        </button>
-      </div>
-      {result && (
-        <div className="output-panel">{JSON.stringify(result, null, 2)}</div>
-      )}
-    </div>
-  );
-}
-
-// ─── MAIN APP ─────────────────────────────────────────────────
-function App() {
-  const [page, setPage] = useState('connection');
-  const [connStatus, setConnStatus] = useState('loading');
-
-  useEffect(() => {
-    api('/test-connection').then(d => {
-      setConnStatus(d.status === 'connected' ? 'ok' : 'err');
-    }).catch(() => setConnStatus('err'));
-  }, []);
-
-  const pages = {
-    'connection': ConnectionPage,
-    'soql': SoqlPage,
-    'describe': DescribePage,
-    'apex-deploy': ApexDeployPage,
-    'fields': CreateFieldPage,
-    'metadata-read': MetadataReadPage,
-    'metadata-update': MetadataUpdatePage,
-    'fls': FlsPage,
-    'layout': LayoutPage,
-    'anonymous': AnonymousPage,
-    'data': DataPage,
-  };
-  const PageComponent = pages[page] || ConnectionPage;
-
-  // Group menu items by section
-  const sections = {};
-  MENU.forEach(m => {
-    if (!sections[m.section]) sections[m.section] = [];
-    sections[m.section].push(m);
+async function callAI(msg) {
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:8000, system:SYS, messages:[{role:"user",content:msg}] })
   });
+  const d = await r.json();
+  const txt = (d.content||[]).map(c=>c.text||'').join('');
+  return JSON.parse(txt.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim());
+}
+
+async function execStep(step) {
+  const {type:t, config:c} = step;
+  if (t==='create_field') return api('/api/metadata-create/CustomField',{method:'POST',body:JSON.stringify(c)});
+  if (t==='deploy_apex') {
+    const d = await api('/api/deploy-code',{method:'POST',body:JSON.stringify(c)});
+    if (d.deployId) { let tries=0; while(tries<30){await new Promise(r=>setTimeout(r,3000)); const s=await api('/api/deploy-status/'+d.deployId); if(s.done)return s; tries++;} return {success:false,error:'Timeout'}; }
+    return d;
+  }
+  if (t==='update_fls') return api('/api/metadata-update/Profile',{method:'POST',body:JSON.stringify(c)});
+  if (t==='update_layout') return api('/api/metadata-update/Layout',{method:'POST',body:JSON.stringify(c)});
+  if (t==='update_quickaction') return api('/api/metadata-update/QuickAction',{method:'POST',body:JSON.stringify(c)});
+  if (t==='execute_anonymous') return api('/api/execute-anonymous',{method:'POST',body:JSON.stringify(c)});
+  return {success:false,error:'Tipo desconhecido: '+t};
+}
+
+function isOk(r,s) {
+  if(!r)return false; if(r.success===true)return true; if(r.status==='Succeeded')return true;
+  if(r.compiled===true&&r.success===true)return true; return false;
+}
+
+function AiPage() {
+  const [prompt,setPrompt]=useState('');
+  const [phase,setPhase]=useState('idle');
+  const [plan,setPlan]=useState(null);
+  const [statuses,setStatuses]=useState([]);
+  const [error,setError]=useState(null);
+
+  const examples = [
+    "Criar campo CPF__c no Contact com validação matemática via trigger e classe de teste",
+    "Criar picklist Prioridade__c no Case com valores Alta/Média/Baixa e FLS para Admin",
+    "Criar campo Receita_Anual__c (Currency) no Account com FLS e adicionar ao layout",
+    "Criar trigger que impede delete de Opportunity fechada (Closed Won)",
+  ];
+
+  const analyze = async () => {
+    if(!prompt.trim())return; setPhase('thinking'); setError(null); setPlan(null); setStatuses([]);
+    try { const p=await callAI(prompt); setPlan(p); setStatuses(p.steps.map(()=>({status:'pending',result:null}))); setPhase('plan'); }
+    catch(e){ setError('Erro ao analisar: '+e.message); setPhase('idle'); }
+  };
+
+  const execute = async () => {
+    if(!plan)return; setPhase('executing');
+    const ss=plan.steps.map(()=>({status:'pending',result:null})); setStatuses([...ss]);
+    for(let i=0;i<plan.steps.length;i++){
+      ss[i]={status:'running',result:null}; setStatuses([...ss]);
+      try { const r=await execStep(plan.steps[i]); ss[i]={status:isOk(r,plan.steps[i])?'done':'failed',result:r}; }
+      catch(e){ ss[i]={status:'failed',result:{error:e.message}}; }
+      setStatuses([...ss]);
+    }
+    setPhase('done');
+  };
+
+  const reset = () => { setPhase('idle'); setPlan(null); setStatuses([]); setError(null); setPrompt(''); };
+
+  const exportMeta = () => {
+    if(!plan)return;
+    const doc = { plan:plan.plan_name, description:plan.description, export_metadata:plan.export_metadata,
+      steps: plan.steps.map((s,i)=>({label:s.label,detail:s.detail,type:s.type,status:statuses[i]?.status,config:s.config})),
+      manual_steps:plan.manual_steps };
+    const b=new Blob([JSON.stringify(doc,null,2)],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(b);
+    a.download=`devtools-${plan.plan_name.replace(/\s+/g,'_')}.json`; a.click();
+  };
+
+  const stepIcon = (st,i) => { if(st==='running')return <span className="spinner"></span>; if(st==='done')return '✓'; if(st==='failed')return '✕'; return i+1; };
 
   return (
-    <div>
-      <div className="header">
-        <div className="header-left">
-          <div className="header-logo">
-            ◇ DevTools <span>Ever i9</span>
+    <div className="main">
+      {phase==='idle' && <>
+        <div className="ai-intro">
+          <h1>O que você precisa desenvolver?</h1>
+          <p>Descreva em linguagem natural. A IA analisa, monta o plano e deploya na org automaticamente.</p>
+        </div>
+        <div className="examples">{examples.map((ex,i)=><div key={i} className="example-chip" onClick={()=>setPrompt(ex)}>{ex}</div>)}</div>
+      </>}
+
+      {(phase==='idle'||phase==='thinking') && (
+        <div className="prompt-box">
+          <textarea className="prompt-textarea" value={prompt} onChange={e=>setPrompt(e.target.value)}
+            onKeyDown={e=>{if(e.ctrlKey&&e.key==='Enter')analyze();}}
+            placeholder="Ex: Criar campo CNPJ no Lead com validação matemática, trigger, classe de teste e FLS..." rows={3} />
+          <div className="prompt-footer">
+            <span className="prompt-hint">Ctrl+Enter para enviar</span>
+            <button className="btn btn-primary" onClick={analyze} disabled={phase==='thinking'||!prompt.trim()}>
+              {phase==='thinking'?<><span className="spinner"></span> Analisando...</>:<>⚡ Analisar e Planejar</>}
+            </button>
           </div>
         </div>
-        <div className="conn-status">
-          <div className={`conn-dot ${connStatus}`}></div>
-          {connStatus === 'ok' ? 'Org conectada' : connStatus === 'err' ? 'Desconectado' : 'Verificando...'}
-        </div>
-      </div>
-      <div className="app-layout">
-        <div className="sidebar">
-          {Object.entries(sections).map(([section, items]) => (
-            <div className="sidebar-section" key={section}>
-              <div className="sidebar-label">{section}</div>
-              {items.map(m => (
-                <div key={m.id} className={`sidebar-item ${page===m.id?'active':''}`}
-                  onClick={() => setPage(m.id)}>
-                  <span className="sidebar-icon">{m.icon}</span>
-                  {m.label}
+      )}
+
+      {error && <div className="output-panel error">{error}</div>}
+
+      {plan && (phase==='plan'||phase==='executing'||phase==='done') && <>
+        <div className="plan-card">
+          <div className="plan-title">
+            📋 {plan.plan_name}
+            {phase==='done' && (statuses.every(s=>s.status==='done')
+              ? <span className="badge badge-success">✓ Concluído</span>
+              : <span className="badge badge-error">Com erros</span>)}
+          </div>
+          <div className="plan-desc">{plan.description}</div>
+          <div className="step-list">
+            {plan.steps.map((step,i)=>{const st=statuses[i]||{status:'pending'}; return (
+              <div key={i} className={`step-item ${st.status}`}>
+                <div className="step-icon">{stepIcon(st.status,i)}</div>
+                <div className="step-body">
+                  <div className="step-name">{step.label}</div>
+                  <div className="step-detail">{step.detail}</div>
+                  {st.status==='failed'&&st.result&&<div className="step-error">
+                    {st.result.errors?.[0]?.message||st.result.compileProblem||st.result.exceptionMessage||
+                     st.result.componentFailures?.[0]?.problem||st.result.error||JSON.stringify(st.result).substring(0,300)}
+                  </div>}
                 </div>
-              ))}
-            </div>
-          ))}
+              </div>
+            );})}
+          </div>
+          {phase==='plan' && <div style={{marginTop:16,display:'flex',gap:8}}>
+            <button className="btn btn-primary" onClick={execute}>🚀 Executar Plano</button>
+            <button className="btn btn-secondary" onClick={reset}>Cancelar</button>
+          </div>}
         </div>
-        <div className="main">
-          <PageComponent />
-        </div>
-      </div>
+
+        {phase==='done' && <>
+          {plan.manual_steps?.length>0 && <div className="manual-steps">
+            <h3>📝 Passos Manuais Necessários</h3>
+            <ol>{plan.manual_steps.map((s,i)=><li key={i}>{s}</li>)}</ol>
+          </div>}
+          <div className="results-bar">
+            <button className="btn btn-secondary" onClick={exportMeta}>📦 Exportar Metadata</button>
+            <button className="btn btn-secondary" onClick={()=>{
+              const t=`# ${plan.plan_name}\n\n${plan.description}\n\n## Steps\n${plan.steps.map((s,i)=>`${i+1}. [${statuses[i]?.status}] ${s.label} — ${s.detail}`).join('\n')}\n\n## Manual\n${(plan.manual_steps||[]).map((s,i)=>`${i+1}. ${s}`).join('\n')}`;
+              navigator.clipboard.writeText(t);
+            }}>📋 Copiar Resumo</button>
+            <button className="btn btn-primary" onClick={reset}>✨ Nova Solicitação</button>
+          </div>
+        </>}
+      </>}
     </div>
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+// ── Tools Page ────────────────────────────────────────────────
+function ToolsPage() {
+  const [at,setAt]=useState(null);
+  const tools=[
+    {id:'soql',icon:'🔍',title:'SOQL Query',desc:'Executar consultas na org'},
+    {id:'describe',icon:'📋',title:'Describe Object',desc:'Schema de qualquer objeto'},
+    {id:'deploy',icon:'🚀',title:'Deploy Apex',desc:'Deploy de classes e triggers'},
+    {id:'field',icon:'🏗️',title:'Criar Campo',desc:'Custom field com FLS auto'},
+    {id:'fls',icon:'🔐',title:'Field-Level Security',desc:'Verificar e ajustar FLS'},
+    {id:'metadata',icon:'📖',title:'Metadata Read',desc:'Ler qualquer metadata'},
+    {id:'anonymous',icon:'▶️',title:'Execute Anonymous',desc:'Rodar Apex na org'},
+    {id:'layout',icon:'🖼️',title:'Layouts',desc:'Visualizar layouts e seções'},
+  ];
+  const C={soql:SoqlT,describe:DescT,deploy:DeployT,field:FieldT,fls:FlsT,metadata:MetaT,anonymous:AnonT,layout:LayoutT};
+  if(at){const Comp=C[at]; return <div className="main"><button className="btn btn-secondary btn-sm" onClick={()=>setAt(null)} style={{marginBottom:16}}>← Voltar</button>{Comp&&<Comp/>}</div>;}
+  return (<div className="main">
+    <h1 style={{fontSize:22,fontWeight:700,marginBottom:4}}>Ferramentas Manuais</h1>
+    <p style={{fontSize:13,color:'var(--text-muted)',marginBottom:24}}>Acesso direto aos endpoints do MCP Server</p>
+    <div className="tool-grid">{tools.map(t=><div key={t.id} className="tool-card" onClick={()=>setAt(t.id)}>
+      <div className="tool-card-icon">{t.icon}</div><div className="tool-card-title">{t.title}</div><div className="tool-card-desc">{t.desc}</div>
+    </div>)}</div>
+  </div>);
+}
+
+function SoqlT(){const[q,setQ]=useState('SELECT Id, Name FROM Lead LIMIT 10');const[r,setR]=useState(null);const[l,setL]=useState(false);
+  const run=async()=>{setL(true);try{setR(await api('/api/soql-b64/'+btoa(unescape(encodeURIComponent(q)))));}catch(e){setR({error:e.message});}setL(false);};
+  const recs=r?.records||[];const cols=recs.length?Object.keys(recs[0]).filter(k=>k!=='attributes'):[];
+  return <div><h2 style={{fontSize:18,fontWeight:700,marginBottom:16}}>🔍 SOQL Query</h2>
+    <div className="form-group"><textarea className="form-textarea" value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.ctrlKey&&e.key==='Enter')run();}}/></div>
+    <button className="btn btn-primary" onClick={run} disabled={l}>{l?<span className="spinner"/>:'Executar'}</button>
+    {r&&(r.error||r.status==='error'?<div className="output-panel error">{r.error||r.message}</div>:
+    cols.length?<div style={{overflowX:'auto',marginTop:12}}><table className="data-table"><thead><tr>{cols.map(c=><th key={c}>{c}</th>)}</tr></thead>
+    <tbody>{recs.map((rec,i)=><tr key={i}>{cols.map(c=><td key={c} className="mono">{typeof rec[c]==='object'?JSON.stringify(rec[c]):String(rec[c]??'')}</td>)}</tr>)}</tbody></table></div>
+    :<div className="output-panel">{JSON.stringify(r,null,2)}</div>)}</div>;}
+
+function DescT(){const[o,setO]=useState('Lead');const[r,setR]=useState(null);const[f,setF]=useState('');const[l,setL]=useState(false);
+  const run=async()=>{setL(true);try{setR(await api('/api/describe/'+o));}catch(e){setR({error:e.message});}setL(false);};
+  const flds=(r?.fields||[]).filter(x=>!f||x.name.toLowerCase().includes(f.toLowerCase())||(x.label||'').toLowerCase().includes(f.toLowerCase()));
+  return <div><h2 style={{fontSize:18,fontWeight:700,marginBottom:16}}>📋 Describe</h2>
+    <div className="form-row"><div className="form-group"><input className="form-input" value={o} onChange={e=>setO(e.target.value)}/></div>
+    <div style={{display:'flex',alignItems:'flex-end'}}><button className="btn btn-primary" onClick={run} disabled={l}>Describe</button></div></div>
+    {r?.fields&&<><div className="form-group" style={{marginTop:12}}><input className="form-input" placeholder="Filtrar..." value={f} onChange={e=>setF(e.target.value)}/></div>
+    <div style={{overflowX:'auto',maxHeight:450,overflowY:'auto'}}><table className="data-table"><thead><tr><th>API Name</th><th>Label</th><th>Tipo</th><th>Custom</th></tr></thead>
+    <tbody>{flds.map(x=><tr key={x.name}><td className="mono">{x.name}</td><td>{x.label}</td><td><span className="badge badge-success">{x.type}</span></td><td>{x.custom?'✓':''}</td></tr>)}</tbody></table></div></>}</div>;}
+
+function DeployT(){const[name,setName]=useState('');const[body,setBody]=useState('');const[r,setR]=useState(null);const[ds,setDs]=useState(null);const[l,setL]=useState(false);const[tab,setTab]=useState('class');
+  const deploy=async()=>{setL(true);setDs(null);try{const p=tab==='class'?{apexClasses:[{name,body}]}:{apexTriggers:[{name,body}]};
+    const d=await api('/api/deploy-code',{method:'POST',body:JSON.stringify(p)});setR(d);
+    if(d.deployId){let t=0;const iv=setInterval(async()=>{t++;try{const s=await api('/api/deploy-status/'+d.deployId);setDs(s);if(s.done||t>20)clearInterval(iv);}catch(e){clearInterval(iv);}},3000);}
+  }catch(e){setR({error:e.message});}setL(false);};
+  return <div><h2 style={{fontSize:18,fontWeight:700,marginBottom:16}}>🚀 Deploy Apex</h2>
+    <div style={{display:'flex',gap:8,marginBottom:16}}><button className={`btn btn-sm ${tab==='class'?'btn-primary':'btn-secondary'}`} onClick={()=>setTab('class')}>Classe</button>
+    <button className={`btn btn-sm ${tab==='trigger'?'btn-primary':'btn-secondary'}`} onClick={()=>setTab('trigger')}>Trigger</button></div>
+    <div className="form-group"><label className="form-label">Nome</label><input className="form-input" value={name} onChange={e=>setName(e.target.value)}/></div>
+    <div className="form-group"><label className="form-label">Código</label><textarea className="form-textarea" style={{minHeight:200}} value={body} onChange={e=>setBody(e.target.value)}/></div>
+    <button className="btn btn-primary" onClick={deploy} disabled={l||!name||!body}>{l?<span className="spinner"/>:'Deployar'}</button>
+    {ds&&<div className={`output-panel ${ds.success?'success':'error'}`}>{ds.success?'✅ Deploy OK — '+ds.numberComponentsDeployed+' componentes':'❌ '+JSON.stringify(ds.componentFailures)}</div>}</div>;}
+
+function FieldT(){const[o,setO]=useState('Lead');const[fn,setFn]=useState('');const[lb,setLb]=useState('');const[tp,setTp]=useState('Text');const[len,setLen]=useState('255');const[pv,setPv]=useState('');
+  const[r,setR]=useState(null);const[l,setL]=useState(false);
+  const create=async()=>{setL(true);try{const m={fullName:o+'.'+fn,label:lb||fn.replace('__c',''),type:tp,required:false};
+    if(tp==='Text')m.length=parseInt(len)||255;
+    if(['Picklist','MultiselectPicklist'].includes(tp)&&pv){const vs=pv.split('\n').filter(v=>v.trim());m.valueSet={restricted:false,valueSetDefinition:{sorted:false,value:vs.map(v=>({fullName:v.trim(),default:false,label:v.trim()}))}};}
+    const d=await api('/api/metadata-create/CustomField',{method:'POST',body:JSON.stringify(m)});
+    if(d.success)await api('/api/metadata-update/Profile',{method:'POST',body:JSON.stringify({fullName:'Admin',fieldPermissions:[{field:o+'.'+fn,editable:true,readable:true}]})});
+    setR(d);}catch(e){setR({error:e.message});}setL(false);};
+  return <div><h2 style={{fontSize:18,fontWeight:700,marginBottom:16}}>🏗️ Criar Campo</h2>
+    <div className="form-row"><div className="form-group"><label className="form-label">Objeto</label><input className="form-input" value={o} onChange={e=>setO(e.target.value)}/></div>
+    <div className="form-group"><label className="form-label">API Name</label><input className="form-input" value={fn} onChange={e=>setFn(e.target.value)} placeholder="Campo__c"/></div></div>
+    <div className="form-row"><div className="form-group"><label className="form-label">Label</label><input className="form-input" value={lb} onChange={e=>setLb(e.target.value)}/></div>
+    <div className="form-group"><label className="form-label">Tipo</label><select className="form-select" value={tp} onChange={e=>setTp(e.target.value)}>
+    {['Text','LongTextArea','Number','Currency','Percent','Picklist','MultiselectPicklist','Checkbox','Date','DateTime','Email','Phone','Url','Lookup'].map(t=><option key={t}>{t}</option>)}</select></div></div>
+    {tp==='Text'&&<div className="form-group"><label className="form-label">Comprimento</label><input className="form-input" value={len} onChange={e=>setLen(e.target.value)} type="number"/></div>}
+    {['Picklist','MultiselectPicklist'].includes(tp)&&<div className="form-group"><label className="form-label">Valores (um por linha)</label><textarea className="form-textarea" style={{fontFamily:'var(--font-body)',minHeight:80}} value={pv} onChange={e=>setPv(e.target.value)}/></div>}
+    <button className="btn btn-primary" onClick={create} disabled={l||!fn}>{l?<span className="spinner"/>:'Criar Campo'}</button>
+    {r&&<div className={`output-panel ${r.success?'success':'error'}`}>{r.success?'✅ '+r.fullName+' criado + FLS Admin':JSON.stringify(r,null,2)}</div>}</div>;}
+
+function FlsT(){const[p,setP]=useState('Admin');const[f,setF]=useState('Lead.CNPJ__c');const[c,setC]=useState(null);const[r,setR]=useState(null);const[l,setL]=useState(false);const[re,setRe]=useState(true);const[ed,setEd]=useState(true);
+  const chk=async()=>{setL(true);try{const d=await api('/api/metadata-read/Profile/'+p);const fp=(d.fieldPermissions||[]).find(x=>x.field===f);setC(fp||{field:f,editable:false,readable:false});}catch(e){}setL(false);};
+  const upd=async()=>{setL(true);try{setR(await api('/api/metadata-update/Profile',{method:'POST',body:JSON.stringify({fullName:p,fieldPermissions:[{field:f,editable:ed,readable:re}]})}));chk();}catch(e){setR({error:e.message});}setL(false);};
+  return <div><h2 style={{fontSize:18,fontWeight:700,marginBottom:16}}>🔐 FLS</h2>
+    <div className="form-row"><div className="form-group"><label className="form-label">Perfil</label><input className="form-input" value={p} onChange={e=>setP(e.target.value)}/></div>
+    <div className="form-group"><label className="form-label">Campo</label><input className="form-input" value={f} onChange={e=>setF(e.target.value)}/></div></div>
+    <button className="btn btn-secondary btn-sm" onClick={chk} disabled={l} style={{marginBottom:12}}>Verificar</button>
+    {c&&<div style={{padding:10,background:'var(--bg-tertiary)',borderRadius:8,marginBottom:12,fontSize:13}}>Read=<span className={`badge ${c.readable?'badge-success':'badge-error'}`}>{String(c.readable)}</span> Edit=<span className={`badge ${c.editable?'badge-success':'badge-error'}`}>{String(c.editable)}</span></div>}
+    <div style={{display:'flex',gap:16,marginBottom:12}}><label style={{fontSize:13,display:'flex',gap:6,alignItems:'center'}}><input type="checkbox" checked={re} onChange={e=>setRe(e.target.checked)}/> Readable</label>
+    <label style={{fontSize:13,display:'flex',gap:6,alignItems:'center'}}><input type="checkbox" checked={ed} onChange={e=>setEd(e.target.checked)}/> Editable</label></div>
+    <button className="btn btn-primary" onClick={upd} disabled={l}>Atualizar</button>
+    {r&&<div className={`output-panel ${r.success?'success':'error'}`}>{r.success?'✅ FLS atualizado':JSON.stringify(r,null,2)}</div>}</div>;}
+
+function MetaT(){const[t,setT]=useState('CustomField');const[fn,setFn]=useState('Lead.CNPJ__c');const[r,setR]=useState(null);const[l,setL]=useState(false);
+  const read=async()=>{setL(true);try{setR(await api('/api/metadata-read/'+t+'/'+encodeURIComponent(fn)));}catch(e){setR({error:e.message});}setL(false);};
+  return <div><h2 style={{fontSize:18,fontWeight:700,marginBottom:16}}>📖 Metadata Read</h2>
+    <div className="form-row"><div className="form-group"><label className="form-label">Tipo</label><select className="form-select" value={t} onChange={e=>setT(e.target.value)}>
+    {['CustomField','CustomObject','Layout','Profile','PermissionSet','QuickAction','RecordType','ValidationRule'].map(x=><option key={x}>{x}</option>)}</select></div>
+    <div className="form-group"><label className="form-label">Full Name</label><input className="form-input" value={fn} onChange={e=>setFn(e.target.value)}/></div></div>
+    <button className="btn btn-primary" onClick={read} disabled={l}>{l?<span className="spinner"/>:'Ler'}</button>
+    {r&&<div className="output-panel">{JSON.stringify(r,null,2)}</div>}</div>;}
+
+function AnonT(){const[code,setCode]=useState("System.debug('Hello!');");const[r,setR]=useState(null);const[l,setL]=useState(false);
+  const run=async()=>{setL(true);try{setR(await api('/api/execute-anonymous',{method:'POST',body:JSON.stringify({code})}));}catch(e){setR({error:e.message});}setL(false);};
+  return <div><h2 style={{fontSize:18,fontWeight:700,marginBottom:16}}>▶️ Execute Anonymous</h2>
+    <div className="form-group"><textarea className="form-textarea" style={{minHeight:200}} value={code} onChange={e=>setCode(e.target.value)} onKeyDown={e=>{if(e.ctrlKey&&e.key==='Enter')run();}}/></div>
+    <button className="btn btn-primary" onClick={run} disabled={l}>{l?<span className="spinner"/>:'Executar'}</button>
+    {r&&<div className={`output-panel ${r.success?'success':'error'}`}>{r.success?'✅ OK':'❌ '+(r.compileProblem||r.exceptionMessage||JSON.stringify(r))}</div>}</div>;}
+
+function LayoutT(){const[o,setO]=useState('Lead');const[r,setR]=useState(null);const[l,setL]=useState(false);
+  const load=async()=>{setL(true);try{setR(await api('/api/describe-layouts/'+o));}catch(e){setR({error:e.message});}setL(false);};
+  return <div><h2 style={{fontSize:18,fontWeight:700,marginBottom:16}}>🖼️ Layouts</h2>
+    <div className="form-row"><div className="form-group"><input className="form-input" value={o} onChange={e=>setO(e.target.value)}/></div>
+    <div style={{display:'flex',alignItems:'flex-end'}}><button className="btn btn-primary" onClick={load} disabled={l}>Carregar</button></div></div>
+    {r?.layouts?.map((lay,i)=><div key={i} className="plan-card" style={{marginTop:12}}>
+      <div className="plan-title">{decodeURIComponent(lay.fullName)}</div>
+      {lay.sections?.map((s,si)=><div key={si} style={{marginBottom:10}}>
+        <div style={{fontSize:12,fontWeight:600,color:'var(--accent)',marginBottom:4}}>📁 {s.label}</div>
+        <div style={{display:'flex',flexWrap:'wrap',gap:4}}>{s.fields?.map((f,fi)=><span key={fi} style={{padding:'2px 8px',borderRadius:6,fontSize:11,background:'var(--bg-tertiary)',border:'1px solid var(--border)',fontFamily:'var(--font-mono)',color:'var(--text-secondary)'}}>{f}</span>)}</div>
+      </div>)}
+    </div>)}</div>;}
+
+// ── App ───────────────────────────────────────────────────────
+function App() {
+  const [tab,setTab]=useState('ai');
+  const [conn,setConn]=useState('loading');
+  useEffect(()=>{api('/test-connection').then(d=>setConn(d.status==='connected'?'ok':'err')).catch(()=>setConn('err'));},[]);
+  return <div>
+    <div className="header">
+      <div className="header-logo">◇ DevTools <span>Ever i9</span></div>
+      <div className="header-right"><div className="conn-badge"><div className={`conn-dot ${conn}`}></div>{conn==='ok'?'Org conectada':conn==='err'?'Desconectado':'...'}</div></div>
+    </div>
+    <div className="tab-bar">
+      <button className={`tab-btn ${tab==='ai'?'active':''}`} onClick={()=>setTab('ai')}>⚡ AI Assistant</button>
+      <button className={`tab-btn ${tab==='tools'?'active':''}`} onClick={()=>setTab('tools')}>🔧 Ferramentas</button>
+    </div>
+    {tab==='ai'?<AiPage/>:<ToolsPage/>}
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 </body>
 </html>
