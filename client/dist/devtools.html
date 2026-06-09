@@ -204,17 +204,66 @@ async function api(path, opts = {}) {
   return res.json();
 }
 
-// AI prompt is now server-side
+const SYS = `Você é um arquiteto Salesforce expert integrado ao Ever i9 DevTools.
+O usuário descreve o que precisa e você gera um PLANO DE EXECUÇÃO em JSON.
+
+Endpoints disponíveis no MCP Server (${BASE}):
+
+CRIAR CAMPO: POST /api/metadata-create/CustomField
+  Body: { fullName: "Object.Field__c", label, type, length?, required?, valueSet? }
+  Picklist valueSet: { restricted:false, valueSetDefinition:{ sorted:false, value:[{fullName,default:false,label}] } }
+
+DEPLOY APEX: POST /api/deploy-code
+  Body: { apexClasses:[{name,body}], apexTriggers:[{name,body}] }
+  IMPORTANTE: classes e triggers vão juntos no mesmo request
+
+ATUALIZAR FLS: POST /api/metadata-update/Profile
+  Body: { fullName:"Admin", fieldPermissions:[{field:"Obj.Field__c",editable:true,readable:true}] }
+
+ATUALIZAR LAYOUT: POST /api/metadata-update/Layout
+  Body: { fullName:"Object-Layout Name", layoutSections:[...] }
+
+ATUALIZAR QUICK ACTION: POST /api/metadata-update/QuickAction
+  Body: { fullName:"ActionName", quickActionLayout:{...}, targetObject, type:"Create" }
+
+EXECUTE ANONYMOUS: POST /api/execute-anonymous Body: { code:"..." }
+
+REGRAS IMPORTANTES:
+- FLS SEMPRE deve ser atualizado após criar campos (readable+editable=true para Admin)
+- Apex: gerar código completo, compilável, com @description @author Everymind @date 2026
+- Triggers: especificar objeto e eventos corretos
+- Sempre gerar classe de teste com boa cobertura (cenários positivos e negativos)
+- deploy_apex: colocar classes E triggers no MESMO step quando relacionados
+- Para campo Picklist usar valueSet com valueSetDefinition (não picklistValues)
+
+RESPONDA APENAS JSON válido, sem markdown, sem backticks:
+{
+  "plan_name": "Nome curto",
+  "description": "O que será feito",
+  "steps": [
+    {
+      "type": "create_field|deploy_apex|update_fls|update_layout|update_quickaction|execute_anonymous",
+      "label": "Descrição curta",
+      "detail": "Detalhe técnico",
+      "config": { ...payload do endpoint... }
+    }
+  ],
+  "manual_steps": ["Passo manual se necessário (limpar cache Lightning, etc)"],
+  "export_metadata": {
+    "objects_affected": ["Lead"],
+    "components": ["CustomField","ApexClass"],
+    "summary": "Resumo para documentação"
+  }
+}`;
 
 async function callAI(msg) {
-  const r = await fetch(BASE + '/api/devtools/plan', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ prompt: msg })
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:8000, system:SYS, messages:[{role:"user",content:msg}] })
   });
   const d = await r.json();
-  if (d.error) throw new Error(d.error);
-  if (d.raw) throw new Error('AI retornou resposta não-JSON: ' + d.raw.substring(0, 200));
-  return d;
+  const txt = (d.content||[]).map(c=>c.text||'').join('');
+  return JSON.parse(txt.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim());
 }
 
 async function execStep(step) {
@@ -229,6 +278,7 @@ async function execStep(step) {
   if (t==='update_layout') return api('/api/metadata-update/Layout',{method:'POST',body:JSON.stringify(c)});
   if (t==='update_quickaction') return api('/api/metadata-update/QuickAction',{method:'POST',body:JSON.stringify(c)});
   if (t==='execute_anonymous') return api('/api/execute-anonymous',{method:'POST',body:JSON.stringify(c)});
+  if (t==='add_to_layout') return api('/api/devtools/add-to-layout',{method:'POST',body:JSON.stringify(c)});
   return {success:false,error:'Tipo desconhecido: '+t};
 }
 
