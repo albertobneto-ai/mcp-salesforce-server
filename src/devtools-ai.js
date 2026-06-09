@@ -72,7 +72,7 @@ RESPONDA APENAS JSON válido, sem markdown, sem backticks:
           'X-Title': 'Ever i9 DevTools AI'
         },
         body: JSON.stringify({
-          model: 'anthropic/claude-sonnet-4',
+          model: 'deepseek/deepseek-chat-v3-0324:free',
           max_tokens: 8000,
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
