@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 
 export function registerDevToolsRoutes(app) {
 
-  const ANTHROPIC_KEY = process.env.ANTHROPIC_KEY;
+  const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 
   const SYSTEM_PROMPT = `Você é um arquiteto Salesforce expert integrado ao Ever i9 DevTools.
 O usuário descreve o que precisa e você gera um PLANO DE EXECUÇÃO em JSON.
@@ -77,7 +77,7 @@ RESPONDA APENAS JSON válido, sem markdown, sem backticks, sem texto antes ou de
           'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-6',
           max_tokens: 8000,
           temperature: 0,
           system: SYSTEM_PROMPT,
