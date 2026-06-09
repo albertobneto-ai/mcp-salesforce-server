@@ -379,20 +379,17 @@ async trEntry(text){
     const res=e.querySelector('.tr-e-result');
     const recentCtx=Array.from(ctx.querySelectorAll('.ctx-l')).slice(-8).map(x=>x.textContent).join('\n');
     const prompt='Contexto da conversa:\n'+recentCtx+'\n\nÚltima fala: "'+text+'"\n\nResponda EM PORTUGUÊS com profundidade técnica de arquiteto principal.\n\nSOLUÇÃO: [nome da abordagem]\nARQUITETURA: [design completo — objetos, campos, relacionamentos, automações, integrações envolvidas]\nIMPLEMENTAÇÃO: [passo a passo técnico — Flows, Apex, configurações, ordem de execução]\nALTERNATIVAS DESCARTADAS: [o que NÃO usar e por quê — ex: por que não Process Builder, por que não Trigger se Flow resolve]\nLIMITES E RISCOS: [governor limits aplicáveis, volumes, considerações de performance]\nCOMPONENTES: [lista exata de features/objetos SF]';
-    const r=await self.api({customPrompt:`SF Solution Architect. Sempre em Português Brasileiro.
+    const r=await self.api({customPrompt:`Arquiteto Salesforce Principal. Responda SEMPRE em Português Brasileiro com máxima clareza e profundidade.
 
-REGRAS SALESFORCE INVIOLÁVEIS:
-- Roll-Up Summary SOMENTE no objeto PAI (master), nunca no filho
-- Master-Detail: filho tem o campo, pai ganha Roll-Up Summary
-- Validation Rules são declarativas (Setup), NÃO são Triggers
-- Process Builder e Workflow Rules são APOSENTADOS — use Flow
-- SOQL: não existe SELECT *, listar campos; limite 50K rows
-- Governor Limits: 100 SOQL, 150 DML, 6MB heap, 10s CPU
-- Lookup=opcional, Master-Detail=obrigatório+cascade delete+Roll-Up
-- Permission Sets substituem Profiles (best practice)
-- Data Cloud = CDP/perfis unificados, NÃO é Data Loader
+ESTRUTURA OBRIGATÓRIA DA RESPOSTA:
+1. PROBLEMA: reformule o problema com clareza técnica em uma frase
+2. SOLUÇÃO: declare a abordagem escolhida com convicção — "A abordagem correta é X porque Y"
+3. ARQUITETURA: detalhe objetos exatos (API names), campos, relacionamentos (Lookup vs MD), automações (Flow type específico, não genérico), integrações
+4. IMPLEMENTAÇÃO: passo a passo com nomes exatos de elementos (Get Records, Decision, Assignment, DML)
+5. POR QUE NÃO OUTRA VIA: justifique por que descartou alternativas (ex: "Apex Trigger é desnecessário aqui porque o Flow before-save resolve sem código e reduz débito técnico")
+6. LIMITES: governor limits específicos que se aplicam (ex: "Com 50K+ registros, o Flow batch é necessário para evitar CPU time limit")
 
-Cite objetos, features e patterns específicos. Direto, sem enrolação. Verifique contra as regras antes de responder.`,messages:[{role:'user',content:prompt}]},800,1500,true);
+Seja cirúrgico. Cada frase deve agregar informação técnica. Zero enrolação.`,messages:[{role:'user',content:prompt}]},800,1500,true);
     res.innerHTML='<div class="tr-r-lbl">☁️ SF Solution</div><div class="tr-r-sf">'+self.fmt((r||'...').trim())+'</div>';
     res.style.display='block';this.textContent='✓';
   };
@@ -432,12 +429,12 @@ async _selAction(type){
       const batchP=isEn
         ?'Translate these English statements to Portuguese, then suggest what I could respond (in English + Portuguese translation):\n\n'+combined+'\n\nFormat:\nTRADUÇÃO:\n[full translation]\n\nRESPOSTA SUGERIDA:\n[response in English]\n\nTRADUÇÃO DA RESPOSTA:\n[response in Portuguese]'
         :'Translate these Portuguese statements to English, then suggest what I could respond (in English + Portuguese translation):\n\n'+combined+'\n\nFormat:\nTRANSLATION:\n[full translation]\n\nSUGGESTED RESPONSE:\n[response in English]\n\nTRADUÇÃO:\n[response in Portuguese]';
-      reply=await this.api({customPrompt:`SF Architect translator. Translate + suggest response. REGRAS SF: Roll-Up só no PAI, Validation Rules≠Triggers, Process Builder aposentado→Flow, SOQL sem SELECT*, Governor Limits (100 SOQL/150 DML). Verifique antes de responder. Follow format.`,messages:[{role:'user',content:batchP}]},1500,true);
+      reply=await this.api({customPrompt:`SF Architect translator. Translate + suggest response. For SF topics: structure as 1) acknowledge problem 2) state solution decisively 3) Salesforce-specific depth with exact objects/features/APIs 4) preempt objections. Use architecture vocabulary: orchestration, event-driven, idempotent, bulkified, declarative-first. Zero filler. Follow format.`,messages:[{role:'user',content:batchP}]},1500,true);
       res.innerHTML='<div class="tr-r-lbl">'+(isEn?'🇧🇷 Translation + Response ('+texts.length+' blocks)':'🇺🇸 Translation + Response ('+texts.length+' blocks)')+'</div><div class="tr-r-sf">'+this.fmt((reply||'...').trim())+'</div>';
     }else{
       const recentCtx=Array.from(this.$('tr-ctx').querySelectorAll('.ctx-l')).slice(-12).map(x=>x.textContent).join('\n');
       const prompt='Contexto completo:\n'+recentCtx+'\n\nBlocos selecionados para análise:\n'+combined+'\n\nComo arquiteto Salesforce principal, forneça em PORTUGUÊS BRASILEIRO:\n\nSOLUÇÃO: [abordagem arquitetural]\nARQUITETURA: [design completo com objetos, campos, relacionamentos, automações]\nIMPLEMENTAÇÃO: [passo a passo técnico detalhado]\nALTERNATIVAS DESCARTADAS: [o que não usar e justificativa]\nLIMITES E RISCOS: [governor limits, volumes, performance]\nCOMPONENTES: [features SF exatas]';
-      reply=await this.api({customPrompt:`SF Solution Architect. Português Brasileiro. REGRAS: Roll-Up Summary só no PAI. Validation Rules ≠ Triggers. Process Builder/Workflow aposentados, use Flow. SOQL sem SELECT *, 50K limit. Governor Limits: 100 SOQL, 150 DML. Lookup≠Master-Detail. Verifique antes de responder. Detalhado, acionável.`,messages:[{role:'user',content:prompt}]},1500,true);
+      reply=await this.api({customPrompt:`Arquiteto SF Principal. Português Brasileiro. Estruture: 1)PROBLEMA claro 2)SOLUÇÃO decisiva 3)ARQUITETURA com objetos/campos/automações exatos 4)IMPLEMENTAÇÃO passo a passo 5)ALTERNATIVAS DESCARTADAS com justificativa 6)LIMITES governor específicos. Cirúrgico, zero enrolação.`,messages:[{role:'user',content:prompt}]},1500,true);
       res.innerHTML='<div class="tr-r-lbl">☁️ SF Solution ('+texts.length+' blocks)</div><div class="tr-r-sf">'+this.fmt((reply||'...').trim())+'</div>';
     }
   }catch(x){res.innerHTML='<div class="tr-r-lbl">Error</div>';}
