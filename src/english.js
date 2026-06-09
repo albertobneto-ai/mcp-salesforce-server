@@ -107,6 +107,19 @@ router.get('/api/auth/check', (req, res) => {
   res.json({ authenticated: tokens.has(token) });
 });
 
+// Test Haiku directly
+router.get('/api/test-haiku', async (req, res) => {
+  try {
+    const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + process.env.OPENROUTER_KEY },
+      body: JSON.stringify({ model: 'anthropic/claude-3.5-haiku', max_tokens: 30, messages: [{ role: 'user', content: 'Say hi' }] })
+    });
+    const text = await r.text();
+    res.json({ status: r.status, body: text.substring(0, 500) });
+  } catch (e) { res.json({ error: e.message }); }
+});
+
 // Debug
 router.get('/api/debug', (req, res) => {
   res.json({ version: 'v4-haiku', hasKey: !!process.env.OPENROUTER_KEY, keyLen: (process.env.OPENROUTER_KEY||'').length });
