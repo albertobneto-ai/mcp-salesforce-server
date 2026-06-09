@@ -78,7 +78,7 @@ async function callOpenRouter(systemPrompt, messages, maxTk) {
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.OPENROUTER_KEY}` },
-    body: JSON.stringify({ model: 'deepseek/deepseek-chat-v3-0324', max_tokens: maxTk || 512, messages: [{ role: 'system', content: systemPrompt }, ...messages] })
+    body: JSON.stringify({ model: 'deepseek/deepseek-chat-v3-0324', max_tokens: maxTk || 800, messages: [{ role: 'system', content: systemPrompt }, ...messages] })
   });
   if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${await res.text()}`);
   const data = await res.json();
