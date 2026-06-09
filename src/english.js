@@ -107,6 +107,11 @@ router.get('/api/auth/check', (req, res) => {
   res.json({ authenticated: tokens.has(token) });
 });
 
+// Debug
+router.get('/api/debug', (req, res) => {
+  res.json({ version: 'v4-haiku', hasKey: !!process.env.OPENROUTER_KEY, keyLen: (process.env.OPENROUTER_KEY||'').length });
+});
+
 // Scenarios
 router.get('/api/chat/scenarios', authMiddleware, (req, res) => {
   res.json(Object.entries(SCENARIOS).map(([k, v]) => ({ id: k, label: v.label, icon: v.icon, description: v.description })));
