@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Partner Community — Gestão de Usuários</title>
+<style>
+  @page { size: A4; margin: 2cm 1.5cm; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#e8dff5; font-family:'Segoe UI',system-ui,sans-serif; color:#2d1f48; min-height:100vh; }
+
+  .header {
+    background:linear-gradient(135deg,#430098,#6C44A0);
+    color:#fff; padding:24px 32px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .header h1 { font-size:20px; font-weight:700; }
+  .header .sub { font-size:12px; opacity:.7; margin-top:2px; }
+  .header-right { display:flex; align-items:center; gap:12px; }
+  .header-badge {
+    background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.25);
+    padding:5px 14px; border-radius:16px; font-size:11px; color:#fff;
+    display:flex; align-items:center; gap:6px;
+  }
+  .dot { width:7px; height:7px; border-radius:50%; background:#34d399; }
+
+  .container { max-width:1100px; margin:0 auto; padding:24px 20px; }
+
+  .tabs { display:flex; gap:2px; margin-bottom:20px; }
+  .tab {
+    padding:10px 24px; border-radius:8px 8px 0 0; font-size:13px; font-weight:600;
+    cursor:pointer; background:#d4c8e8; color:#5a3d8a; border:1px solid #c9b8d8; border-bottom:none;
+    transition:all .15s;
+  }
+  .tab.active { background:#fff; color:#430098; border-color:#c9b8d8; }
+
+  .panel {
+    background:#fff; border:1px solid #c9b8d8; border-radius:0 8px 8px 8px;
+    padding:24px; margin-bottom:20px;
+  }
+
+  .section-header {
+    background:linear-gradient(135deg,#5a3d8a,#7868a0);
+    border-left:6px solid #430098; color:#fff; padding:12px 18px; border-radius:6px;
+    font-size:14px; font-weight:600; margin-bottom:16px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .section-header .icon { font-size:18px; }
+
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .form-group { margin-bottom:0; }
+  .form-group.full { grid-column:1/-1; }
+  .form-label { display:block; font-size:12px; font-weight:600; color:#5a3d8a; margin-bottom:5px; }
+  .form-label .req { color:#dc2626; }
+  .form-input, .form-select {
+    width:100%; padding:10px 14px; border-radius:6px; border:1px solid #c9b8d8;
+    background:#f9f7fb; font-size:13px; color:#2d1f48; font-family:inherit;
+    transition:border-color .2s; outline:none;
+  }
+  .form-input:focus { border-color:#430098; box-shadow:0 0 0 3px rgba(67,0,152,.1); }
+  .form-input::placeholder { color:#a89bc2; }
+
+  .btn {
+    padding:10px 24px; border-radius:6px; font-size:13px; font-weight:600;
+    cursor:pointer; border:none; transition:all .15s; font-family:inherit;
+    display:inline-flex; align-items:center; gap:8px;
+  }
+  .btn-primary { background:#430098; color:#fff; }
+  .btn-primary:hover { background:#5a1aad; transform:translateY(-1px); }
+  .btn-primary:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+  .btn-secondary { background:#d4c8e8; color:#5a3d8a; }
+  .btn-secondary:hover { background:#c4b4de; }
+  .btn-danger { background:#dc2626; color:#fff; }
+  .btn-sm { padding:6px 14px; font-size:12px; }
+
+  .actions { display:flex; gap:10px; margin-top:20px; align-items:center; }
+
+  .result-box {
+    margin-top:16px; padding:16px; border-radius:8px; font-size:13px; line-height:1.7;
+    display:none;
+  }
+  .result-box.success { display:block; background:rgba(5,150,105,.08); border:1px solid rgba(5,150,105,.25); color:#059669; }
+  .result-box.error { display:block; background:rgba(220,38,38,.06); border:1px solid rgba(220,38,38,.2); color:#dc2626; }
+
+  .user-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .user-table th {
+    background:linear-gradient(135deg,#5a3d8a,#7868a0);
+    color:#fff; padding:10px 14px; text-align:left; font-size:11px;
+    font-weight:600; text-transform:uppercase; letter-spacing:.5px;
+  }
+  .user-table td { padding:10px 14px; border-bottom:1px solid #e8dff5; color:#2d1f48; }
+  .user-table tr:hover td { background:rgba(67,0,152,.03); }
+
+  .badge { padding:3px 10px; border-radius:12px; font-size:11px; font-weight:600; }
+  .badge-active { background:rgba(5,150,105,.1); color:#059669; }
+  .badge-inactive { background:rgba(220,38,38,.08); color:#dc2626; }
+
+  .spinner { width:14px; height:14px; border:2px solid #c9b8d8; border-top-color:#430098; border-radius:50%; animation:spin .6s linear infinite; display:inline-block; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  .credential-box {
+    background:#f0ebf7; border:2px dashed #5a3d8a; border-radius:8px; padding:14px 18px;
+    margin-top:12px; font-family:'Courier New',monospace; font-size:13px;
+  }
+  .credential-box strong { color:#430098; }
+
+  .footer {
+    background:#430098; color:#fff; padding:14px 24px; display:flex;
+    justify-content:space-between; font-size:11px; border-radius:6px; margin-top:30px;
+  }
+
+  .empty-state { text-align:center; padding:40px; color:#8c7ea3; font-size:14px; }
+
+  @media(max-width:768px) { .form-grid{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>🤝 Partner Community</h1>
+    <div class="sub">Gestão de Usuários — API Gateway → MuleSoft → Salesforce</div>
+  </div>
+  <div class="header-right">
+    <div class="header-badge"><div class="dot" id="connDot"></div><span id="connLabel">Verificando...</span></div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('create')">➕ Criar Usuário</div>
+    <div class="tab" onclick="switchTab('list')">📋 Usuários Ativos</div>
+  </div>
+
+  <!-- CREATE TAB -->
+  <div class="panel" id="tab-create">
+    <div class="section-header"><span class="icon">👤</span> Novo Usuário Parceiro</div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Nome</label>
+        <input class="form-input" id="firstName" placeholder="Carlos" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Sobrenome <span class="req">*</span></label>
+        <input class="form-input" id="lastName" placeholder="Mendes" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email <span class="req">*</span></label>
+        <input class="form-input" id="email" type="email" placeholder="carlos@empresa.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Telefone</label>
+        <input class="form-input" id="phone" placeholder="(34) 99999-0000" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cargo</label>
+        <input class="form-input" id="title" placeholder="Gerente Comercial" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">CNPJ</label>
+        <input class="form-input" id="cnpj" placeholder="12.345.678/0001-90" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Senha inicial</label>
+        <input class="form-input" id="password" value="Algar@Partner2026!" />
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="btnCreate" onclick="createUser()">
+        🚀 Criar via API Gateway
+      </button>
+      <span id="createSpinner" style="display:none"><span class="spinner"></span> Processando...</span>
+    </div>
+
+    <div class="result-box" id="resultBox"></div>
+  </div>
+
+  <!-- LIST TAB -->
+  <div class="panel" id="tab-list" style="display:none">
+    <div class="section-header"><span class="icon">📋</span> Usuários Partner Community</div>
+    <div id="userListContent"><div class="empty-state"><span class="spinner"></span> Carregando...</div></div>
+  </div>
+
+  <div class="footer">
+    <span>EVER I9 / PARTNER COMMUNITY</span>
+    <span>Confidencial — Uso Interno</span>
+  </div>
+</div>
+
+<script>
+const API_GATEWAY = 'https://ever-i9-api-mgmt-9ffe0302261d.herokuapp.com';
+const MCP_DIRECT = 'https://mcp-sf-provisioning-462dd29c2455.herokuapp.com';
+
+// Use MCP direto como fallback se API Gateway não responder
+let BASE = MCP_DIRECT;
+
+// Check connection
+fetch(MCP_DIRECT + '/test-connection')
+  .then(r => r.json())
+  .then(d => {
+    document.getElementById('connDot').style.background = d.status === 'connected' ? '#34d399' : '#f87171';
+    document.getElementById('connLabel').textContent = d.status === 'connected' ? 'Org conectada' : 'Desconectado';
+  })
+  .catch(() => {
+    document.getElementById('connDot').style.background = '#f87171';
+    document.getElementById('connLabel').textContent = 'Erro';
+  });
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (tab === 'create' && i === 0) || (tab === 'list' && i === 1)));
+  document.getElementById('tab-create').style.display = tab === 'create' ? 'block' : 'none';
+  document.getElementById('tab-list').style.display = tab === 'list' ? 'block' : 'none';
+  if (tab === 'list') loadUsers();
+}
+
+async function createUser() {
+  const data = {
+    firstName: document.getElementById('firstName').value.trim(),
+    lastName: document.getElementById('lastName').value.trim(),
+    email: document.getElementById('email').value.trim(),
+    phone: document.getElementById('phone').value.trim(),
+    title: document.getElementById('title').value.trim(),
+    cnpj: document.getElementById('cnpj').value.trim(),
+    password: document.getElementById('password').value.trim(),
+  };
+
+  if (!data.lastName || !data.email) {
+    showResult('error', '❌ Sobrenome e Email são obrigatórios.');
+    return;
+  }
+
+  document.getElementById('btnCreate').disabled = true;
+  document.getElementById('createSpinner').style.display = 'inline';
+  showResult('', '');
+
+  try {
+    const resp = await fetch(BASE + '/api/partner-users/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const result = await resp.json();
+
+    if (result.success) {
+      const u = result.user;
+      showResult('success',
+        `✅ Usuário ${result.action === 'created' ? 'criado' : 'atualizado'} com sucesso!` +
+        `<div class="credential-box">` +
+        `<strong>Portal:</strong> ${u.loginUrl}<br>` +
+        `<strong>Username:</strong> ${u.username}<br>` +
+        `<strong>Senha:</strong> ${u.password}<br>` +
+        `<strong>Contact ID:</strong> ${u.contactId}<br>` +
+        `<strong>User ID:</strong> ${u.id}` +
+        `</div>`
+      );
+      // Limpar form
+      ['firstName','lastName','email','phone','title','cnpj'].forEach(f => document.getElementById(f).value = '');
+    } else {
+      showResult('error', '❌ ' + (result.error || JSON.stringify(result)));
+    }
+  } catch (err) {
+    showResult('error', '❌ Erro de conexão: ' + err.message);
+  }
+
+  document.getElementById('btnCreate').disabled = false;
+  document.getElementById('createSpinner').style.display = 'none';
+}
+
+function showResult(type, html) {
+  const box = document.getElementById('resultBox');
+  box.className = 'result-box' + (type ? ' ' + type : '');
+  box.innerHTML = html;
+  box.style.display = type ? 'block' : 'none';
+}
+
+async function loadUsers() {
+  const container = document.getElementById('userListContent');
+  try {
+    const resp = await fetch(BASE + '/api/partner-users');
+    const data = await resp.json();
+
+    if (!data.users || data.users.length === 0) {
+      container.innerHTML = '<div class="empty-state">Nenhum usuário parceiro encontrado.</div>';
+      return;
+    }
+
+    let html = '<table class="user-table"><thead><tr><th>Nome</th><th>Username</th><th>Email</th><th>Account</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+    data.users.forEach(u => {
+      const active = u.IsActive;
+      html += `<tr>
+        <td><strong>${u.Name}</strong></td>
+        <td style="font-family:monospace;font-size:12px">${u.Username}</td>
+        <td>${u.Email}</td>
+        <td>${u.Contact?.Account?.Name || '-'}</td>
+        <td><span class="badge ${active ? 'badge-active' : 'badge-inactive'}">${active ? 'Ativo' : 'Inativo'}</span></td>
+        <td><button class="btn btn-sm ${active ? 'btn-danger' : 'btn-secondary'}" onclick="toggleUser('${u.Id}', ${!active})">${active ? 'Desativar' : 'Ativar'}</button></td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    html += `<div style="margin-top:12px;font-size:12px;color:#8c7ea3">${data.total} usuário(s) encontrado(s)</div>`;
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = '<div class="empty-state">❌ Erro ao carregar: ' + err.message + '</div>';
+  }
+}
+
+async function toggleUser(userId, isActive) {
+  try {
+    await fetch(BASE + '/api/partner-users/toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, isActive })
+    });
+    loadUsers();
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  }
+}
+</script>
+</body>
+</html>
