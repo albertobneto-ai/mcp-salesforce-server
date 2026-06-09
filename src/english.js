@@ -136,7 +136,7 @@ router.post('/api/chat/message', authMiddleware, async (req, res) => {
     return res.status(400).json({ error: 'Invalid scenario' });
   }
   try {
-    const reply = useGrok ? await callGrok(sysPrompt, messages, max_tokens) : await callOpenRouter(sysPrompt, messages, max_tokens);
+    const reply = useGrok ? await callHaiku(sysPrompt, messages, max_tokens) : await callOpenRouter(sysPrompt, messages, max_tokens);
     res.json({ reply });
   } catch (err) {
     console.error('[english] Error:', err.message);
