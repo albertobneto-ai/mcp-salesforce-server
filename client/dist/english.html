@@ -185,6 +185,24 @@ kbd{font-family:var(--mono);font-size:10px;background:var(--bg3);border:1px soli
 .tr-r-sf{color:var(--tx)}
 .tr-r-sf strong{color:#7c3aed}
 
+
+.tr-sel-bar{display:flex;gap:4px;padding:6px 10px;border-bottom:1px solid var(--bdr);background:#f8f5ff;flex-wrap:wrap;align-items:center}
+.tr-sb-btn{padding:5px 10px;border-radius:6px;border:1px solid var(--ac);background:var(--acd);color:var(--ac);font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.tr-sb-btn:hover{background:var(--ac);color:#fff}
+.tr-sb-btn:disabled{opacity:.5;cursor:wait}
+.tr-sb-sf{border-color:#7c3aed;color:#7c3aed;background:#f5f3ff}
+.tr-sb-sf:hover{background:#7c3aed;color:#fff}
+.tr-sb-x{padding:5px 8px;border:none;background:none;color:var(--tx3);font-size:12px;cursor:pointer;font-family:var(--sans)}
+.tr-sb-x:hover{color:var(--red)}
+.tr-e-chk{position:absolute;top:10px;left:10px;width:18px;height:18px;border-radius:4px;border:2px solid var(--bdr);background:var(--bg2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;font-size:11px;color:transparent}
+.tr-e-chk:hover{border-color:var(--ac)}
+.tr-e-chk.on{border-color:var(--ac);background:var(--ac);color:#fff}
+.tr-e{padding-left:36px}
+.tr-sel-result{margin:0 10px 8px;padding:12px;background:var(--bg);border:1px solid var(--bdr);border-radius:10px;font-size:13px;line-height:1.6;animation:fu .2s ease}
+.tr-sel-result .tr-r-lbl{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--tx3);margin-bottom:4px}
+.tr-sel-result .tr-r-txt{color:var(--ac);font-weight:500}
+.tr-sel-result .tr-r-sf strong{color:#7c3aed}
+
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:10px}
 </style>
 </head>
@@ -217,7 +235,7 @@ kbd{font-family:var(--mono);font-size:10px;background:var(--bg3);border:1px soli
 <div id="tr-live" class="tr-live hidden"><div class="tr-live-lbl">Hearing...</div><div id="tr-live-txt" class="tr-live-txt"></div></div>
 </div>
 <div class="tr-panels">
-<div class="tr-panel"><div class="tr-panel-h"><span class="tr-panel-t">⚡ Live Insights</span></div><div id="tr-feed" class="tr-feed"></div></div>
+<div class="tr-panel"><div class="tr-panel-h"><span class="tr-panel-t">⚡ Live Insights</span><span id="tr-sel-cnt" class="tr-cnt hidden">0 selected</span></div><div id="tr-sel-bar" class="tr-sel-bar hidden"><button class="tr-sb-btn" id="tr-sel-translate">🌐 Translate selected</button><button class="tr-sb-btn tr-sb-sf" id="tr-sel-sf">☁️ SF Solution</button><button class="tr-sb-x" id="tr-sel-clear">✕ Clear</button></div><div id="tr-feed" class="tr-feed"></div></div>
 <div class="tr-panel"><div class="tr-panel-h"><span class="tr-panel-t">📄 Transcript</span><span id="tr-cnt" class="tr-cnt">0</span></div><div id="tr-ctx" class="tr-ctx"></div></div>
 </div>
 <div class="tr-acts"><button class="btn-g" id="tr-dl" style="display:none">📥 Download .txt</button><button class="btn-g" id="tr-clr">🗑 Clear</button></div>
@@ -279,6 +297,9 @@ initTranslator(){
   this.$('tr-mic').onclick=()=>{if(this.trOn)this.stopTr();else this.startTr();};
   this.$('tr-clr').onclick=()=>{this.$('tr-feed').innerHTML='';this.$('tr-ctx').innerHTML='';this.trHist=[];this.$('tr-cnt').textContent='0';this.$('tr-dl').style.display='none';};
   this.$('tr-dl').onclick=()=>this.dlTranscript();
+  this.$('tr-sel-translate').onclick=()=>this._selAction('translate');
+  this.$('tr-sel-sf').onclick=()=>this._selAction('sf');
+  this.$('tr-sel-clear').onclick=()=>{document.querySelectorAll('.tr-e-chk.on').forEach(c=>{c.classList.remove('on');c.textContent='';});this._updateSelBar();};
 },
 setTrLang(l){this.trLang=l;document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('on',b.dataset.lang===l));if(this.trOn){this.stopTr();setTimeout(()=>this.startTr(),300);}},
 startTr(){
@@ -322,41 +343,90 @@ async trEntry(text){
   const feed=this.$('tr-feed'),ctx=this.$('tr-ctx'),isEn=this.trLang==='en';
   const time=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 
-  // Transcript: raw text only
+  // Transcript: raw text
   const cl=document.createElement('div');cl.className='ctx-l';cl.innerHTML='<span class="ctx-t">'+time+'</span> '+this.esc(text);
   ctx.appendChild(cl);ctx.scrollTop=ctx.scrollHeight;
   this.$('tr-cnt').textContent=ctx.children.length;
   this.$('tr-dl').style.display='inline-flex';
   this.trHist.push({source:text,time});
 
-  // Live Insights: card with 3 action buttons
-  const e=document.createElement('div');e.className='tr-e';
-  e.innerHTML='<div class="tr-e-src">'+this.esc(text)+'</div><div class="tr-e-time">'+time+'</div><div class="tr-e-acts"><button class="tr-ab tr-ab-tr">🌐 Translate</button><button class="tr-ab tr-ab-sf">☁️ SF Solution</button><button class="tr-ab tr-ab-tip">💬 Respond</button></div><div class="tr-e-result" style="display:none"></div>';
+  // Live Insights: card with checkbox + individual buttons
+  const e=document.createElement('div');e.className='tr-e';e.dataset.text=text;
+  e.innerHTML='<div class="tr-e-chk" title="Select"></div><div class="tr-e-src">'+this.esc(text)+'</div><div class="tr-e-time">'+time+'</div><div class="tr-e-acts"><button class="tr-ab tr-ab-tr">🌐</button><button class="tr-ab tr-ab-sf">☁️</button><button class="tr-ab tr-ab-tip">💬</button></div><div class="tr-e-result" style="display:none"></div>';
   feed.insertBefore(e,feed.firstChild);
   if(feed.children.length>30)feed.removeChild(feed.lastChild);
 
+  // Checkbox toggle
+  const chk=e.querySelector('.tr-e-chk');
+  chk.onclick=()=>{chk.classList.toggle('on');chk.textContent=chk.classList.contains('on')?'✓':'';this._updateSelBar();};
+
   const self=this;
-  // Translate
+  // Individual Translate
   e.querySelector('.tr-ab-tr').onclick=async function(){
-    this.disabled=true;this.textContent='⏳...';
+    this.disabled=true;this.textContent='⏳';
     const res=e.querySelector('.tr-e-result');
     const p=isEn?'Translate to Brazilian Portuguese. ONLY the translation:\n'+text:'Translate to English. ONLY the translation:\n'+text;
     const r=await self.api({customPrompt:'Translator. ONLY translation.',messages:[{role:'user',content:p}]});
-    res.innerHTML='<div class="tr-r-lbl">'+(isEn?'🇧🇷 Português':'🇺🇸 English')+'</div><div class="tr-r-txt">'+self.esc((r||'...').trim())+'</div>';
-    res.style.display='block';this.textContent='✓ Done';
+    res.innerHTML='<div class="tr-r-lbl">'+(isEn?'🇧🇷 PT':'🇺🇸 EN')+'</div><div class="tr-r-txt">'+self.esc((r||'...').trim())+'</div>';
+    res.style.display='block';this.textContent='✓';
   };
-  // SF Solution
+  // Individual SF Solution
   e.querySelector('.tr-ab-sf').onclick=async function(){
-    this.disabled=true;this.textContent='⏳ Analyzing...';
+    this.disabled=true;this.textContent='⏳';
     const res=e.querySelector('.tr-e-result');
     const recentCtx=Array.from(ctx.querySelectorAll('.ctx-l')).slice(-8).map(x=>x.textContent).join('\n');
-    const prompt='You are a senior Salesforce Architect (Sales Cloud, Service Cloud, Data Cloud, Revenue Cloud, Agentforce, MuleSoft). Context:\n'+recentCtx+'\n\nLatest: "'+text+'"\n\nSuggest the Salesforce solution. Be specific. 3-5 lines.\nSOLUTION: [name]\nDETAIL: [how]\nCOMPONENTS: [SF features]';
-    const r=await self.api({customPrompt:'Salesforce Solution Architect. Concise, specific.',messages:[{role:'user',content:prompt}]});
-    res.innerHTML='<div class="tr-r-lbl">☁️ Salesforce Solution</div><div class="tr-r-sf">'+self.fmt((r||'No suggestion').trim())+'</div>';
-    res.style.display='block';this.textContent='✓ Done';
+    const prompt='Senior Salesforce Architect (Sales/Service/Data/Revenue Cloud, Agentforce, MuleSoft).\nContext:\n'+recentCtx+'\n\nLatest: "'+text+'"\n\nSuggest Salesforce solution. Specific. 3-5 lines.\nSOLUTION: [name]\nDETAIL: [how]\nCOMPONENTS: [SF features]';
+    const r=await self.api({customPrompt:'SF Solution Architect. Concise.',messages:[{role:'user',content:prompt}]});
+    res.innerHTML='<div class="tr-r-lbl">☁️ SF Solution</div><div class="tr-r-sf">'+self.fmt((r||'...').trim())+'</div>';
+    res.style.display='block';this.textContent='✓';
   };
-  // Respond
+  // Individual Respond
   e.querySelector('.tr-ab-tip').onclick=()=>this.trTip(text,null,isEn);
+},
+
+_updateSelBar(){
+  const sel=document.querySelectorAll('.tr-e-chk.on');
+  const bar=this.$('tr-sel-bar');
+  const cnt=this.$('tr-sel-cnt');
+  if(sel.length>0){bar.classList.remove('hidden');cnt.classList.remove('hidden');cnt.textContent=sel.length+' selected';}
+  else{bar.classList.add('hidden');cnt.classList.add('hidden');}
+},
+
+_getSelectedTexts(){
+  return Array.from(document.querySelectorAll('.tr-e-chk.on')).map(c=>c.parentElement.dataset.text).filter(Boolean);
+},
+
+async _selAction(type){
+  const texts=this._getSelectedTexts();if(!texts.length)return;
+  const combined=texts.join('\n');
+  const isEn=this.trLang==='en';
+  const feed=this.$('tr-feed');
+  const btn=type==='translate'?this.$('tr-sel-translate'):this.$('tr-sel-sf');
+  btn.disabled=true;btn.textContent='⏳ Processing...';
+
+  // Insert result at top of feed
+  const res=document.createElement('div');res.className='tr-sel-result';
+  res.innerHTML='<div class="tr-r-lbl">⏳ Processing '+texts.length+' blocks...</div>';
+  feed.insertBefore(res,feed.firstChild);
+
+  try{
+    let reply;
+    if(type==='translate'){
+      const p=isEn?'Translate to Brazilian Portuguese. ONLY the translation:\n\n'+combined:'Translate to English. ONLY the translation:\n\n'+combined;
+      reply=await this.api({customPrompt:'Translator. Translate naturally.',messages:[{role:'user',content:p}]});
+      res.innerHTML='<div class="tr-r-lbl">'+(isEn?'🇧🇷 Translation ('+texts.length+' blocks)':'🇺🇸 Translation ('+texts.length+' blocks)')+'</div><div class="tr-r-txt">'+this.esc((reply||'...').trim())+'</div>';
+    }else{
+      const recentCtx=Array.from(this.$('tr-ctx').querySelectorAll('.ctx-l')).slice(-12).map(x=>x.textContent).join('\n');
+      const prompt='Senior Salesforce Architect (Sales/Service/Data/Revenue Cloud, Agentforce, MuleSoft, Apex, Flows, LWC).\n\nFull conversation context:\n'+recentCtx+'\n\nSelected blocks for analysis:\n'+combined+'\n\nAnalyze the combined context and suggest comprehensive Salesforce solution(s). Be specific with products, features, objects, and implementation approach.';
+      reply=await this.api({customPrompt:'SF Solution Architect. Detailed, actionable.',messages:[{role:'user',content:prompt}]});
+      res.innerHTML='<div class="tr-r-lbl">☁️ SF Solution ('+texts.length+' blocks)</div><div class="tr-r-sf">'+this.fmt((reply||'...').trim())+'</div>';
+    }
+  }catch(x){res.innerHTML='<div class="tr-r-lbl">Error</div>';}
+
+  btn.disabled=false;btn.textContent=type==='translate'?'🌐 Translate selected':'☁️ SF Solution';
+  // Clear selection
+  document.querySelectorAll('.tr-e-chk.on').forEach(c=>{c.classList.remove('on');c.textContent='';});
+  this._updateSelBar();
 },
 
 async trTip(orig,trans,isEn){
