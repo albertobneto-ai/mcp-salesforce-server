@@ -368,7 +368,18 @@ async trEntry(text){
     const p=isEn
       ?'Someone said in English: "'+text+'"\n\nProvide:\n1. Translation to Brazilian Portuguese\n2. A suggested response I could give (in English, professional, 1-2 sentences)\n3. Translation of that response to Portuguese\n\nFormat exactly:\nTRADUÇÃO: [translation]\nRESPOSTA: [response in English]\nTRADUÇÃO DA RESPOSTA: [response in Portuguese]'
       :'Someone said in Portuguese: "'+text+'"\n\nProvide:\n1. Translation to English\n2. A suggested response I could give (in English, professional, 1-2 sentences)\n3. Translation of that response to Portuguese\n\nFormat exactly:\nTRANSLATION: [translation]\nRESPONSE: [response in English]\nTRADUÇÃO: [response in Portuguese]';
-    const r=await self.api({customPrompt:'Translator and Salesforce Architect communication coach. When the content involves Salesforce, CRM, cloud, integrations, data, automation, or enterprise tech, the suggested response MUST be at a senior architecture level: technically precise, formally polished, direct, and assertive — like a principal architect in a steering committee. Use proper Salesforce terminology (governor limits, bulkification, OOTB, declarative-first, etc). When the content is general/non-technical, respond naturally and professionally. Follow the format exactly. Concise.',messages:[{role:'user',content:p}]});
+    const r=await self.api({customPrompt:`Translator and response coach for a Senior Salesforce Architect (12+ years, Sales/Service/Revenue/Data Cloud, Agentforce, MuleSoft, Apex, LWC).
+
+CRITICAL RULE FOR SUGGESTED RESPONSES:
+When the topic touches Salesforce, CRM, integration, automation, data, cloud, or enterprise tech:
+- Respond as a decisive architect who OWNS the solution. Never vague. Never "we could consider". Instead: "The right approach here is X because Y."
+- Name SPECIFIC Salesforce components: exact object names (OpportunityLineItem, PricebookEntry), exact features (Record-Triggered Flow with Before-Save, Platform Events, Change Data Capture), exact patterns (Saga pattern for integration, Outbound Message vs CDC).
+- Reference architecture trade-offs: "Flow handles this OOTB but at scale beyond 50K records we hit CPU limits — Apex with Queueable is the correct path."
+- Reference governor limits, order of execution, sharing model, multi-org patterns when relevant.
+- Sound like you are in a steering committee with VPs and CTOs — formal, polished, zero fluff, technically irrefutable.
+
+When topic is general/non-technical: respond naturally, professionally, still direct.
+Follow the format exactly.`,messages:[{role:'user',content:p}]});
     const reply=(r||'').trim();
     res.innerHTML='<div class="tr-r-sf">'+self.fmt(reply)+'</div>';
     res.style.display='block';this.textContent='✓';
@@ -419,7 +430,7 @@ async _selAction(type){
       const batchP=isEn
         ?'Translate these English statements to Portuguese, then suggest what I could respond (in English + Portuguese translation):\n\n'+combined+'\n\nFormat:\nTRADUÇÃO:\n[full translation]\n\nRESPOSTA SUGERIDA:\n[response in English]\n\nTRADUÇÃO DA RESPOSTA:\n[response in Portuguese]'
         :'Translate these Portuguese statements to English, then suggest what I could respond (in English + Portuguese translation):\n\n'+combined+'\n\nFormat:\nTRANSLATION:\n[full translation]\n\nSUGGESTED RESPONSE:\n[response in English]\n\nTRADUÇÃO:\n[response in Portuguese]';
-      reply=await this.api({customPrompt:'Translator and Salesforce Architect coach. When content is Salesforce/tech/enterprise, suggest responses at senior architecture level: technically precise, formal, polished, direct. Use proper SF terminology. When general, respond naturally. Follow format. Concise.',messages:[{role:'user',content:batchP}]});
+      reply=await this.api({customPrompt:`Translator + Salesforce Architect coach. For SF/tech/enterprise topics: respond as a decisive principal architect — name specific objects, features, patterns, limits. No vague advice. Sound like a steering committee presenter: formal, irrefutable, zero fluff. For general topics: natural and professional. Follow format.`,messages:[{role:'user',content:batchP}]});
       res.innerHTML='<div class="tr-r-lbl">'+(isEn?'🇧🇷 Translation + Response ('+texts.length+' blocks)':'🇺🇸 Translation + Response ('+texts.length+' blocks)')+'</div><div class="tr-r-sf">'+this.fmt((reply||'...').trim())+'</div>';
     }else{
       const recentCtx=Array.from(this.$('tr-ctx').querySelectorAll('.ctx-l')).slice(-12).map(x=>x.textContent).join('\n');
