@@ -82,7 +82,8 @@ async function callOpenRouter(systemPrompt, messages, maxTk, model) {
     body: JSON.stringify({ model: model || 'deepseek/deepseek-chat-v3-0324', max_tokens: maxTk || 1500, messages: [{ role: 'system', content: systemPrompt }, ...messages] })
   });
   if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${await res.text()}`);
-  const data = await res.json();
+  const txt = await res.text();
+  const data = JSON.parse(txt.trim());
   return data.choices[0].message.content;
 }
 
@@ -105,24 +106,6 @@ router.post('/api/auth/logout', authMiddleware, (req, res) => {
 router.get('/api/auth/check', (req, res) => {
   const token = (req.headers.authorization || '').replace('Bearer ', '');
   res.json({ authenticated: tokens.has(token) });
-});
-
-// Test Haiku directly
-router.get('/api/test-haiku', async (req, res) => {
-  try {
-    const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + process.env.OPENROUTER_KEY },
-      body: JSON.stringify({ model: 'anthropic/claude-3.5-haiku', max_tokens: 30, messages: [{ role: 'user', content: 'Say hi' }] })
-    });
-    const text = await r.text();
-    res.json({ status: r.status, body: text.substring(0, 500) });
-  } catch (e) { res.json({ error: e.message }); }
-});
-
-// Debug
-router.get('/api/debug', (req, res) => {
-  res.json({ version: 'v4-haiku', hasKey: !!process.env.OPENROUTER_KEY, keyLen: (process.env.OPENROUTER_KEY||'').length });
 });
 
 // Scenarios
