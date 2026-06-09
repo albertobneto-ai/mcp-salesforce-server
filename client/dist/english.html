@@ -56,7 +56,7 @@ input:focus,textarea:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--acg
 .tr-live-lbl{font-size:10px;font-weight:700;color:var(--ac);text-transform:uppercase;margin-bottom:4px}
 .tr-live-txt{font-size:14px;color:var(--tx);line-height:1.5;font-style:italic;min-height:20px}
 .tr-panels{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;flex:1;min-height:0}
-@media(max-width:768px){.tr-panels{grid-template-columns:1fr;grid-template-rows:1fr 1fr}}
+@media(max-width:768px){.tr-panels{grid-template-columns:1fr;grid-template-rows:2fr 1fr}.tr-head h1{font-size:18px}.tr-mic{width:70px;height:70px}.tr-mic-i{font-size:24px}}
 .tr-panel{display:flex;flex-direction:column;background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;overflow:hidden;min-height:200px}
 .tr-panel-h{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--bdr);background:var(--bg);flex-shrink:0}
 .tr-panel-t{font-size:12px;font-weight:700}
@@ -168,6 +168,13 @@ kbd{font-family:var(--mono);font-size:10px;background:var(--bg3);border:1px soli
 .ex-box{background:var(--bg);border-left:3px solid var(--ac);padding:8px 12px;border-radius:0 8px 8px 0;margin:6px 0;font-size:12px;line-height:1.5}
 .ex-box .en{color:var(--tx);font-weight:500}.ex-box .pt{color:var(--tx3);font-style:italic;font-size:11px}
 .les-prac-btn{margin-top:.8rem;padding:10px 20px;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;border:none;border-radius:8px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer}
+
+
+.tr-e-acts{display:flex;gap:6px;margin-top:6px}
+.tr-e-tr,.tr-e-tip{padding:6px 12px;border-radius:6px;border:1px solid var(--bdr);background:var(--bg2);color:var(--tx2);font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.tr-e-tr:hover,.tr-e-tip:hover{border-color:var(--ac);color:var(--ac)}
+.tr-e-tr:disabled{opacity:.5;cursor:wait}
+.tr-e .tr-e-tgt{margin-top:6px;padding:8px 10px;background:var(--acd);border-radius:8px;color:var(--ac);font-weight:500;font-size:13px}
 
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:10px}
 </style>
@@ -292,7 +299,7 @@ _queueEntry(txt){
   this._trDebounce=setTimeout(()=>{
     const batch=this._trPending.trim();this._trPending='';
     if(batch.length>2)this.trEntry(batch);
-  },1500);
+  },IS_MOBILE?2500:1500);
 },
 stopTr(){
   this.trOn=false;if(this.trRec){this.trRec.stop();this.trRec=null;}
