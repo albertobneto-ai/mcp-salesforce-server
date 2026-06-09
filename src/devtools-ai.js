@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 
 export function registerDevToolsRoutes(app) {
 
-  const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+  const ANTHROPIC_KEY = process.env.ANTHROPIC_KEY;
 
   const SYSTEM_PROMPT = `Você é um arquiteto Salesforce expert integrado ao Ever i9 DevTools.
 O usuário descreve o que precisa e você gera um PLANO DE EXECUÇÃO em JSON.
