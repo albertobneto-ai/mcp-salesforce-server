@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 
 export function registerDevToolsRoutes(app) {
 
-  const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+  const ANTHROPIC_KEY = process.env.ANTHROPIC_KEY;
 
   const SYSTEM_PROMPT = `Você é um arquiteto Salesforce expert integrado ao Ever i9 DevTools.
 O usuário descreve o que precisa e você gera um PLANO DE EXECUÇÃO em JSON.
@@ -65,7 +65,7 @@ RESPONDA APENAS JSON válido, sem markdown, sem backticks, sem texto antes ou de
     try {
       const { prompt } = req.body;
       if (!prompt) return res.status(400).json({ error: 'prompt é obrigatório' });
-      if (!ANTHROPIC_KEY) return res.status(500).json({ error: 'ANTHROPIC_API_KEY não configurada no Heroku' });
+      if (!ANTHROPIC_KEY) return res.status(500).json({ error: 'ANTHROPIC_KEY não configurada no Heroku' });
 
       console.log('[DevTools AI] Chamando Claude Sonnet...');
 
@@ -77,7 +77,7 @@ RESPONDA APENAS JSON válido, sem markdown, sem backticks, sem texto antes ou de
           'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: 'claude-sonnet-4-20250514',
           max_tokens: 8000,
           temperature: 0,
           system: SYSTEM_PROMPT,
