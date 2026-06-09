@@ -80,7 +80,7 @@ async function callGrok(systemPrompt, messages, maxTk) {
   const res = await fetch('https://api.x.ai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (process.env.GROK_KEY || '') },
-    body: JSON.stringify({ model: 'grok-3-mini', max_tokens: maxTk || 800, messages: grokMessages })
+    body: JSON.stringify({ model: 'grok-3-mini', max_tokens: maxTk || 1500, messages: grokMessages })
   });
   if (!res.ok) { const err = await res.text(); console.error('[english] Grok error:', err.substring(0,200)); throw new Error('Grok ' + res.status); }
   const data = await res.json();
@@ -91,7 +91,7 @@ async function callOpenRouter(systemPrompt, messages, maxTk) {
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.OPENROUTER_KEY}` },
-    body: JSON.stringify({ model: 'deepseek/deepseek-chat-v3-0324', max_tokens: maxTk || 800, messages: [{ role: 'system', content: systemPrompt }, ...messages] })
+    body: JSON.stringify({ model: 'deepseek/deepseek-chat-v3-0324', max_tokens: maxTk || 1500, messages: [{ role: 'system', content: systemPrompt }, ...messages] })
   });
   if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${await res.text()}`);
   const data = await res.json();
