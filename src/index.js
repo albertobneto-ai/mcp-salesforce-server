@@ -12,6 +12,7 @@ import { mountChatApp } from "./chat-app.js";
 import { registerMuleSyncRoutes } from "./mule-sync.js";
 import { registerKmlRoutes } from "./routes/kml.js";
 import { englishRouter, initEnglish } from "./english.js";
+import { registerDevToolsRoutes } from "./devtools-ai.js";
 
 const app = express();
 app.use(express.json({ limit: "10mb" }));
@@ -2209,6 +2210,7 @@ app.get("/api/assign-record-types/:objectName", async (req, res) => {
 registerSnowflakeRoutes(app);
 registerMuleSyncRoutes(app, sfClient);
 registerKmlRoutes(app);
+registerDevToolsRoutes(app);
   
   // TechEnglish
   app.use('/english', englishRouter);
