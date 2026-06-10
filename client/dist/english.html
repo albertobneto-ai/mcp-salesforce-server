@@ -489,54 +489,88 @@ async analyseTranscript(){
   if(!this.trHist||!this.trHist.length)return;
   const btn=this.$('tr-analyse');
   btn.disabled=true;btn.textContent='⏳ Analisando...';
-  // Remover análise anterior se existir
   const existing=this.$('tr-ctx').querySelector('.tr-analyse-popup');
   if(existing)existing.remove();
-  const allText=this.trHist.map((h,i)=>`${i+1}. [${h.time}] "${h.source}"`).join('\n');
-  const lang=this.trLang==='en'?'inglês':'português';
-  const prompt=`Você é um coach de inglês especializado em profissionais de tecnologia Salesforce.
-Analise as seguintes ${this.trHist.length} falas transcritas em ${lang}:
+  const allText=this.trHist.map((h,i)=>`[${h.time}] ${h.source}`).join('\n');
+  const prompt=`Analise a seguinte transcrição de uma reunião/conversa técnica e retorne APENAS JSON válido (sem markdown):
 
+TRANSCRIÇÃO:
 ${allText}
 
-Retorne EXATAMENTE neste formato JSON (sem markdown, sem explicação fora do JSON):
+Retorne exatamente:
 {
-  "score": <número de 0-100 representando fluência geral>,
-  "resumo": "<2 frases descrevendo o padrão geral da conversa>",
-  "erros_recorrentes": ["<erro 1>", "<erro 2>", "<erro 3>"],
-  "vocabulario_fraco": [{"usou": "<palavra/frase usada>", "melhor": "<alternativa profissional>"}],
-  "frases_destaque": [{"original": "<frase tentada>", "correta": "<como deveria ser dito>"}],
-  "prioridades": ["<ponto de melhoria 1>", "<ponto de melhoria 2>", "<ponto de melhoria 3>"]
+  "contexto": "<2-3 frases descrevendo o contexto geral da conversa — quem falou sobre o quê, qual o objetivo>",
+  "pontos_principais": ["<ponto 1>", "<ponto 2>", "<ponto 3>", "<ponto 4>", "<ponto 5>"],
+  "decisoes": ["<decisão tomada 1>", "<decisão tomada 2>"],
+  "proximos_passos": ["<ação 1>", "<ação 2>"]
 }`;
   try{
-    const r=await this.api({customPrompt:'Analista linguístico. Retorne APENAS JSON válido, sem markdown.',messages:[{role:'user',content:prompt}]},2000,true);
+    const r=await this.api({customPrompt:'Analista de reuniões. Retorne APENAS JSON válido, sem markdown, sem texto fora do JSON.',messages:[{role:'user',content:prompt}]},2000,true);
     let data;
     try{
       const clean=(r||'').replace(/```json|```/g,'').trim();
       data=JSON.parse(clean);
-    }catch(e){
-      // fallback: mostrar resposta bruta
-      data={score:null,resumo:r,erros_recorrentes:[],vocabulario_fraco:[],frases_destaque:[],prioridades:[]};
-    }
+    }catch(e){data={contexto:r,pontos_principais:[],decisoes:[],proximos_passos:[]};}
     const ctx=this.$('tr-ctx');
     const popup=document.createElement('div');
     popup.className='tr-analyse-popup';
-    const scoreHtml=data.score!=null?`<div class="tr-a-score">${data.score}<span style="font-size:14px;color:var(--tx3)">/100</span></div>`:'';
-    const errosHtml=data.erros_recorrentes&&data.erros_recorrentes.length?data.erros_recorrentes.map(e=>`<div style="padding:3px 0;font-size:13px">⚠️ ${this.esc(e)}</div>`).join(''):'<div style="color:var(--tx3);font-size:13px">Nenhum erro recorrente identificado.</div>';
-    const vocabHtml=data.vocabulario_fraco&&data.vocabulario_fraco.length?data.vocabulario_fraco.map(v=>`<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;font-size:13px"><span style="text-decoration:line-through;color:var(--tx3)">${this.esc(v.usou)}</span><span style="color:var(--tx3)">→</span><span style="color:var(--ac);font-weight:600">${this.esc(v.melhor)}</span></div>`).join(''):'<div style="color:var(--tx3);font-size:13px">Nenhuma sugestão.</div>';
-    const frasesHtml=data.frases_destaque&&data.frases_destaque.length?data.frases_destaque.map(f=>`<div style="background:var(--bg);border-radius:8px;padding:8px 10px;margin:4px 0;font-size:12px"><div style="color:var(--tx3);font-style:italic">"${this.esc(f.original)}"</div><div style="color:var(--ac);font-weight:600;margin-top:3px">✓ "${this.esc(f.correta)}"</div></div>`).join(''):'<div style="color:var(--tx3);font-size:13px">Nenhuma frase para destacar.</div>';
-    const priorHtml=data.prioridades&&data.prioridades.length?data.prioridades.map((p,i)=>`<div style="padding:4px 0;font-size:13px"><span style="font-weight:700;color:var(--ac)">${i+1}.</span> ${this.esc(p)}</div>`).join(''):'';
+    popup.dataset.rawtext=allText;
+    const pontosHtml=(data.pontos_principais||[]).map(p=>`<div style="padding:3px 0;font-size:13px;line-height:1.5">• ${this.esc(p)}</div>`).join('');
+    const decisoesHtml=(data.decisoes||[]).length?`<div class="tr-a-sec"><div class="tr-a-lbl">Decisões</div>${data.decisoes.map(d=>`<div style="padding:3px 0;font-size:13px">✓ ${this.esc(d)}</div>`).join('')}</div>`:'';
+    const stepsHtml=(data.proximos_passos||[]).length?`<div class="tr-a-sec"><div class="tr-a-lbl">Próximos Passos</div>${data.proximos_passos.map(s=>`<div style="padding:3px 0;font-size:13px">→ ${this.esc(s)}</div>`).join('')}</div>`:'';
     popup.innerHTML=`
-      <h3>🔍 Análise da Sessão — ${this.trHist.length} falas</h3>
-      ${scoreHtml?`<div class="tr-a-sec"><div class="tr-a-lbl">Fluência Geral</div>${scoreHtml}</div>`:''}
-      ${data.resumo?`<div class="tr-a-sec"><div class="tr-a-lbl">Resumo</div><div class="tr-a-txt">${this.esc(data.resumo)}</div></div>`:''}
-      <div class="tr-a-sec"><div class="tr-a-lbl">Erros Recorrentes</div>${errosHtml}</div>
-      <div class="tr-a-sec"><div class="tr-a-lbl">Vocabulário — Upgrade</div>${vocabHtml}</div>
-      <div class="tr-a-sec"><div class="tr-a-lbl">Frases: Original vs Ideal</div>${frasesHtml}</div>
-      ${priorHtml?`<div class="tr-a-sec"><div class="tr-a-lbl">Prioridades de Melhoria</div>${priorHtml}</div>`:''}
-      <div style="text-align:right;margin-top:.6rem"><button class="btn-g" onclick="this.closest('.tr-analyse-popup').remove()" style="font-size:11px">✕ Fechar</button></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem">
+        <h3 style="font-size:13px;font-weight:700;color:var(--ac);margin:0">📋 Contexto da Transcrição</h3>
+        <div style="display:flex;gap:6px">
+          <button class="tr-ab tr-ab-sf tr-sf-analyse-btn" title="Análise Salesforce">☁️ SF Analysis</button>
+          <button class="btn-g" onclick="this.closest('.tr-analyse-popup').remove()" style="font-size:11px">✕</button>
+        </div>
+      </div>
+      <div class="tr-a-sec"><div class="tr-a-lbl">Contexto</div><div class="tr-a-txt" style="font-size:13px;line-height:1.6">${this.esc(data.contexto||'')}</div></div>
+      <div class="tr-a-sec"><div class="tr-a-lbl">Pontos Principais</div>${pontosHtml||'<div style="color:var(--tx3);font-size:13px">Nenhum ponto identificado.</div>'}</div>
+      ${decisoesHtml}
+      ${stepsHtml}
+      <div id="tr-sf-result" style="display:none"></div>
     `;
     ctx.insertBefore(popup, ctx.firstChild);
+    // Botão SF Analysis
+    popup.querySelector('.tr-sf-analyse-btn').onclick=async(ev)=>{
+      const sfBtn=ev.currentTarget;
+      sfBtn.disabled=true;sfBtn.textContent='⏳';
+      const sfDiv=popup.querySelector('#tr-sf-result');
+      sfDiv.style.display='none';
+      const sfPrompt=`Você é um Arquiteto Salesforce Principal. Analise a transcrição abaixo e forneça uma análise técnica Salesforce em Português Brasileiro.
+
+TRANSCRIÇÃO:
+${allText}
+
+Retorne APENAS JSON válido:
+{
+  "objetos_envolvidos": ["<Objeto1>", "<Objeto2>"],
+  "features_identificadas": ["<feature/funcionalidade Salesforce mencionada ou implicada>"],
+  "decisoes_arquitetura": ["<decisão de arquitetura identificada ou recomendada>"],
+  "riscos": ["<risco ou ponto de atenção técnico>"],
+  "recomendacoes": ["<recomendação técnica Salesforce específica com justificativa>"]
+}`;
+      try{
+        const sr=await this.api({customPrompt:'Arquiteto Salesforce Principal. Responda SEMPRE em Português Brasileiro. Retorne APENAS JSON válido.',messages:[{role:'user',content:sfPrompt}]},2000,true);
+        let sd;
+        try{const sc=(sr||'').replace(/```json|```/g,'').trim();sd=JSON.parse(sc);}
+        catch(e){sd={objetos_envolvidos:[],features_identificadas:[],decisoes_arquitetura:[],riscos:[],recomendacoes:[sr]};}
+        const mkList=(arr,icon)=>(arr||[]).map(i=>`<div style="padding:3px 0;font-size:13px">${icon} ${this.esc(i)}</div>`).join('');
+        sfDiv.innerHTML=`
+          <div style="margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--bdr)">
+            <div style="font-size:12px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem">☁️ Análise Salesforce</div>
+            ${sd.objetos_envolvidos&&sd.objetos_envolvidos.length?`<div class="tr-a-sec"><div class="tr-a-lbl">Objetos Envolvidos</div>${mkList(sd.objetos_envolvidos,'🔵')}</div>`:''}
+            ${sd.features_identificadas&&sd.features_identificadas.length?`<div class="tr-a-sec"><div class="tr-a-lbl">Features Identificadas</div>${mkList(sd.features_identificadas,'⚡')}</div>`:''}
+            ${sd.decisoes_arquitetura&&sd.decisoes_arquitetura.length?`<div class="tr-a-sec"><div class="tr-a-lbl">Decisões de Arquitetura</div>${mkList(sd.decisoes_arquitetura,'✓')}</div>`:''}
+            ${sd.riscos&&sd.riscos.length?`<div class="tr-a-sec"><div class="tr-a-lbl">Riscos</div>${mkList(sd.riscos,'⚠️')}</div>`:''}
+            ${sd.recomendacoes&&sd.recomendacoes.length?`<div class="tr-a-sec"><div class="tr-a-lbl">Recomendações</div>${mkList(sd.recomendacoes,'→')}</div>`:''}
+          </div>`;
+        sfDiv.style.display='block';
+      }catch(err){console.error('SF analyse error:',err);}
+      finally{sfBtn.disabled=false;sfBtn.textContent='☁️ SF Analysis';}
+    };
   }catch(err){console.error('analyseTranscript error:',err);}
   finally{btn.disabled=false;btn.textContent='🔍 Análise';}
 },
