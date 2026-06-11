@@ -52,6 +52,12 @@ export async function mountChatApp(app) {
     app.use('/api/lab', labRoutes);
   } catch (e) { console.error('[Lab] Rota nao carregada:', e.message); }
 
+  // HF Studio (Discovery interativo + DeepSeek)
+  try {
+    const { default: hfStudioRoutes } = await import('./routes/hf-studio.js');
+    app.use('/api/hf-studio', hfStudioRoutes);
+  } catch (e) { console.error('[HF-Studio] Rota nao carregada:', e.message); }
+
   // Servir prototipos como HTML estatico
   const protoDir = '/tmp/prototipos';
   try { const fs = await import('fs'); fs.default.mkdirSync(protoDir, { recursive: true }); } catch {}

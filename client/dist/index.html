@@ -41,6 +41,12 @@
   var ifr5=document.createElement('iframe');ifr5.style.cssText='width:100%;height:100%;border:none;';
   ov5.appendChild(ifr5);document.body.appendChild(ov5);
 
+  /* === HF Studio Overlay === */
+  var ov6=document.createElement('div');ov6.id='hf-overlay';ov6.style.cssText='position:fixed;inset:0;z-index:1050;display:none;';
+  var ifr6=document.createElement('iframe');ifr6.style.cssText='width:100%;height:100%;border:none;';
+  ov6.appendChild(ifr6);document.body.appendChild(ov6);
+  window.__openHFStudio=function(){ifr6.src='/hf-studio.html';ov6.style.display='block';};
+
   /* === Message handler for all overlays === */
   window.addEventListener('message',function(e){
     if(e.data==='dc-closed')ov.style.display='none';
@@ -48,6 +54,7 @@
     if(e.data==='squad-closed')ov3.style.display='none';
     if(e.data==='lab-closed')ov4.style.display='none';
     if(e.data==='ref-closed')ov5.style.display='none';
+    if(e.data==='hf-closed')ov6.style.display='none';
   });
 
   /* === Role-based redirects === */
