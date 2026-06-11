@@ -119,6 +119,14 @@
       return btn;
     }
 
+    var isFuncional=role==='funcional';
+
+    /* HF Studio — visível para TODOS os perfis */
+    inner.appendChild(mkApp('app-hf-studio','HF Studio','#6c44a0',function(){
+      ov6.style.display='block';ifr6.src='/hf-studio.html';
+    }));
+
+    if(!isFuncional){
     /* GP */
     inner.appendChild(mkApp('app-gp','Gest\u00E3o de Projetos','#94a3b8',function(){
       var bs=document.querySelectorAll('button');
@@ -133,11 +141,6 @@
     /* Refinamentos */
     inner.appendChild(mkApp('app-ref','Refinamentos','#7c6df0',function(){
       ov5.style.display='block';ifr5.src='/refinamentos.html';
-    }));
-
-    /* HF Studio */
-    inner.appendChild(mkApp('app-hf-studio','HF Studio','#6c44a0',function(){
-      ov6.style.display='block';ifr6.src='/hf-studio.html';
     }));
 
     if(isAdmin){
@@ -173,6 +176,7 @@
     inner.appendChild(mkApp('app-gateway','API Management','#6d28d9',function(){
       ov4.style.display='block';ifr4.src='https://ever-i9-api-mgmt-9ffe0302261d.herokuapp.com/';
     }));
+    } /* fim !isFuncional */
 
     drawer.appendChild(inner);
 
