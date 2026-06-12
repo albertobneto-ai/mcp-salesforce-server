@@ -14,6 +14,7 @@ import { registerKmlRoutes } from "./routes/kml.js";
 import { englishRouter, initEnglish } from "./english.js";
 import { registerDevToolsRoutes } from "./devtools-ai.js";
 import { registerPartnerUserRoutes } from "./partner-users.js";
+import specGeneratorRouter from "./routes/spec-generator.js";
 
 const app = express();
 app.use(express.json({ limit: "10mb" }));
@@ -2219,6 +2220,9 @@ registerPartnerUserRoutes(app, sfClient);
   initEnglish();
   console.log('[english] Mounted at /english');
   registerAdditionalRoutes(app, sfClient, connectToTargetOrg);
+
+  // Spec Generator
+  app.use('/api/spec-generator', specGeneratorRouter);
 
 // --- Everi9 Chat App ---
 mountChatApp(app);
