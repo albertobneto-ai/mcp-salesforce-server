@@ -1,7 +1,10 @@
-// src/routes/spec-generator.js — Spec-to-Runbook converter via DeepSeek (OpenRouter)
+// src/routes/spec-generator.js — Spec-to-Runbook converter via xAI Grok
 import express from 'express';
 
 const router = express.Router();
+
+const XAI_URL = 'https://api.x.ai/v1/chat/completions';
+const getXaiKey = () => process.env.XAI_KEY || process.env.GROK_KEY || '';
 
 const SYSTEM_PROMPT = `# SF Agent — Conversor de Spec Técnica para Runbook Executável
 
@@ -12,10 +15,9 @@ Você é um conversor de especificações técnicas Salesforce. Recebe o output 
 ZERO intervenção manual. Tudo que a Metadata API suporta vai no JSON para deploy automático. A seção manual só existe para itens que literalmente não têm API de criação.
 
 ## Output obrigatório
-Gere um ou mais blocos JSON no formato abaixo. Se a spec for grande, divida em fases sequenciais de no máximo 15 componentes cada.
+Gere um ou mais blocos JSON. Se a spec for grande, divida em fases sequenciais de no máximo 15 componentes cada.
 
 ### Formato de cada fase:
-\`\`\`json
 {
   "specName": "Nome_Descritivo_Fase_N",
   "summary": "O que esta fase deploya",
@@ -31,13 +33,11 @@ Gere um ou mais blocos JSON no formato abaixo. Se a spec for grande, divida em f
   "flows": [],
   "manual": []
 }
-\`\`\`
 
 ## Formatos por tipo de componente
 
 ### Custom Objects
 {"fullName":"Obj__c","label":"Label","pluralLabel":"Labels","nameField":{"type":"Text","label":"Nome"},"sharingModel":"ReadWrite","deploymentStatus":"Deployed"}
-
 Com AutoNumber: nameField: {"type":"AutoNumber","label":"Número","displayFormat":"PREFIX-{00000}"}
 
 ### Custom Fields — sempre incluir objectName, fieldName, label, type
@@ -93,48 +93,47 @@ Para cada fase gere:
 
 === FASE N: [descrição] ===
 
+\`\`\`json
 {json da fase}
+\`\`\`
 
 Gere APENAS o runbook. Sem explicações extras antes ou depois das fases.`;
 
-// ── POST /api/spec-to-runbook ──
+// ── POST /convert (streaming SSE) ──
 router.post('/convert', async (req, res) => {
   const { specText } = req.body;
   if (!specText || specText.trim().length < 50) {
     return res.status(400).json({ error: 'Especificação muito curta. Cole o conteúdo completo da spec.' });
   }
 
-  const OPENROUTER_KEY = process.env.OPENROUTER_KEY;
-  if (!OPENROUTER_KEY) {
-    return res.status(500).json({ error: 'OPENROUTER_KEY não configurada no servidor.' });
+  const apiKey = getXaiKey();
+  if (!apiKey) {
+    return res.status(500).json({ error: 'XAI_KEY não configurada no servidor.' });
   }
 
   try {
-    // Stream response from DeepSeek via OpenRouter
-    const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const apiRes = await fetch(XAI_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENROUTER_KEY}`,
-        'HTTP-Referer': 'https://everi9.albertobottaro.info',
-        'X-Title': 'Ever i9 Spec Generator',
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'deepseek/deepseek-v4-flash:free',
+        model: 'grok-4.3',
         max_tokens: 16384,
         temperature: 0.2,
+        stream: true,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: `Converta esta especificação técnica Salesforce em Runbook JSON executável:\n\n${specText}` },
         ],
-        stream: true,
       }),
     });
 
-    if (!orRes.ok) {
-      const errBody = await orRes.text();
-      console.error('[spec-gen] OpenRouter error:', orRes.status, errBody.slice(0, 300));
-      return res.status(502).json({ error: `DeepSeek retornou ${orRes.status}`, detail: errBody.slice(0, 200) });
+    if (!apiRes.ok) {
+      const errBody = await apiRes.text();
+      console.error('[spec-gen] xAI error:', apiRes.status, errBody.slice(0, 300));
+      return res.status(502).json({ error: `Grok retornou ${apiRes.status}`, detail: errBody.slice(0, 200) });
     }
 
     // Stream SSE to client
@@ -142,7 +141,7 @@ router.post('/convert', async (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    const reader = orRes.body.getReader();
+    const reader = apiRes.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
 
@@ -182,29 +181,27 @@ router.post('/convert', async (req, res) => {
   }
 });
 
-// ── Non-streaming fallback ──
+// ── POST /convert-sync (non-streaming) ──
 router.post('/convert-sync', async (req, res) => {
   const { specText } = req.body;
   if (!specText || specText.trim().length < 50) {
     return res.status(400).json({ error: 'Especificação muito curta.' });
   }
 
-  const OPENROUTER_KEY = process.env.OPENROUTER_KEY;
-  if (!OPENROUTER_KEY) {
-    return res.status(500).json({ error: 'OPENROUTER_KEY não configurada.' });
+  const apiKey = getXaiKey();
+  if (!apiKey) {
+    return res.status(500).json({ error: 'XAI_KEY não configurada.' });
   }
 
   try {
-    const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const apiRes = await fetch(XAI_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENROUTER_KEY}`,
-        'HTTP-Referer': 'https://everi9.albertobottaro.info',
-        'X-Title': 'Ever i9 Spec Generator',
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'deepseek/deepseek-v4-flash:free',
+        model: 'grok-4.3',
         max_tokens: 16384,
         temperature: 0.2,
         messages: [
@@ -214,12 +211,12 @@ router.post('/convert-sync', async (req, res) => {
       }),
     });
 
-    if (!orRes.ok) {
-      const errBody = await orRes.text();
-      return res.status(502).json({ error: `DeepSeek ${orRes.status}`, detail: errBody.slice(0, 200) });
+    if (!apiRes.ok) {
+      const errBody = await apiRes.text();
+      return res.status(502).json({ error: `Grok ${apiRes.status}`, detail: errBody.slice(0, 200) });
     }
 
-    const data = await orRes.json();
+    const data = await apiRes.json();
     const text = data.choices?.[0]?.message?.content || '';
     res.json({ runbook: text });
   } catch (err) {
