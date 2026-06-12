@@ -354,7 +354,15 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
     try {
       await connectToTargetOrg(req);
       const conn = sfClient.getConnection();
-      const result = await conn.metadata.create(req.params.type, req.body);
+      // Strip objectName — not a valid Metadata API field (used only for routing)
+      const body = { ...req.body };
+      if (body.objectName) {
+        if (body.fullName && !body.fullName.includes('.')) {
+          body.fullName = body.objectName + '.' + body.fullName;
+        }
+        delete body.objectName;
+      }
+      const result = await conn.metadata.create(req.params.type, body);
       sfClient.clearTargetOrg();
       const item = Array.isArray(result) ? result[0] : result;
       res.json({ success: item?.success, fullName: item?.fullName, errors: item?.errors || null });
@@ -429,7 +437,12 @@ export function registerAdditionalRoutes(app, sfClient, connectToTargetOrg) {
     try {
       await connectToTargetOrg(req);
       const conn = sfClient.getConnection();
-      const result = await conn.metadata.update(req.params.type, req.body);
+      const body = { ...req.body };
+      if (body.objectName) {
+        if (body.fullName && !body.fullName.includes('.')) body.fullName = body.objectName + '.' + body.fullName;
+        delete body.objectName;
+      }
+      const result = await conn.metadata.update(req.params.type, body);
       sfClient.clearTargetOrg();
       const item = Array.isArray(result) ? result[0] : result;
       res.json({ success: item?.success, errors: item?.errors || null });
@@ -552,7 +565,15 @@ ${mappingXml}
     try {
       await connectToTargetOrg(req);
       const conn = sfClient.getConnection();
-      const result = await conn.metadata.create(req.params.type, req.body);
+      // Strip objectName — not a valid Metadata API field (used only for routing)
+      const body = { ...req.body };
+      if (body.objectName) {
+        if (body.fullName && !body.fullName.includes('.')) {
+          body.fullName = body.objectName + '.' + body.fullName;
+        }
+        delete body.objectName;
+      }
+      const result = await conn.metadata.create(req.params.type, body);
       sfClient.clearTargetOrg();
       const item = Array.isArray(result) ? result[0] : result;
       res.json({ success: item?.success, fullName: item?.fullName, errors: item?.errors || null });
