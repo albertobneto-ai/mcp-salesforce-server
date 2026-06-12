@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ever i9 — Overview Executivo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  @page { size: A4; margin: 2cm 1.5cm; }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', Arial, sans-serif;
+    background: #f0f0f0;
+    color: #1a1a1a;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* ═══ CAPA ═══ */
+  .cover-header {
+    background: linear-gradient(145deg, #0d0d0d 0%, #1a1a1a 40%, #2d2d2d 80%, #333333 100%);
+    color: #fff;
+    padding: 56px 60px 48px 60px;
+    page-break-after: always;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover-header::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 340px; height: 340px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 50%;
+  }
+  .cover-header::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: -60px;
+    width: 260px; height: 260px;
+    background: rgba(255,255,255,0.02);
+    border-radius: 50%;
+  }
+  .cover-logo {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.4);
+    border: 1px solid rgba(255,255,255,0.2);
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 4px;
+    margin-bottom: 48px;
+  }
+  .cover-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 32px;
+  }
+  .cover-title {
+    font-size: 56px;
+    font-weight: 800;
+    line-height: 1.02;
+    color: #fff;
+    margin-bottom: 18px;
+    letter-spacing: -1.5px;
+  }
+  .cover-subtitle {
+    font-size: 17px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.72);
+    margin-bottom: 56px;
+    max-width: 580px;
+    line-height: 1.55;
+  }
+  .cover-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border-top: 1px solid rgba(255,255,255,0.15);
+    padding-top: 32px;
+    margin-top: auto;
+  }
+  .cover-meta-item { padding: 0 24px 0 0; border-right: 1px solid rgba(255,255,255,0.1); }
+  .cover-meta-item:last-child { border-right: none; padding-left: 24px; padding-right: 0; }
+  .cover-meta-item:not(:first-child) { padding-left: 24px; }
+  .cover-meta-label { font-size: 9px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.38); margin-bottom: 6px; }
+  .cover-meta-value { font-size: 14px; font-weight: 600; color: #fff; }
+
+  /* ═══ CONTAINER ═══ */
+  .container { max-width: 1100px; margin: 0 auto; padding: 48px 40px; }
+
+  /* ═══ SUMÁRIO ═══ */
+  .toc {
+    background: #e0e0e0;
+    border-radius: 10px;
+    padding: 36px 40px;
+    margin-bottom: 48px;
+    border: 1px solid #cccccc;
+    page-break-after: always;
+  }
+  .toc-title { font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #1a1a1a; margin-bottom: 20px; }
+  .toc-item {
+    display: flex; align-items: center; padding: 9px 0;
+    border-bottom: 1px dashed #cccccc; text-decoration: none; color: #1a1a1a; transition: color 0.2s;
+  }
+  .toc-item:last-child { border-bottom: none; }
+  .toc-item:hover { color: #555555; }
+  .toc-num { font-size: 10px; font-weight: 700; color: #888888; width: 36px; flex-shrink: 0; }
+  .toc-label { font-size: 13px; font-weight: 500; flex: 1; }
+  .toc-dots { flex: 1; border-bottom: 1px dotted #cccccc; margin: 0 12px; }
+
+  /* ═══ SECTION HEADER ═══ */
+  .section-header {
+    background: linear-gradient(135deg, #2d2d2d 0%, #555555 100%);
+    border-left: 6px solid #1a1a1a;
+    border-radius: 0 8px 8px 0;
+    padding: 18px 28px; margin-bottom: 28px;
+    display: flex; align-items: center; gap: 18px;
+    page-break-after: avoid;
+  }
+  .section-number {
+    width: 40px; height: 40px;
+    background: rgba(255,255,255,0.15); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .section-title { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
+  .section-desc { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 2px; }
+
+  /* ═══ CARDS ═══ */
+  .card {
+    background: #e0e0e0; border: 1px solid #cccccc;
+    border-radius: 8px; padding: 24px 28px; margin-bottom: 20px;
+    page-break-inside: avoid;
+  }
+  .card-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #1a1a1a; margin-bottom: 14px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+
+  /* ═══ KPI ═══ */
+  .kpi-card {
+    background: #e0e0e0; border: 1px solid #cccccc;
+    border-radius: 8px; padding: 20px 22px; text-align: center;
+    page-break-inside: avoid;
+  }
+  .kpi-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: #888888; margin-bottom: 8px; }
+  .kpi-value { font-size: 28px; font-weight: 800; color: #1a1a1a; line-height: 1; margin-bottom: 4px; }
+  .kpi-sub { font-size: 11px; color: #555555; }
+
+  /* ═══ BADGES ═══ */
+  .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; }
+  .badge-ok { background: #d4edda; color: #1a6b35; }
+  .badge-warning { background: #fff3cd; color: #856404; }
+  .badge-info { background: #d1ecf1; color: #0c5460; }
+
+  /* ═══ CALLOUTS ═══ */
+  .callout-success { background: #d4edda; border-left: 4px solid #28a745; border-radius: 0 6px 6px 0; padding: 14px 18px; margin-bottom: 16px; page-break-inside: avoid; }
+  .callout-warning { background: #fff8e1; border-left: 4px solid #ffc107; border-radius: 0 6px 6px 0; padding: 14px 18px; margin-bottom: 16px; page-break-inside: avoid; }
+  .callout-info { background: #e8e8e8; border-left: 4px solid #555555; border-radius: 0 6px 6px 0; padding: 14px 18px; margin-bottom: 16px; page-break-inside: avoid; }
+  .callout-dark { background: #e0e0e0; border-left: 4px solid #1a1a1a; border-radius: 0 6px 6px 0; padding: 14px 18px; margin-bottom: 16px; page-break-inside: avoid; }
+
+  /* ═══ TABELAS ═══ */
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; page-break-inside: avoid; }
+  thead tr { background: linear-gradient(135deg, #1a1a1a 0%, #333333 100%); }
+  thead th { color: #fff; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 11px 14px; text-align: left; }
+  tbody tr:nth-child(even) { background: rgba(255,255,255,0.5); }
+  tbody tr:nth-child(odd) { background: rgba(255,255,255,0.25); }
+  tbody td { padding: 10px 14px; font-size: 12px; color: #1a1a1a; border-bottom: 1px solid #cccccc; vertical-align: top; }
+  td.label-cell { font-weight: 600; color: #1a1a1a; white-space: nowrap; }
+
+  /* ═══ DECISION BOX ═══ */
+  .decision-box {
+    border: 2px dashed #555555; border-radius: 8px;
+    padding: 20px 24px; margin-bottom: 20px;
+    position: relative; page-break-inside: avoid;
+  }
+  .decision-box::before {
+    content: '✓'; position: absolute; top: -12px; left: 20px;
+    background: #1a1a1a; color: #fff;
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; line-height: 24px; text-align: center;
+  }
+
+  /* ═══ ARCH LAYERS ═══ */
+  .arch-layer { display: flex; align-items: stretch; margin-bottom: 10px; border-radius: 6px; overflow: hidden; page-break-inside: avoid; }
+  .arch-layer-label {
+    background: #1a1a1a; color: #fff;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+    writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);
+    padding: 12px 10px; min-width: 38px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .arch-layer-content {
+    flex: 1; background: #e0e0e0; border: 1px solid #cccccc; border-left: none;
+    padding: 14px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .arch-chip {
+    background: #fff; border: 1px solid #cccccc; border-radius: 20px;
+    padding: 5px 14px; font-size: 11px; font-weight: 600; color: #1a1a1a;
+  }
+
+  /* ═══ ROADMAP ═══ */
+  .roadmap-item { display: flex; gap: 16px; margin-bottom: 14px; page-break-inside: avoid; }
+  .roadmap-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0; margin-top: 2px;
+  }
+  .roadmap-icon.done { background: #d4edda; }
+  .roadmap-icon.active { background: #e0e0e0; border: 2px solid #1a1a1a; }
+  .roadmap-icon.pending { background: #f0f0f0; }
+  .roadmap-body { flex: 1; }
+  .roadmap-title { font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 2px; }
+  .roadmap-desc { font-size: 11px; color: #555555; }
+
+  /* ═══ FOOTER ═══ */
+  .doc-footer {
+    background: #1a1a1a; color: #fff;
+    padding: 18px 40px; display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; margin-top: 48px;
+  }
+  .doc-footer strong { font-weight: 700; }
+
+  .sep { height: 1px; background: linear-gradient(90deg, #cccccc, transparent); margin: 28px 0; }
+  .section-block { margin-bottom: 48px; }
+  p { margin-bottom: 10px; color: #1a1a1a; font-size: 13px; line-height: 1.7; }
+  ul, ol { margin: 8px 0 14px 20px; color: #1a1a1a; font-size: 12px; line-height: 1.8; }
+  li { margin-bottom: 4px; }
+  strong { color: #1a1a1a; }
+
+  @media print {
+    body { background: #f0f0f0; }
+    .cover-header { page-break-after: always; min-height: 100vh; }
+    .toc { page-break-after: always; }
+    .card, .callout-success, .callout-warning, .callout-info, .callout-dark,
+    table, .arch-layer, .kpi-card, .roadmap-item, .decision-box { page-break-inside: avoid; }
+    .section-header { page-break-after: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- CAPA                                    -->
+<!-- ═══════════════════════════════════════ -->
+<div class="cover-header">
+  <div>
+    <div class="cover-logo">Ever i9</div>
+    <div class="cover-eyebrow">Produto Interno · Uso Confidencial · Visão Executiva</div>
+    <div class="cover-title">Ever i9</div>
+    <div class="cover-subtitle">Plataforma de aceleração Salesforce focada em ganho de produtividade e automação completa do ciclo de entrega — do requisito ao deploy em produção.</div>
+  </div>
+  <div class="cover-meta-grid">
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Projeto Piloto</div>
+      <div class="cover-meta-value">Algar Telecom B2B</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Versão do Documento</div>
+      <div class="cover-meta-value">v1.0 — Junho 2026</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Autor</div>
+      <div class="cover-meta-value">Alberto Bottaro · Analista SF</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- CORPO                                   -->
+<!-- ═══════════════════════════════════════ -->
+<div class="container">
+
+  <!-- SUMÁRIO -->
+  <div class="toc">
+    <div class="toc-title">Sumário</div>
+    <a class="toc-item" href="#sec01"><span class="toc-num">01</span><span class="toc-label">O que é o Ever i9</span><span class="toc-dots"></span></a>
+    <a class="toc-item" href="#sec02"><span class="toc-num">02</span><span class="toc-label">Arquitetura Técnica</span><span class="toc-dots"></span></a>
+    <a class="toc-item" href="#sec03"><span class="toc-num">03</span><span class="toc-label">Módulos Ativos</span><span class="toc-dots"></span></a>
+    <a class="toc-item" href="#sec04"><span class="toc-num">04</span><span class="toc-label">Custos de Infraestrutura e Ganho de Produtividade</span><span class="toc-dots"></span></a>
+    <a class="toc-item" href="#sec05"><span class="toc-num">05</span><span class="toc-label">Potencial SaaS</span><span class="toc-dots"></span></a>
+    <a class="toc-item" href="#sec06"><span class="toc-num">06</span><span class="toc-label">Roadmap e Próximos Passos</span><span class="toc-dots"></span></a>
+  </div>
+
+  <!-- ─── 01 · O QUE É O EVER I9 ─── -->
+  <div class="section-block" id="sec01">
+    <div class="section-header">
+      <div class="section-number">01</div>
+      <div>
+        <div class="section-title">O que é o Ever i9</div>
+        <div class="section-desc">Visão de produto e proposta de valor</div>
+      </div>
+    </div>
+
+    <div class="callout-dark">
+      <strong>Objetivo:</strong> O Ever i9 acelera entregas Salesforce automatizando cada etapa do ciclo — captura de requisitos, geração de documentação técnica por IA, provisionamento de metadados, gestão de projetos e criação de protótipos — eliminando trabalho manual e repetitivo para maximizar a produtividade do time de arquitetura.
+    </div>
+
+    <div class="grid-4">
+      <div class="kpi-card">
+        <div class="kpi-label">Projeto Piloto</div>
+        <div class="kpi-value">Algar</div>
+        <div class="kpi-sub">CRM B2B Telecom</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Módulos Ativos</div>
+        <div class="kpi-value">11+</div>
+        <div class="kpi-sub">Em produção</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Redução Ciclo</div>
+        <div class="kpi-value">~93%</div>
+        <div class="kpi-sub">Documentação e deploy</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Prototipagem</div>
+        <div class="kpi-value">Integrada</div>
+        <div class="kpi-sub">Lab + HF Studio</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Proposta de Valor Central</div>
+      <p>O Ever i9 elimina o trabalho manual e repetitivo do ciclo de entrega Salesforce — desde a captura de requisitos até o deploy em produção — reduzindo drasticamente o tempo de ciclo, aumentando a qualidade das entregas com rastreabilidade completa e permitindo criação rápida de protótipos para validação com stakeholders.</p>
+      <table>
+        <thead><tr><th>Sem Ever i9</th><th>Com Ever i9</th></tr></thead>
+        <tbody>
+          <tr><td>Documentação manual (horas/dias)</td><td>Histórias Funcionais e Specs geradas em minutos por IA (Claude Opus)</td></tr>
+          <tr><td>Deploy de metadados via Salesforce CLI manual</td><td>Deploy via API com manifest JSON — zero terminal</td></tr>
+          <tr><td>Gestão de projetos em ferramentas externas (Jira, Trello)</td><td>GP Panel integrado com Kanban, Gantt e Cadências no mesmo ambiente</td></tr>
+          <tr><td>Análise de lacunas de implementação manual</td><td>Inventory automático + Spec com gap analysis (JÁ EXISTE vs CRIAR NOVO)</td></tr>
+          <tr><td>Conhecimento disperso em drives e wikis</td><td>Knowledge Base centralizada com documentação Salesforce e contexto do projeto</td></tr>
+          <tr><td>Protótipos criados em ferramentas separadas</td><td>Laboratório integrado com upload, versionamento e chat IA contextual</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─── 02 · ARQUITETURA TÉCNICA ─── -->
+  <div class="section-block" id="sec02">
+    <div class="section-header">
+      <div class="section-number">02</div>
+      <div>
+        <div class="section-title">Arquitetura Técnica</div>
+        <div class="section-desc">Camadas, componentes e integrações</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Visão em Camadas</div>
+
+      <div class="arch-layer">
+        <div class="arch-layer-label">Apresentação</div>
+        <div class="arch-layer-content">
+          <span class="arch-chip">React SPA (Ever i9)</span>
+          <span class="arch-chip">GP Panel</span>
+          <span class="arch-chip">DevTools AI</span>
+          <span class="arch-chip">Data Cloud Sandbox</span>
+          <span class="arch-chip">HF Studio</span>
+          <span class="arch-chip">Laboratório</span>
+          <span class="arch-chip">Lab Revenue Cloud</span>
+          <span class="arch-chip">Refinamentos</span>
+          <span class="arch-chip">Partner Community</span>
+        </div>
+      </div>
+
+      <div class="arch-layer">
+        <div class="arch-layer-label">API / Backend</div>
+        <div class="arch-layer-content">
+          <span class="arch-chip">Node.js (Heroku Eco)</span>
+          <span class="arch-chip">Express REST</span>
+          <span class="arch-chip">GitHub Auto-Deploy</span>
+          <span class="arch-chip">JWT Auth</span>
+          <span class="arch-chip">Postgres (dados persistentes)</span>
+        </div>
+      </div>
+
+      <div class="arch-layer">
+        <div class="arch-layer-label">IA</div>
+        <div class="arch-layer-content">
+          <span class="arch-chip">Claude Opus (Spec, Dev, Deploy)</span>
+          <span class="arch-chip">Claude Sonnet (DevTools AI)</span>
+          <span class="arch-chip">DeepSeek V4 Flash (Agente i9, Chat)</span>
+        </div>
+      </div>
+
+      <div class="arch-layer">
+        <div class="arch-layer-label">Conhecimento</div>
+        <div class="arch-layer-content">
+          <span class="arch-chip">Knowledge Base (KB)</span>
+          <span class="arch-chip">Documentação Salesforce</span>
+          <span class="arch-chip">Inventory Scanner (Org Scan)</span>
+          <span class="arch-chip">Contexto do Projeto</span>
+        </div>
+      </div>
+
+      <div class="arch-layer">
+        <div class="arch-layer-label">Dados</div>
+        <div class="arch-layer-content">
+          <span class="arch-chip">Snowflake V2 (ALGAR_CRM_LAKE)</span>
+          <span class="arch-chip">Data Cloud (13 streams ativos)</span>
+          <span class="arch-chip">Salesforce Dev Org</span>
+          <span class="arch-chip">MuleSoft (iPaaS)</span>
+        </div>
+      </div>
+
+      <div class="arch-layer">
+        <div class="arch-layer-label">Infra</div>
+        <div class="arch-layer-content">
+          <span class="arch-chip">GitHub (CI/CD)</span>
+          <span class="arch-chip">Heroku (deploy ~85s)</span>
+          <span class="arch-chip">Postgres (Heroku Add-on)</span>
+          <span class="arch-chip">Salesforce Experience Cloud</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Regras Arquiteturais</div>
+        <ul>
+          <li><strong>MuleSoft</strong> = SOMENTE Account ↔ CRM Algar (nunca toca Snowflake diretamente)</li>
+          <li><strong>Salesforce → Snowflake</strong> = SOMENTE via Data Cloud (Activation Target)</li>
+          <li><strong>CRM Algar</strong> é o source of truth de dados legados</li>
+          <li><strong>DevEvery Org</strong> = leitura estrita (gap analysis) — zero escrita</li>
+          <li><strong>IA com contexto</strong> — KB + Inventory alimentam decisões de Spec e Deploy</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title">Endpoints-Chave do MCP Server</div>
+        <ul>
+          <li><strong>/api/deploy-code</strong> — Deploy Apex/Flows/Settings</li>
+          <li><strong>/api/deploy-b64/</strong> — Deploy manifest JSON via base64</li>
+          <li><strong>/api/soql-b64/</strong> — Consultas SOQL diretas</li>
+          <li><strong>/api/execute-anonymous</strong> — Apex anônimo</li>
+          <li><strong>/api/snowflake/query</strong> — Consulta Snowflake V2</li>
+          <li><strong>/api/inventory/run</strong> — Scan completo da org → KB</li>
+          <li><strong>/api/github/file</strong> — Push de código ao GitHub</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout-info">
+      <strong>Diferencial técnico:</strong> O MCP Server opera como um meta-orquestrador — Claude (arquiteto) instrui o servidor, que provisiona Salesforce, atualiza GitHub, executa Apex e consulta Snowflake em sequência, eliminando qualquer interface manual do ciclo de entrega. A Knowledge Base consolidada permite que a IA tome decisões com contexto real da org.
+    </div>
+  </div>
+
+  <!-- ─── 03 · MÓDULOS ATIVOS ─── -->
+  <div class="section-block" id="sec03">
+    <div class="section-header">
+      <div class="section-number">03</div>
+      <div>
+        <div class="section-title">Módulos Ativos</div>
+        <div class="section-desc">Funcionalidades entregues em produção</div>
+      </div>
+    </div>
+
+    <table>
+      <thead><tr><th>Módulo</th><th>URL</th><th>Descrição</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="label-cell">GP Panel</td><td>/</td>
+          <td>Gestão de Projetos: Kanban (10 colunas), Gantt, Cadências. Workstreams com monogramas WsIcon.</td>
+          <td><span class="status-badge badge-ok">Produção</span></td>
+        </tr>
+        <tr>
+          <td class="label-cell">Squad Agentes SF</td><td>/squad</td>
+          <td>Pipeline IA Kanban (6 colunas): agentes HF, Spec e Dev que geram runbook + manifest automaticamente.</td>
+          <td><span class="status-badge badge-ok">Produção</span></td>
+        </tr>
+        <tr>
+          <td class="label-cell">HF Studio</td><td>/hf</td>
+          <td>Geração de Histórias Funcionais completas (14 seções) via IA — transforma requisitos de negócio em documentação estruturada.</td>
+          <td><span class="status-badge badge-ok">Produção</span></td>
+        </tr>
+        <tr>
+          <td class="label-cell">SF Agent</td><td>Salesforce Org</td>
+          <td>Agentforce — Agente Algar Vendas (Employee Agent) com subagente B2B Account Enrichment e Apex invocable.</td>
+          <td><span class="status-badge badge-ok">Produção</span></td>
+        </tr>
+        <tr>
+          <td class="label-cell">DevTools AI</td><td>/devtools.html</td>
+          <td>Painel admin com IA Assistant (Claude Opus) e Ferramentas Manuais. Injeta campos em layouts automaticamente.</td>
+          <td><span class="status-badge badge-ok">Produção</span></td>
+        </tr>
+        <tr>
+          <td class="label-cell">Knowledge Base</td><td>/kb</td>
+          <td>Base de conhecimento centralizada com documentação Salesforce, contexto do projeto Algar e resultados do Inventory Scanner.</td>
+          <td><span class="status-badge badge-ok">Produção</span></td>
+        </tr>
+        <tr>
+          <td class="label-cell">Data Cloud Sandbox</td><td>/datacloud.html</td>
+          <td>Simulador SLDS fiel com dados Snowflake ao vivo, CRUD completo, painel de agentes contextual.</td>
+          <td><span class="status-badge badge-ok">Produção</span></td>
+        </tr>
+        <tr>
+          <td class="label-cell">Laboratório</td><td>/lab.html</td>
+          <td>Repositório de protótipos, apresentações e documentações com upload/download, versionamento e chat Ever i9 integrado.</td>
+          <td><span class="status-badge badge-ok">Produção</span></td>
+        </tr>
+        <tr>
+          <td class="label-cell">Lab Revenue Cloud</td><td>/lab-revenue</td>
+          <td>Ambiente de experimentação Revenue Cloud: Product Catalog, Pricing, Quotes e Contracts para cenários B2B Algar (MPLS, SD-WAN, IoT, UCaaS, Fiber).</td>
+          <td><span class="status-badge badge-ok">Produção</span></td>
+        </tr>
+        <tr>
+          <td class="label-cell">Partner Community</td><td>/partner-users.html</td>
+          <td>Criação/listagem de usuários Partner com Experience Cloud (AlgarPartners) integrado.</td>
+          <td><span class="status-badge badge-ok">Produção</span></td>
+        </tr>
+        <tr>
+          <td class="label-cell">Refinamentos</td><td>/refinamentos.html</td>
+          <td>Board de refinamentos por semana com Postgres, anexos e gestão de sessões.</td>
+          <td><span class="status-badge badge-ok">Produção</span></td>
+        </tr>
+        <tr>
+          <td class="label-cell">Inventory Scanner</td><td>POST /api/inventory/run</td>
+          <td>Scan completo da org Salesforce → KB consolidada para gap analysis automático nas Specs.</td>
+          <td><span class="status-badge badge-ok">Produção</span></td>
+        </tr>
+        <tr>
+          <td class="label-cell">Agente i9</td><td>Global (flutuante)</td>
+          <td>Botão verde flutuante com DeepSeek para perguntas rápidas e suporte contextual em qualquer tela da plataforma.</td>
+          <td><span class="status-badge badge-ok">Produção</span></td>
+        </tr>
+        <tr>
+          <td class="label-cell">Reuniões / Actions / Relatório</td><td>/gp</td>
+          <td>Abas do GP Panel para gestão de reuniões, ações e relatórios de progresso.</td>
+          <td><span class="status-badge badge-warning">Pendente</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─── 04 · CUSTOS E PRODUTIVIDADE ─── -->
+  <div class="section-block" id="sec04">
+    <div class="section-header">
+      <div class="section-number">04</div>
+      <div>
+        <div class="section-title">Custos de Infraestrutura e Ganho de Produtividade</div>
+        <div class="section-desc">Modelo de custos e impacto direto na produtividade do time</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Custo Mensal de Infraestrutura (Cenário Atual — Piloto Algar)</div>
+      <table>
+        <thead><tr><th>Componente</th><th>Plano / Nível</th><th>Custo/mês (USD)</th><th>Custo/mês (BRL ~5.7x)</th><th>Observação</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="label-cell">Heroku Dyno</td><td>Eco ($5) + Basic Postgres ($9)</td>
+            <td>$14</td><td>~R$80</td><td>Backend Node.js + DB Postgres</td>
+          </tr>
+          <tr>
+            <td class="label-cell">Anthropic API</td><td>Claude Opus (Spec/Dev/Deploy) + Sonnet (DevTools)</td>
+            <td>~$10–30</td><td>~R$57–171</td><td>Pipeline IA de documentação e deploy</td>
+          </tr>
+          <tr>
+            <td class="label-cell">Snowflake</td><td>Standard (us-east-1)</td>
+            <td>~$20–40</td><td>~R$114–228</td><td>Depende do volume de queries</td>
+          </tr>
+          <tr>
+            <td class="label-cell">GitHub</td><td>Free (repositório privado)</td>
+            <td>$0</td><td>R$0</td><td>CI/CD via auto-deploy Heroku</td>
+          </tr>
+          <tr>
+            <td class="label-cell">Salesforce Orgs</td><td>Dev Org (DevHub) — já licenciada</td>
+            <td>$0 incremental</td><td>R$0</td><td>Inclusa no contrato Algar</td>
+          </tr>
+          <tr style="font-weight:700; background: rgba(26,26,26,0.08) !important;">
+            <td class="label-cell">TOTAL ESTIMADO</td><td>—</td>
+            <td><strong>$44–84/mês</strong></td><td><strong>~R$250–480/mês</strong></td>
+            <td>Cenário piloto (1 projeto)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Ganho de Produtividade por Atividade</div>
+      <table>
+        <thead><tr><th>Atividade</th><th>Tempo Manual</th><th>Com Ever i9</th><th>Redução</th></tr></thead>
+        <tbody>
+          <tr><td>História Funcional (HF Studio)</td><td>4–8 horas</td><td>~20 minutos</td><td><strong>~93%</strong></td></tr>
+          <tr><td>Especificação Técnica (Claude Opus)</td><td>8–16 horas</td><td>~40 minutos</td><td><strong>~94%</strong></td></tr>
+          <tr><td>Deploy de Metadados</td><td>2–4 horas</td><td>~5 minutos</td><td><strong>~96%</strong></td></tr>
+          <tr><td>Gap Analysis da Org (Inventory)</td><td>6–12 horas</td><td>~15 minutos</td><td><strong>~97%</strong></td></tr>
+          <tr><td>Criação de Protótipos (Lab)</td><td>4–8 horas</td><td>~30 minutos</td><td><strong>~90%</strong></td></tr>
+          <tr><td>Gestão de Refinamentos</td><td>1–2h setup por sessão</td><td>Automatizado</td><td><strong>~80%</strong></td></tr>
+          <tr><td>Consulta a Knowledge Base</td><td>Busca manual dispersa</td><td>Busca contextual IA</td><td><strong>~85%</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Redução Média no Ciclo</div>
+        <div class="kpi-value">~91%</div>
+        <div class="kpi-sub">Média ponderada das atividades</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Horas Liberadas/Mês</div>
+        <div class="kpi-value">40–80h</div>
+        <div class="kpi-sub">Por arquiteto ativo</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Custo Infra/Mês</div>
+        <div class="kpi-value">~$60</div>
+        <div class="kpi-sub">R$250–480 (piloto)</div>
+      </div>
+    </div>
+
+    <div class="callout-success">
+      <strong>Impacto:</strong> O Ever i9 libera entre 40 e 80 horas por mês por arquiteto — tempo que é redirecionado para atividades estratégicas como arquitetura de solução, discovery com clientes e inovação. O custo de infraestrutura é irrisório frente ao ganho de produtividade, permitindo escalar a capacidade do time sem aumento de headcount.
+    </div>
+  </div>
+
+  <!-- ─── 05 · POTENCIAL SAAS ─── -->
+  <div class="section-block" id="sec05">
+    <div class="section-header">
+      <div class="section-number">05</div>
+      <div>
+        <div class="section-title">Potencial SaaS</div>
+        <div class="section-desc">Capacidade de escala como produto comercializável</div>
+      </div>
+    </div>
+
+    <div class="callout-dark">
+      <strong>Hipótese estratégica:</strong> O Ever i9 nasceu como acelerador interno, mas sua arquitetura multi-tenant, modular e baseada em API permite sua comercialização como produto SaaS para implementadoras e clientes Salesforce no Brasil e LATAM.
+    </div>
+
+    <div class="grid-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Produtividade p/ Equipe</div>
+        <div class="kpi-value">3–5x</div>
+        <div class="kpi-sub">Multiplicador de capacidade por arquiteto</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Time-to-Deploy</div>
+        <div class="kpi-value">~85s</div>
+        <div class="kpi-sub">Requisito → Org em minutos</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Documentação Zero-Effort</div>
+        <div class="kpi-value">100%</div>
+        <div class="kpi-sub">HF + Spec + Runbook via IA</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Diferenciais Competitivos</div>
+      <div class="grid-2">
+        <div>
+          <p><strong>Nativo Salesforce:</strong> Integra diretamente com orgs via Connected App e Metadata API — sem intermediários.</p>
+          <p><strong>IA Embedded:</strong> Claude Opus e DeepSeek integrados ao ciclo de entrega, não como ferramenta externa.</p>
+          <p><strong>Knowledge Base Contextual:</strong> Documentação Salesforce + Inventory da org + contexto do projeto alimentam a IA com dados reais.</p>
+        </div>
+        <div>
+          <p><strong>Prototipagem Integrada:</strong> Laboratório permite criar, versionar e compartilhar protótipos com chat IA contextual no mesmo ambiente.</p>
+          <p><strong>Custo Marginal Baixo:</strong> Arquitetura Node.js + Heroku + Postgres — escala por projeto com custo incremental mínimo.</p>
+          <p><strong>IP proprietário:</strong> Todo o código-fonte é próprio, sem dependência de terceiros além de APIs de IA.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="decision-box">
+      <p style="margin-top:8px;"><strong>Decisão estratégica requerida:</strong> Para viabilizar a comercialização, são necessárias três decisões: (1) aprovação do investimento em multi-tenancy (~3 meses dev), (2) definição de go-to-market (canal parceiro vs. direto), e (3) precificação formal do produto. O IP e a base técnica já existem.</p>
+    </div>
+  </div>
+
+  <!-- ─── 06 · ROADMAP ─── -->
+  <div class="section-block" id="sec06">
+    <div class="section-header">
+      <div class="section-number">06</div>
+      <div>
+        <div class="section-title">Roadmap e Próximos Passos</div>
+        <div class="section-desc">Entregas concluídas, em andamento e pendentes</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Entregas — Projeto Algar (2026)</div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-icon done">✅</div>
+        <div class="roadmap-body">
+          <div class="roadmap-title">Infraestrutura Base — Heroku + GitHub + Salesforce</div>
+          <div class="roadmap-desc">MCP Server, auto-deploy, Connected App, DevHub. Concluído.</div>
+        </div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-icon done">✅</div>
+        <div class="roadmap-body">
+          <div class="roadmap-title">GP Panel + Squad Agentes + DevTools AI</div>
+          <div class="roadmap-desc">Kanban, Gantt, Cadências, pipeline IA, assistente com Claude Opus e Sonnet. Concluído.</div>
+        </div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-icon done">✅</div>
+        <div class="roadmap-body">
+          <div class="roadmap-title">HF Studio + SF Agent + Knowledge Base</div>
+          <div class="roadmap-desc">Geração de HFs por IA, Agentforce (Employee Agent + B2B Enrichment), KB com documentação Salesforce e contexto do projeto. Concluído.</div>
+        </div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-icon done">✅</div>
+        <div class="roadmap-body">
+          <div class="roadmap-title">Data Cloud Sandbox + Snowflake V2</div>
+          <div class="roadmap-desc">13 streams ativos, 291 registros, conector RSA keypair. Concluído.</div>
+        </div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-icon done">✅</div>
+        <div class="roadmap-body">
+          <div class="roadmap-title">Laboratório + Refinamentos + Partner Community + Agente i9</div>
+          <div class="roadmap-desc">Protótipos, refinamentos semanais, Experience Cloud (AlgarPartners), agente flutuante DeepSeek. Concluído.</div>
+        </div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-icon active">🔄</div>
+        <div class="roadmap-body">
+          <div class="roadmap-title">Entrega C — Filtro Global WS + Automação de Bloqueio</div>
+          <div class="roadmap-desc">Filtro de Workstream cruzando todas as abas do GP Panel com automação de bloqueio. Em definição.</div>
+        </div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-icon done">✅</div>
+        <div class="roadmap-body">
+          <div class="roadmap-title">Reuniões / Actions / Relatório</div>
+          <div class="roadmap-desc">Abas do GP Panel para gestão de reuniões, ações de follow-up e relatórios de progresso. Concluído.</div>
+        </div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-icon done">✅</div>
+        <div class="roadmap-body">
+          <div class="roadmap-title">CRM Algar Emulator</div>
+          <div class="roadmap-desc">Emulador React/SLDS completo com Lead Mgmt, Account 360, Opp Pipeline e sincronização Snowflake bidirecional. Concluído.</div>
+        </div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-icon done">✅</div>
+        <div class="roadmap-body">
+          <div class="roadmap-title">Dashboards de Burndown e Velocity</div>
+          <div class="roadmap-desc">Indicadores visuais de performance do time e velocidade de entrega por sprint. Concluído.</div>
+        </div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-icon done">✅</div>
+        <div class="roadmap-body">
+          <div class="roadmap-title">Lab Revenue Cloud</div>
+          <div class="roadmap-desc">Ambiente de experimentação Revenue Cloud — modelagem de Product Catalog, Pricing, Quotes e Contracts para os cenários B2B Algar (MPLS, SD-WAN, IoT, UCaaS, Fiber). Concluído.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="callout-info" style="margin-bottom:0;">
+    <strong>Resumo executivo:</strong> O Ever i9 é um ativo estratégico com 11+ módulos em produção, redução média de ~91% no ciclo de entrega Salesforce e capacidade de multiplicar por 3 a 5 vezes a produtividade de cada arquiteto. A plataforma combina IA generativa (Claude Opus + DeepSeek), Knowledge Base contextual, prototipagem integrada e automação de deploy — permitindo que o time foque em atividades estratégicas de alto valor enquanto o trabalho operacional é executado automaticamente.
+  </div>
+
+</div>
+
+<div class="doc-footer">
+  <div><strong>EVER I9</strong> / Overview Executivo — Visão Executiva</div>
+  <div>Confidencial — Uso Interno · Junho 2026</div>
+</div>
+
+</body>
+</html>
