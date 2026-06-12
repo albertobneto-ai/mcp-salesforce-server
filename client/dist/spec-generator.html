@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ever i9 — Spec Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Outfit',system-ui,sans-serif;overflow:hidden;height:100vh;background:#e8dff5}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#c9b8d8;border-radius:3px}
+
+.app{display:flex;height:100vh;width:100vw}
+
+/* SIDEBAR */
+.sidebar{width:56px;min-width:56px;background:linear-gradient(180deg,#1a0a3e 0%,#2d1b69 40%,#4a2d8a 100%);display:flex;flex-direction:column;align-items:center;padding:16px 0;gap:6px;z-index:10}
+.sidebar-logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#6c44a0,#9b6dd7);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:11px;margin-bottom:12px;letter-spacing:-0.5px}
+.sidebar-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;color:rgba(255,255,255,.5);font-size:18px}
+.sidebar-icon:hover{background:rgba(255,255,255,.12);color:#fff}
+.sidebar-icon.active{background:rgba(255,255,255,.18);color:#fff;box-shadow:0 0 12px rgba(138,100,220,.4)}
+.sidebar-spacer{flex:1}
+
+/* MAIN */
+.main{flex:1;display:flex;gap:16px;background:linear-gradient(135deg,#e8dff5 0%,#d4c8e8 50%,#c9b8d8 100%);padding:16px;overflow:hidden}
+
+/* LEFT PANEL */
+.panel-left{width:420px;min-width:360px;display:flex;flex-direction:column;gap:12px}
+.panel-card{background:rgba(255,255,255,.72);backdrop-filter:blur(16px);border-radius:16px;border:1px solid rgba(255,255,255,.4);box-shadow:0 4px 24px rgba(90,61,138,.08);overflow:hidden;display:flex;flex-direction:column}
+.panel-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid rgba(200,184,216,.3)}
+.panel-title{font-weight:700;font-size:16px;color:#1a0a3e;display:flex;align-items:center;gap:8px}
+.panel-body{padding:16px 20px;flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* RIGHT PANEL */
+.panel-right{flex:1;display:flex;flex-direction:column}
+.conv-card{flex:1;background:rgba(255,255,255,.82);backdrop-filter:blur(16px);border-radius:16px;border:1px solid rgba(255,255,255,.5);box-shadow:0 4px 24px rgba(90,61,138,.08);display:flex;flex-direction:column;overflow:hidden}
+.conv-header{padding:16px 20px 12px;border-bottom:1px solid rgba(200,184,216,.2);display:flex;align-items:center;justify-content:space-between}
+.conv-title{font-weight:700;font-size:16px;color:#1a0a3e;display:flex;align-items:center;gap:8px}
+.conv-actions{display:flex;gap:8px}
+
+/* BUTTONS */
+.btn{padding:8px 18px;border-radius:10px;border:1px solid #c9b8d8;background:#fff;font-family:inherit;font-size:12px;font-weight:600;color:#5a3d8a;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
+.btn:hover{background:#f3eef9;border-color:#6c44a0}
+.btn.primary{background:linear-gradient(135deg,#5a3d8a,#6c44a0);color:#fff;border:none}
+.btn.primary:hover{opacity:.9;box-shadow:0 4px 16px rgba(90,61,138,.3)}
+.btn.danger{border-color:#fca5a5;color:#dc2626}.btn.danger:hover{background:#fef2f2}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.success{background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;border:none}
+.btn.success:hover{opacity:.9}
+
+/* TEXTAREA */
+.spec-textarea{width:100%;flex:1;border:1px solid #d4c8e8;border-radius:12px;padding:16px;font-family:'Outfit',sans-serif;font-size:13px;line-height:1.7;color:#1a0a3e;resize:none;outline:none;transition:border .2s;background:rgba(255,255,255,.6);min-height:200px}
+.spec-textarea:focus{border-color:#6c44a0;box-shadow:0 0 0 3px rgba(108,68,160,.1)}
+.spec-textarea::placeholder{color:#b8a8d0}
+
+/* STATS BAR */
+.stats-bar{display:flex;gap:16px;padding:10px 0 4px;font-size:11px;color:#7868a0;font-weight:500}
+.stats-bar span{display:flex;align-items:center;gap:4px}
+
+/* OUTPUT AREA */
+.output-area{flex:1;padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+
+/* PHASE BLOCKS */
+.phase-block{animation:msgIn .25s ease}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.phase-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:linear-gradient(135deg,#5a3d8a,#6c44a0);border-radius:12px 12px 0 0;color:#fff}
+.phase-title{font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px}
+.phase-badge{background:rgba(255,255,255,.2);padding:2px 10px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:.05em}
+.phase-actions{display:flex;gap:6px}
+.phase-copy-btn{padding:5px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.phase-copy-btn:hover{background:rgba(255,255,255,.15)}
+.phase-body{background:rgba(232,223,245,.4);border:1px solid rgba(200,184,216,.3);border-top:none;border-radius:0 0 12px 12px;padding:0}
+.phase-json{background:#1a0a3e;color:#e0d4f5;padding:16px;border-radius:0 0 12px 12px;font-family:'JetBrains Mono','Fira Code',monospace;font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-all;overflow-x:auto;max-height:400px;overflow-y:auto;tab-size:2}
+
+/* STREAMING TEXT */
+.stream-text{padding:16px 20px;background:rgba(232,223,245,.4);border:1px solid rgba(200,184,216,.3);border-radius:12px;font-family:'JetBrains Mono','Fira Code',monospace;font-size:12px;line-height:1.6;color:#1a0a3e;white-space:pre-wrap;word-break:break-all;max-height:100%;overflow-y:auto}
+
+/* EMPTY STATE */
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#7868a0}
+.empty-icon{font-size:52px;opacity:.35}
+.empty-text{font-size:14px;font-weight:500;text-align:center;max-width:300px;line-height:1.6}
+.empty-sub{font-size:12px;color:#b8a8d0;text-align:center;max-width:340px;line-height:1.5}
+
+/* TYPING */
+.typing{display:flex;align-items:center;gap:8px;padding:14px 20px;color:#5a3d8a;font-size:13px;font-weight:500}
+.typing-dots{display:flex;gap:4px}
+.typing-dots span{width:6px;height:6px;border-radius:50%;background:#7868a0;animation:blink 1.2s infinite}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,100%{opacity:.3}50%{opacity:1}}
+
+/* PROGRESS */
+.progress-bar{height:3px;background:#e8dff5;border-radius:2px;overflow:hidden;margin-top:6px}
+.progress-fill{height:100%;background:linear-gradient(90deg,#6c44a0,#9b6dd7);border-radius:2px;transition:width .3s;animation:progressPulse 2s infinite}
+@keyframes progressPulse{0%{opacity:.7}50%{opacity:1}100%{opacity:.7}}
+
+/* COPY TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a0a3e;color:#fff;padding:10px 24px;border-radius:10px;font-size:13px;font-weight:600;opacity:0;transition:all .3s;z-index:999;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* CLOSE BTN */
+.close-btn{position:fixed;top:12px;right:16px;width:32px;height:32px;border-radius:8px;border:none;background:rgba(26,10,62,.65);color:#fff;font-size:16px;cursor:pointer;z-index:20;display:flex;align-items:center;justify-content:center;transition:all .15s;backdrop-filter:blur(8px)}
+.close-btn:hover{background:rgba(26,10,62,.85)}
+
+/* RESPONSIVE */
+@media(max-width:900px){.panel-left{display:none}.main{padding:8px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">SG</div>
+    <div class="sidebar-icon active" title="Spec Generator">&#9874;</div>
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-icon" title="Voltar" onclick="window.parent.postMessage('lab-closed','*')">&#10094;</div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <!-- LEFT: Input -->
+    <div class="panel-left">
+      <div class="panel-card" style="flex:1;display:flex;flex-direction:column">
+        <div class="panel-header">
+          <div class="panel-title">&#128196; Especificação Técnica</div>
+        </div>
+        <div class="panel-body">
+          <div style="margin-bottom:10px">
+            <div style="font-size:11px;font-weight:700;color:#5a3d8a;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">Cole o conteúdo da Spec</div>
+          </div>
+          <textarea id="specInput" class="spec-textarea" placeholder="Cole aqui o conteúdo completo da especificação técnica Salesforce gerada pelo comando /spec...
+
+Ex: Seções de Modelo de Dados, Campos, Validações, Record Types, Apex, Flows, Permission Sets, etc."></textarea>
+          <div class="stats-bar">
+            <span id="charCount">&#128209; 0 caracteres</span>
+            <span id="lineCount">&#128220; 0 linhas</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn primary" id="btnGenerate" onclick="generateRunbook()" style="flex:1">
+              &#9889; Gerar Runbook
+            </button>
+            <button class="btn danger" id="btnClear" onclick="clearAll()">&#128465;</button>
+          </div>
+          <div class="progress-bar" id="progressBar" style="display:none">
+            <div class="progress-fill" id="progressFill" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Output -->
+    <div class="panel-right">
+      <div class="conv-card">
+        <div class="conv-header">
+          <div class="conv-title">&#9889; Runbook Gerado</div>
+          <div class="conv-actions" id="outputActions" style="display:none">
+            <button class="btn" onclick="copyAll()">&#128203; Copiar Tudo</button>
+            <button class="btn success" onclick="downloadTxt()">&#128229; Baixar .txt</button>
+          </div>
+        </div>
+        <div class="output-area" id="outputArea">
+          <div class="empty-state" id="emptyState">
+            <div class="empty-icon">&#9874;</div>
+            <div class="empty-text">Spec Generator</div>
+            <div class="empty-sub">Cole uma especificação técnica Salesforce no painel esquerdo e clique em <strong>Gerar Runbook</strong> para converter em fases JSON executáveis pelo SF Agent.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="close-btn" onclick="window.parent.postMessage('lab-closed','*')" title="Fechar">&#10005;</button>
+<div class="toast" id="toast"></div>
+
+<script>
+const specInput = document.getElementById('specInput');
+const outputArea = document.getElementById('outputArea');
+const emptyState = document.getElementById('emptyState');
+const outputActions = document.getElementById('outputActions');
+const btnGenerate = document.getElementById('btnGenerate');
+const progressBar = document.getElementById('progressBar');
+const progressFill = document.getElementById('progressFill');
+let fullRunbook = '';
+
+// Stats
+specInput.addEventListener('input', () => {
+  const v = specInput.value;
+  document.getElementById('charCount').innerHTML = '&#128209; ' + v.length.toLocaleString() + ' caracteres';
+  document.getElementById('lineCount').innerHTML = '&#128220; ' + (v ? v.split('\n').length : 0) + ' linhas';
+});
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function clearAll() {
+  specInput.value = '';
+  specInput.dispatchEvent(new Event('input'));
+  outputArea.innerHTML = '';
+  outputArea.appendChild(emptyState);
+  emptyState.style.display = 'flex';
+  outputActions.style.display = 'none';
+  fullRunbook = '';
+}
+
+async function generateRunbook() {
+  const spec = specInput.value.trim();
+  if (spec.length < 50) {
+    showToast('Cole a especificação técnica completa (mínimo 50 caracteres)');
+    return;
+  }
+
+  // UI: loading
+  btnGenerate.disabled = true;
+  btnGenerate.innerHTML = '&#9203; Gerando...';
+  progressBar.style.display = 'block';
+  progressFill.style.width = '30%';
+  emptyState.style.display = 'none';
+  outputActions.style.display = 'none';
+  fullRunbook = '';
+
+  // Clear output and add streaming element
+  outputArea.innerHTML = '';
+  const streamDiv = document.createElement('div');
+  streamDiv.className = 'stream-text';
+  streamDiv.id = 'streamOutput';
+  outputArea.appendChild(streamDiv);
+
+  // Add typing indicator
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'typing';
+  typingDiv.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div> DeepSeek processando...';
+  outputArea.insertBefore(typingDiv, streamDiv);
+
+  try {
+    const response = await fetch('/api/spec-generator/convert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ specText: spec }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+      throw new Error(err.error || err.detail || `HTTP ${response.status}`);
+    }
+
+    // Read SSE stream
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    progressFill.style.width = '60%';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const payload = line.slice(6).trim();
+        if (payload === '[DONE]') continue;
+        try {
+          const json = JSON.parse(payload);
+          if (json.text) {
+            fullRunbook += json.text;
+            streamDiv.textContent = fullRunbook;
+            streamDiv.scrollTop = streamDiv.scrollHeight;
+          }
+        } catch { /* skip */ }
+      }
+    }
+
+    progressFill.style.width = '100%';
+
+    // Remove typing indicator
+    if (typingDiv.parentNode) typingDiv.remove();
+
+    // Parse phases and render nicely
+    renderPhases(fullRunbook);
+
+  } catch (err) {
+    if (typingDiv.parentNode) typingDiv.remove();
+    outputArea.innerHTML = '';
+    const errDiv = document.createElement('div');
+    errDiv.style.cssText = 'padding:20px;color:#dc2626;font-size:13px;background:rgba(254,242,242,.8);border:1px solid #fca5a5;border-radius:12px';
+    errDiv.innerHTML = '<strong>Erro:</strong> ' + escapeHtml(err.message) + '<br><br><span style="color:#7868a0;font-size:11px">Verifique se o servidor está online e tente novamente.</span>';
+    outputArea.appendChild(errDiv);
+  }
+
+  // Reset button
+  btnGenerate.disabled = false;
+  btnGenerate.innerHTML = '&#9889; Gerar Runbook';
+  setTimeout(() => {
+    progressBar.style.display = 'none';
+    progressFill.style.width = '0%';
+  }, 1000);
+}
+
+function renderPhases(text) {
+  outputArea.innerHTML = '';
+
+  // Try to split by === FASE N: ... ===
+  const phaseRegex = /===\s*FASE\s*(\d+)\s*:\s*(.+?)\s*===/gi;
+  const phases = [];
+  let match;
+  const indices = [];
+
+  while ((match = phaseRegex.exec(text)) !== null) {
+    indices.push({ idx: match.index, num: match[1], title: match[2], fullMatch: match[0] });
+  }
+
+  if (indices.length === 0) {
+    // No phases found — show as single block
+    const block = createPhaseBlock('1', 'Runbook Completo', text.trim());
+    outputArea.appendChild(block);
+  } else {
+    for (let i = 0; i < indices.length; i++) {
+      const start = indices[i].idx + indices[i].fullMatch.length;
+      const end = i + 1 < indices.length ? indices[i + 1].idx : text.length;
+      const content = text.slice(start, end).trim();
+      const block = createPhaseBlock(indices[i].num, indices[i].title, content);
+      outputArea.appendChild(block);
+    }
+  }
+
+  outputActions.style.display = 'flex';
+}
+
+function createPhaseBlock(num, title, content) {
+  const block = document.createElement('div');
+  block.className = 'phase-block';
+
+  // Extract JSON from content
+  let jsonContent = content;
+  const jsonMatch = content.match(/```json\s*([\s\S]*?)```/);
+  if (jsonMatch) {
+    jsonContent = jsonMatch[1].trim();
+  } else {
+    // Try to find raw JSON object
+    const braceStart = content.indexOf('{');
+    const braceEnd = content.lastIndexOf('}');
+    if (braceStart >= 0 && braceEnd > braceStart) {
+      jsonContent = content.slice(braceStart, braceEnd + 1);
+    }
+  }
+
+  // Try to prettify
+  let prettyJson = jsonContent;
+  try {
+    const parsed = JSON.parse(jsonContent);
+    prettyJson = JSON.stringify(parsed, null, 2);
+  } catch { /* keep as-is */ }
+
+  block.innerHTML = `
+    <div class="phase-header">
+      <div class="phase-title">
+        <span class="phase-badge">FASE ${escapeHtml(num)}</span>
+        ${escapeHtml(title)}
+      </div>
+      <div class="phase-actions">
+        <button class="phase-copy-btn" onclick="copyPhase(this, ${JSON.stringify(prettyJson).replace(/</g,'\\u003c')})">&#128203; Copiar JSON</button>
+      </div>
+    </div>
+    <div class="phase-body">
+      <pre class="phase-json">${escapeHtml(prettyJson)}</pre>
+    </div>
+  `;
+  return block;
+}
+
+function copyPhase(btn, json) {
+  navigator.clipboard.writeText(json).then(() => {
+    const orig = btn.innerHTML;
+    btn.innerHTML = '&#10003; Copiado!';
+    setTimeout(() => btn.innerHTML = orig, 1500);
+    showToast('JSON da fase copiado!');
+  });
+}
+
+function copyAll() {
+  navigator.clipboard.writeText(fullRunbook).then(() => {
+    showToast('Runbook completo copiado!');
+  });
+}
+
+function downloadTxt() {
+  const blob = new Blob([fullRunbook], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const ts = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
+  a.download = `runbook_${ts}.txt`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('Arquivo .txt baixado!');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
