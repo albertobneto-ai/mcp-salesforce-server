@@ -232,7 +232,7 @@ async function generateRunbook() {
   // Add typing indicator
   const typingDiv = document.createElement('div');
   typingDiv.className = 'typing';
-  typingDiv.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div> Grok 4.3 processando...';
+  typingDiv.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div> Conectando ao modelo...';
   outputArea.insertBefore(typingDiv, streamDiv);
 
   try {
@@ -251,6 +251,8 @@ async function generateRunbook() {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let modelUsed = '';
+    let logData = [];
 
     progressFill.style.width = '60%';
 
@@ -268,13 +270,37 @@ async function generateRunbook() {
         if (payload === '[DONE]') continue;
         try {
           const json = JSON.parse(payload);
+          if (json.meta) {
+            modelUsed = json.meta.label || json.meta.model;
+            typingDiv.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div> ' + modelUsed + ' gerando...';
+          }
           if (json.text) {
             fullRunbook += json.text;
             streamDiv.textContent = fullRunbook;
             streamDiv.scrollTop = streamDiv.scrollHeight;
           }
-        } catch { /* skip */ }
+          if (json.log) {
+            logData = json.log;
+          }
+          if (json.error) {
+            throw new Error(json.error + (json.log ? ' — Log: ' + JSON.stringify(json.log) : ''));
+          }
+        } catch (e) {
+          if (e.message && e.message.includes('Todos')) throw e;
+        }
       }
+    }
+
+    // Show model badge after completion
+    if (modelUsed) {
+      const badge = document.createElement('div');
+      badge.style.cssText = 'padding:8px 16px;background:linear-gradient(135deg,#5a3d8a,#6c44a0);color:#fff;border-radius:10px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:6px;margin-bottom:8px';
+      badge.innerHTML = '&#9889; Gerado por ' + escapeHtml(modelUsed);
+      if (logData.length) {
+        const logStr = logData.map(l => l.model + ': ' + l.status + (l.reason ? ' (' + l.reason.slice(0,60) + ')' : '')).join(' → ');
+        badge.title = logStr;
+      }
+      outputArea.insertBefore(badge, outputArea.firstChild);
     }
 
     progressFill.style.width = '100%';
