@@ -56,7 +56,8 @@ body{font-family:'Outfit',system-ui,sans-serif;overflow:hidden;height:100vh;back
 .session-item{padding:10px 14px;border-radius:10px;background:rgba(232,223,245,.5);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:space-between}
 .session-item:hover{background:rgba(108,68,160,.1)}
 .session-item.active{background:rgba(108,68,160,.15);border:1px solid rgba(108,68,160,.25)}
-.session-title{font-size:13px;font-weight:500;color:#2d1f48;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+.session-title{font-size:13px;font-weight:500;color:#2d1f48;display:flex;align-items:center;gap:5px}
+.session-title-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
 .session-phase{font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.05em}
 .phase-discovery{background:#e8dff5;color:#6c44a0}
 .phase-confirmation{background:#fef3c7;color:#d97706}
@@ -131,6 +132,99 @@ body{font-family:'Outfit',system-ui,sans-serif;overflow:hidden;height:100vh;back
 
 /* ── RESPONSIVE ── */
 @media(max-width:900px){.panel-left{display:none}.main{padding:8px}}
+
+/* ── EDIT BUTTON ── */
+.edit-btn{width:20px;height:20px;border-radius:5px;border:none;background:transparent;color:#c9b8d8;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;padding:0}
+.edit-btn:hover{background:rgba(108,68,160,.12);color:#6c44a0}
+.edit-title-input{width:100%;padding:4px 8px;border:1px solid #6c44a0;border-radius:6px;font-family:inherit;font-size:13px;color:#1a0a3e;outline:none;background:#fff}
+
+/* ── DISCOVERY MODAL ── */
+.modal-backdrop{position:fixed;inset:0;background:rgba(26,10,62,.55);backdrop-filter:blur(6px);z-index:100;display:flex;align-items:center;justify-content:center;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:#fff;border-radius:16px;width:680px;max-width:92vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(26,10,62,.3);animation:slideUp .25s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid #e8dff5;display:flex;align-items:center;justify-content:space-between}
+.modal-header h2{font-size:16px;font-weight:700;color:#1a0a3e;display:flex;align-items:center;gap:8px}
+.modal-body{flex:1;padding:20px 24px;overflow-y:auto}
+.modal-footer{padding:14px 24px;border-top:1px solid #e8dff5;display:flex;gap:10px;justify-content:flex-end}
+.modal-textarea{width:100%;min-height:280px;border:1px solid #d4c8e8;border-radius:12px;padding:16px;font-family:'Outfit',sans-serif;font-size:13px;line-height:1.7;color:#1a0a3e;resize:vertical;outline:none;transition:border .2s}
+.modal-textarea:focus{border-color:#6c44a0;box-shadow:0 0 0 3px rgba(108,68,160,.1)}
+.modal-textarea::placeholder{color:#b8a8d0}
+.modal-hint{font-size:11px;color:#a89bc2;margin-top:8px;line-height:1.4}
+.modal-btn{padding:8px 20px;border-radius:8px;border:1px solid #c9b8d8;background:#fff;font-family:inherit;font-size:12px;font-weight:600;color:#5a3d8a;cursor:pointer;transition:all .15s}
+.modal-btn:hover{background:#f3eef9}
+.modal-btn.primary{background:linear-gradient(135deg,#5a3d8a,#6c44a0);color:#fff;border:none}
+.modal-btn.primary:hover{opacity:.9}
+.modal-btn.secondary{background:#e8dff5;border-color:#d4c8e8;color:#5a3d8a}
+.modal-btn:disabled{opacity:.4;cursor:not-allowed}
+.draft-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#22c55e;background:rgba(34,197,94,.1);padding:2px 10px;border-radius:10px;margin-left:auto}
+
+/* ── MIC MODAL ── */
+.mic-modal{background:#fff;border-radius:16px;width:500px;max-width:92vw;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(26,10,62,.3);animation:slideUp .25s ease}
+.mic-modal-body{padding:24px;display:flex;flex-direction:column;align-items:center;gap:16px}
+.mic-circle{width:80px;height:80px;border-radius:50%;border:3px solid #d4c8e8;background:#f3eef9;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s}
+.mic-circle:hover{border-color:#6c44a0}
+.mic-circle.recording{border-color:#ef4444;background:linear-gradient(135deg,#fce4ec,#fdf2ff);animation:micPulse 1.2s infinite}
+.mic-transcript{width:100%;min-height:120px;max-height:200px;overflow-y:auto;border:1px solid #e8dff5;border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.65;color:#1a0a3e;background:#faf8ff;resize:none;font-family:'Outfit',sans-serif;outline:none}
+.mic-transcript:focus{border-color:#6c44a0}
+.mic-interim-text{font-size:12px;color:#a89bc2;font-style:italic;text-align:center;min-height:18px}
+.mic-status{font-size:12px;font-weight:600;color:#7868a0;text-align:center}
+.mic-status.on{color:#ef4444}
+
+/* ── OPTIMIZE BTN ── */
+.optimize-btn{padding:7px 14px;border-radius:8px;border:1px solid #c9b8d8;background:linear-gradient(135deg,#f3eef9,#e8dff5);font-family:inherit;font-size:12px;font-weight:600;color:#5a3d8a;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px}
+.optimize-btn:hover{background:linear-gradient(135deg,#e8dff5,#d4c8e8);border-color:#6c44a0}
+.optimize-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── MIC BUTTON ── */
+.mic-btn{width:36px;height:36px;border-radius:50%;border:2px solid #d4c8e8;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .25s;flex-shrink:0}
+.mic-btn:hover{border-color:#6c44a0;background:#f3eef9}
+.mic-btn.recording{border-color:#ef4444;background:linear-gradient(135deg,#fce4ec,#fdf2ff);animation:micPulse 1.2s infinite}
+.mic-interim{font-size:12px;color:#a89bc2;font-style:italic;min-height:18px;margin-top:6px;padding:0 4px}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.3)}50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}
+
+/* ── ANALYZE POPUP ── */
+.analyze-float{position:fixed;z-index:200;background:linear-gradient(135deg,#5a3d8a,#6c44a0);color:#fff;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(90,61,138,.4);animation:popIn .15s ease;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.analyze-float:hover{transform:scale(1.05)}
+@keyframes popIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+.analyze-modal{position:fixed;z-index:200;background:#fff;border-radius:14px;width:460px;max-width:90vw;max-height:50vh;box-shadow:0 12px 40px rgba(26,10,62,.25);animation:slideUp .2s ease;overflow:hidden;display:flex;flex-direction:column}
+.analyze-modal-header{padding:14px 18px;border-bottom:1px solid #e8dff5;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#f3eef9,#e8dff5)}
+.analyze-modal-header h3{font-size:13px;font-weight:700;color:#1a0a3e}
+.analyze-modal-body{padding:16px 18px;overflow-y:auto;flex:1}
+.analyze-modal-body .quote{font-size:12px;color:#7868a0;font-style:italic;border-left:3px solid #6c44a0;padding-left:10px;margin-bottom:12px;max-height:60px;overflow:hidden}
+.analyze-content{font-size:13px;line-height:1.6;color:#1a0a3e}
+.analyze-content strong{color:#5a3d8a}
+.analyze-spinner{display:flex;align-items:center;gap:8px;color:#7868a0;font-size:13px;padding:12px 0}
+
+/* ── MODAL Discovery Notes ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(10,10,10,.55);backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:#fff;border-radius:18px;width:90%;max-width:720px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(90,61,138,.2);animation:slideUp .25s ease}
+@keyframes slideUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 24px 14px;border-bottom:1px solid #e8dff5}
+.modal-title{font-size:17px;font-weight:700;color:#1a0a3e}
+.modal-subtitle{font-size:11px;color:#7868a0;margin-top:2px}
+.modal-body{flex:1;padding:20px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.modal-footer{display:flex;gap:10px;padding:14px 24px;border-top:1px solid #e8dff5;justify-content:flex-end}
+.modal-textarea{width:100%;min-height:200px;border:1px solid #d4c8e8;border-radius:12px;padding:14px 16px;font-family:'Outfit',sans-serif;font-size:13px;color:#1a0a3e;resize:vertical;outline:none;line-height:1.7;transition:border .2s}
+.modal-textarea:focus{border-color:#6c44a0;box-shadow:0 0 0 3px rgba(108,68,160,.1)}
+.modal-textarea::placeholder{color:#b8a8d0}
+.modal-hint{font-size:11px;color:#a89bc2;line-height:1.5}
+.draft-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#d97706;background:#fef3c7;padding:3px 10px;border-radius:8px;border:1px solid #fde68a}
+
+/* ── EDITABLE TITLE ── */
+
+.edit-title-input{border:1px solid #6c44a0;border-radius:6px;padding:3px 8px;font-family:inherit;font-size:13px;font-weight:500;color:#2d1f48;outline:none;width:100%;background:#fff;box-shadow:0 0 0 3px rgba(108,68,160,.12)}
+
+/* ── ANALYZE POPUP ── */
+.analyze-float{position:fixed;z-index:90;background:linear-gradient(135deg,#5a3d8a,#6c44a0);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(90,61,138,.35);display:flex;align-items:center;gap:5px;animation:popIn .15s ease}
+@keyframes popIn{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+.analyze-float:hover{transform:scale(1.04)}
+.analyze-result{position:fixed;z-index:95;background:#fff;border-radius:14px;border:1px solid #d4c8e8;box-shadow:0 8px 32px rgba(90,61,138,.15);width:420px;max-height:360px;overflow-y:auto;padding:16px 18px;animation:slideUp .2s ease}
+.analyze-result h3{font-size:13px;font-weight:700;color:#1a0a3e;margin:10px 0 4px}
+.analyze-result h3:first-child{margin-top:0}
+.analyze-result p,.analyze-result li{font-size:12px;color:#2d1f48;line-height:1.6}
+.analyze-close{position:absolute;top:8px;right:10px;background:none;border:none;font-size:16px;color:#a89bc2;cursor:pointer}
 </style>
 </head>
 <body>
@@ -160,8 +254,87 @@ function App(){
   const [loading, setLoading] = useState(false);
   const [streaming, setStreaming] = useState('');
   const [tab, setTab] = useState('sessions');
+  const [showDiscovery, setShowDiscovery] = useState(false);
+  const [discoveryNotes, setDiscoveryNotes] = useState('');
+  const [editingTitle, setEditingTitle] = useState(null);
+  const [editTitleVal, setEditTitleVal] = useState('');
+  const [analyzePos, setAnalyzePos] = useState(null);
+  const [analyzeText, setAnalyzeText] = useState('');
+  const [analyzeResult, setAnalyzeResult] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [micInterim, setMicInterim] = useState('');
+  const [micTranscript, setMicTranscript] = useState('');
+  const [showMicModal, setShowMicModal] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
+  const micRecRef = useRef(null);
   const chatRef = useRef(null);
   const inputRef = useRef(null);
+
+  // ── Mic: start/stop ──
+  const toggleMic = useCallback(()=>{
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SR){ alert('Web Speech API não suportada. Use Chrome ou Edge.'); return; }
+    if(recording){
+      try{ micRecRef.current?.stop(); }catch(e){}
+      micRecRef.current = null;
+      setRecording(false); setMicInterim('');
+      return;
+    }
+    const rec = new SR();
+    rec.lang = 'pt-BR'; rec.interimResults = true; rec.continuous = true;
+    rec.onresult = (e) => {
+      let interim = '', final = '';
+      for(let i = e.resultIndex; i < e.results.length; i++){
+        if(e.results[i].isFinal) final += e.results[i][0].transcript + ' ';
+        else interim = e.results[i][0].transcript;
+      }
+      if(final) setMicTranscript(prev => prev ? prev + ' ' + final.trim() : final.trim());
+      setMicInterim(interim);
+    };
+    rec.onend = () => { if(micRecRef.current) try{ rec.start(); }catch(e){} };
+    rec.onerror = (e) => { if(e.error!=='no-speech'&&e.error!=='aborted'){ setRecording(false); setMicInterim(''); } };
+    micRecRef.current = rec;
+    rec.start();
+    setRecording(true);
+  },[recording]);
+
+  // ── Fechar mic modal ──
+  const closeMicModal = useCallback(()=>{
+    if(recording){ try{ micRecRef.current?.stop(); }catch(e){} micRecRef.current=null; setRecording(false); setMicInterim(''); }
+    setShowMicModal(false);
+  },[recording]);
+
+  // ── Merge transcript → Discovery ──
+  const mergeTranscript = useCallback(()=>{
+    if(!micTranscript.trim()) return;
+    setDiscoveryNotes(prev => prev ? prev + '\n\n' + micTranscript.trim() : micTranscript.trim());
+    setMicTranscript('');
+    closeMicModal();
+  },[micTranscript, closeMicModal]);
+
+  // ── Otimizar Discovery com DeepSeek ──
+  const optimizeDiscovery = useCallback(async ()=>{
+    if(!discoveryNotes.trim()) return;
+    setOptimizing(true);
+    try {
+      const r = await fetch(API+'/api/hf-studio/optimize',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+getToken()},
+        body: JSON.stringify({text: discoveryNotes})
+      });
+      const data = await r.json();
+      if(data.optimized) setDiscoveryNotes(data.optimized);
+      else alert(data.error||'Erro ao otimizar');
+    } catch(e){ alert('Erro: '+e.message); }
+    setOptimizing(false);
+  },[discoveryNotes]);
+
+  // ── Parar mic ao fechar Discovery ──
+  const closeDiscovery = useCallback(()=>{
+    if(recording){ try{ micRecRef.current?.stop(); }catch(e){} micRecRef.current=null; setRecording(false); setMicInterim(''); }
+    setShowDiscovery(false);
+  },[recording]);
 
   // Load sessions
   const loadSessions = useCallback(async ()=>{
@@ -202,6 +375,67 @@ function App(){
     if(activeSession?.id===id){setActiveSession(null);setMessages([]);}
     loadSessions();
   };
+
+  // Rename session
+  const renameSession = async (id, newTitle)=>{
+    if(!newTitle?.trim()) return;
+    await fetch(API+'/api/hf-studio/sessions/'+id,{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+getToken()},body:JSON.stringify({title:newTitle.trim()})});
+    setEditingTitle(null);
+    if(activeSession?.id===id) setActiveSession(prev=>({...prev,title:newTitle.trim()}));
+    loadSessions();
+  };
+
+  // Save discovery notes
+  const saveDiscoveryNotes = async ()=>{
+    if(!activeSession) return;
+    await fetch(API+'/api/hf-studio/sessions/'+activeSession.id,{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+getToken()},body:JSON.stringify({discovery_notes:discoveryNotes})});
+    loadSessions();
+  };
+
+  // Open discovery modal
+  const openDiscovery = ()=>{
+    setDiscoveryNotes(activeSession?.discovery_notes||'');
+    setShowDiscovery(true);
+  };
+
+  // Send discovery notes to chat
+  const sendDiscoveryToChat = async ()=>{
+    if(!discoveryNotes.trim()||!activeSession) return;
+    setShowDiscovery(false);
+    setInput(discoveryNotes);
+  };
+
+  // Analyze selected text
+  const doAnalyze = async ()=>{
+    if(!analyzeText.trim()) return;
+    setAnalyzing(true);
+    setAnalyzeResult(null);
+    try {
+      const r = await fetch(API+'/api/hf-studio/analyze',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+getToken()},body:JSON.stringify({text:analyzeText})});
+      const data = await r.json();
+      setAnalyzeResult(data.analysis||data.error||'Erro');
+    } catch(e){ setAnalyzeResult('Erro: '+e.message); }
+    setAnalyzing(false);
+    setAnalyzePos(null);
+  };
+
+  // Text selection listener for analyze
+  useEffect(()=>{
+    const onSelect = ()=>{
+      const sel = window.getSelection();
+      const text = sel?.toString()?.trim();
+      if(text && text.length > 10 && chatRef.current?.contains(sel.anchorNode)){
+        const range = sel.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        setAnalyzeText(text);
+        setAnalyzePos({x:rect.left+rect.width/2-40, y:rect.top-40});
+      } else {
+        setTimeout(()=>{if(!window.getSelection()?.toString()?.trim()) setAnalyzePos(null);},200);
+      }
+    };
+    document.addEventListener('mouseup', onSelect);
+    return ()=>document.removeEventListener('mouseup', onSelect);
+  },[]);
 
   // Send message (SSE streaming)
   const sendMessage = async ()=>{
@@ -327,6 +561,10 @@ function App(){
                 'Sessions',
                 React.createElement('span',{className:'count'},sessions.length)
               ),
+              React.createElement('div',{className:'tab'+(tab==='drafts'?' active':''),onClick:()=>setTab('drafts')},
+                'Rascunhos',
+                React.createElement('span',{className:'count'},sessions.filter(s=>s.discovery_notes?.trim()).length||0)
+              ),
               React.createElement('div',{className:'tab'+(tab==='knowledge'?' active':''),onClick:()=>setTab('knowledge')},
                 'Knowledge',
                 React.createElement('span',{className:'count'},'KB')
@@ -342,7 +580,18 @@ function App(){
                 sessions.map(s=>
                   React.createElement('div',{key:s.id,className:'session-item'+(activeSession?.id===s.id?' active':''),onClick:()=>loadSession(s.id)},
                     React.createElement('div',{style:{flex:1,minWidth:0}},
-                      React.createElement('div',{className:'session-title'},s.title||'Nova HF'),
+                      editingTitle===s.id ?
+                        React.createElement('input',{
+                          className:'edit-title-input',
+                          value:editTitleVal,
+                          onChange:e=>setEditTitleVal(e.target.value),
+                          onKeyDown:e=>{if(e.key==='Enter')renameSession(s.id,editTitleVal);if(e.key==='Escape')setEditingTitle(null)},
+                          onBlur:()=>renameSession(s.id,editTitleVal),
+                          autoFocus:true,
+                          onClick:e=>e.stopPropagation()
+                        })
+                      :
+                        React.createElement('div',{className:'session-title'},React.createElement('span',{className:'session-title-text'},s.title||'Nova HF'),editingTitle!==s.id&&React.createElement('button',{className:'edit-btn',onClick:(e)=>{e.stopPropagation();setEditingTitle(s.id);setEditTitleVal(s.title||'Nova HF')},title:'Renomear'},'✏')),
                       React.createElement('div',{style:{fontSize:10,color:'#a89bc2',marginTop:2}},new Date(s.updated_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}))
                     ),
                     React.createElement('div',{style:{display:'flex',alignItems:'center',gap:6}},
@@ -351,6 +600,45 @@ function App(){
                     )
                   )
                 )
+              )
+            : tab==='drafts' ?
+              // ── Aba Rascunhos ──
+              React.createElement('div',{className:'session-list'},
+                (()=>{
+                  const drafts = sessions.filter(s=>s.discovery_notes?.trim());
+                  return drafts.length===0 ?
+                    React.createElement('div',{style:{textAlign:'center',padding:24,color:'#a89bc2',fontSize:13}},'Nenhum rascunho salvo. Use o botão 📝 Discovery para escrever.')
+                  :
+                  drafts.map(s=>
+                    React.createElement('div',{key:s.id,className:'session-item'+(activeSession?.id===s.id?' active':''),onClick:()=>{loadSession(s.id).then(()=>{
+                      setDiscoveryNotes(s.discovery_notes||'');
+                      setShowDiscovery(true);
+                    })}},
+                      React.createElement('div',{style:{flex:1,minWidth:0}},
+                        editingTitle===s.id ?
+                          React.createElement('input',{
+                            className:'edit-title-input',
+                            value:editTitleVal,
+                            onChange:e=>setEditTitleVal(e.target.value),
+                            onKeyDown:e=>{if(e.key==='Enter')renameSession(s.id,editTitleVal);if(e.key==='Escape')setEditingTitle(null)},
+                            onBlur:()=>renameSession(s.id,editTitleVal),
+                            autoFocus:true,
+                            onClick:e=>e.stopPropagation()
+                          })
+                        :
+                          React.createElement('div',{className:'session-title'},React.createElement('span',{className:'session-title-text'},s.title||'Nova HF'),editingTitle!==s.id&&React.createElement('button',{className:'edit-btn',onClick:(e)=>{e.stopPropagation();setEditingTitle(s.id);setEditTitleVal(s.title||'Nova HF')},title:'Renomear'},'✏')),
+                        React.createElement('div',{style:{fontSize:11,color:'#7868a0',marginTop:4,lineHeight:1.3,maxHeight:36,overflow:'hidden',textOverflow:'ellipsis'}},
+                          (s.discovery_notes||'').slice(0,80) + ((s.discovery_notes||'').length>80?'...':'')
+                        ),
+                        React.createElement('div',{style:{fontSize:10,color:'#a89bc2',marginTop:3}},new Date(s.updated_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}))
+                      ),
+                      React.createElement('div',{style:{display:'flex',alignItems:'center',gap:6}},
+                        React.createElement('span',{style:{fontSize:10,fontWeight:700,color:'#f59e0b',background:'rgba(245,158,11,.1)',padding:'2px 8px',borderRadius:10}},'RASCUNHO'),
+                        React.createElement('button',{className:'session-delete',onClick:(e)=>deleteSession(s.id,e)},'✕')
+                      )
+                    )
+                  );
+                })()
               )
             :
             // Knowledge tab
@@ -391,6 +679,7 @@ function App(){
           React.createElement('div',{className:'conv-header'},
             React.createElement('span',{className:'conv-title'},'Conversation Preview'),
             React.createElement('div',{className:'conv-actions'},
+              activeSession && React.createElement('button',{className:'conv-btn',onClick:openDiscovery},'📝 Discovery'),
               React.createElement('button',{className:'conv-btn',onClick:exportDocx,disabled:!hasHF},'📄 Export .docx'),
               React.createElement('button',{className:'conv-btn primary',onClick:createSession},'+ Nova HF')
             )
@@ -455,7 +744,131 @@ function App(){
           )
         )
       )
+    ),
+
+    // ── DISCOVERY MODAL ──
+    showDiscovery && React.createElement('div',{className:'modal-backdrop'},
+      React.createElement('div',{className:'modal'},
+        React.createElement('div',{className:'modal-header'},
+          React.createElement('h2',null,'📝 Discovery — Notas e Contexto'),
+          React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8,marginLeft:'auto'}},
+            React.createElement('button',{
+              className:'mic-btn',
+              onClick:()=>{setMicTranscript('');setShowMicModal(true);},
+              title:'Gravar por voz'
+            },
+              React.createElement('svg',{width:16,height:16,viewBox:'0 0 24 24',fill:'none',stroke:'#6c44a0',strokeWidth:2},
+                React.createElement('path',{d:'M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z'}),
+                React.createElement('path',{d:'M19 10v2a7 7 0 0 1-14 0v-2'}),
+                React.createElement('line',{x1:12,y1:19,x2:12,y2:23}),
+                React.createElement('line',{x1:8,y1:23,x2:16,y2:23})
+              )
+            ),
+            React.createElement('button',{className:'panel-close',onClick:closeDiscovery},'✕')
+          )
+        ),
+        React.createElement('div',{className:'modal-body'},
+          React.createElement('textarea',{
+            className:'modal-textarea',
+            placeholder:'Escreva aqui suas notas de Discovery...\n\nDescreva a necessidade de negócio, contexto, processos atuais, dores, personas envolvidas, volumes, regras de negócio, etc.\n\nUse o 🎤 para gravar por voz e depois fazer Merge aqui.',
+            value:discoveryNotes,
+            onChange:e=>setDiscoveryNotes(e.target.value)
+          }),
+          React.createElement('div',{className:'modal-hint'},'Dica: Selecione qualquer trecho e clique "Analisar", ou use ✨ Otimizar para a AI estruturar tudo.')
+        ),
+        React.createElement('div',{className:'modal-footer'},
+          React.createElement('button',{className:'modal-btn',onClick:()=>{
+            const ta = document.querySelector('.modal-textarea');
+            if(ta && ta.selectionStart !== ta.selectionEnd){
+              const sel = ta.value.slice(ta.selectionStart, ta.selectionEnd).trim();
+              if(sel.length > 5){
+                setAnalyzeText(sel); setAnalyzing(true); setAnalyzeResult(null);
+                fetch(API+'/api/hf-studio/analyze',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+getToken()},body:JSON.stringify({text:sel})})
+                  .then(r=>r.json()).then(d=>{setAnalyzeResult(d.analysis||d.error||'Erro');setAnalyzing(false)})
+                  .catch(e=>{setAnalyzeResult('Erro: '+e.message);setAnalyzing(false)});
+              }
+            }
+          }},'🔍 Analisar Seleção'),
+          React.createElement('button',{
+            className:'optimize-btn',
+            onClick:optimizeDiscovery,
+            disabled:optimizing||!discoveryNotes.trim()
+          }, optimizing ? '⏳ Otimizando...' : '✨ Otimizar'),
+          React.createElement('button',{className:'modal-btn secondary',onClick:()=>{saveDiscoveryNotes();closeDiscovery();}},'💾 Salvar Rascunho'),
+          React.createElement('button',{className:'modal-btn primary',onClick:()=>{saveDiscoveryNotes();sendDiscoveryToChat()},disabled:!discoveryNotes.trim()},'▶ Enviar para Chat')
+        )
+      )
+    ),
+
+    // ── MIC MODAL ──
+    showMicModal && React.createElement('div',{className:'modal-backdrop'},
+      React.createElement('div',{className:'mic-modal'},
+        React.createElement('div',{className:'modal-header'},
+          React.createElement('h2',null,'🎤 Gravação por Voz'),
+          React.createElement('button',{className:'panel-close',onClick:closeMicModal},'✕')
+        ),
+        React.createElement('div',{className:'mic-modal-body'},
+          React.createElement('div',{
+            className:'mic-circle'+(recording?' recording':''),
+            onClick:toggleMic,
+            title:recording?'Parar':'Iniciar gravação'
+          },
+            recording
+              ? React.createElement('svg',{width:24,height:24,viewBox:'0 0 24 24',fill:'#ef4444'},React.createElement('rect',{x:6,y:6,width:12,height:12,rx:2}))
+              : React.createElement('svg',{width:24,height:24,viewBox:'0 0 24 24',fill:'none',stroke:'#6c44a0',strokeWidth:2},
+                  React.createElement('path',{d:'M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z'}),
+                  React.createElement('path',{d:'M19 10v2a7 7 0 0 1-14 0v-2'}),
+                  React.createElement('line',{x1:12,y1:19,x2:12,y2:23}),
+                  React.createElement('line',{x1:8,y1:23,x2:16,y2:23})
+                )
+          ),
+          React.createElement('div',{className:'mic-status'+(recording?' on':'')}, recording ? '🔴 Gravando em pt-BR...' : 'Clique para iniciar'),
+          React.createElement('textarea',{
+            className:'mic-transcript',
+            value:micTranscript,
+            onChange:e=>setMicTranscript(e.target.value),
+            placeholder:'O texto transcrito aparecerá aqui...\nVocê pode editar antes de fazer Merge.'
+          }),
+          micInterim && React.createElement('div',{className:'mic-interim-text'},'...'+micInterim)
+        ),
+        React.createElement('div',{className:'modal-footer'},
+          React.createElement('button',{className:'modal-btn secondary',onClick:()=>setMicTranscript('')},'🗑 Limpar'),
+          React.createElement('button',{
+            className:'modal-btn primary',
+            onClick:mergeTranscript,
+            disabled:!micTranscript.trim()
+          },'⤵ Merge no Discovery')
+        )
+      )
+    ),
+
+    // ── ANALYZE FLOAT BUTTON ──
+    analyzePos && !analyzeResult && React.createElement('div',{
+      className:'analyze-float',
+      style:{left:analyzePos.x,top:analyzePos.y},
+      onClick:doAnalyze
+    },'🔍 Analisar'),
+
+    // ── ANALYZE RESULT MODAL ──
+    (analyzing || analyzeResult) && React.createElement('div',{className:'modal-backdrop',onClick:()=>{setAnalyzeResult(null);setAnalyzing(false);setAnalyzePos(null)}},
+      React.createElement('div',{className:'analyze-modal',onClick:e=>e.stopPropagation()},
+        React.createElement('div',{className:'analyze-modal-header'},
+          React.createElement('h3',null,'🔍 Análise AI'),
+          React.createElement('button',{className:'panel-close',onClick:()=>{setAnalyzeResult(null);setAnalyzing(false);setAnalyzePos(null)}},'✕')
+        ),
+        React.createElement('div',{className:'analyze-modal-body'},
+          React.createElement('div',{className:'quote'},'"',analyzeText.slice(0,150),analyzeText.length>150?'...':'','"'),
+          analyzing ?
+            React.createElement('div',{className:'analyze-spinner'},
+              React.createElement('div',{className:'typing',style:{padding:0}},React.createElement('span'),React.createElement('span'),React.createElement('span')),
+              'Analisando com DeepSeek...'
+            )
+          :
+          React.createElement('div',{className:'analyze-content',dangerouslySetInnerHTML:{__html:renderMd(analyzeResult||'')}})
+        )
+      )
     )
+
   );
 }
 
