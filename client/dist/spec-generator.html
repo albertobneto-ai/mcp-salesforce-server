@@ -181,6 +181,7 @@ const btnGenerate = document.getElementById('btnGenerate');
 const progressBar = document.getElementById('progressBar');
 const progressFill = document.getElementById('progressFill');
 let fullRunbook = '';
+let phaseJsons = [];
 
 // Stats
 specInput.addEventListener('input', () => {
@@ -204,6 +205,7 @@ function clearAll() {
   emptyState.style.display = 'flex';
   outputActions.style.display = 'none';
   fullRunbook = '';
+  phaseJsons = [];
 }
 
 async function generateRunbook() {
@@ -331,6 +333,7 @@ async function generateRunbook() {
 
 function renderPhases(text) {
   outputArea.innerHTML = '';
+  phaseJsons = [];
 
   // Try to split by === FASE N: ... ===
   const phaseRegex = /===\s*FASE\s*(\d+)\s*:\s*(.+?)\s*===/gi;
@@ -369,7 +372,6 @@ function createPhaseBlock(num, title, content) {
   if (jsonMatch) {
     jsonContent = jsonMatch[1].trim();
   } else {
-    // Try to find raw JSON object
     const braceStart = content.indexOf('{');
     const braceEnd = content.lastIndexOf('}');
     if (braceStart >= 0 && braceEnd > braceStart) {
@@ -384,6 +386,10 @@ function createPhaseBlock(num, title, content) {
     prettyJson = JSON.stringify(parsed, null, 2);
   } catch { /* keep as-is */ }
 
+  // Store in array and reference by index
+  const idx = phaseJsons.length;
+  phaseJsons.push(prettyJson);
+
   block.innerHTML = `
     <div class="phase-header">
       <div class="phase-title">
@@ -391,7 +397,7 @@ function createPhaseBlock(num, title, content) {
         ${escapeHtml(title)}
       </div>
       <div class="phase-actions">
-        <button class="phase-copy-btn" onclick="copyPhase(this, ${JSON.stringify(prettyJson).replace(/</g,'\\u003c')})">&#128203; Copiar JSON</button>
+        <button class="phase-copy-btn" onclick="copyPhase(this, ${idx})">&#128203; Copiar JSON</button>
       </div>
     </div>
     <div class="phase-body">
@@ -401,12 +407,22 @@ function createPhaseBlock(num, title, content) {
   return block;
 }
 
-function copyPhase(btn, json) {
+function copyPhase(btn, idx) {
+  const json = phaseJsons[idx] || '';
   navigator.clipboard.writeText(json).then(() => {
     const orig = btn.innerHTML;
     btn.innerHTML = '&#10003; Copiado!';
     setTimeout(() => btn.innerHTML = orig, 1500);
     showToast('JSON da fase copiado!');
+  }).catch(() => {
+    // Fallback for non-HTTPS
+    const ta = document.createElement('textarea');
+    ta.value = json;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('JSON copiado (fallback)!');
   });
 }
 
