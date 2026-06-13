@@ -155,6 +155,7 @@ textarea { resize:vertical; min-height:80px; }
   <div class="tab" data-tab="attributes">ATRIBUTOS</div>
   <div class="tab" data-tab="pricing">PRECIFICACAO</div>
   <div class="tab" data-tab="bundles">BUNDLES</div>
+  <div class="tab" data-tab="rules">REGRAS</div>
   <div class="tab" data-tab="catalog">CATALOGO</div>
   <div class="tab" data-tab="kb">KNOWLEDGE BASE</div>
 </div>
@@ -166,6 +167,7 @@ textarea { resize:vertical; min-height:80px; }
     <div class="stat-card"><div class="label">ATRIBUTOS</div><div class="value blue" id="st-attrs">-</div></div>
     <div class="stat-card"><div class="label">MODELOS PRICING</div><div class="value green" id="st-pricing">-</div></div>
     <div class="stat-card"><div class="label">BUNDLES</div><div class="value orange" id="st-bundles">-</div></div>
+    <div class="stat-card"><div class="label">REGRAS ATIVAS</div><div class="value orange" id="st-rules">-</div></div>
     <div class="stat-card"><div class="label">DOCS KB</div><div class="value purple" id="st-kb">-</div></div>
     <div class="stat-card"><div class="label">CONFIG CATALOGO</div><div class="value blue" id="st-config">-</div></div>
   </div>
@@ -263,6 +265,26 @@ textarea { resize:vertical; min-height:80px; }
   <div class="lib-grid" id="bundleGrid"><div style="color:var(--text2);padding:40px;text-align:center;">Carregando...</div></div>
 </div>
 
+<!-- ═══════ BUSINESS RULES ═══════ -->
+<div class="panel" id="panel-rules">
+  <div class="toolbar">
+    <h3 style="font-size:1em;">REGRAS DE NEGOCIO</h3>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" onclick="openRuleModal()">+ NOVA REGRA</button>
+  </div>
+  <p style="font-size:0.85em;color:var(--text2);margin-bottom:16px;">Regras de negócio que a AI deve considerar ao modelar produtos. Restrições, políticas, condições obrigatórias.</p>
+  <div id="ruleFilterBar" style="display:flex;gap:8px;margin-bottom:16px;">
+    <button class="btn btn-sm btn-secondary rule-cat-btn active" onclick="filterRules(this,'')">TODAS</button>
+    <button class="btn btn-sm btn-secondary rule-cat-btn" onclick="filterRules(this,'pricing')">PRICING</button>
+    <button class="btn btn-sm btn-secondary rule-cat-btn" onclick="filterRules(this,'contrato')">CONTRATO</button>
+    <button class="btn btn-sm btn-secondary rule-cat-btn" onclick="filterRules(this,'desconto')">DESCONTO</button>
+    <button class="btn btn-sm btn-secondary rule-cat-btn" onclick="filterRules(this,'bundle')">BUNDLE</button>
+    <button class="btn btn-sm btn-secondary rule-cat-btn" onclick="filterRules(this,'compliance')">COMPLIANCE</button>
+    <button class="btn btn-sm btn-secondary rule-cat-btn" onclick="filterRules(this,'geral')">GERAL</button>
+  </div>
+  <div class="lib-grid" id="rulesGrid"><div style="color:var(--text2);padding:40px;text-align:center;">Carregando...</div></div>
+</div>
+
 <!-- ═══════ CATALOG CONFIG ═══════ -->
 <div class="panel" id="panel-catalog">
   <div class="toolbar">
@@ -327,6 +349,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (t === 'attributes') loadAttributes();
     if (t === 'pricing') loadPricingModels();
     if (t === 'bundles') loadBundles();
+    if (t === 'rules') loadRules();
     if (t === 'catalog') loadCatalogConfig();
     if (t === 'kb') loadKb();
   });
@@ -359,6 +382,7 @@ async function loadStats() {
   document.getElementById('st-attrs').textContent = stats.total_attributes || 0;
   document.getElementById('st-pricing').textContent = stats.total_pricing_models || 0;
   document.getElementById('st-bundles').textContent = stats.total_bundles || 0;
+  document.getElementById('st-rules').textContent = stats.total_business_rules || 0;
   document.getElementById('st-kb').textContent = stats.total_kb_docs || 0;
   const totalConfig = (stats.catalog_config || []).reduce((s, r) => s + parseInt(r.count), 0);
   document.getElementById('st-config').textContent = totalConfig;
@@ -589,6 +613,11 @@ function renderAiTemplate(t, kbUsed) {
       ${(t.proposed_new_library_items.bundles||[]).map(b => `<div>Bundle: <strong>${esc(typeof b === 'string' ? b : b.name || JSON.stringify(b))}</strong></div>`).join('')}
     </div>` : ''}
 
+    ${t.business_rules_applied?.length ? `<h4 style="font-size:0.85em;color:var(--cyan);text-transform:uppercase;margin:16px 0 8px;">REGRAS DE NEGOCIO APLICADAS</h4>
+    <div style="background:rgba(6,182,212,0.08);padding:12px;border-radius:var(--radius);border:1px solid rgba(6,182,212,0.2);">
+      ${t.business_rules_applied.map(r => `<div style="margin-bottom:6px;font-size:0.85em;"><strong style="color:var(--cyan);">${esc(typeof r === 'string' ? r : r.rule || '')}</strong>${r.impact ? ': ' + esc(r.impact) : ''}</div>`).join('')}
+    </div>` : ''}
+
     ${t.kb_gaps?.length ? `<h4 style="font-size:0.85em;color:var(--orange);text-transform:uppercase;margin:16px 0 8px;">LACUNAS NA KB</h4>
     <div style="background:var(--orange-bg);padding:12px;border-radius:var(--radius);font-size:0.85em;">
       ${t.kb_gaps.map(g => `<div style="margin-bottom:4px;">• ${esc(g)}</div>`).join('')}
@@ -756,6 +785,97 @@ async function deleteBundle(id) {
   if (!confirm('Excluir bundle?')) return;
   await api('/bundles/' + id, { method: 'DELETE' });
   loadBundles();
+}
+
+// ── BUSINESS RULES ──
+let currentRuleFilter = '';
+async function loadRules() {
+  let q = '/business-rules?';
+  if (currentRuleFilter) q += 'category=' + currentRuleFilter + '&';
+  q += 'active_only=false';
+  const rules = await api(q);
+  const grid = document.getElementById('rulesGrid');
+  if (!rules.length) { grid.innerHTML = '<div style="color:var(--text2);padding:40px;text-align:center;">Nenhuma regra cadastrada</div>'; return; }
+  const prioColors = { high:'var(--red)', medium:'var(--orange)', low:'var(--blue)' };
+  const prioLabels = { high:'ALTA', medium:'MEDIA', low:'BAIXA' };
+  grid.innerHTML = rules.map(r => `<div class="lib-card" style="border-left:3px solid ${prioColors[r.priority]||'var(--border)'}; ${!r.is_active ? 'opacity:0.5;' : ''}">
+    <div class="actions">
+      <button class="btn-icon" onclick="toggleRule(${r.id}, ${!r.is_active})" title="${r.is_active ? 'Desativar' : 'Ativar'}">${r.is_active ? '✅' : '⏸'}</button>
+      <button class="btn-icon" onclick="deleteRule(${r.id})" title="Excluir">🗑</button>
+    </div>
+    <h4>${esc(r.name)}</h4>
+    <div class="meta">
+      <span class="badge" style="background:${prioColors[r.priority]||'var(--border)'}22;color:${prioColors[r.priority]||'var(--text2)'};">${prioLabels[r.priority] || r.priority}</span>
+      <span class="badge badge-validado" style="margin-left:4px;">${esc(r.category || 'geral')}</span>
+      <span class="badge" style="margin-left:4px;background:var(--surface2);color:var(--text2);">${esc(r.rule_type || 'constraint')}</span>
+      ${!r.is_active ? '<span class="badge badge-descontinuado" style="margin-left:4px;">INATIVA</span>' : ''}
+    </div>
+    <div style="margin-top:8px;font-size:0.9em;color:var(--text);">${esc(r.description)}</div>
+    ${r.applicable_families?.length ? '<div style="margin-top:6px;" class="tags">' + r.applicable_families.map(f => '<span class="tag">' + esc(f) + '</span>').join('') + '</div>' : ''}
+  </div>`).join('');
+}
+
+function filterRules(btn, cat) {
+  document.querySelectorAll('.rule-cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentRuleFilter = cat;
+  loadRules();
+}
+
+function openRuleModal() {
+  openModal('NOVA REGRA DE NEGOCIO', `
+    <div class="form-group"><label>NOME</label><input type="text" id="m-rule-name" placeholder="Ex: Contrato mínimo 12 meses Connectivity"></div>
+    <div class="form-group"><label>DESCRICAO DA REGRA</label><textarea id="m-rule-desc" rows="3" placeholder="Descreva a regra de negócio que a AI deve considerar ao modelar produtos..."></textarea></div>
+    <div class="form-group"><label>CATEGORIA</label><select id="m-rule-cat">
+      <option value="geral">Geral</option>
+      <option value="pricing">Pricing</option>
+      <option value="contrato">Contrato</option>
+      <option value="desconto">Desconto</option>
+      <option value="bundle">Bundle</option>
+      <option value="compliance">Compliance</option>
+      <option value="aprovacao">Aprovação</option>
+      <option value="comissao">Comissão</option>
+    </select></div>
+    <div class="form-group"><label>TIPO</label><select id="m-rule-type">
+      <option value="constraint">Restrição (constraint)</option>
+      <option value="policy">Política (policy)</option>
+      <option value="condition">Condição (condition)</option>
+      <option value="validation">Validação (validation)</option>
+      <option value="automation">Automação (automation)</option>
+    </select></div>
+    <div class="form-group"><label>PRIORIDADE</label><select id="m-rule-prio">
+      <option value="high">Alta — AI deve sempre aplicar</option>
+      <option value="medium" selected>Média — AI deve considerar</option>
+      <option value="low">Baixa — AI pode sugerir</option>
+    </select></div>
+    <div class="form-group"><label>FAMILIAS APLICAVEIS (separadas por vírgula, vazio = todas)</label><input type="text" id="m-rule-families" placeholder="Ex: Connectivity, Internet (vazio aplica a todas)"></div>
+  `, `<button class="btn btn-secondary" onclick="closeModal()">CANCELAR</button>
+     <button class="btn btn-primary" onclick="saveRule()">SALVAR</button>`);
+}
+
+async function saveRule() {
+  const body = {
+    name: document.getElementById('m-rule-name').value,
+    description: document.getElementById('m-rule-desc').value,
+    category: document.getElementById('m-rule-cat').value,
+    rule_type: document.getElementById('m-rule-type').value,
+    priority: document.getElementById('m-rule-prio').value,
+    applicable_families: document.getElementById('m-rule-families').value.split(',').map(s => s.trim()).filter(Boolean)
+  };
+  if (!body.name || !body.description) return alert('Nome e descrição são obrigatórios');
+  await api('/business-rules', { method: 'POST', body });
+  closeModal(); loadRules();
+}
+
+async function toggleRule(id, activate) {
+  await api('/business-rules/' + id, { method: 'PUT', body: { is_active: activate } });
+  loadRules();
+}
+
+async function deleteRule(id) {
+  if (!confirm('Excluir regra?')) return;
+  await api('/business-rules/' + id, { method: 'DELETE' });
+  loadRules();
 }
 
 // ── CATALOG CONFIG ──
