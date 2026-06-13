@@ -704,13 +704,42 @@ FORMATO DE RESPOSTA (JSON):
           })
         });
         const data = await response.json();
-        if (data.error) return res.status(500).json({ error: data.error.message || JSON.stringify(data.error) });
+        if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
         aiText = data.choices?.[0]?.message?.content || '';
         modelUsed = 'grok-3-mini (fallback)';
         tokensIn = data.usage?.prompt_tokens || 0;
         tokensOut = data.usage?.completion_tokens || 0;
-      } else if (usedFallback && !GROK_KEY) {
-        return res.status(500).json({ error: 'Anthropic indisponível e GROK_KEY não configurada' });
+      }
+
+      // Third fallback: OpenRouter (free models)
+      if (usedFallback && !aiText) {
+        const OR_KEY = process.env.OPENROUTER_KEY;
+        if (OR_KEY) {
+          try {
+            console.log('[RC] Grok failed or unavailable, trying OpenRouter free...');
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OR_KEY}` },
+              body: JSON.stringify({
+                model: 'deepseek/deepseek-v4-flash:free',
+                max_tokens: 4096,
+                messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMsg }]
+              })
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+            aiText = data.choices?.[0]?.message?.content || '';
+            modelUsed = 'deepseek-v4-flash (free)';
+            tokensIn = data.usage?.prompt_tokens || 0;
+            tokensOut = data.usage?.completion_tokens || 0;
+          } catch (orErr) {
+            console.log('[RC] OpenRouter also failed:', orErr.message);
+          }
+        }
+      }
+
+      if (!aiText) {
+        return res.status(500).json({ error: 'Todos os provedores de AI falharam (Anthropic, Grok, OpenRouter). Verifique créditos das chaves.' });
       }
 
       // Track token usage
