@@ -358,6 +358,7 @@ textarea { resize:vertical; min-height:80px; }
     <button class="btn btn-sm btn-secondary catalog-type-btn" data-type="catalog" onclick="filterCatalog(this,'catalog')">CATALOGOS</button>
     <button class="btn btn-sm btn-secondary catalog-type-btn" data-type="discount_schedule" onclick="filterCatalog(this,'discount_schedule')">DISCOUNT SCHEDULES</button>
     <button class="btn btn-sm btn-secondary catalog-type-btn" data-type="price_adjustment" onclick="filterCatalog(this,'price_adjustment')">AJUSTES PRECO</button>
+    <button class="btn btn-sm btn-secondary catalog-type-btn" data-type="product_family" onclick="filterCatalog(this,'product_family')">FAMILIAS</button>
     <button class="btn btn-sm btn-secondary catalog-type-btn" data-type="other" onclick="filterCatalog(this,'other')">OUTROS</button>
   </div>
   <div class="lib-grid" id="catalogGrid"><div style="color:var(--text2);padding:40px;text-align:center;">Carregando...</div></div>
@@ -515,8 +516,11 @@ async function showWizard() {
   renderWizardStep();
   // Load families for datalist
   try {
+    const configs = await api('/catalog-config?config_type=product_family');
     const prods = await api('/products');
-    const families = [...new Set(prods.map(p=>p.product_family).filter(Boolean))];
+    const fromConfig = configs.map(c=>c.name);
+    const fromProducts = prods.map(p=>p.product_family).filter(Boolean);
+    const families = [...new Set([...fromConfig, ...fromProducts])].sort();
     const dl = document.getElementById('familyList');
     if (dl) dl.innerHTML = families.map(f=>`<option value="${esc(f)}">`).join('');
   } catch {}
@@ -1537,8 +1541,8 @@ async function loadCatalogConfig() {
   const configs = await api(q);
   const grid = document.getElementById('catalogGrid');
   if (!configs.length) { grid.innerHTML = '<div style="color:var(--text2);padding:40px;text-align:center;">Nenhuma configuração cadastrada</div>'; return; }
-  const typeLabels = { pricebook:'PRICEBOOK', catalog:'CATALOGO', discount_schedule:'DISCOUNT SCHEDULE', price_adjustment:'AJUSTE PRECO', other:'OUTRO' };
-  const typeIcons = { pricebook:'💰', catalog:'📋', discount_schedule:'🏷', price_adjustment:'📊', other:'⚙' };
+  const typeLabels = { pricebook:'PRICEBOOK', catalog:'CATALOGO', discount_schedule:'DISCOUNT SCHEDULE', price_adjustment:'AJUSTE PRECO', product_family:'FAMILIA', other:'OUTRO' };
+  const typeIcons = { pricebook:'💰', catalog:'📋', discount_schedule:'🏷', price_adjustment:'📊', product_family:'👨‍👩‍👧‍👦', other:'⚙' };
   grid.innerHTML = configs.map(c => `<div class="lib-card">
     <div class="actions">
       <button class="btn-icon" onclick="editCatalogConfig(${c.id})" title="Editar">✏</button>
@@ -1590,6 +1594,13 @@ const catalogFields = {
     { id:'adjustmentValue', label:'VALOR', type:'number', placeholder:'Ex: 10 (para 10%)' },
     { id:'conditions', label:'CONDICOES DE APLICACAO', type:'text', placeholder:'Ex: Volume > 5 unidades, contrato >= 24 meses' },
     { id:'autoApply', label:'APLICACAO AUTOMATICA', type:'bool', default:false },
+  ],
+  product_family: [
+    { id:'familyCode', label:'CODIGO DA FAMILIA', type:'text', placeholder:'Ex: CONN, CLOUD, IOT' },
+    { id:'isActive', label:'ATIVA', type:'bool', default:true },
+    { id:'segment', label:'SEGMENTO', type:'select', options:['All','Enterprise','SMB','Consumer','Government'], default:'All' },
+    { id:'revenueType', label:'TIPO DE RECEITA', type:'select', options:['Recurring','One-Time','Mixed','Usage'], default:'Mixed' },
+    { id:'description', label:'DESCRICAO', type:'text', placeholder:'Descrição da família' },
   ],
   other: [
     { id:'configKey', label:'CHAVE', type:'text', placeholder:'Identificador da configuração' },
@@ -1716,6 +1727,7 @@ function openKbModal() {
       <option value="implementation_guide">Implementation Guide</option>
       <option value="trailhead">Trailhead</option>
       <option value="best_practices">Best Practices</option>
+      <option value="product_family">Família de Produto</option>
       <option value="other">Outro</option>
     </select></div>
     <div class="form-group"><label>CONTEUDO (cole o texto do documento)</label><textarea id="m-kb-content" rows="10" placeholder="Cole aqui o conteúdo textual do documento..."></textarea></div>
