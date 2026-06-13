@@ -520,14 +520,26 @@ async function runAiModeling() {
 
   try {
     const result = await api('/ai/model', { method: 'POST', body: { description: desc, product_family: family } });
+
+    if (result.error) {
+      document.getElementById('aiResultArea').style.display = 'block';
+      document.getElementById('aiTemplateView').innerHTML = \`
+        <div style="background:var(--red-bg);color:var(--red);padding:16px;border-radius:var(--radius);font-size:0.9em;">
+          <strong>ERRO DA AI:</strong> \${esc(result.error)}
+        </div>\`;
+      document.getElementById('aiSaveBtn').style.display = 'none';
+      return;
+    }
+
     currentAiTemplate = result.template;
     currentAiInput = desc;
     document.getElementById('aiResultArea').style.display = 'block';
+    document.getElementById('aiSaveBtn').style.display = '';
 
-    if (result.template?.parse_error) {
-      document.getElementById('aiTemplateView').innerHTML = `
+    if (!result.template || result.template.parse_error) {
+      document.getElementById('aiTemplateView').innerHTML = \`
         <div style="color:var(--orange);margin-bottom:8px;">AI retornou texto não-JSON. Resultado bruto:</div>
-        <div class="ai-result"><pre>${esc(result.ai_raw)}</pre></div>`;
+        <div class="ai-result"><pre>\${esc(result.ai_raw || JSON.stringify(result))}</pre></div>\`;
     } else {
       renderAiTemplate(result.template, result.kb_used);
     }
