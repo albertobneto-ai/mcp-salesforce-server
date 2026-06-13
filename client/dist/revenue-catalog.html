@@ -677,36 +677,25 @@ async function loadProducts() {
 }
 
 // ── PRODUCT DETAIL (Tabbed View) ──
+let currentProductData = null;
+let currentTemplate = null;
+
 async function viewProduct(id) {
   const data = await api('/products/' + id);
+  currentProductData = data;
+  const v = data.versions?.[0];
+  currentTemplate = v?.template_json || {};
+  if (!currentTemplate.related) currentTemplate.related = {};
+  const r = currentTemplate.related;
+
   document.getElementById('productList').style.display = 'none';
   const det = document.getElementById('productDetail');
   det.style.display = 'block';
-  const v = data.versions?.[0];
-  const t = v?.template_json || {};
 
-  // Build related items from template
+  const t = currentTemplate;
   const pricing = t.pricing || {};
   const classification = t.classification || {};
-  const lifecycle = t.lifecycle || {};
   const product = t.product || {};
-
-  const relatedSections = [
-    { icon:'👥', color:'var(--blue)', title:'Parent Products', count:0, items:[] },
-    { icon:'🧩', color:'var(--green)', title:'Child Components', count:0, items:[], action:'Adicionar' },
-    { icon:'💳', color:'var(--primary)', title:'Product Selling Model', count: classification.sellingModel?1:0,
-      items: classification.sellingModel ? [`<div style="padding:8px;font-size:0.9em;"><strong>${classification.sellingModel}</strong> ${classification.configureDuringSale?'— Config: '+classification.configureDuringSale:''}</div>`] : [] },
-    { icon:'💰', color:'var(--orange)', title:'Price Books', count: pricing.listPrice?1:0,
-      items: pricing.listPrice ? [`<div style="padding:8px;font-size:0.9em;display:flex;justify-content:space-between;">
-        <span>${pricing.pricebook||'Standard'}</span>
-        <span><strong>${pricing.currency||'BRL'} ${pricing.listPrice}</strong> — ${pricing.chargeType||'?'} ${pricing.billingFrequency||''}</span>
-      </div>`] : [] },
-    { icon:'📋', color:'var(--cyan)', title:'Categories', count:0, items:[] },
-    { icon:'🏷', color:'#f472b6', title:'Attributes', count: Object.keys(product).filter(k=>!['Name','Description'].includes(k)).length,
-      items: Object.entries(product).filter(([k])=>!['Name','Description'].includes(k)).map(([k,v]) =>
-        `<div style="padding:4px 8px;font-size:0.88em;display:flex;justify-content:space-between;border-bottom:1px solid rgba(71,85,105,0.15);">
-          <span style="color:var(--text2);">${k}</span><span>${typeof v==='boolean'?(v?'Sim':'Não'):v}</span></div>`) },
-  ];
 
   det.innerHTML = `
     <div class="toolbar">
@@ -723,50 +712,182 @@ async function viewProduct(id) {
         <option value="PROVISIONADO">Provisionado</option><option value="DESCONTINUADO">Descontinuado</option>
       </select>
     </div>
-
     <div class="pd-tabs">
       <div class="pd-tab active" onclick="switchPdTab(this,'pd-related')">Related</div>
       <div class="pd-tab" onclick="switchPdTab(this,'pd-details')">Details</div>
       <div class="pd-tab" onclick="switchPdTab(this,'pd-versions')">Versions</div>
     </div>
+    <div id="pd-related">${renderRelatedSections(data, t)}</div>
+    <div id="pd-details" style="display:none;">${renderDetailsTab(t)}</div>
+    <div id="pd-versions" style="display:none;">${renderVersionsTab(data)}</div>`;
+}
 
-    <div id="pd-related">
-      ${relatedSections.map(s => `
-        <div class="pd-section${s.items.length?' open':''}">
-          <div class="pd-section-header" onclick="this.parentElement.classList.toggle('open')">
-            <div class="icon" style="background:${s.color}22;color:${s.color};">${s.icon}</div>
-            <h4>${s.title}</h4>
-            <span class="count">(${s.count})</span>
-          </div>
-          <div class="pd-section-body">${s.items.length ? s.items.join('') : '<div style="color:var(--text2);font-size:0.85em;padding:8px;">Nenhum item</div>'}</div>
-        </div>`).join('')}
+function renderRelatedSections(data, t) {
+  const r = t.related || {};
+  const sections = [
+    renderRelSection('parentProducts','👥','var(--blue)','Parent Products', r.parentProducts||[],
+      (items) => items.map((p,i) => relRow(p.productName||p, `<button class="btn-icon" onclick="removeRelItem('parentProducts',${i})" title="Remover">✕</button>`)),
+      `<div class="wiz-grid">
+        <div><div class="form-group"><label>NOME DO PRODUTO PAI</label><input type="text" id="rel-pp-name" placeholder="Nome do produto pai"></div></div>
+      </div>`,
+      () => ({productName: gv('rel-pp-name')})
+    ),
+    renderRelSection('childComponents','🧩','var(--green)','Child Components', r.childComponents||[],
+      (items) => items.map((c,i) => relRow(`<strong>${esc(c.productName)}</strong> <span style="color:var(--text2);">— ${c.required?'Required':'Optional'} | Qty: ${c.minQty||1}${c.maxQty?' - '+c.maxQty:'+'}  </span>`,
+        `<button class="btn-icon" onclick="removeRelItem('childComponents',${i})">✕</button>`)),
+      `<div class="wiz-grid">
+        <div><div class="form-group"><label>NOME DO COMPONENTE</label><input type="text" id="rel-cc-name" placeholder="Ex: IP Fixo, SLA Gold"></div></div>
+        <div><div class="form-group"><label>OBRIGATORIO</label><select id="rel-cc-req"><option value="true">Required</option><option value="false">Optional</option></select></div></div>
+        <div><div class="form-group"><label>QTD MINIMA</label><input type="number" id="rel-cc-min" value="1"></div></div>
+        <div><div class="form-group"><label>QTD MAXIMA</label><input type="number" id="rel-cc-max" placeholder="Vazio = ilimitado"></div></div>
+      </div>`,
+      () => ({productName:gv('rel-cc-name'), required:gv('rel-cc-req')==='true', minQty:parseInt(gv('rel-cc-min'))||1, maxQty:gv('rel-cc-max')?parseInt(gv('rel-cc-max')):null})
+    ),
+    renderRelSection('sellingModelOptions','💳','var(--primary)','Product Selling Model Options', r.sellingModelOptions||[],
+      (items) => items.map((s,i) => relRow(`<strong>${esc(s.model)}</strong> <span style="color:var(--text2);">— ${s.chargeType||''} ${s.billingFrequency||''}</span>`,
+        `<button class="btn-icon" onclick="removeRelItem('sellingModelOptions',${i})">✕</button>`)),
+      `<div class="wiz-grid">
+        <div><div class="form-group"><label>SELLING MODEL</label><select id="rel-sm-model"><option>One-Time</option><option>Evergreen</option><option>Term-Based</option></select></div></div>
+        <div><div class="form-group"><label>TIPO COBRANCA</label><select id="rel-sm-charge"><option>One-Time</option><option>Recurring</option><option>Usage</option></select></div></div>
+        <div><div class="form-group"><label>FREQUENCIA</label><select id="rel-sm-freq"><option>--None--</option><option>Monthly</option><option>Quarterly</option><option>Semi-Annual</option><option>Annual</option></select></div></div>
+        <div><div class="form-group"><label>PRAZO (MESES)</label><input type="number" id="rel-sm-term" placeholder="Ex: 12, 24 (Term-Based)"></div></div>
+      </div>`,
+      () => ({model:gv('rel-sm-model'), chargeType:gv('rel-sm-charge'), billingFrequency:gv('rel-sm-freq')!=='--None--'?gv('rel-sm-freq'):'', termMonths:gv('rel-sm-term')?parseInt(gv('rel-sm-term')):null})
+    ),
+    renderRelSection('priceBookEntries','💰','var(--orange)','Price Books', r.priceBookEntries||[],
+      (items) => items.map((p,i) => relRow(`<div style="display:flex;justify-content:space-between;width:100%;"><span>${esc(p.pricebook||'Standard')}</span><strong>${p.currency||'BRL'} ${p.listPrice}</strong><span style="color:var(--text2);">${p.chargeType||''} ${p.frequency||''}</span></div>`,
+        `<button class="btn-icon" onclick="removeRelItem('priceBookEntries',${i})">✕</button>`)),
+      `<div class="wiz-grid">
+        <div><div class="form-group"><label>PRICEBOOK</label><input type="text" id="rel-pb-book" value="Standard Price Book"></div></div>
+        <div><div class="form-group"><label>PRECO DE LISTA</label><input type="number" step="0.01" id="rel-pb-price" placeholder="Ex: 4500.00"></div></div>
+        <div><div class="form-group"><label>MOEDA</label><select id="rel-pb-curr"><option>BRL</option><option>USD</option><option>EUR</option></select></div></div>
+        <div><div class="form-group"><label>TIPO COBRANCA</label><select id="rel-pb-charge"><option>Recurring</option><option>One-Time</option><option>Usage</option></select></div></div>
+        <div><div class="form-group"><label>FREQUENCIA</label><select id="rel-pb-freq"><option>Monthly</option><option>Quarterly</option><option>Semi-Annual</option><option>Annual</option><option>--None--</option></select></div></div>
+      </div>`,
+      () => ({pricebook:gv('rel-pb-book'), listPrice:parseFloat(gv('rel-pb-price'))||0, currency:gv('rel-pb-curr'), chargeType:gv('rel-pb-charge'), frequency:gv('rel-pb-freq')!=='--None--'?gv('rel-pb-freq'):''})
+    ),
+    renderRelSection('categories','📋','var(--cyan)','Categories', r.categories||[],
+      (items) => items.map((c,i) => relRow(esc(typeof c==='string'?c:c.name), `<button class="btn-icon" onclick="removeRelItem('categories',${i})">✕</button>`)),
+      `<div class="form-group"><label>CATEGORIA</label><input type="text" id="rel-cat-name" placeholder="Ex: Enterprise, Connectivity, Data"></div>`,
+      () => gv('rel-cat-name')
+    ),
+    renderRelSection('attributes','🏷','#f472b6','Attributes', r.attributes||[],
+      (items) => items.map((a,i) => relRow(`<strong>${esc(a.name)}</strong> <span style="color:var(--text2);">= ${esc(a.value||'')}</span> ${a.priceImpacting?'<span class="badge" style="background:var(--orange-bg);color:var(--orange);margin-left:6px;">Price Impacting</span>':''}`,
+        `<button class="btn-icon" onclick="removeRelItem('attributes',${i})">✕</button>`)),
+      `<div class="wiz-grid">
+        <div><div class="form-group"><label>ATRIBUTO</label><input type="text" id="rel-at-name" placeholder="Ex: Velocidade, SLA"></div></div>
+        <div><div class="form-group"><label>VALOR</label><input type="text" id="rel-at-val" placeholder="Ex: 100Mbps, Gold"></div></div>
+        <div><div class="form-group"><label>PRICE IMPACTING</label><select id="rel-at-pi"><option value="false">Não</option><option value="true">Sim</option></select></div></div>
+      </div>`,
+      () => ({name:gv('rel-at-name'), value:gv('rel-at-val'), priceImpacting:gv('rel-at-pi')==='true'})
+    ),
+  ];
+  return sections.join('');
+}
+
+function relRow(content, actions) {
+  return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(71,85,105,0.15);font-size:0.9em;">
+    <div style="flex:1;">${content}</div><div>${actions}</div></div>`;
+}
+
+function gv(id) { const el=document.getElementById(id); return el?el.value:''; }
+
+function renderRelSection(key, icon, color, title, items, renderItems, formHtml, buildItem) {
+  const id = 'rel-sec-'+key;
+  const formId = 'rel-form-'+key;
+  const hasItems = items.length > 0;
+  window['_relForm_'+key] = { formHtml, buildItem };
+  return `<div class="pd-section${hasItems?' open':''}" id="${id}">
+    <div class="pd-section-header" onclick="this.parentElement.classList.toggle('open')">
+      <div class="icon" style="background:${color}22;color:${color};">${icon}</div>
+      <h4>${title}</h4>
+      <span class="count">(${items.length})</span>
+      <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();toggleRelForm('${key}')" style="margin-left:8px;">+ Add</button>
     </div>
-
-    <div id="pd-details" style="display:none;">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        ${Object.entries({...product,...(lifecycle||{})}).map(([k,v]) => `
-          <div style="background:var(--surface);padding:10px 14px;border-radius:6px;border:1px solid var(--border);">
-            <div style="font-size:0.75em;color:var(--text2);text-transform:uppercase;">${k}</div>
-            <div style="font-weight:500;margin-top:2px;">${typeof v==='boolean'?(v?'<span style="color:var(--green);">Sim</span>':'<span style="color:var(--red);">Não</span>'):esc(String(v||'-'))}</div>
-          </div>`).join('')}
+    <div class="pd-section-body">
+      <div id="rel-items-${key}">${hasItems ? renderItems(items).join('') : '<div style="color:var(--text2);font-size:0.85em;padding:4px 0;">Nenhum item</div>'}</div>
+      <div id="${formId}" style="display:none;margin-top:12px;padding:14px;background:var(--bg);border:1px solid var(--primary);border-radius:8px;">
+        <div id="${formId}-fields"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end;">
+          <button class="btn btn-sm btn-secondary" onclick="document.getElementById('${formId}').style.display='none'">Cancelar</button>
+          <button class="btn btn-sm btn-primary" onclick="addRelItem('${key}')">Adicionar</button>
+        </div>
       </div>
-      <details style="margin-top:16px;"><summary style="cursor:pointer;color:var(--text2);font-size:0.85em;">JSON COMPLETO</summary>
-        <pre style="margin-top:8px;background:var(--bg);padding:12px;border-radius:6px;font-size:0.8em;color:var(--cyan);white-space:pre-wrap;">${esc(JSON.stringify(t,null,2))}</pre>
-      </details>
     </div>
+  </div>`;
+}
 
-    <div id="pd-versions" style="display:none;">
-      ${(data.versions||[]).map(v => `
-        <div class="pd-section open" style="margin-bottom:6px;">
-          <div class="pd-section-header">
-            <div class="icon" style="background:var(--primary-bg);color:var(--primary);font-weight:700;">v${v.version_number}</div>
-            <h4>${new Date(v.created_at).toLocaleString('pt-BR')}</h4>
-            ${v.version_number===data.current_version?'<span class="badge badge-provisionado">ATUAL</span>':''}
-          </div>
-          <div class="pd-section-body">${v.notes?'<div style="font-size:0.9em;">'+esc(v.notes)+'</div>':'<div style="color:var(--text2);font-size:0.85em;">Sem notas</div>'}</div>
-        </div>`).join('')}
-    </div>
-  `;
+function toggleRelForm(key) {
+  const form = document.getElementById('rel-form-'+key);
+  const sec = document.getElementById('rel-sec-'+key);
+  sec.classList.add('open');
+  if (form.style.display === 'none') {
+    form.style.display = 'block';
+    document.getElementById('rel-form-'+key+'-fields').innerHTML = window['_relForm_'+key].formHtml;
+  } else {
+    form.style.display = 'none';
+  }
+}
+
+async function addRelItem(key) {
+  const builder = window['_relForm_'+key].buildItem;
+  const item = builder();
+  if (!item || (typeof item==='object' && !item.productName && !item.name && !item.model && !item.pricebook && !item.listPrice)) {
+    alert('Preencha os campos obrigatórios'); return;
+  }
+  if (!currentTemplate.related) currentTemplate.related = {};
+  if (!currentTemplate.related[key]) currentTemplate.related[key] = [];
+  currentTemplate.related[key].push(item);
+  await saveCurrentTemplate();
+  viewProduct(currentProductData.id);
+}
+
+async function removeRelItem(key, index) {
+  if (!confirm('Remover este item?')) return;
+  if (currentTemplate.related?.[key]) {
+    currentTemplate.related[key].splice(index, 1);
+    await saveCurrentTemplate();
+    viewProduct(currentProductData.id);
+  }
+}
+
+async function saveCurrentTemplate() {
+  if (!currentProductData) return;
+  await api('/products/' + currentProductData.id + '/versions', {
+    method: 'POST',
+    body: { template_json: currentTemplate, notes: 'Atualização via Related' }
+  });
+}
+
+function renderDetailsTab(t) {
+  const product = t.product || {};
+  const classification = t.classification || {};
+  const lifecycle = t.lifecycle || {};
+  const pricing = t.pricing || {};
+  const all = {...product, ...classification, ...lifecycle, ...pricing};
+  const entries = Object.entries(all).filter(([k,v]) => v !== null && v !== undefined && v !== '');
+  if (!entries.length) return '<div style="color:var(--text2);padding:20px;text-align:center;">Nenhum detalhe cadastrado</div>';
+  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    ${entries.map(([k,v]) => `<div style="background:var(--surface);padding:10px 14px;border-radius:6px;border:1px solid var(--border);">
+      <div style="font-size:0.75em;color:var(--text2);text-transform:uppercase;">${esc(k)}</div>
+      <div style="font-weight:500;margin-top:2px;">${typeof v==='boolean'?(v?'<span style="color:var(--green);">Sim</span>':'<span style="color:var(--red);">Não</span>'):esc(String(v))}</div>
+    </div>`).join('')}
+  </div>
+  <details style="margin-top:16px;"><summary style="cursor:pointer;color:var(--text2);font-size:0.85em;">JSON COMPLETO</summary>
+    <pre style="margin-top:8px;background:var(--bg);padding:12px;border-radius:6px;font-size:0.8em;color:var(--cyan);white-space:pre-wrap;">${esc(JSON.stringify(t,null,2))}</pre>
+  </details>`;
+}
+
+function renderVersionsTab(data) {
+  return (data.versions||[]).map(v => `
+    <div class="pd-section open" style="margin-bottom:6px;">
+      <div class="pd-section-header">
+        <div class="icon" style="background:var(--primary-bg);color:var(--primary);font-weight:700;">v${v.version_number}</div>
+        <h4>${new Date(v.created_at).toLocaleString('pt-BR')}</h4>
+        ${v.version_number===data.current_version?'<span class="badge badge-provisionado">ATUAL</span>':''}
+      </div>
+      <div class="pd-section-body">${v.notes?'<div style="font-size:0.9em;">'+esc(v.notes)+'</div>':'<div style="color:var(--text2);font-size:0.85em;">Sem notas</div>'}</div>
+    </div>`).join('');
 }
 
 function switchPdTab(el, panelId) {
