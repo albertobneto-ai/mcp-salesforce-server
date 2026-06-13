@@ -698,7 +698,7 @@ FORMATO DE RESPOSTA (JSON):
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROK_KEY}` },
           body: JSON.stringify({
-            model: 'grok-3',
+            model: 'grok-3-mini',
             max_tokens: 4096,
             messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMsg }]
           })
@@ -706,7 +706,7 @@ FORMATO DE RESPOSTA (JSON):
         const data = await response.json();
         if (data.error) return res.status(500).json({ error: data.error.message || JSON.stringify(data.error) });
         aiText = data.choices?.[0]?.message?.content || '';
-        modelUsed = 'grok-3 (fallback)';
+        modelUsed = 'grok-3-mini (fallback)';
         tokensIn = data.usage?.prompt_tokens || 0;
         tokensOut = data.usage?.completion_tokens || 0;
       } else if (usedFallback && !GROK_KEY) {
