@@ -184,6 +184,7 @@ textarea { resize:vertical; min-height:80px; }
   <a href="/" class="back-btn">← Ever i9</a>
   <h1>REVENUE CLOUD CATALOG BUILDER</h1>
   <div class="subtitle">Modelagem de Produtos Revenue Cloud</div>
+  <button class="btn btn-sm" onclick="openGuide()" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);margin-left:12px;">📖 GUIA</button>
 </div>
 
 <div class="tabs" id="mainTabs">
@@ -1761,6 +1762,131 @@ async function deleteKb(id) {
   if (!confirm('Excluir documento da KB?')) return;
   await api('/kb/' + id, { method: 'DELETE' });
   loadKb();
+}
+
+// ── GUIDE ──
+function openGuide() {
+  const guideHtml = `
+    <div style="max-height:70vh;overflow-y:auto;line-height:1.7;font-size:0.92em;">
+      
+      <div style="background:var(--primary-bg);border:1px solid var(--primary);border-radius:8px;padding:16px;margin-bottom:20px;">
+        <div style="font-weight:700;color:var(--primary);margin-bottom:6px;">O QUE E O REVENUE CLOUD CATALOG BUILDER?</div>
+        <div>Ferramenta para modelar produtos Salesforce Revenue Cloud antes de implementar na org. Você define produtos, preços, atributos e bundles aqui — o sistema gera automaticamente o JSON que o Salesforce espera.</div>
+      </div>
+
+      <div style="font-weight:700;font-size:1.05em;color:var(--text);margin-bottom:12px;">HIERARQUIA DE PRODUTOS</div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+        <div style="background:var(--surface);border-left:3px solid var(--primary);padding:12px;border-radius:6px;">
+          <div style="font-weight:700;color:var(--primary);">BASE</div>
+          <div style="font-size:0.85em;color:var(--text2);">Produto principal vendido individualmente. Ex: Link MPLS 100Mbps, Internet Fibra 300M.</div>
+        </div>
+        <div style="background:var(--surface);border-left:3px solid var(--green);padding:12px;border-radius:6px;">
+          <div style="font-weight:700;color:var(--green);">ADD-ON</div>
+          <div style="font-size:0.85em;color:var(--text2);">Complemento vendido junto com um produto Base. Ex: IP Fixo, SLA Gold, Firewall Gerenciado.</div>
+        </div>
+        <div style="background:var(--surface);border-left:3px solid var(--orange);padding:12px;border-radius:6px;">
+          <div style="font-weight:700;color:var(--orange);">BUNDLE</div>
+          <div style="font-size:0.85em;color:var(--text2);">Pacote composto por vários produtos (Base + Add-Ons). Ex: Pacote Enterprise = Link + IP + SLA.</div>
+        </div>
+        <div style="background:var(--surface);border-left:3px solid var(--cyan);padding:12px;border-radius:6px;">
+          <div style="font-weight:700;color:var(--cyan);">COMPONENT</div>
+          <div style="font-size:0.85em;color:var(--text2);">Produto que só existe dentro de outro (não vendido sozinho). Ex: Módulo de roteador.</div>
+        </div>
+      </div>
+
+      <div style="font-weight:700;font-size:1.05em;color:var(--text);margin-bottom:12px;">COMO CRIAR UM BUNDLE (PASSO A PASSO)</div>
+      
+      <div style="margin-bottom:20px;">
+        <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">1</div>
+          <div>
+            <div style="font-weight:600;">CONFIGURE A INFRAESTRUTURA</div>
+            <div style="font-size:0.85em;color:var(--text2);">Vá na aba <strong>CATALOGO</strong> e cadastre: Famílias de produto, Pricebooks, Discount Schedules. Isso alimenta os formulários de produto.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">2</div>
+          <div>
+            <div style="font-weight:600;">CADASTRE ATRIBUTOS E MODELOS DE PRECIFICACAO</div>
+            <div style="font-size:0.85em;color:var(--text2);">Nas abas <strong>ATRIBUTOS</strong> e <strong>PRECIFICACAO</strong>, crie os itens reutilizáveis. Ex: atributo "Velocidade" com valores 100/200/300Mbps, modelo "Recorrente Mensal".</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">3</div>
+          <div>
+            <div style="font-weight:600;">CRIE OS PRODUTOS INDIVIDUAIS PRIMEIRO</div>
+            <div style="font-size:0.85em;color:var(--text2);">Na aba <strong>PRODUTOS</strong>, clique "+ Novo Produto" e use o wizard. Crie cada componente como produto separado:
+              <br>• Link MPLS 100Mbps (Product Type: <strong>Base</strong>)
+              <br>• IP Fixo (Product Type: <strong>Add-On</strong>)
+              <br>• SLA Gold (Product Type: <strong>Add-On</strong>)</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">4</div>
+          <div>
+            <div style="font-weight:600;">CRIE O PRODUTO BUNDLE</div>
+            <div style="font-size:0.85em;color:var(--text2);">Crie outro produto com Product Type: <strong>Bundle</strong>. Ex: "Pacote Enterprise Connectivity".</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--green);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">5</div>
+          <div>
+            <div style="font-weight:600;">MONTE O BUNDLE NA ABA RELATED</div>
+            <div style="font-size:0.85em;color:var(--text2);">Abra o produto Bundle, vá na aba <strong>Related</strong>, seção <strong>Child Components</strong>, clique <strong>"+ Add"</strong>. Selecione cada produto e defina:
+              <br>• <strong>Required</strong> = obrigatório no pacote (ex: Link MPLS)
+              <br>• <strong>Optional</strong> = cliente pode escolher (ex: IP Fixo)
+              <br>• <strong>Qty Min/Max</strong> = quantidade permitida</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--green);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">6</div>
+          <div>
+            <div style="font-weight:600;">CONFIGURE PRECOS E ATRIBUTOS</div>
+            <div style="font-size:0.85em;color:var(--text2);">Ainda no Related do Bundle, adicione:
+              <br>• <strong>Price Books</strong>: preço do pacote (ou deixe vazio se preço vem dos componentes)
+              <br>• <strong>Selling Model</strong>: como o pacote é vendido (Evergreen, Term-Based)
+              <br>• <strong>Attributes</strong>: atributos do pacote (selecione da biblioteca)</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-weight:700;font-size:1.05em;color:var(--text);margin-bottom:12px;">FLUXO DAS ABAS</div>
+      
+      <div style="background:var(--surface);border-radius:8px;padding:16px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:0.85em;">
+          <span style="background:var(--primary);color:white;padding:4px 10px;border-radius:4px;">CATALOGO</span>
+          <span style="color:var(--text2);">→</span>
+          <span style="background:var(--blue);color:white;padding:4px 10px;border-radius:4px;">ATRIBUTOS</span>
+          <span style="color:var(--text2);">→</span>
+          <span style="background:var(--green);color:white;padding:4px 10px;border-radius:4px;">PRECIFICACAO</span>
+          <span style="color:var(--text2);">→</span>
+          <span style="background:var(--orange);color:white;padding:4px 10px;border-radius:4px;">PRODUTOS</span>
+          <span style="color:var(--text2);">→</span>
+          <span style="background:#f472b6;color:white;padding:4px 10px;border-radius:4px;">REGRAS</span>
+        </div>
+        <div style="font-size:0.82em;color:var(--text2);margin-top:10px;">
+          <strong>CATALOGO</strong>: Famílias, Pricebooks, Discount Schedules (infraestrutura base)<br>
+          <strong>ATRIBUTOS</strong>: Biblioteca de atributos reutilizáveis (Velocidade, SLA, etc.)<br>
+          <strong>PRECIFICACAO</strong>: Modelos de pricing reutilizáveis (Recorrente, One-Time, etc.)<br>
+          <strong>PRODUTOS</strong>: Produtos Revenue Cloud com wizard e related lists<br>
+          <strong>BUNDLES</strong>: Templates de bundle reutilizáveis (composições padrão)<br>
+          <strong>REGRAS</strong>: Regras de negócio que a AI considera na modelagem
+        </div>
+      </div>
+
+      <div style="font-weight:700;font-size:1.05em;color:var(--text);margin-bottom:12px;">DICAS</div>
+      <div style="background:var(--surface);border-radius:8px;padding:16px;font-size:0.88em;">
+        <div style="margin-bottom:8px;">💡 Sempre crie a <strong>infraestrutura</strong> (famílias, pricebooks) antes dos produtos.</div>
+        <div style="margin-bottom:8px;">💡 Cada seção do Related tem um botão <strong>"?"</strong> que explica o que fazer.</div>
+        <div style="margin-bottom:8px;">💡 Produtos individuais devem existir <strong>antes</strong> de montar o Bundle.</div>
+        <div style="margin-bottom:8px;">💡 O JSON é gerado <strong>automaticamente</strong> — nunca precisa editar JSON manualmente.</div>
+        <div>💡 Cada alteração no Related cria uma <strong>nova versão</strong> do produto (rastreável).</div>
+      </div>
+
+    </div>`;
+
+  openModal('📖 GUIA — REVENUE CLOUD CATALOG BUILDER', guideHtml, '<button class="btn btn-primary" onclick="closeModal()">ENTENDI</button>');
 }
 
 // ── UTILS ──
