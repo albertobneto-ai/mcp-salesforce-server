@@ -1027,6 +1027,14 @@ async function saveCurrentTemplate() {
 
 function renderDetailsTab(t) {
   const r = t.related || {};
+  const relDetailCard = (label, val, badge, color) => {
+    return `<div style="background:var(--surface);padding:8px 12px;border-radius:6px;border:1px solid var(--border);border-left:3px solid ${color||'var(--border)'};">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:0.7em;color:var(--text2);text-transform:uppercase;letter-spacing:0.3px;">${label}</div>
+        ${badge?'<span style="font-size:0.65em;padding:2px 6px;border-radius:4px;background:'+color+'22;color:'+color+';">'+badge+'</span>':''}
+      </div>
+      <div style="font-weight:500;margin-top:1px;font-size:0.9em;">${val||'—'}</div></div>`;
+  };
   const detCard = (label, val, color) => {
     if (val===null||val===undefined||val==='') return '';
     let display = val;
@@ -1097,7 +1105,7 @@ function renderDetailsTab(t) {
   if (r.sellingModelOptions?.length) {
     cards += sectionTitle('SELLING MODELS ('+r.sellingModelOptions.length+')','var(--primary)');
     r.sellingModelOptions.forEach(s => {
-      cards += detCard(s.model, `${s.chargeType||''} ${s.billingFrequency||''} ${s.termMonths?s.termMonths+'m':''}`, 'var(--primary)');
+      cards += relDetailCard(s.model, (s.chargeType||'')+' '+(s.billingFrequency||''), s.termMonths?s.termMonths+' meses':'', 'var(--primary)');
     });
   }
 
@@ -1105,7 +1113,7 @@ function renderDetailsTab(t) {
   if (r.childComponents?.length) {
     cards += sectionTitle('COMPONENTES ('+r.childComponents.length+')','var(--green)');
     r.childComponents.forEach(c => {
-      cards += detCard(c.productName, `${c.required?'Required':'Optional'} | Qty: ${c.minQty||1}${c.maxQty?'-'+c.maxQty:'+'}`, 'var(--green)');
+      cards += relDetailCard(c.productName, 'Qty: '+(c.minQty||1)+(c.maxQty?'-'+c.maxQty:'+'), c.required?'Required':'Optional', 'var(--green)');
     });
   }
 
@@ -1113,7 +1121,7 @@ function renderDetailsTab(t) {
   if (r.attributes?.length) {
     cards += sectionTitle('ATRIBUTOS ('+r.attributes.length+')','#f472b6');
     r.attributes.forEach(a => {
-      cards += detCard(a.name + (a.priceImpacting?' 💰':''), a.value, '#f472b6');
+      cards += relDetailCard(a.name, a.value||'(sem valor)', a.priceImpacting?'Price Impacting':'', '#f472b6');
     });
   }
 
@@ -1121,7 +1129,7 @@ function renderDetailsTab(t) {
   if (r.categories?.length) {
     cards += sectionTitle('CATEGORIAS ('+r.categories.length+')','var(--cyan)');
     r.categories.forEach(c => {
-      cards += detCard('Categoria', typeof c==='string'?c:c.name, 'var(--cyan)');
+      cards += relDetailCard('Categoria', typeof c==='string'?c:c.name, '', 'var(--cyan)');
     });
   }
 
