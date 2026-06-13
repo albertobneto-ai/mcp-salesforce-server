@@ -176,6 +176,21 @@ textarea { resize:vertical; min-height:80px; }
 .rel-lib-select select { flex:1; }
 .rel-lib-select .btn-new { padding:8px 12px;white-space:nowrap; }
 .rel-new-form { margin-top:10px;padding:12px;background:rgba(139,92,246,0.06);border:1px dashed var(--primary);border-radius:6px; }
+
+/* ── VISUAL POLISH ── */
+.lib-card, .pd-section, .stat-card, .mapping-card { transition: transform 0.15s, box-shadow 0.15s; }
+.lib-card:hover, .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+.pd-section:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
+.data-table tr { transition: background 0.15s; }
+.btn { transition: all 0.15s; }
+.btn:active { transform: scale(0.97); }
+.wiz-step-card { transition: opacity 0.3s; animation: fadeIn 0.3s; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.toast { position:fixed; bottom:24px; right:24px; background:var(--green); color:white; padding:12px 24px; border-radius:8px; font-weight:600; font-size:0.9em; z-index:2000; animation: toastIn 0.3s, toastOut 0.3s 2.5s forwards; box-shadow:0 4px 20px rgba(0,0,0,0.3); }
+@keyframes toastIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes toastOut { from{opacity:1} to{opacity:0;transform:translateY(20px)} }
+.action-bar { display:flex; gap:6px; align-items:center; }
+.action-bar .btn { font-size:0.8em; padding:6px 12px; }
 </style>
 </head>
 <body>
@@ -248,7 +263,7 @@ textarea { resize:vertical; min-height:80px; }
   <div id="productWizard" style="display:none;">
     <div class="toolbar">
       <button class="btn btn-secondary" onclick="closeWizard()">← VOLTAR</button>
-      <h3 style="font-size:1.1em;margin-left:12px;">NOVO PRODUTO REVENUE CLOUD</h3>
+      <h3 style="font-size:1.1em;margin-left:12px;" id="wizTitle">NOVO PRODUTO REVENUE CLOUD</h3>
     </div>
     <!-- Progress bar -->
     <div style="display:flex;gap:2px;margin-bottom:24px;" id="wizardProgress"></div>
@@ -510,6 +525,8 @@ let wizStep = 0;
 let wizData = {};
 
 async function showWizard() {
+  window._editingProductId = null;
+  window._editingRelated = null;
   document.getElementById('productList').style.display = 'none';
   document.getElementById('productWizard').style.display = 'block';
   wizStep = 0;
@@ -533,6 +550,8 @@ function closeWizard() {
 }
 
 function renderWizardStep() {
+  const titleEl = document.getElementById('wizTitle');
+  if (titleEl) titleEl.textContent = window._editingProductId ? 'EDITAR PRODUTO' : 'NOVO PRODUTO REVENUE CLOUD';
   // Progress bar
   const prog = document.getElementById('wizardProgress');
   prog.innerHTML = wizardSteps.map((s,i) => 
@@ -543,6 +562,7 @@ function renderWizardStep() {
   document.getElementById('wizPrev').style.display = wizStep > 0 ? '' : 'none';
   document.getElementById('wizNext').style.display = wizStep < wizardSteps.length-1 ? '' : 'none';
   document.getElementById('wizSave').style.display = wizStep === wizardSteps.length-1 ? '' : 'none';
+  document.getElementById('wizSave').textContent = window._editingProductId ? '💾 ATUALIZAR PRODUTO' : '💾 SALVAR PRODUTO';
 
   const step = wizardSteps[wizStep];
   const container = document.getElementById('wizardStepContent');
@@ -663,17 +683,42 @@ async function wizardSave() {
   collectWizData();
   if (!wizData.productName) { alert('Nome do produto é obrigatório'); return; }
   const template = buildProductTemplateJson();
-  const body = {
-    name: wizData.productName,
-    product_code: wizData.productCode || '',
-    product_family: wizData.productFamily || '',
-    description: wizData.productDescription || '',
-    template_json: template,
-    ai_input: '', ai_output: ''
-  };
-  await api('/products', { method: 'POST', body });
-  closeWizard();
-  loadProducts();
+  // Preserve related items if editing
+  if (window._editingRelated && Object.keys(window._editingRelated).length) {
+    template.related = window._editingRelated;
+  }
+
+  if (window._editingProductId) {
+    // UPDATE existing product
+    const id = window._editingProductId;
+    await api('/products/' + id, { method: 'PUT', body: {
+      name: wizData.productName,
+      product_code: wizData.productCode || '',
+      product_family: wizData.productFamily || '',
+      description: wizData.productDescription || '',
+    }});
+    await api('/products/' + id + '/versions', { method: 'POST', body: {
+      template_json: template, notes: 'Editado via wizard'
+    }});
+    window._editingProductId = null;
+    window._editingRelated = null;
+    showToast('Produto atualizado');
+    closeWizard();
+    loadProducts();
+  } else {
+    // CREATE new product
+    const body = {
+      name: wizData.productName,
+      product_code: wizData.productCode || '',
+      product_family: wizData.productFamily || '',
+      description: wizData.productDescription || '',
+      template_json: template,
+    };
+    await api('/products', { method: 'POST', body });
+    showToast('Produto criado');
+    closeWizard();
+    loadProducts();
+  }
 }
 
 // ── PRODUCT LIST ──
@@ -730,11 +775,17 @@ async function viewProduct(id) {
       </div>
       <span class="badge badge-${data.status.toLowerCase()}" style="margin-left:12px;">${data.status}</span>
       <div class="spacer"></div>
-      <select onchange="changeProductStatus(${data.id}, this.value)" style="max-width:180px;">
-        <option value="">Alterar status...</option>
-        <option value="RASCUNHO">Rascunho</option><option value="VALIDADO">Validado</option>
-        <option value="PROVISIONADO">Provisionado</option><option value="DESCONTINUADO">Descontinuado</option>
-      </select>
+      <div class="action-bar">
+        <button class="btn btn-secondary" onclick="editProduct(${data.id})" title="Editar campos do produto">✏ Editar</button>
+        <button class="btn btn-secondary" onclick="duplicateProduct(${data.id})" title="Criar cópia deste produto">📋 Duplicar</button>
+        <button class="btn btn-secondary" onclick="exportProductJson()" title="Baixar JSON Revenue Cloud">📥 JSON</button>
+        <select onchange="changeProductStatus(${data.id}, this.value)" style="max-width:160px;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:0.8em;">
+          <option value="">Status...</option>
+          <option value="RASCUNHO">Rascunho</option><option value="VALIDADO">Validado</option>
+          <option value="PROVISIONADO">Provisionado</option><option value="DESCONTINUADO">Descontinuado</option>
+        </select>
+        <button class="btn btn-danger btn-sm" onclick="deleteProduct(${data.id})" title="Excluir produto">🗑</button>
+      </div>
     </div>
     <div class="pd-tabs">
       <div class="pd-tab active" onclick="switchPdTab(this,'pd-related')">Related</div>
@@ -1024,6 +1075,7 @@ async function saveCurrentTemplate() {
     method: 'POST',
     body: { template_json: currentTemplate, notes: 'Atualização via Related' }
   });
+  showToast('Salvo');
 }
 
 function renderDetailsTab(t) {
@@ -1162,6 +1214,95 @@ function switchPdTab(el, panelId) {
     const p = det.querySelector('#'+id);
     if (p) p.style.display = id===panelId ? 'block' : 'none';
   });
+}
+
+// Edit product - reopen wizard with existing data
+async function editProduct(id) {
+  const data = await api('/products/' + id);
+  const v = data.versions?.[0];
+  const t = v?.template_json || {};
+  const p = t.product || {};
+  const c = t.classification || {};
+  const l = t.lifecycle || {};
+  const pr = t.pricing || {};
+
+  wizData = {
+    productName: p.Name || data.name,
+    productCode: p.ProductCode || data.product_code,
+    productSKU: p.StockKeepingUnit || '',
+    productFamily: p.Family || data.product_family,
+    recordType: t.recordType || '',
+    productDescription: p.Description || data.description,
+    productType: c.productType || '',
+    sellingModel: c.sellingModel || '',
+    configureDuringSale: c.configureDuringSale || '',
+    sellOnlyWithOthers: c.sellOnlyWithOthers || false,
+    quantityUOM: p.QuantityUnitOfMeasure || '',
+    basedOn: c.basedOn || '',
+    isActive: p.IsActive !== false,
+    isAssetizable: l.isAssetizable !== false,
+    availabilityDate: l.availabilityDate || '',
+    endOfLifeDate: l.endOfLifeDate || '',
+    discontinuedDate: l.discontinuedDate || '',
+    displayURL: l.displayURL || '',
+    listPrice: pr.listPrice || '',
+    priceCurrency: pr.currency || 'BRL',
+    chargeType: pr.chargeType || '',
+    billingFrequency: pr.billingFrequency || '',
+    taxPolicy: pr.taxPolicy || '',
+    pricebook: pr.pricebook || '',
+  };
+  window._editingProductId = id;
+  window._editingRelated = t.related || {};
+
+  document.getElementById('productDetail').style.display = 'none';
+  document.getElementById('productWizard').style.display = 'block';
+  wizStep = 0;
+  renderWizardStep();
+  // Load families
+  try {
+    const configs = await api('/catalog-config?config_type=product_family');
+    const prods = await api('/products');
+    const fromConfig = configs.map(c=>c.name);
+    const fromProducts = prods.map(p=>p.product_family).filter(Boolean);
+    const families = [...new Set([...fromConfig, ...fromProducts])].sort();
+    const dl = document.getElementById('familyList');
+    if (dl) dl.innerHTML = families.map(f=>`<option value="${esc(f)}">`).join('');
+  } catch {}
+}
+
+// Duplicate product
+async function duplicateProduct(id) {
+  const data = await api('/products/' + id);
+  const v = data.versions?.[0];
+  const t = v?.template_json || {};
+  const body = {
+    name: data.name + ' (cópia)',
+    product_code: (data.product_code||'') + '-COPY',
+    product_family: data.product_family || '',
+    description: data.description || '',
+    template_json: t,
+    ai_input: '', ai_output: ''
+  };
+  const result = await api('/products', { method: 'POST', body });
+  showToast('Produto duplicado: ' + body.name);
+  loadProducts();
+  document.getElementById('productDetail').style.display = 'none';
+  document.getElementById('productList').style.display = 'block';
+}
+
+// Export JSON
+function exportProductJson() {
+  if (!currentTemplate) return;
+  const json = JSON.stringify(currentTemplate, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (currentProductData?.name || 'produto').replace(/\s+/g, '_') + '_rc.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('JSON exportado');
 }
 
 function closeProductDetail() {
@@ -1890,6 +2031,15 @@ function openGuide() {
 }
 
 // ── UTILS ──
+function showToast(msg, color) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  if (color) t.style.background = color;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
 function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
 
 // ── INIT ──
