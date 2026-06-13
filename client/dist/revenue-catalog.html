@@ -138,6 +138,33 @@ textarea { resize:vertical; min-height:80px; }
   .tabs { padding:4px 8px; }
   .tab { padding:8px 12px; font-size:0.8em; }
 }
+
+/* ── WIZARD ── */
+.wiz-progress-step { flex:1; height:6px; border-radius:3px; background:var(--surface2); transition:background 0.3s; }
+.wiz-progress-step.done { background:var(--primary); }
+.wiz-progress-step.active { background:var(--primary); box-shadow:0 0 8px rgba(139,92,246,0.4); }
+.wiz-step-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px; }
+.wiz-step-title { font-size:1.1em; font-weight:700; color:var(--primary); margin-bottom:4px; }
+.wiz-step-desc { font-size:0.85em; color:var(--text2); margin-bottom:20px; }
+.wiz-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.wiz-grid .full { grid-column:1/-1; }
+.wiz-review-section { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:10px; }
+.wiz-review-section h4 { font-size:0.8em; color:var(--primary); text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px; }
+.wiz-review-row { display:flex; justify-content:space-between; padding:3px 0; font-size:0.88em; border-bottom:1px solid rgba(71,85,105,0.15); }
+.wiz-review-row .lbl { color:var(--text2); }
+/* ── PRODUCT DETAIL TABS ── */
+.pd-tabs { display:flex; gap:2px; margin-bottom:16px; }
+.pd-tab { padding:8px 16px; font-size:0.85em; font-weight:600; color:var(--text2); cursor:pointer; border:none; background:var(--surface); border-radius:6px 6px 0 0; }
+.pd-tab.active { color:var(--primary); background:var(--surface); border-bottom:2px solid var(--primary); }
+.pd-tab:hover { color:var(--text); }
+.pd-section { background:var(--surface); border:1px solid var(--border); border-radius:8px; margin-bottom:8px; overflow:hidden; }
+.pd-section-header { padding:12px 16px; display:flex; align-items:center; gap:10px; cursor:pointer; }
+.pd-section-header:hover { background:rgba(139,92,246,0.04); }
+.pd-section-header .icon { width:28px; height:28px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:0.85em; }
+.pd-section-header h4 { font-size:0.9em; font-weight:600; flex:1; }
+.pd-section-header .count { font-size:0.8em; color:var(--text2); }
+.pd-section-body { padding:0 16px 14px; display:none; }
+.pd-section.open .pd-section-body { display:block; }
 </style>
 </head>
 <body>
@@ -185,6 +212,7 @@ textarea { resize:vertical; min-height:80px; }
 
 <!-- ═══════ PRODUCTS ═══════ -->
 <div class="panel" id="panel-products">
+  <!-- LIST VIEW -->
   <div id="productList">
     <div class="toolbar">
       <input type="text" class="search-input" placeholder="Buscar produto..." id="productSearch" oninput="loadProducts()">
@@ -196,13 +224,33 @@ textarea { resize:vertical; min-height:80px; }
         <option value="DESCONTINUADO">Descontinuado</option>
       </select>
       <div class="spacer"></div>
-      <button class="btn btn-primary" onclick="openProductModal()">+ NOVO PRODUTO</button>
+      <button class="btn btn-primary" onclick="showWizard()">+ NOVO PRODUTO</button>
     </div>
     <table class="data-table">
       <thead><tr><th>NOME</th><th>CODIGO</th><th>FAMILIA</th><th>STATUS</th><th>VERSAO</th><th>ATUALIZADO</th><th></th></tr></thead>
       <tbody id="productTableBody"><tr><td colspan="7" style="color:var(--text2);text-align:center;padding:40px;">Carregando...</td></tr></tbody>
     </table>
   </div>
+
+  <!-- WIZARD CREATE -->
+  <div id="productWizard" style="display:none;">
+    <div class="toolbar">
+      <button class="btn btn-secondary" onclick="closeWizard()">← VOLTAR</button>
+      <h3 style="font-size:1.1em;margin-left:12px;">NOVO PRODUTO REVENUE CLOUD</h3>
+    </div>
+    <!-- Progress bar -->
+    <div style="display:flex;gap:2px;margin-bottom:24px;" id="wizardProgress"></div>
+    <!-- Step container -->
+    <div id="wizardStepContent" style="max-width:800px;"></div>
+    <!-- Nav buttons -->
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;max-width:800px;">
+      <button class="btn btn-secondary" id="wizPrev" onclick="wizardNav(-1)">ANTERIOR</button>
+      <button class="btn btn-primary" id="wizNext" onclick="wizardNav(1)">PROXIMO</button>
+      <button class="btn btn-primary" id="wizSave" onclick="wizardSave()" style="display:none;background:var(--green);">SALVAR PRODUTO</button>
+    </div>
+  </div>
+
+  <!-- DETAIL VIEW -->
   <div id="productDetail" style="display:none;"></div>
 </div>
 
@@ -405,6 +453,206 @@ async function loadStats() {
 }
 
 // ── PRODUCTS ──
+const wizardSteps = [
+  { id:'identity', title:'IDENTIDADE', desc:'Informações essenciais do produto',
+    fields:[
+      {id:'productName',label:'NOME DO PRODUTO',type:'text',required:true,placeholder:'Ex: Link MPLS Dedicado 100Mbps',full:true},
+      {id:'productCode',label:'CODIGO',type:'text',placeholder:'Ex: MPLS-100'},
+      {id:'productSKU',label:'SKU',type:'text',placeholder:'Ex: SKU-NET-001'},
+      {id:'productFamily',label:'FAMILIA',type:'select',options:['--Selecione--','Connectivity','Internet','Cloud','IoT','UCaaS','Security','Managed Services']},
+      {id:'recordType',label:'RECORD TYPE',type:'select',options:['Commercial','Internal','Sample']},
+      {id:'productDescription',label:'DESCRICAO',type:'textarea',placeholder:'Descrição detalhada do produto...',full:true},
+    ]},
+  { id:'classification', title:'CLASSIFICACAO', desc:'Comportamento comercial e modelo de venda',
+    fields:[
+      {id:'productType',label:'TIPO DO PRODUTO',type:'select',options:['--None--','Base','Add-On','Bundle','Component']},
+      {id:'sellingModel',label:'SELLING MODEL',type:'select',options:['--None--','One-Time','Evergreen','Term-Based']},
+      {id:'configureDuringSale',label:'CONFIGURAR DURANTE VENDA',type:'select',options:['--None--','Allowed','Required','Not Allowed']},
+      {id:'sellOnlyWithOthers',label:'VENDER APENAS COM OUTROS',type:'bool',default:false},
+      {id:'quantityUOM',label:'UNIDADE DE MEDIDA',type:'select',options:['--None--','Each','Users','GB','Mbps','Hours','Licenses','Connections']},
+      {id:'basedOn',label:'BASED ON (CLASSIFICATION)',type:'text',placeholder:'Product Classification (opcional)'},
+    ]},
+  { id:'lifecycle', title:'CICLO DE VIDA', desc:'Datas e estado do produto no catálogo',
+    fields:[
+      {id:'isActive',label:'ATIVO',type:'bool',default:true},
+      {id:'isAssetizable',label:'ASSETIZABLE',type:'bool',default:true},
+      {id:'availabilityDate',label:'DATA DISPONIBILIDADE',type:'date'},
+      {id:'endOfLifeDate',label:'END OF LIFE',type:'date'},
+      {id:'discontinuedDate',label:'DATA DESCONTINUACAO',type:'date'},
+      {id:'displayURL',label:'DISPLAY URL',type:'text',placeholder:'URL de exibição (opcional)'},
+    ]},
+  { id:'commercial', title:'COMERCIAL', desc:'Precificação e política fiscal',
+    fields:[
+      {id:'listPrice',label:'PRECO DE LISTA',type:'number',placeholder:'Ex: 4500.00'},
+      {id:'priceCurrency',label:'MOEDA',type:'select',options:['BRL','USD','EUR'],default:'BRL'},
+      {id:'chargeType',label:'TIPO DE COBRANCA',type:'select',options:['--None--','One-Time','Recurring','Usage']},
+      {id:'billingFrequency',label:'FREQUENCIA',type:'select',options:['--None--','Monthly','Quarterly','Semi-Annual','Annual']},
+      {id:'taxPolicy',label:'POLITICA FISCAL',type:'text',placeholder:'Tax Policy (opcional)'},
+      {id:'pricebook',label:'PRICEBOOK',type:'text',placeholder:'Standard Price Book'},
+    ]},
+  { id:'review', title:'REVIEW', desc:'Revise todos os dados antes de salvar' }
+];
+
+let wizStep = 0;
+let wizData = {};
+
+function showWizard() {
+  document.getElementById('productList').style.display = 'none';
+  document.getElementById('productWizard').style.display = 'block';
+  wizStep = 0;
+  wizData = {};
+  renderWizardStep();
+}
+
+function closeWizard() {
+  document.getElementById('productWizard').style.display = 'none';
+  document.getElementById('productList').style.display = 'block';
+}
+
+function renderWizardStep() {
+  // Progress bar
+  const prog = document.getElementById('wizardProgress');
+  prog.innerHTML = wizardSteps.map((s,i) => 
+    `<div class="wiz-progress-step ${i<wizStep?'done':''} ${i===wizStep?'active':''}" title="${s.title}"></div>`
+  ).join('');
+
+  // Buttons
+  document.getElementById('wizPrev').style.display = wizStep > 0 ? '' : 'none';
+  document.getElementById('wizNext').style.display = wizStep < wizardSteps.length-1 ? '' : 'none';
+  document.getElementById('wizSave').style.display = wizStep === wizardSteps.length-1 ? '' : 'none';
+
+  const step = wizardSteps[wizStep];
+  const container = document.getElementById('wizardStepContent');
+
+  if (step.id === 'review') {
+    collectWizData();
+    container.innerHTML = renderWizardReview();
+    return;
+  }
+
+  const fieldsHtml = step.fields.map(f => {
+    const val = wizData[f.id] || f.default || '';
+    const cls = f.full ? 'full' : '';
+    let input = '';
+    if (f.type === 'select') {
+      const opts = (f.options||[]).map(o => `<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('');
+      input = `<select id="wiz-${f.id}" class="wiz-field">${opts}</select>`;
+    } else if (f.type === 'bool') {
+      input = `<select id="wiz-${f.id}" class="wiz-field">
+        <option value="true" ${val===true||val==='true'?'selected':''}>Sim</option>
+        <option value="false" ${val===false||val==='false'||!val?'selected':''}>Não</option></select>`;
+    } else if (f.type === 'textarea') {
+      input = `<textarea id="wiz-${f.id}" class="wiz-field" rows="3" placeholder="${f.placeholder||''}">${esc(val)}</textarea>`;
+    } else if (f.type === 'date') {
+      input = `<input type="date" id="wiz-${f.id}" class="wiz-field" value="${val}">`;
+    } else if (f.type === 'number') {
+      input = `<input type="number" step="0.01" id="wiz-${f.id}" class="wiz-field" placeholder="${f.placeholder||''}" value="${val}">`;
+    } else {
+      input = `<input type="text" id="wiz-${f.id}" class="wiz-field" placeholder="${f.placeholder||''}" value="${esc(val)}">`;
+    }
+    return `<div class="${cls}"><div class="form-group"><label>${f.label}${f.required?' <span style="color:var(--red);">*</span>':''}</label>${input}</div></div>`;
+  }).join('');
+
+  container.innerHTML = `<div class="wiz-step-card">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;">${wizStep+1}</div>
+      <div><div class="wiz-step-title">${step.title}</div><div class="wiz-step-desc">${step.desc}</div></div>
+    </div>
+    <div class="wiz-grid">${fieldsHtml}</div>
+  </div>`;
+}
+
+function collectWizData() {
+  document.querySelectorAll('.wiz-field').forEach(el => {
+    const key = el.id.replace('wiz-','');
+    let val = el.value;
+    if (el.tagName === 'SELECT' && (val === 'true' || val === 'false')) val = val === 'true';
+    if (val !== '' && val !== '--None--' && val !== '--Selecione--') wizData[key] = val;
+  });
+}
+
+function wizardNav(dir) {
+  collectWizData();
+  if (dir > 0 && wizStep === 0 && !wizData.productName) { alert('Nome do produto é obrigatório'); return; }
+  wizStep = Math.max(0, Math.min(wizardSteps.length-1, wizStep + dir));
+  renderWizardStep();
+}
+
+function renderWizardReview() {
+  const sections = wizardSteps.filter(s => s.id !== 'review').map(step => {
+    const rows = (step.fields||[]).map(f => {
+      let val = wizData[f.id];
+      if (val === undefined || val === '') return '';
+      if (typeof val === 'boolean') val = val ? '<span style="color:var(--green);">Sim</span>' : '<span style="color:var(--red);">Não</span>';
+      return `<div class="wiz-review-row"><span class="lbl">${f.label}</span><span>${val}</span></div>`;
+    }).filter(Boolean).join('');
+    if (!rows) return '';
+    return `<div class="wiz-review-section"><h4>${step.title}</h4>${rows}</div>`;
+  }).join('');
+
+  // Build template_json preview
+  const tj = buildProductTemplateJson();
+  return `<div class="wiz-step-card">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--green);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;">✓</div>
+      <div><div class="wiz-step-title">REVIEW</div><div class="wiz-step-desc">Confira os dados e salve o produto</div></div>
+    </div>
+    ${sections}
+    <details style="margin-top:12px;"><summary style="cursor:pointer;color:var(--text2);font-size:0.85em;">VER JSON REVENUE CLOUD</summary>
+      <pre style="margin-top:8px;background:var(--bg);padding:12px;border-radius:6px;font-size:0.8em;color:var(--cyan);white-space:pre-wrap;max-height:300px;overflow-y:auto;">${esc(JSON.stringify(tj,null,2))}</pre>
+    </details>
+  </div>`;
+}
+
+function buildProductTemplateJson() {
+  const d = wizData;
+  const template = {
+    product: {
+      Name: d.productName, ProductCode: d.productCode, StockKeepingUnit: d.productSKU,
+      Family: d.productFamily, Description: d.productDescription,
+      IsActive: d.isActive !== false, QuantityUnitOfMeasure: d.quantityUOM,
+    },
+    recordType: d.recordType,
+    classification: {
+      productType: d.productType, sellingModel: d.sellingModel,
+      configureDuringSale: d.configureDuringSale, sellOnlyWithOthers: d.sellOnlyWithOthers,
+      basedOn: d.basedOn,
+    },
+    lifecycle: {
+      isAssetizable: d.isAssetizable, availabilityDate: d.availabilityDate,
+      endOfLifeDate: d.endOfLifeDate, discontinuedDate: d.discontinuedDate,
+      displayURL: d.displayURL,
+    },
+    pricing: {
+      listPrice: d.listPrice ? parseFloat(d.listPrice) : null, currency: d.priceCurrency,
+      chargeType: d.chargeType, billingFrequency: d.billingFrequency,
+      taxPolicy: d.taxPolicy, pricebook: d.pricebook,
+    },
+  };
+  // Clean nulls/undefined
+  const clean = (obj) => { for (const k in obj) { if (obj[k]===null||obj[k]===undefined||obj[k]==='') delete obj[k]; else if (typeof obj[k]==='object'&&!Array.isArray(obj[k])) { clean(obj[k]); if(!Object.keys(obj[k]).length) delete obj[k]; } } };
+  clean(template);
+  return template;
+}
+
+async function wizardSave() {
+  collectWizData();
+  if (!wizData.productName) { alert('Nome do produto é obrigatório'); return; }
+  const template = buildProductTemplateJson();
+  const body = {
+    name: wizData.productName,
+    product_code: wizData.productCode || '',
+    product_family: wizData.productFamily || '',
+    description: wizData.productDescription || '',
+    template_json: template,
+    ai_input: '', ai_output: ''
+  };
+  await api('/products', { method: 'POST', body });
+  closeWizard();
+  loadProducts();
+}
+
+// ── PRODUCT LIST ──
 async function loadProducts() {
   const search = document.getElementById('productSearch')?.value || '';
   const status = document.getElementById('productFilterStatus')?.value || '';
@@ -428,69 +676,107 @@ async function loadProducts() {
   </tr>`).join('');
 }
 
+// ── PRODUCT DETAIL (Tabbed View) ──
 async function viewProduct(id) {
   const data = await api('/products/' + id);
   document.getElementById('productList').style.display = 'none';
   const det = document.getElementById('productDetail');
   det.style.display = 'block';
   const v = data.versions?.[0];
-  const template = v?.template_json || {};
-  const mapping = template.revenue_cloud_mapping || [];
+  const t = v?.template_json || {};
+
+  // Build related items from template
+  const pricing = t.pricing || {};
+  const classification = t.classification || {};
+  const lifecycle = t.lifecycle || {};
+  const product = t.product || {};
+
+  const relatedSections = [
+    { icon:'👥', color:'var(--blue)', title:'Parent Products', count:0, items:[] },
+    { icon:'🧩', color:'var(--green)', title:'Child Components', count:0, items:[], action:'Adicionar' },
+    { icon:'💳', color:'var(--primary)', title:'Product Selling Model', count: classification.sellingModel?1:0,
+      items: classification.sellingModel ? [`<div style="padding:8px;font-size:0.9em;"><strong>${classification.sellingModel}</strong> ${classification.configureDuringSale?'— Config: '+classification.configureDuringSale:''}</div>`] : [] },
+    { icon:'💰', color:'var(--orange)', title:'Price Books', count: pricing.listPrice?1:0,
+      items: pricing.listPrice ? [`<div style="padding:8px;font-size:0.9em;display:flex;justify-content:space-between;">
+        <span>${pricing.pricebook||'Standard'}</span>
+        <span><strong>${pricing.currency||'BRL'} ${pricing.listPrice}</strong> — ${pricing.chargeType||'?'} ${pricing.billingFrequency||''}</span>
+      </div>`] : [] },
+    { icon:'📋', color:'var(--cyan)', title:'Categories', count:0, items:[] },
+    { icon:'🏷', color:'#f472b6', title:'Attributes', count: Object.keys(product).filter(k=>!['Name','Description'].includes(k)).length,
+      items: Object.entries(product).filter(([k])=>!['Name','Description'].includes(k)).map(([k,v]) =>
+        `<div style="padding:4px 8px;font-size:0.88em;display:flex;justify-content:space-between;border-bottom:1px solid rgba(71,85,105,0.15);">
+          <span style="color:var(--text2);">${k}</span><span>${typeof v==='boolean'?(v?'Sim':'Não'):v}</span></div>`) },
+  ];
 
   det.innerHTML = `
     <div class="toolbar">
       <button class="btn btn-secondary" onclick="closeProductDetail()">← VOLTAR</button>
-      <h3 style="font-size:1.1em;margin-left:12px;">${esc(data.name)}</h3>
-      <span class="badge badge-${data.status.toLowerCase()}" style="margin-left:8px;">${data.status}</span>
+      <div style="margin-left:12px;">
+        <div style="font-size:1.15em;font-weight:700;">${esc(data.name)}</div>
+        <div style="font-size:0.8em;color:var(--text2);">${esc(data.product_code||'')} ${data.product_family?'— '+data.product_family:''}</div>
+      </div>
+      <span class="badge badge-${data.status.toLowerCase()}" style="margin-left:12px;">${data.status}</span>
       <div class="spacer"></div>
       <select onchange="changeProductStatus(${data.id}, this.value)" style="max-width:180px;">
         <option value="">Alterar status...</option>
-        <option value="RASCUNHO">Rascunho</option>
-        <option value="VALIDADO">Validado</option>
-        <option value="PROVISIONADO">Provisionado</option>
-        <option value="DESCONTINUADO">Descontinuado</option>
+        <option value="RASCUNHO">Rascunho</option><option value="VALIDADO">Validado</option>
+        <option value="PROVISIONADO">Provisionado</option><option value="DESCONTINUADO">Descontinuado</option>
       </select>
     </div>
-    <div class="product-detail">
-      <div class="product-main">
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-            <div><span style="font-size:0.75em;color:var(--text2);text-transform:uppercase;">CODIGO</span><div style="font-weight:600;">${esc(data.product_code || '-')}</div></div>
-            <div><span style="font-size:0.75em;color:var(--text2);text-transform:uppercase;">FAMILIA</span><div style="font-weight:600;">${esc(data.product_family || '-')}</div></div>
-            <div><span style="font-size:0.75em;color:var(--text2);text-transform:uppercase;">VERSAO ATUAL</span><div style="font-weight:600;">v${data.current_version}</div></div>
+
+    <div class="pd-tabs">
+      <div class="pd-tab active" onclick="switchPdTab(this,'pd-related')">Related</div>
+      <div class="pd-tab" onclick="switchPdTab(this,'pd-details')">Details</div>
+      <div class="pd-tab" onclick="switchPdTab(this,'pd-versions')">Versions</div>
+    </div>
+
+    <div id="pd-related">
+      ${relatedSections.map(s => `
+        <div class="pd-section${s.items.length?' open':''}">
+          <div class="pd-section-header" onclick="this.parentElement.classList.toggle('open')">
+            <div class="icon" style="background:${s.color}22;color:${s.color};">${s.icon}</div>
+            <h4>${s.title}</h4>
+            <span class="count">(${s.count})</span>
           </div>
-          ${data.description ? `<div style="margin-top:12px;font-size:0.9em;color:var(--text2);">${esc(data.description)}</div>` : ''}
-        </div>
-        <h4 style="font-size:0.85em;color:var(--text2);text-transform:uppercase;margin-bottom:8px;">MAPEAMENTO REVENUE CLOUD</h4>
-        ${mapping.length ? mapping.map(m => `
-          <div class="mapping-card">
-            <div class="component">${esc(m.component || '')}</div>
-            <div class="obj-name">${esc(m.sf_object || '')}</div>
-            <div class="fields">${m.sf_fields ? Object.entries(m.sf_fields).map(([k,v]) => `<span style="margin-right:12px;"><strong>${k}:</strong> ${v}</span>`).join('') : ''}</div>
-            ${m.notes ? `<div style="margin-top:4px;font-size:0.8em;color:var(--orange);">${esc(m.notes)}</div>` : ''}
-          </div>`).join('') : '<div style="color:var(--text2);padding:20px;text-align:center;">Nenhum mapeamento definido</div>'}
+          <div class="pd-section-body">${s.items.length ? s.items.join('') : '<div style="color:var(--text2);font-size:0.85em;padding:8px;">Nenhum item</div>'}</div>
+        </div>`).join('')}
+    </div>
 
-        ${template.attributes?.length ? `<h4 style="font-size:0.85em;color:var(--text2);text-transform:uppercase;margin:16px 0 8px;">ATRIBUTOS</h4>
-          ${template.attributes.map(a => `<div class="mapping-card"><strong>${esc(a.name)}</strong> <span class="tag" style="margin-left:8px;">${a.source}</span>
-          ${a.values?.length ? `<div style="margin-top:4px;font-size:0.85em;color:var(--text2);">${a.values.join(', ')}</div>` : ''}</div>`).join('')}` : ''}
-
-        ${template.pricing?.length ? `<h4 style="font-size:0.85em;color:var(--text2);text-transform:uppercase;margin:16px 0 8px;">PRECIFICACAO</h4>
-          ${template.pricing.map(p => `<div class="mapping-card"><strong>${esc(p.model_name)}</strong> <span class="badge badge-validado">${p.charge_type}</span>
-          <div style="margin-top:4px;font-size:0.85em;color:var(--text2);">${JSON.stringify(p.config||{})}</div></div>`).join('')}` : ''}
-
-        ${data.relations?.length ? `<h4 style="font-size:0.85em;color:var(--text2);text-transform:uppercase;margin:16px 0 8px;">RELACOES</h4>
-          ${data.relations.map(r => `<div class="mapping-card"><span class="badge badge-rascunho">${r.relation_type}</span> → <strong>${esc(r.target_name)}</strong></div>`).join('')}` : ''}
-      </div>
-      <div class="product-sidebar">
-        <h4 style="font-size:0.85em;color:var(--text2);text-transform:uppercase;margin-bottom:8px;">VERSOES</h4>
-        ${(data.versions||[]).map(v => `
-          <div class="version-item ${v.version_number === data.current_version ? 'active' : ''}">
-            <div class="v-num">v${v.version_number}</div>
-            <div class="v-date">${new Date(v.created_at).toLocaleString('pt-BR')}</div>
-            ${v.notes ? `<div style="font-size:0.8em;color:var(--text2);margin-top:4px;">${esc(v.notes)}</div>` : ''}
+    <div id="pd-details" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        ${Object.entries({...product,...(lifecycle||{})}).map(([k,v]) => `
+          <div style="background:var(--surface);padding:10px 14px;border-radius:6px;border:1px solid var(--border);">
+            <div style="font-size:0.75em;color:var(--text2);text-transform:uppercase;">${k}</div>
+            <div style="font-weight:500;margin-top:2px;">${typeof v==='boolean'?(v?'<span style="color:var(--green);">Sim</span>':'<span style="color:var(--red);">Não</span>'):esc(String(v||'-'))}</div>
           </div>`).join('')}
       </div>
-    </div>`;
+      <details style="margin-top:16px;"><summary style="cursor:pointer;color:var(--text2);font-size:0.85em;">JSON COMPLETO</summary>
+        <pre style="margin-top:8px;background:var(--bg);padding:12px;border-radius:6px;font-size:0.8em;color:var(--cyan);white-space:pre-wrap;">${esc(JSON.stringify(t,null,2))}</pre>
+      </details>
+    </div>
+
+    <div id="pd-versions" style="display:none;">
+      ${(data.versions||[]).map(v => `
+        <div class="pd-section open" style="margin-bottom:6px;">
+          <div class="pd-section-header">
+            <div class="icon" style="background:var(--primary-bg);color:var(--primary);font-weight:700;">v${v.version_number}</div>
+            <h4>${new Date(v.created_at).toLocaleString('pt-BR')}</h4>
+            ${v.version_number===data.current_version?'<span class="badge badge-provisionado">ATUAL</span>':''}
+          </div>
+          <div class="pd-section-body">${v.notes?'<div style="font-size:0.9em;">'+esc(v.notes)+'</div>':'<div style="color:var(--text2);font-size:0.85em;">Sem notas</div>'}</div>
+        </div>`).join('')}
+    </div>
+  `;
+}
+
+function switchPdTab(el, panelId) {
+  const det = document.getElementById('productDetail');
+  det.querySelectorAll('.pd-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  ['pd-related','pd-details','pd-versions'].forEach(id => {
+    const p = det.querySelector('#'+id);
+    if (p) p.style.display = id===panelId ? 'block' : 'none';
+  });
 }
 
 function closeProductDetail() {
@@ -508,28 +794,6 @@ async function deleteProduct(id) {
   if (!confirm('Excluir este produto?')) return;
   await api('/products/' + id, { method: 'DELETE' });
   loadProducts();
-}
-
-function openProductModal() {
-  openModal('NOVO PRODUTO', `
-    <div class="form-group"><label>NOME</label><input type="text" id="m-prd-name" placeholder="Nome do produto"></div>
-    <div class="form-group"><label>CODIGO</label><input type="text" id="m-prd-code" placeholder="Código do produto"></div>
-    <div class="form-group"><label>FAMILIA</label><input type="text" id="m-prd-family" placeholder="Ex: Connectivity, Cloud, IoT"></div>
-    <div class="form-group"><label>DESCRICAO</label><textarea id="m-prd-desc" rows="3" placeholder="Descrição do produto"></textarea></div>
-  `, `<button class="btn btn-secondary" onclick="closeModal()">CANCELAR</button>
-     <button class="btn btn-primary" onclick="saveNewProduct()">SALVAR</button>`);
-}
-
-async function saveNewProduct() {
-  const body = {
-    name: document.getElementById('m-prd-name').value,
-    product_code: document.getElementById('m-prd-code').value,
-    product_family: document.getElementById('m-prd-family').value,
-    description: document.getElementById('m-prd-desc').value
-  };
-  if (!body.name) return alert('Nome é obrigatório');
-  await api('/products', { method: 'POST', body });
-  closeModal(); loadProducts();
 }
 
 // ── AI MODELING ──
