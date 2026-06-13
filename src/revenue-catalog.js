@@ -496,8 +496,10 @@ export function registerRevenueCatalogRoutes(app) {
 
   app.post('/api/rc/ai/model', async (req, res) => {
     try {
-      const API_KEY = process.env.ANTHROPIC_KEY;
-      if (!API_KEY) return res.status(500).json({ error: 'ANTHROPIC_KEY não configurada' });
+      const ANTHROPIC_KEY = process.env.ANTHROPIC_KEY;
+      const GROK_KEY = process.env.GROK_KEY;
+
+      if (!ANTHROPIC_KEY && !GROK_KEY) return res.status(500).json({ error: 'Nenhuma chave de AI configurada' });
 
       const { description, product_family } = req.body;
       if (!description) return res.status(400).json({ error: 'Descrição do produto é obrigatória' });
@@ -585,32 +587,61 @@ FORMATO DE RESPOSTA (JSON):
   "implementation_notes": "Notas de implementação"
 }`;
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': API_KEY,
-          'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 4096,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: `Modele o seguinte produto Revenue Cloud:\n\n${description}${product_family ? `\n\nFamília sugerida: ${product_family}` : ''}` }]
-        })
-      });
+      const userMsg = `Modele o seguinte produto Revenue Cloud:\n\n${description}${product_family ? `\n\nFamília sugerida: ${product_family}` : ''}`;
 
-      const data = await response.json();
-      if (data.error) return res.status(500).json({ error: data.error.message });
+      let aiText = '';
+      let modelUsed = 'unknown';
+      let tokensIn = 0, tokensOut = 0;
 
-      const aiText = data.content?.[0]?.text || '';
+      // Try Anthropic first, fallback to Grok
+      let usedFallback = false;
+      if (ANTHROPIC_KEY) {
+        try {
+          const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+            body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4096, system: systemPrompt, messages: [{ role: 'user', content: userMsg }] })
+          });
+          const data = await response.json();
+          if (data.error) throw new Error(data.error.message || 'Anthropic error');
+          aiText = data.content?.[0]?.text || '';
+          modelUsed = 'claude-sonnet-4-6';
+          tokensIn = data.usage?.input_tokens || 0;
+          tokensOut = data.usage?.output_tokens || 0;
+        } catch (anthropicErr) {
+          console.log('[RC] Anthropic failed, falling back to Grok:', anthropicErr.message);
+          usedFallback = true;
+        }
+      } else {
+        usedFallback = true;
+      }
+
+      if (usedFallback && GROK_KEY) {
+        const response = await fetch('https://api.x.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROK_KEY}` },
+          body: JSON.stringify({
+            model: 'grok-3',
+            max_tokens: 4096,
+            messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMsg }]
+          })
+        });
+        const data = await response.json();
+        if (data.error) return res.status(500).json({ error: data.error.message || JSON.stringify(data.error) });
+        aiText = data.choices?.[0]?.message?.content || '';
+        modelUsed = 'grok-3 (fallback)';
+        tokensIn = data.usage?.prompt_tokens || 0;
+        tokensOut = data.usage?.completion_tokens || 0;
+      } else if (usedFallback && !GROK_KEY) {
+        return res.status(500).json({ error: 'Anthropic indisponível e GROK_KEY não configurada' });
+      }
 
       // Track token usage
       try {
         await pool.query(
           `INSERT INTO token_usage (user_id, command, model, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens)
            VALUES (1, 'rc_model', $1, $2, $3, 0, 0)`,
-          ['claude-sonnet-4-6', data.usage?.input_tokens || 0, data.usage?.output_tokens || 0]
+          [modelUsed, tokensIn, tokensOut]
         );
       } catch {}
 
@@ -626,7 +657,8 @@ FORMATO DE RESPOSTA (JSON):
       res.json({
         template,
         ai_raw: aiText,
-        tokens: { input: data.usage?.input_tokens, output: data.usage?.output_tokens },
+        model: modelUsed,
+        tokens: { input: tokensIn, output: tokensOut },
         kb_used: kbResult.rows.length > 0
       });
     } catch (err) { res.status(500).json({ error: err.message }); }
