@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revenue Cloud Catalog Builder — Ever i9</title>
+<style>
+:root {
+  --bg: #0f172a; --surface: #1e293b; --surface2: #334155;
+  --border: #475569; --text: #e2e8f0; --text2: #94a3b8;
+  --primary: #8b5cf6; --primary-dark: #7c3aed; --primary-bg: rgba(139,92,246,0.1);
+  --green: #22c55e; --green-bg: rgba(34,197,94,0.12);
+  --blue: #3b82f6; --blue-bg: rgba(59,130,246,0.12);
+  --orange: #f59e0b; --orange-bg: rgba(245,158,11,0.12);
+  --red: #ef4444; --red-bg: rgba(239,68,68,0.12);
+  --cyan: #06b6d4;
+  --radius: 8px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+/* ── HEADER ── */
+.header { background:linear-gradient(135deg,#430098,#6C44A0); padding:16px 24px; display:flex; align-items:center; gap:16px; }
+.header h1 { font-size:1.3em; font-weight:700; color:white; }
+.header .subtitle { font-size:0.85em; color:rgba(255,255,255,0.7); margin-left:auto; }
+.header .back-btn { color:rgba(255,255,255,0.8); text-decoration:none; font-size:0.9em; padding:6px 14px; border:1px solid rgba(255,255,255,0.3); border-radius:var(--radius); }
+.header .back-btn:hover { background:rgba(255,255,255,0.1); }
+
+/* ── TABS ── */
+.tabs { display:flex; gap:2px; background:var(--surface); padding:4px 16px; border-bottom:1px solid var(--border); overflow-x:auto; }
+.tab { padding:10px 18px; font-size:0.85em; font-weight:600; color:var(--text2); cursor:pointer; border:none; background:none; border-bottom:2px solid transparent; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; }
+.tab:hover { color:var(--text); }
+.tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+
+/* ── PANELS ── */
+.panel { display:none; padding:20px; }
+.panel.active { display:block; }
+
+/* ── STATS ── */
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:24px; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; }
+.stat-card .label { font-size:0.75em; color:var(--text2); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+.stat-card .value { font-size:1.8em; font-weight:700; }
+.stat-card .value.purple { color:var(--primary); }
+.stat-card .value.green { color:var(--green); }
+.stat-card .value.blue { color:var(--blue); }
+.stat-card .value.orange { color:var(--orange); }
+
+/* ── TABLE ── */
+.data-table { width:100%; border-collapse:collapse; }
+.data-table th { text-align:left; padding:10px 12px; font-size:0.75em; color:var(--text2); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--border); background:var(--surface); }
+.data-table td { padding:10px 12px; border-bottom:1px solid rgba(71,85,105,0.3); font-size:0.9em; }
+.data-table tr:hover td { background:rgba(139,92,246,0.04); }
+
+/* ── BADGES ── */
+.badge { display:inline-block; padding:2px 10px; border-radius:12px; font-size:0.75em; font-weight:600; }
+.badge-rascunho { background:var(--orange-bg); color:var(--orange); }
+.badge-validado { background:var(--blue-bg); color:var(--blue); }
+.badge-provisionado { background:var(--green-bg); color:var(--green); }
+.badge-descontinuado { background:var(--red-bg); color:var(--red); }
+
+/* ── BUTTONS ── */
+.btn { padding:8px 16px; border:none; border-radius:var(--radius); font-size:0.85em; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+.btn-primary { background:var(--primary); color:white; }
+.btn-primary:hover { background:var(--primary-dark); }
+.btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+.btn-secondary:hover { background:var(--border); }
+.btn-danger { background:var(--red); color:white; }
+.btn-danger:hover { opacity:0.85; }
+.btn-sm { padding:5px 10px; font-size:0.8em; }
+.btn-icon { background:none; border:none; color:var(--text2); cursor:pointer; padding:4px; }
+.btn-icon:hover { color:var(--primary); }
+
+/* ── FORMS ── */
+.form-group { margin-bottom:14px; }
+.form-group label { display:block; font-size:0.8em; color:var(--text2); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.3px; }
+input[type="text"], input[type="number"], select, textarea {
+  width:100%; padding:10px 12px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius);
+  color:var(--text); font-size:0.9em; font-family:inherit;
+}
+input:focus, select:focus, textarea:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 2px rgba(139,92,246,0.2); }
+textarea { resize:vertical; min-height:80px; }
+
+/* ── TOOLBAR ── */
+.toolbar { display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+.toolbar .spacer { flex:1; }
+.search-input { max-width:280px; }
+
+/* ── CARDS ── */
+.lib-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:12px; }
+.lib-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; position:relative; }
+.lib-card h4 { font-size:0.95em; margin-bottom:6px; color:var(--text); }
+.lib-card .meta { font-size:0.8em; color:var(--text2); margin-bottom:8px; }
+.lib-card .tags { display:flex; gap:4px; flex-wrap:wrap; }
+.lib-card .tag { background:var(--primary-bg); color:var(--primary); padding:2px 8px; border-radius:4px; font-size:0.75em; }
+.lib-card .actions { position:absolute; top:12px; right:12px; display:flex; gap:4px; }
+
+/* ── MODAL ── */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center; }
+.modal-overlay.open { display:flex; }
+.modal { background:var(--surface); border:1px solid var(--border); border-radius:12px; width:90%; max-width:700px; max-height:85vh; overflow-y:auto; }
+.modal-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.modal-header h3 { font-size:1.1em; }
+.modal-body { padding:20px; }
+.modal-footer { padding:12px 20px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end; }
+
+/* ── AI PROMPT ── */
+.ai-section { background:var(--surface); border:1px solid var(--primary); border-radius:var(--radius); padding:20px; margin-bottom:20px; }
+.ai-section h3 { color:var(--primary); margin-bottom:12px; font-size:1em; display:flex; align-items:center; gap:8px; }
+.ai-result { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-top:12px; max-height:500px; overflow-y:auto; }
+.ai-result pre { white-space:pre-wrap; font-size:0.85em; font-family:'Cascadia Code','Fira Code',monospace; color:var(--text2); }
+.ai-loading { display:none; color:var(--primary); font-size:0.9em; margin-top:8px; }
+.ai-loading.active { display:flex; align-items:center; gap:8px; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.ai-loading .dot { width:8px; height:8px; border-radius:50%; background:var(--primary); animation:pulse 1.2s infinite; }
+.ai-loading .dot:nth-child(2) { animation-delay:0.2s; }
+.ai-loading .dot:nth-child(3) { animation-delay:0.4s; }
+
+/* ── PRODUCT DETAIL ── */
+.product-detail { display:grid; grid-template-columns:1fr 320px; gap:20px; }
+.product-main { min-width:0; }
+.product-sidebar { }
+.version-item { padding:10px; border:1px solid var(--border); border-radius:var(--radius); margin-bottom:8px; cursor:pointer; }
+.version-item:hover { border-color:var(--primary); }
+.version-item.active { border-color:var(--primary); background:var(--primary-bg); }
+.version-item .v-num { font-weight:700; color:var(--primary); }
+.version-item .v-date { font-size:0.8em; color:var(--text2); }
+.mapping-card { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:12px; margin-bottom:8px; }
+.mapping-card .obj-name { color:var(--cyan); font-weight:600; font-size:0.9em; }
+.mapping-card .component { color:var(--text2); font-size:0.85em; margin-bottom:4px; }
+.mapping-card .fields { font-size:0.8em; color:var(--text2); }
+
+/* ── RESPONSIVE ── */
+@media (max-width:768px) {
+  .product-detail { grid-template-columns:1fr; }
+  .stats-grid { grid-template-columns:repeat(2,1fr); }
+  .lib-grid { grid-template-columns:1fr; }
+  .tabs { padding:4px 8px; }
+  .tab { padding:8px 12px; font-size:0.8em; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="/" class="back-btn">← Ever i9</a>
+  <h1>REVENUE CLOUD CATALOG BUILDER</h1>
+  <div class="subtitle">Modelagem de Produtos Revenue Cloud</div>
+</div>
+
+<div class="tabs" id="mainTabs">
+  <div class="tab active" data-tab="dashboard">DASHBOARD</div>
+  <div class="tab" data-tab="products">PRODUTOS</div>
+  <div class="tab" data-tab="ai-model">AI MODELING</div>
+  <div class="tab" data-tab="attributes">ATRIBUTOS</div>
+  <div class="tab" data-tab="pricing">PRECIFICACAO</div>
+  <div class="tab" data-tab="bundles">BUNDLES</div>
+  <div class="tab" data-tab="catalog">CATALOGO</div>
+  <div class="tab" data-tab="kb">KNOWLEDGE BASE</div>
+</div>
+
+<!-- ═══════ DASHBOARD ═══════ -->
+<div class="panel active" id="panel-dashboard">
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat-card"><div class="label">PRODUTOS</div><div class="value purple" id="st-products">-</div></div>
+    <div class="stat-card"><div class="label">ATRIBUTOS</div><div class="value blue" id="st-attrs">-</div></div>
+    <div class="stat-card"><div class="label">MODELOS PRICING</div><div class="value green" id="st-pricing">-</div></div>
+    <div class="stat-card"><div class="label">BUNDLES</div><div class="value orange" id="st-bundles">-</div></div>
+    <div class="stat-card"><div class="label">DOCS KB</div><div class="value purple" id="st-kb">-</div></div>
+    <div class="stat-card"><div class="label">CONFIG CATALOGO</div><div class="value blue" id="st-config">-</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div>
+      <h3 style="font-size:0.95em;color:var(--text2);margin-bottom:12px;text-transform:uppercase;">PRODUTOS POR STATUS</h3>
+      <div id="statusChart"></div>
+    </div>
+    <div>
+      <h3 style="font-size:0.95em;color:var(--text2);margin-bottom:12px;text-transform:uppercase;">PRODUTOS POR FAMILIA</h3>
+      <div id="familyChart"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ PRODUCTS ═══════ -->
+<div class="panel" id="panel-products">
+  <div id="productList">
+    <div class="toolbar">
+      <input type="text" class="search-input" placeholder="Buscar produto..." id="productSearch" oninput="loadProducts()">
+      <select id="productFilterStatus" onchange="loadProducts()" style="max-width:160px;">
+        <option value="">Todos os status</option>
+        <option value="RASCUNHO">Rascunho</option>
+        <option value="VALIDADO">Validado</option>
+        <option value="PROVISIONADO">Provisionado</option>
+        <option value="DESCONTINUADO">Descontinuado</option>
+      </select>
+      <div class="spacer"></div>
+      <button class="btn btn-primary" onclick="openProductModal()">+ NOVO PRODUTO</button>
+    </div>
+    <table class="data-table">
+      <thead><tr><th>NOME</th><th>CODIGO</th><th>FAMILIA</th><th>STATUS</th><th>VERSAO</th><th>ATUALIZADO</th><th></th></tr></thead>
+      <tbody id="productTableBody"><tr><td colspan="7" style="color:var(--text2);text-align:center;padding:40px;">Carregando...</td></tr></tbody>
+    </table>
+  </div>
+  <div id="productDetail" style="display:none;"></div>
+</div>
+
+<!-- ═══════ AI MODELING ═══════ -->
+<div class="panel" id="panel-ai-model">
+  <div class="ai-section">
+    <h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 1 7 7c0 2.4-1.2 4.5-3 5.7V17a1 1 0 0 1-1 1h-6a1 1 0 0 1-1-1v-2.3C6.2 13.5 5 11.4 5 9a7 7 0 0 1 7-7z"/><path d="M9 21h6"/><path d="M10 17v4"/><path d="M14 17v4"/></svg> MODELAGEM AI DE PRODUTO</h3>
+    <p style="font-size:0.85em;color:var(--text2);margin-bottom:16px;">Descreva o produto em linguagem natural. A AI vai decompor nos componentes Revenue Cloud e gerar o template de modelagem.</p>
+    <div class="form-group">
+      <label>DESCRICAO DO PRODUTO</label>
+      <textarea id="aiProductDesc" rows="5" placeholder="Ex: Link MPLS dedicado, 100Mbps simétrico. Mensalidade R$4.500, taxa de instalação one-time R$2.000. Add-on de IP fixo por R$150/mês. Contrato mínimo 24 meses com multa proporcional..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>FAMILIA DO PRODUTO (OPCIONAL)</label>
+      <input type="text" id="aiProductFamily" placeholder="Ex: Connectivity, Cloud, IoT, UCaaS">
+    </div>
+    <button class="btn btn-primary" onclick="runAiModeling()" id="aiRunBtn">MODELAR PRODUTO</button>
+    <div class="ai-loading" id="aiLoading">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      <span>AI analisando produto e consultando KB...</span>
+    </div>
+  </div>
+  <div id="aiResultArea" style="display:none;">
+    <div class="toolbar">
+      <h3 style="font-size:1em;">TEMPLATE GERADO</h3>
+      <div class="spacer"></div>
+      <button class="btn btn-primary" onclick="saveAiProduct()" id="aiSaveBtn">SALVAR COMO PRODUTO</button>
+    </div>
+    <div id="aiTemplateView"></div>
+  </div>
+</div>
+
+<!-- ═══════ ATTRIBUTES ═══════ -->
+<div class="panel" id="panel-attributes">
+  <div class="toolbar">
+    <h3 style="font-size:1em;">BIBLIOTECA DE ATRIBUTOS</h3>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" onclick="openAttrModal()">+ NOVO ATRIBUTO</button>
+  </div>
+  <div class="lib-grid" id="attrGrid"><div style="color:var(--text2);padding:40px;text-align:center;">Carregando...</div></div>
+</div>
+
+<!-- ═══════ PRICING ═══════ -->
+<div class="panel" id="panel-pricing">
+  <div class="toolbar">
+    <h3 style="font-size:1em;">MODELOS DE PRECIFICACAO</h3>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" onclick="openPricingModal()">+ NOVO MODELO</button>
+  </div>
+  <div class="lib-grid" id="pricingGrid"><div style="color:var(--text2);padding:40px;text-align:center;">Carregando...</div></div>
+</div>
+
+<!-- ═══════ BUNDLES ═══════ -->
+<div class="panel" id="panel-bundles">
+  <div class="toolbar">
+    <h3 style="font-size:1em;">BIBLIOTECA DE BUNDLES</h3>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" onclick="openBundleModal()">+ NOVO BUNDLE</button>
+  </div>
+  <div class="lib-grid" id="bundleGrid"><div style="color:var(--text2);padding:40px;text-align:center;">Carregando...</div></div>
+</div>
+
+<!-- ═══════ CATALOG CONFIG ═══════ -->
+<div class="panel" id="panel-catalog">
+  <div class="toolbar">
+    <h3 style="font-size:1em;">INFRAESTRUTURA DO CATALOGO</h3>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" onclick="openCatalogModal()">+ NOVA CONFIGURACAO</button>
+  </div>
+  <p style="font-size:0.85em;color:var(--text2);margin-bottom:16px;">Pricebooks, Catálogos, Discount Schedules e outras configurações de infraestrutura Revenue Cloud.</p>
+  <div id="catalogTabs" style="display:flex;gap:8px;margin-bottom:16px;">
+    <button class="btn btn-sm btn-secondary catalog-type-btn active" data-type="" onclick="filterCatalog(this,'')">TODOS</button>
+    <button class="btn btn-sm btn-secondary catalog-type-btn" data-type="pricebook" onclick="filterCatalog(this,'pricebook')">PRICEBOOKS</button>
+    <button class="btn btn-sm btn-secondary catalog-type-btn" data-type="catalog" onclick="filterCatalog(this,'catalog')">CATALOGOS</button>
+    <button class="btn btn-sm btn-secondary catalog-type-btn" data-type="discount_schedule" onclick="filterCatalog(this,'discount_schedule')">DISCOUNT SCHEDULES</button>
+    <button class="btn btn-sm btn-secondary catalog-type-btn" data-type="price_adjustment" onclick="filterCatalog(this,'price_adjustment')">AJUSTES PRECO</button>
+    <button class="btn btn-sm btn-secondary catalog-type-btn" data-type="other" onclick="filterCatalog(this,'other')">OUTROS</button>
+  </div>
+  <div class="lib-grid" id="catalogGrid"><div style="color:var(--text2);padding:40px;text-align:center;">Carregando...</div></div>
+</div>
+
+<!-- ═══════ KB ═══════ -->
+<div class="panel" id="panel-kb">
+  <div class="toolbar">
+    <h3 style="font-size:1em;">KNOWLEDGE BASE REVENUE CLOUD</h3>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" onclick="openKbModal()">+ ADICIONAR DOCUMENTO</button>
+  </div>
+  <p style="font-size:0.85em;color:var(--text2);margin-bottom:16px;">Documentos oficiais que alimentam a AI para modelagem de produtos. PDFs, guides, release notes.</p>
+  <table class="data-table">
+    <thead><tr><th>TITULO</th><th>ARQUIVO</th><th>VERSAO</th><th>TIPO</th><th>DATA</th><th></th></tr></thead>
+    <tbody id="kbTableBody"><tr><td colspan="6" style="color:var(--text2);text-align:center;padding:40px;">Carregando...</td></tr></tbody>
+  </table>
+</div>
+
+<!-- ═══════ MODAL GENÉRICO ═══════ -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">Novo Item</h3>
+      <button class="btn-icon" onclick="closeModal()" style="font-size:1.3em;">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter"></div>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin + '/api/rc';
+let currentAiTemplate = null;
+let currentAiInput = '';
+
+// ── TABS ──
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    // Load data for active tab
+    const t = tab.dataset.tab;
+    if (t === 'dashboard') loadStats();
+    if (t === 'products') loadProducts();
+    if (t === 'attributes') loadAttributes();
+    if (t === 'pricing') loadPricingModels();
+    if (t === 'bundles') loadBundles();
+    if (t === 'catalog') loadCatalogConfig();
+    if (t === 'kb') loadKb();
+  });
+});
+
+// ── FETCH HELPER ──
+async function api(path, opts = {}) {
+  const r = await fetch(API + path, {
+    headers: { 'Content-Type': 'application/json', ...opts.headers },
+    ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  return r.json();
+}
+
+// ── MODAL ──
+function openModal(title, bodyHtml, footerHtml) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = bodyHtml;
+  document.getElementById('modalFooter').innerHTML = footerHtml;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+
+// ── DASHBOARD ──
+async function loadStats() {
+  const stats = await api('/stats');
+  const totalProducts = (stats.products_by_status || []).reduce((s, r) => s + parseInt(r.count), 0);
+  document.getElementById('st-products').textContent = totalProducts;
+  document.getElementById('st-attrs').textContent = stats.total_attributes || 0;
+  document.getElementById('st-pricing').textContent = stats.total_pricing_models || 0;
+  document.getElementById('st-bundles').textContent = stats.total_bundles || 0;
+  document.getElementById('st-kb').textContent = stats.total_kb_docs || 0;
+  const totalConfig = (stats.catalog_config || []).reduce((s, r) => s + parseInt(r.count), 0);
+  document.getElementById('st-config').textContent = totalConfig;
+
+  // Status chart
+  const statusColors = { RASCUNHO: 'var(--orange)', VALIDADO: 'var(--blue)', PROVISIONADO: 'var(--green)', DESCONTINUADO: 'var(--red)' };
+  document.getElementById('statusChart').innerHTML = (stats.products_by_status || []).map(r => `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <div style="width:12px;height:12px;border-radius:3px;background:${statusColors[r.status]||'var(--text2)'}"></div>
+      <span style="font-size:0.9em;flex:1;">${r.status}</span>
+      <span style="font-weight:700;font-size:1.1em;">${r.count}</span>
+    </div>`).join('') || '<div style="color:var(--text2);font-size:0.85em;">Nenhum produto</div>';
+
+  document.getElementById('familyChart').innerHTML = (stats.products_by_family || []).map(r => `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <div style="width:12px;height:12px;border-radius:3px;background:var(--primary)"></div>
+      <span style="font-size:0.9em;flex:1;">${r.product_family || 'Sem família'}</span>
+      <span style="font-weight:700;font-size:1.1em;">${r.count}</span>
+    </div>`).join('') || '<div style="color:var(--text2);font-size:0.85em;">Nenhuma família</div>';
+}
+
+// ── PRODUCTS ──
+async function loadProducts() {
+  const search = document.getElementById('productSearch')?.value || '';
+  const status = document.getElementById('productFilterStatus')?.value || '';
+  let q = '/products?';
+  if (search) q += 'search=' + encodeURIComponent(search) + '&';
+  if (status) q += 'status=' + encodeURIComponent(status);
+  const products = await api(q);
+  const tbody = document.getElementById('productTableBody');
+  if (!products.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text2);text-align:center;padding:40px;">Nenhum produto encontrado</td></tr>';
+    return;
+  }
+  tbody.innerHTML = products.map(p => `<tr>
+    <td><a href="#" onclick="viewProduct(${p.id});return false;" style="color:var(--primary);text-decoration:none;font-weight:600;">${esc(p.name)}</a></td>
+    <td style="color:var(--text2);">${esc(p.product_code || '-')}</td>
+    <td>${esc(p.product_family || '-')}</td>
+    <td><span class="badge badge-${p.status.toLowerCase()}">${p.status}</span></td>
+    <td>v${p.current_version}</td>
+    <td style="color:var(--text2);font-size:0.85em;">${new Date(p.updated_at).toLocaleDateString('pt-BR')}</td>
+    <td><button class="btn-icon" onclick="deleteProduct(${p.id})" title="Excluir">🗑</button></td>
+  </tr>`).join('');
+}
+
+async function viewProduct(id) {
+  const data = await api('/products/' + id);
+  document.getElementById('productList').style.display = 'none';
+  const det = document.getElementById('productDetail');
+  det.style.display = 'block';
+  const v = data.versions?.[0];
+  const template = v?.template_json || {};
+  const mapping = template.revenue_cloud_mapping || [];
+
+  det.innerHTML = `
+    <div class="toolbar">
+      <button class="btn btn-secondary" onclick="closeProductDetail()">← VOLTAR</button>
+      <h3 style="font-size:1.1em;margin-left:12px;">${esc(data.name)}</h3>
+      <span class="badge badge-${data.status.toLowerCase()}" style="margin-left:8px;">${data.status}</span>
+      <div class="spacer"></div>
+      <select onchange="changeProductStatus(${data.id}, this.value)" style="max-width:180px;">
+        <option value="">Alterar status...</option>
+        <option value="RASCUNHO">Rascunho</option>
+        <option value="VALIDADO">Validado</option>
+        <option value="PROVISIONADO">Provisionado</option>
+        <option value="DESCONTINUADO">Descontinuado</option>
+      </select>
+    </div>
+    <div class="product-detail">
+      <div class="product-main">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+            <div><span style="font-size:0.75em;color:var(--text2);text-transform:uppercase;">CODIGO</span><div style="font-weight:600;">${esc(data.product_code || '-')}</div></div>
+            <div><span style="font-size:0.75em;color:var(--text2);text-transform:uppercase;">FAMILIA</span><div style="font-weight:600;">${esc(data.product_family || '-')}</div></div>
+            <div><span style="font-size:0.75em;color:var(--text2);text-transform:uppercase;">VERSAO ATUAL</span><div style="font-weight:600;">v${data.current_version}</div></div>
+          </div>
+          ${data.description ? `<div style="margin-top:12px;font-size:0.9em;color:var(--text2);">${esc(data.description)}</div>` : ''}
+        </div>
+        <h4 style="font-size:0.85em;color:var(--text2);text-transform:uppercase;margin-bottom:8px;">MAPEAMENTO REVENUE CLOUD</h4>
+        ${mapping.length ? mapping.map(m => `
+          <div class="mapping-card">
+            <div class="component">${esc(m.component || '')}</div>
+            <div class="obj-name">${esc(m.sf_object || '')}</div>
+            <div class="fields">${m.sf_fields ? Object.entries(m.sf_fields).map(([k,v]) => `<span style="margin-right:12px;"><strong>${k}:</strong> ${v}</span>`).join('') : ''}</div>
+            ${m.notes ? `<div style="margin-top:4px;font-size:0.8em;color:var(--orange);">${esc(m.notes)}</div>` : ''}
+          </div>`).join('') : '<div style="color:var(--text2);padding:20px;text-align:center;">Nenhum mapeamento definido</div>'}
+
+        ${template.attributes?.length ? `<h4 style="font-size:0.85em;color:var(--text2);text-transform:uppercase;margin:16px 0 8px;">ATRIBUTOS</h4>
+          ${template.attributes.map(a => `<div class="mapping-card"><strong>${esc(a.name)}</strong> <span class="tag" style="margin-left:8px;">${a.source}</span>
+          ${a.values?.length ? `<div style="margin-top:4px;font-size:0.85em;color:var(--text2);">${a.values.join(', ')}</div>` : ''}</div>`).join('')}` : ''}
+
+        ${template.pricing?.length ? `<h4 style="font-size:0.85em;color:var(--text2);text-transform:uppercase;margin:16px 0 8px;">PRECIFICACAO</h4>
+          ${template.pricing.map(p => `<div class="mapping-card"><strong>${esc(p.model_name)}</strong> <span class="badge badge-validado">${p.charge_type}</span>
+          <div style="margin-top:4px;font-size:0.85em;color:var(--text2);">${JSON.stringify(p.config||{})}</div></div>`).join('')}` : ''}
+
+        ${data.relations?.length ? `<h4 style="font-size:0.85em;color:var(--text2);text-transform:uppercase;margin:16px 0 8px;">RELACOES</h4>
+          ${data.relations.map(r => `<div class="mapping-card"><span class="badge badge-rascunho">${r.relation_type}</span> → <strong>${esc(r.target_name)}</strong></div>`).join('')}` : ''}
+      </div>
+      <div class="product-sidebar">
+        <h4 style="font-size:0.85em;color:var(--text2);text-transform:uppercase;margin-bottom:8px;">VERSOES</h4>
+        ${(data.versions||[]).map(v => `
+          <div class="version-item ${v.version_number === data.current_version ? 'active' : ''}">
+            <div class="v-num">v${v.version_number}</div>
+            <div class="v-date">${new Date(v.created_at).toLocaleString('pt-BR')}</div>
+            ${v.notes ? `<div style="font-size:0.8em;color:var(--text2);margin-top:4px;">${esc(v.notes)}</div>` : ''}
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function closeProductDetail() {
+  document.getElementById('productDetail').style.display = 'none';
+  document.getElementById('productList').style.display = 'block';
+}
+
+async function changeProductStatus(id, status) {
+  if (!status) return;
+  await api('/products/' + id, { method: 'PUT', body: { status } });
+  viewProduct(id);
+}
+
+async function deleteProduct(id) {
+  if (!confirm('Excluir este produto?')) return;
+  await api('/products/' + id, { method: 'DELETE' });
+  loadProducts();
+}
+
+function openProductModal() {
+  openModal('NOVO PRODUTO', `
+    <div class="form-group"><label>NOME</label><input type="text" id="m-prd-name" placeholder="Nome do produto"></div>
+    <div class="form-group"><label>CODIGO</label><input type="text" id="m-prd-code" placeholder="Código do produto"></div>
+    <div class="form-group"><label>FAMILIA</label><input type="text" id="m-prd-family" placeholder="Ex: Connectivity, Cloud, IoT"></div>
+    <div class="form-group"><label>DESCRICAO</label><textarea id="m-prd-desc" rows="3" placeholder="Descrição do produto"></textarea></div>
+  `, `<button class="btn btn-secondary" onclick="closeModal()">CANCELAR</button>
+     <button class="btn btn-primary" onclick="saveNewProduct()">SALVAR</button>`);
+}
+
+async function saveNewProduct() {
+  const body = {
+    name: document.getElementById('m-prd-name').value,
+    product_code: document.getElementById('m-prd-code').value,
+    product_family: document.getElementById('m-prd-family').value,
+    description: document.getElementById('m-prd-desc').value
+  };
+  if (!body.name) return alert('Nome é obrigatório');
+  await api('/products', { method: 'POST', body });
+  closeModal(); loadProducts();
+}
+
+// ── AI MODELING ──
+async function runAiModeling() {
+  const desc = document.getElementById('aiProductDesc').value;
+  if (!desc) return alert('Descreva o produto');
+  const family = document.getElementById('aiProductFamily').value;
+
+  document.getElementById('aiRunBtn').disabled = true;
+  document.getElementById('aiLoading').classList.add('active');
+  document.getElementById('aiResultArea').style.display = 'none';
+
+  try {
+    const result = await api('/ai/model', { method: 'POST', body: { description: desc, product_family: family } });
+    currentAiTemplate = result.template;
+    currentAiInput = desc;
+    document.getElementById('aiResultArea').style.display = 'block';
+
+    if (result.template?.parse_error) {
+      document.getElementById('aiTemplateView').innerHTML = `
+        <div style="color:var(--orange);margin-bottom:8px;">AI retornou texto não-JSON. Resultado bruto:</div>
+        <div class="ai-result"><pre>${esc(result.ai_raw)}</pre></div>`;
+    } else {
+      renderAiTemplate(result.template, result.kb_used);
+    }
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  } finally {
+    document.getElementById('aiRunBtn').disabled = false;
+    document.getElementById('aiLoading').classList.remove('active');
+  }
+}
+
+function renderAiTemplate(t, kbUsed) {
+  const view = document.getElementById('aiTemplateView');
+  const mapping = t.revenue_cloud_mapping || [];
+  view.innerHTML = `
+    ${!kbUsed ? '<div style="background:var(--orange-bg);color:var(--orange);padding:10px;border-radius:var(--radius);margin-bottom:12px;font-size:0.85em;">KB vazia — modelagem baseada em conhecimento geral. Adicione documentos na aba KNOWLEDGE BASE para resultados mais precisos.</div>' : ''}
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div><span style="font-size:0.75em;color:var(--text2);text-transform:uppercase;">PRODUTO</span><div style="font-weight:700;font-size:1.1em;">${esc(t.product_name || '')}</div></div>
+        <div><span style="font-size:0.75em;color:var(--text2);text-transform:uppercase;">CODIGO</span><div style="font-weight:600;">${esc(t.product_code || '')}</div></div>
+        <div><span style="font-size:0.75em;color:var(--text2);text-transform:uppercase;">FAMILIA</span><div style="font-weight:600;">${esc(t.product_family || '')}</div></div>
+      </div>
+      ${t.summary ? `<div style="margin-top:12px;font-size:0.9em;color:var(--text2);">${esc(t.summary)}</div>` : ''}
+    </div>
+    <h4 style="font-size:0.85em;color:var(--text2);text-transform:uppercase;margin-bottom:8px;">MAPEAMENTO REVENUE CLOUD (${mapping.length} componentes)</h4>
+    ${mapping.map(m => `<div class="mapping-card">
+      <div class="component">${esc(m.component || '')}</div>
+      <div class="obj-name">${esc(m.sf_object || '')}</div>
+      <div class="fields">${m.sf_fields ? Object.entries(m.sf_fields).map(([k,v]) => `<span style="margin-right:12px;"><strong>${k}:</strong> ${v}</span>`).join('') : ''}</div>
+      ${m.notes ? `<div style="margin-top:4px;font-size:0.8em;color:var(--orange);">${esc(m.notes)}</div>` : ''}
+    </div>`).join('')}
+
+    ${t.catalog_infrastructure ? `<h4 style="font-size:0.85em;color:var(--text2);text-transform:uppercase;margin:16px 0 8px;">INFRAESTRUTURA DO CATALOGO</h4>
+    <div class="mapping-card">
+      <div><strong>Pricebook:</strong> ${esc(t.catalog_infrastructure.pricebook || '-')}</div>
+      <div><strong>Catalogo:</strong> ${esc(t.catalog_infrastructure.catalog || '-')}</div>
+      ${t.catalog_infrastructure.notes ? `<div style="margin-top:4px;color:var(--text2);font-size:0.85em;">${esc(t.catalog_infrastructure.notes)}</div>` : ''}
+    </div>` : ''}
+
+    ${t.proposed_new_library_items && (t.proposed_new_library_items.attributes?.length || t.proposed_new_library_items.pricing_models?.length || t.proposed_new_library_items.bundles?.length) ?
+    `<h4 style="font-size:0.85em;color:var(--green);text-transform:uppercase;margin:16px 0 8px;">NOVOS ITENS PROPOSTOS PARA BIBLIOTECA</h4>
+    <div class="mapping-card" style="border-color:var(--green);">
+      ${(t.proposed_new_library_items.attributes||[]).map(a => `<div>Atributo: <strong>${esc(typeof a === 'string' ? a : a.name || JSON.stringify(a))}</strong></div>`).join('')}
+      ${(t.proposed_new_library_items.pricing_models||[]).map(p => `<div>Pricing: <strong>${esc(typeof p === 'string' ? p : p.name || JSON.stringify(p))}</strong></div>`).join('')}
+      ${(t.proposed_new_library_items.bundles||[]).map(b => `<div>Bundle: <strong>${esc(typeof b === 'string' ? b : b.name || JSON.stringify(b))}</strong></div>`).join('')}
+    </div>` : ''}
+
+    ${t.kb_gaps?.length ? `<h4 style="font-size:0.85em;color:var(--orange);text-transform:uppercase;margin:16px 0 8px;">LACUNAS NA KB</h4>
+    <div style="background:var(--orange-bg);padding:12px;border-radius:var(--radius);font-size:0.85em;">
+      ${t.kb_gaps.map(g => `<div style="margin-bottom:4px;">• ${esc(g)}</div>`).join('')}
+    </div>` : ''}
+
+    <details style="margin-top:16px;">
+      <summary style="cursor:pointer;color:var(--text2);font-size:0.85em;">VER JSON COMPLETO</summary>
+      <div class="ai-result" style="margin-top:8px;"><pre>${esc(JSON.stringify(t, null, 2))}</pre></div>
+    </details>`;
+}
+
+async function saveAiProduct() {
+  if (!currentAiTemplate || currentAiTemplate.parse_error) return alert('Sem template válido para salvar');
+  const t = currentAiTemplate;
+  const body = {
+    name: t.product_name || 'Produto sem nome',
+    product_code: t.product_code || '',
+    product_family: t.product_family || '',
+    description: t.summary || '',
+    template_json: t,
+    ai_input: currentAiInput,
+    ai_output: JSON.stringify(t)
+  };
+  await api('/products', { method: 'POST', body });
+  alert('Produto salvo como RASCUNHO');
+  document.querySelector('[data-tab="products"]').click();
+}
+
+// ── ATTRIBUTES ──
+async function loadAttributes() {
+  const attrs = await api('/attributes');
+  const grid = document.getElementById('attrGrid');
+  if (!attrs.length) { grid.innerHTML = '<div style="color:var(--text2);padding:40px;text-align:center;">Nenhum atributo cadastrado</div>'; return; }
+  grid.innerHTML = attrs.map(a => `<div class="lib-card">
+    <div class="actions">
+      <button class="btn-icon" onclick="deleteAttr(${a.id})" title="Excluir">🗑</button>
+    </div>
+    <h4>${esc(a.name)}</h4>
+    <div class="meta">${esc(a.attr_type)} ${a.description ? '— ' + esc(a.description) : ''}</div>
+    <div class="tags">
+      ${(Array.isArray(a.possible_values) ? a.possible_values : []).map(v => `<span class="tag">${esc(v)}</span>`).join('')}
+    </div>
+    ${a.applicable_families?.length ? `<div style="margin-top:6px;font-size:0.75em;color:var(--text2);">Famílias: ${a.applicable_families.join(', ')}</div>` : ''}
+  </div>`).join('');
+}
+
+function openAttrModal() {
+  openModal('NOVO ATRIBUTO', `
+    <div class="form-group"><label>NOME</label><input type="text" id="m-attr-name" placeholder="Ex: Velocidade, SLA"></div>
+    <div class="form-group"><label>TIPO</label><select id="m-attr-type">
+      <option value="Picklist">Picklist</option><option value="Text">Text</option><option value="Number">Number</option>
+      <option value="Percent">Percent</option><option value="Currency">Currency</option><option value="Boolean">Boolean</option>
+    </select></div>
+    <div class="form-group"><label>VALORES POSSIVEIS (separados por vírgula)</label><input type="text" id="m-attr-values" placeholder="Ex: 10Mbps, 50Mbps, 100Mbps"></div>
+    <div class="form-group"><label>FAMILIAS APLICAVEIS (separadas por vírgula)</label><input type="text" id="m-attr-families" placeholder="Ex: Connectivity, Cloud"></div>
+    <div class="form-group"><label>DESCRICAO</label><input type="text" id="m-attr-desc" placeholder="Descrição do atributo"></div>
+  `, `<button class="btn btn-secondary" onclick="closeModal()">CANCELAR</button>
+     <button class="btn btn-primary" onclick="saveAttr()">SALVAR</button>`);
+}
+
+async function saveAttr() {
+  const body = {
+    name: document.getElementById('m-attr-name').value,
+    attr_type: document.getElementById('m-attr-type').value,
+    possible_values: document.getElementById('m-attr-values').value.split(',').map(s => s.trim()).filter(Boolean),
+    applicable_families: document.getElementById('m-attr-families').value.split(',').map(s => s.trim()).filter(Boolean),
+    description: document.getElementById('m-attr-desc').value
+  };
+  if (!body.name) return alert('Nome é obrigatório');
+  await api('/attributes', { method: 'POST', body });
+  closeModal(); loadAttributes();
+}
+
+async function deleteAttr(id) {
+  if (!confirm('Excluir atributo?')) return;
+  await api('/attributes/' + id, { method: 'DELETE' });
+  loadAttributes();
+}
+
+// ── PRICING MODELS ──
+async function loadPricingModels() {
+  const models = await api('/pricing-models');
+  const grid = document.getElementById('pricingGrid');
+  if (!models.length) { grid.innerHTML = '<div style="color:var(--text2);padding:40px;text-align:center;">Nenhum modelo cadastrado</div>'; return; }
+  grid.innerHTML = models.map(m => `<div class="lib-card">
+    <div class="actions"><button class="btn-icon" onclick="deletePricing(${m.id})" title="Excluir">🗑</button></div>
+    <h4>${esc(m.name)}</h4>
+    <div class="meta"><span class="badge badge-validado">${esc(m.charge_type)}</span> ${m.description ? '— ' + esc(m.description) : ''}</div>
+    <div style="font-size:0.8em;color:var(--text2);margin-top:6px;">${esc(JSON.stringify(m.parameters_json || {}))}</div>
+  </div>`).join('');
+}
+
+function openPricingModal() {
+  openModal('NOVO MODELO DE PRECIFICACAO', `
+    <div class="form-group"><label>NOME</label><input type="text" id="m-pm-name" placeholder="Ex: Recorrente Mensal, One-Time Setup"></div>
+    <div class="form-group"><label>TIPO DE COBRANCA</label><select id="m-pm-type">
+      <option value="Recurring">Recurring</option><option value="OneTime">One-Time</option>
+      <option value="Usage">Usage-Based</option><option value="Tiered">Tiered</option>
+      <option value="Discount">Discount</option><option value="Hybrid">Hybrid</option>
+    </select></div>
+    <div class="form-group"><label>PARAMETROS (JSON)</label><textarea id="m-pm-params" rows="4" placeholder='{"frequency":"Monthly","unit_price":0}'></textarea></div>
+    <div class="form-group"><label>DESCRICAO</label><input type="text" id="m-pm-desc" placeholder="Descrição do modelo"></div>
+  `, `<button class="btn btn-secondary" onclick="closeModal()">CANCELAR</button>
+     <button class="btn btn-primary" onclick="savePricing()">SALVAR</button>`);
+}
+
+async function savePricing() {
+  let params = {};
+  try { params = JSON.parse(document.getElementById('m-pm-params').value || '{}'); } catch { return alert('JSON inválido'); }
+  const body = {
+    name: document.getElementById('m-pm-name').value,
+    charge_type: document.getElementById('m-pm-type').value,
+    parameters_json: params,
+    description: document.getElementById('m-pm-desc').value
+  };
+  if (!body.name) return alert('Nome é obrigatório');
+  await api('/pricing-models', { method: 'POST', body });
+  closeModal(); loadPricingModels();
+}
+
+async function deletePricing(id) {
+  if (!confirm('Excluir modelo?')) return;
+  await api('/pricing-models/' + id, { method: 'DELETE' });
+  loadPricingModels();
+}
+
+// ── BUNDLES ──
+async function loadBundles() {
+  const bundles = await api('/bundles');
+  const grid = document.getElementById('bundleGrid');
+  if (!bundles.length) { grid.innerHTML = '<div style="color:var(--text2);padding:40px;text-align:center;">Nenhum bundle cadastrado</div>'; return; }
+  grid.innerHTML = bundles.map(b => `<div class="lib-card">
+    <div class="actions"><button class="btn-icon" onclick="deleteBundle(${b.id})" title="Excluir">🗑</button></div>
+    <h4>${esc(b.name)}</h4>
+    <div class="meta">${b.description ? esc(b.description) : ''}</div>
+    <div style="font-size:0.8em;color:var(--text2);margin-top:6px;">Itens: ${esc(JSON.stringify(b.items_json || []))}</div>
+  </div>`).join('');
+}
+
+function openBundleModal() {
+  openModal('NOVO BUNDLE', `
+    <div class="form-group"><label>NOME</label><input type="text" id="m-bnd-name" placeholder="Ex: Connectivity Enterprise Bundle"></div>
+    <div class="form-group"><label>ITENS (JSON array)</label><textarea id="m-bnd-items" rows="4" placeholder='[{"product":"Link MPLS","required":true,"min_qty":1},{"product":"IP Fixo","required":false}]'></textarea></div>
+    <div class="form-group"><label>REGRAS (JSON)</label><textarea id="m-bnd-rules" rows="3" placeholder='{"min_items":1,"max_items":5}'></textarea></div>
+    <div class="form-group"><label>DESCRICAO</label><input type="text" id="m-bnd-desc" placeholder="Descrição do bundle"></div>
+  `, `<button class="btn btn-secondary" onclick="closeModal()">CANCELAR</button>
+     <button class="btn btn-primary" onclick="saveBundle()">SALVAR</button>`);
+}
+
+async function saveBundle() {
+  let items = [], rules = {};
+  try { items = JSON.parse(document.getElementById('m-bnd-items').value || '[]'); } catch { return alert('JSON itens inválido'); }
+  try { rules = JSON.parse(document.getElementById('m-bnd-rules').value || '{}'); } catch { return alert('JSON regras inválido'); }
+  const body = {
+    name: document.getElementById('m-bnd-name').value,
+    items_json: items, rules_json: rules,
+    description: document.getElementById('m-bnd-desc').value
+  };
+  if (!body.name) return alert('Nome é obrigatório');
+  await api('/bundles', { method: 'POST', body });
+  closeModal(); loadBundles();
+}
+
+async function deleteBundle(id) {
+  if (!confirm('Excluir bundle?')) return;
+  await api('/bundles/' + id, { method: 'DELETE' });
+  loadBundles();
+}
+
+// ── CATALOG CONFIG ──
+let currentCatalogFilter = '';
+async function loadCatalogConfig() {
+  let q = '/catalog-config';
+  if (currentCatalogFilter) q += '?config_type=' + currentCatalogFilter;
+  const configs = await api(q);
+  const grid = document.getElementById('catalogGrid');
+  if (!configs.length) { grid.innerHTML = '<div style="color:var(--text2);padding:40px;text-align:center;">Nenhuma configuração cadastrada</div>'; return; }
+  const typeLabels = { pricebook:'PRICEBOOK', catalog:'CATALOGO', discount_schedule:'DISCOUNT SCHEDULE', price_adjustment:'AJUSTE PRECO', other:'OUTRO' };
+  grid.innerHTML = configs.map(c => `<div class="lib-card">
+    <div class="actions"><button class="btn-icon" onclick="deleteCatalogConfig(${c.id})" title="Excluir">🗑</button></div>
+    <h4>${esc(c.name)}</h4>
+    <div class="meta">
+      <span class="badge badge-validado">${typeLabels[c.config_type] || c.config_type}</span>
+      ${c.is_default ? '<span class="badge badge-provisionado" style="margin-left:4px;">DEFAULT</span>' : ''}
+      ${c.description ? ' — ' + esc(c.description) : ''}
+    </div>
+    <div style="font-size:0.8em;color:var(--text2);margin-top:6px;">${esc(JSON.stringify(c.config_json || {}))}</div>
+  </div>`).join('');
+}
+
+function filterCatalog(btn, type) {
+  document.querySelectorAll('.catalog-type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentCatalogFilter = type;
+  loadCatalogConfig();
+}
+
+function openCatalogModal() {
+  openModal('NOVA CONFIGURACAO DE CATALOGO', `
+    <div class="form-group"><label>TIPO</label><select id="m-cat-type">
+      <option value="pricebook">Pricebook</option>
+      <option value="catalog">Catálogo</option>
+      <option value="discount_schedule">Discount Schedule</option>
+      <option value="price_adjustment">Ajuste de Preço</option>
+      <option value="other">Outro</option>
+    </select></div>
+    <div class="form-group"><label>NOME</label><input type="text" id="m-cat-name" placeholder="Ex: Standard Price Book, B2B Enterprise Catalog"></div>
+    <div class="form-group"><label>CONFIGURACAO (JSON)</label><textarea id="m-cat-config" rows="4" placeholder='{"currency":"BRL","isActive":true}'></textarea></div>
+    <div class="form-group"><label>DEFAULT</label><select id="m-cat-default"><option value="false">Não</option><option value="true">Sim</option></select></div>
+    <div class="form-group"><label>DESCRICAO</label><input type="text" id="m-cat-desc" placeholder="Descrição"></div>
+  `, `<button class="btn btn-secondary" onclick="closeModal()">CANCELAR</button>
+     <button class="btn btn-primary" onclick="saveCatalogConfig()">SALVAR</button>`);
+}
+
+async function saveCatalogConfig() {
+  let config = {};
+  try { config = JSON.parse(document.getElementById('m-cat-config').value || '{}'); } catch { return alert('JSON inválido'); }
+  const body = {
+    config_type: document.getElementById('m-cat-type').value,
+    name: document.getElementById('m-cat-name').value,
+    config_json: config,
+    is_default: document.getElementById('m-cat-default').value === 'true',
+    description: document.getElementById('m-cat-desc').value
+  };
+  if (!body.name) return alert('Nome é obrigatório');
+  await api('/catalog-config', { method: 'POST', body });
+  closeModal(); loadCatalogConfig();
+}
+
+async function deleteCatalogConfig(id) {
+  if (!confirm('Excluir configuração?')) return;
+  await api('/catalog-config/' + id, { method: 'DELETE' });
+  loadCatalogConfig();
+}
+
+// ── KNOWLEDGE BASE ──
+async function loadKb() {
+  const docs = await api('/kb');
+  const tbody = document.getElementById('kbTableBody');
+  if (!docs.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text2);text-align:center;padding:40px;">Nenhum documento na KB</td></tr>'; return; }
+  tbody.innerHTML = docs.map(d => `<tr>
+    <td style="font-weight:600;">${esc(d.title)}</td>
+    <td style="color:var(--text2);">${esc(d.filename || '-')}</td>
+    <td>${esc(d.doc_version || '-')}</td>
+    <td><span class="badge badge-validado">${esc(d.content_type || 'text')}</span></td>
+    <td style="color:var(--text2);font-size:0.85em;">${new Date(d.uploaded_at).toLocaleDateString('pt-BR')}</td>
+    <td><button class="btn-icon" onclick="deleteKb(${d.id})" title="Excluir">🗑</button></td>
+  </tr>`).join('');
+}
+
+function openKbModal() {
+  openModal('ADICIONAR DOCUMENTO A KB', `
+    <div class="form-group"><label>TITULO</label><input type="text" id="m-kb-title" placeholder="Ex: Revenue Cloud Object Model v62"></div>
+    <div class="form-group"><label>NOME DO ARQUIVO</label><input type="text" id="m-kb-file" placeholder="Ex: rc-object-model-v62.pdf"></div>
+    <div class="form-group"><label>VERSAO</label><input type="text" id="m-kb-version" placeholder="Ex: Spring '26, v62.0"></div>
+    <div class="form-group"><label>TIPO</label><select id="m-kb-type">
+      <option value="reference">Reference Guide</option>
+      <option value="release_notes">Release Notes</option>
+      <option value="implementation_guide">Implementation Guide</option>
+      <option value="trailhead">Trailhead</option>
+      <option value="best_practices">Best Practices</option>
+      <option value="other">Outro</option>
+    </select></div>
+    <div class="form-group"><label>CONTEUDO (cole o texto do documento)</label><textarea id="m-kb-content" rows="10" placeholder="Cole aqui o conteúdo textual do documento..."></textarea></div>
+  `, `<button class="btn btn-secondary" onclick="closeModal()">CANCELAR</button>
+     <button class="btn btn-primary" onclick="saveKb()">SALVAR E PROCESSAR</button>`);
+}
+
+async function saveKb() {
+  const body = {
+    title: document.getElementById('m-kb-title').value,
+    filename: document.getElementById('m-kb-file').value,
+    content_type: document.getElementById('m-kb-type').value,
+    doc_version: document.getElementById('m-kb-version').value,
+    content_text: document.getElementById('m-kb-content').value
+  };
+  if (!body.title || !body.content_text) return alert('Título e conteúdo são obrigatórios');
+  const result = await api('/kb', { method: 'POST', body });
+  alert('Documento processado em ' + (result.chunks_count || 0) + ' chunks');
+  closeModal(); loadKb();
+}
+
+async function deleteKb(id) {
+  if (!confirm('Excluir documento da KB?')) return;
+  await api('/kb/' + id, { method: 'DELETE' });
+  loadKb();
+}
+
+// ── UTILS ──
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+
+// ── INIT ──
+loadStats();
+</script>
+</body>
+</html>
