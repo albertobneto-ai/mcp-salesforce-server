@@ -523,10 +523,10 @@ async function runAiModeling() {
 
     if (result.error) {
       document.getElementById('aiResultArea').style.display = 'block';
-      document.getElementById('aiTemplateView').innerHTML = \`
+      document.getElementById('aiTemplateView').innerHTML = `
         <div style="background:var(--red-bg);color:var(--red);padding:16px;border-radius:var(--radius);font-size:0.9em;">
-          <strong>ERRO DA AI:</strong> \${esc(result.error)}
-        </div>\`;
+          <strong>ERRO DA AI:</strong> ${esc(result.error)}
+        </div>`;
       document.getElementById('aiSaveBtn').style.display = 'none';
       return;
     }
@@ -537,9 +537,9 @@ async function runAiModeling() {
     document.getElementById('aiSaveBtn').style.display = '';
 
     if (!result.template || result.template.parse_error) {
-      document.getElementById('aiTemplateView').innerHTML = \`
+      document.getElementById('aiTemplateView').innerHTML = `
         <div style="color:var(--orange);margin-bottom:8px;">AI retornou texto não-JSON. Resultado bruto:</div>
-        <div class="ai-result"><pre>\${esc(result.ai_raw || JSON.stringify(result))}</pre></div>\`;
+        <div class="ai-result"><pre>${esc(result.ai_raw || JSON.stringify(result))}</pre></div>`;
     } else {
       renderAiTemplate(result.template, result.kb_used);
     }
