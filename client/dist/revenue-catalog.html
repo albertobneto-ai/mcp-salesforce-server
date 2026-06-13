@@ -880,6 +880,21 @@ async function deleteRule(id) {
 
 // ── CATALOG CONFIG ──
 let currentCatalogFilter = '';
+
+function renderConfigDetail(cfg) {
+  if (!cfg || typeof cfg !== 'object') return '';
+  const rows = Object.entries(cfg).map(([k,v]) => {
+    let val = v;
+    if (typeof v === 'boolean') val = v ? '<span style="color:var(--green);">Sim</span>' : '<span style="color:var(--red);">Não</span>';
+    else if (Array.isArray(v)) val = v.map(i => typeof i === 'object' ? JSON.stringify(i) : i).join(', ');
+    else if (typeof v === 'object') val = JSON.stringify(v);
+    return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(71,85,105,0.2);font-size:0.85em;">
+      <span style="color:var(--text2);text-transform:uppercase;font-size:0.8em;letter-spacing:0.3px;">${esc(k)}</span>
+      <span style="font-weight:500;">${val}</span></div>`;
+  }).join('');
+  return `<div style="margin-top:8px;background:var(--bg);border-radius:6px;padding:8px 12px;">${rows}</div>`;
+}
+
 async function loadCatalogConfig() {
   let q = '/catalog-config';
   if (currentCatalogFilter) q += '?config_type=' + currentCatalogFilter;
@@ -887,15 +902,19 @@ async function loadCatalogConfig() {
   const grid = document.getElementById('catalogGrid');
   if (!configs.length) { grid.innerHTML = '<div style="color:var(--text2);padding:40px;text-align:center;">Nenhuma configuração cadastrada</div>'; return; }
   const typeLabels = { pricebook:'PRICEBOOK', catalog:'CATALOGO', discount_schedule:'DISCOUNT SCHEDULE', price_adjustment:'AJUSTE PRECO', other:'OUTRO' };
+  const typeIcons = { pricebook:'💰', catalog:'📋', discount_schedule:'🏷', price_adjustment:'📊', other:'⚙' };
   grid.innerHTML = configs.map(c => `<div class="lib-card">
-    <div class="actions"><button class="btn-icon" onclick="deleteCatalogConfig(${c.id})" title="Excluir">🗑</button></div>
-    <h4>${esc(c.name)}</h4>
+    <div class="actions">
+      <button class="btn-icon" onclick="editCatalogConfig(${c.id})" title="Editar">✏</button>
+      <button class="btn-icon" onclick="deleteCatalogConfig(${c.id})" title="Excluir">🗑</button>
+    </div>
+    <h4>${typeIcons[c.config_type]||'⚙'} ${esc(c.name)}</h4>
     <div class="meta">
       <span class="badge badge-validado">${typeLabels[c.config_type] || c.config_type}</span>
       ${c.is_default ? '<span class="badge badge-provisionado" style="margin-left:4px;">DEFAULT</span>' : ''}
       ${c.description ? ' — ' + esc(c.description) : ''}
     </div>
-    <div style="font-size:0.8em;color:var(--text2);margin-top:6px;">${esc(JSON.stringify(c.config_json || {}))}</div>
+    ${renderConfigDetail(c.config_json)}
   </div>`).join('');
 }
 
@@ -906,28 +925,114 @@ function filterCatalog(btn, type) {
   loadCatalogConfig();
 }
 
+// Dynamic form fields per config type
+const catalogFields = {
+  pricebook: [
+    { id:'currency', label:'MOEDA', type:'select', options:['BRL','USD','EUR','GBP'], default:'BRL' },
+    { id:'isActive', label:'ATIVO', type:'bool', default:true },
+    { id:'isStandard', label:'STANDARD PRICEBOOK', type:'bool', default:false },
+    { id:'effectiveDate', label:'DATA EFETIVA', type:'text', placeholder:'YYYY-MM-DD (opcional)' },
+    { id:'expirationDate', label:'DATA EXPIRACAO', type:'text', placeholder:'YYYY-MM-DD (opcional)' },
+  ],
+  catalog: [
+    { id:'catalogType', label:'TIPO DE CATALOGO', type:'select', options:['Product','Service','Bundle','Mixed'], default:'Product' },
+    { id:'isActive', label:'ATIVO', type:'bool', default:true },
+    { id:'channel', label:'CANAL', type:'select', options:['Direct','Partner','Web','All'], default:'All' },
+    { id:'segment', label:'SEGMENTO', type:'text', placeholder:'Ex: Enterprise, SMB, Consumer' },
+    { id:'effectiveDate', label:'DATA EFETIVA', type:'text', placeholder:'YYYY-MM-DD' },
+  ],
+  discount_schedule: [
+    { id:'discountType', label:'TIPO DE DESCONTO', type:'select', options:['Percentage','Amount','Tiered'], default:'Percentage' },
+    { id:'maxDiscount', label:'DESCONTO MAXIMO (%)', type:'number', placeholder:'Ex: 30' },
+    { id:'approvalRequired', label:'REQUER APROVACAO', type:'bool', default:false },
+    { id:'approvalThreshold', label:'LIMIAR APROVACAO (%)', type:'number', placeholder:'Ex: 15 (acima disso requer aprovação)' },
+    { id:'tiers', label:'FAIXAS (qtd:desconto, separados por ;)', type:'text', placeholder:'Ex: 3:5%;5:10%;10:15%' },
+  ],
+  price_adjustment: [
+    { id:'adjustmentType', label:'TIPO DE AJUSTE', type:'select', options:['Markup','Markdown','Override','Surcharge'], default:'Markdown' },
+    { id:'adjustmentMethod', label:'METODO', type:'select', options:['Percentage','FixedAmount'], default:'Percentage' },
+    { id:'adjustmentValue', label:'VALOR', type:'number', placeholder:'Ex: 10 (para 10%)' },
+    { id:'conditions', label:'CONDICOES DE APLICACAO', type:'text', placeholder:'Ex: Volume > 5 unidades, contrato >= 24 meses' },
+    { id:'autoApply', label:'APLICACAO AUTOMATICA', type:'bool', default:false },
+  ],
+  other: [
+    { id:'configKey', label:'CHAVE', type:'text', placeholder:'Identificador da configuração' },
+    { id:'configValue', label:'VALOR', type:'text', placeholder:'Valor da configuração' },
+    { id:'notes', label:'OBSERVACOES', type:'text', placeholder:'Notas adicionais' },
+  ]
+};
+
+function renderCatalogFields(type) {
+  const fields = catalogFields[type] || catalogFields.other;
+  return fields.map(f => {
+    if (f.type === 'select') {
+      const opts = f.options.map(o => `<option value="${o}" ${o===f.default?'selected':''}>${o}</option>`).join('');
+      return `<div class="form-group"><label>${f.label}</label><select id="m-cf-${f.id}">${opts}</select></div>`;
+    }
+    if (f.type === 'bool') {
+      return `<div class="form-group"><label>${f.label}</label><select id="m-cf-${f.id}">
+        <option value="true" ${f.default?'selected':''}>Sim</option>
+        <option value="false" ${!f.default?'selected':''}>Não</option></select></div>`;
+    }
+    if (f.type === 'number') {
+      return `<div class="form-group"><label>${f.label}</label><input type="number" id="m-cf-${f.id}" placeholder="${f.placeholder||''}"></div>`;
+    }
+    return `<div class="form-group"><label>${f.label}</label><input type="text" id="m-cf-${f.id}" placeholder="${f.placeholder||''}"></div>`;
+  }).join('');
+}
+
+function buildConfigJson(type) {
+  const fields = catalogFields[type] || catalogFields.other;
+  const config = {};
+  for (const f of fields) {
+    const el = document.getElementById('m-cf-' + f.id);
+    if (!el) continue;
+    let val = el.value;
+    if (f.type === 'bool') val = (val === 'true');
+    else if (f.type === 'number' && val) val = parseFloat(val);
+    else if (f.id === 'tiers' && val) {
+      val = val.split(';').map(t => { const [qty,disc] = t.split(':'); return { minQty: parseInt(qty), discount: disc?.trim() }; }).filter(t => t.minQty);
+    }
+    if (val !== '' && val !== null && val !== undefined) config[f.id] = val;
+  }
+  return config;
+}
+
 function openCatalogModal() {
+  const typeSelect = `<div class="form-group"><label>TIPO</label><select id="m-cat-type" onchange="document.getElementById('m-cat-fields').innerHTML = renderCatalogFields(this.value)">
+    <option value="pricebook">Pricebook</option>
+    <option value="catalog">Catálogo</option>
+    <option value="discount_schedule">Discount Schedule</option>
+    <option value="price_adjustment">Ajuste de Preço</option>
+    <option value="other">Outro</option>
+  </select></div>`;
   openModal('NOVA CONFIGURACAO DE CATALOGO', `
-    <div class="form-group"><label>TIPO</label><select id="m-cat-type">
-      <option value="pricebook">Pricebook</option>
-      <option value="catalog">Catálogo</option>
-      <option value="discount_schedule">Discount Schedule</option>
-      <option value="price_adjustment">Ajuste de Preço</option>
-      <option value="other">Outro</option>
-    </select></div>
-    <div class="form-group"><label>NOME</label><input type="text" id="m-cat-name" placeholder="Ex: Standard Price Book, B2B Enterprise Catalog"></div>
-    <div class="form-group"><label>CONFIGURACAO (JSON)</label><textarea id="m-cat-config" rows="4" placeholder='{"currency":"BRL","isActive":true}'></textarea></div>
+    ${typeSelect}
+    <div class="form-group"><label>NOME</label><input type="text" id="m-cat-name" placeholder="Nome da configuração"></div>
+    <div id="m-cat-fields">${renderCatalogFields('pricebook')}</div>
     <div class="form-group"><label>DEFAULT</label><select id="m-cat-default"><option value="false">Não</option><option value="true">Sim</option></select></div>
     <div class="form-group"><label>DESCRICAO</label><input type="text" id="m-cat-desc" placeholder="Descrição"></div>
+    <div id="m-cat-preview" style="margin-top:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;display:none;">
+      <div style="font-size:0.75em;color:var(--text2);text-transform:uppercase;margin-bottom:4px;">JSON GERADO</div>
+      <pre id="m-cat-json" style="font-size:0.8em;color:var(--cyan);white-space:pre-wrap;"></pre>
+    </div>
   `, `<button class="btn btn-secondary" onclick="closeModal()">CANCELAR</button>
+     <button class="btn btn-secondary" onclick="previewCatalogJson()">PREVIEW JSON</button>
      <button class="btn btn-primary" onclick="saveCatalogConfig()">SALVAR</button>`);
 }
 
+function previewCatalogJson() {
+  const type = document.getElementById('m-cat-type').value;
+  const config = buildConfigJson(type);
+  document.getElementById('m-cat-preview').style.display = 'block';
+  document.getElementById('m-cat-json').textContent = JSON.stringify(config, null, 2);
+}
+
 async function saveCatalogConfig() {
-  let config = {};
-  try { config = JSON.parse(document.getElementById('m-cat-config').value || '{}'); } catch { return alert('JSON inválido'); }
+  const type = document.getElementById('m-cat-type').value;
+  const config = buildConfigJson(type);
   const body = {
-    config_type: document.getElementById('m-cat-type').value,
+    config_type: type,
     name: document.getElementById('m-cat-name').value,
     config_json: config,
     is_default: document.getElementById('m-cat-default').value === 'true',
@@ -936,6 +1041,11 @@ async function saveCatalogConfig() {
   if (!body.name) return alert('Nome é obrigatório');
   await api('/catalog-config', { method: 'POST', body });
   closeModal(); loadCatalogConfig();
+}
+
+async function editCatalogConfig(id) {
+  // TODO: load and populate form for editing
+  alert('Edição inline em desenvolvimento. Por enquanto, exclua e recrie.');
 }
 
 async function deleteCatalogConfig(id) {
