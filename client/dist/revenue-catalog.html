@@ -470,7 +470,7 @@ const wizardSteps = [
       {id:'productName',label:'NOME DO PRODUTO',type:'text',required:true,placeholder:'Ex: Link MPLS Dedicado 100Mbps',full:true},
       {id:'productCode',label:'CODIGO',type:'text',placeholder:'Ex: MPLS-100'},
       {id:'productSKU',label:'SKU',type:'text',placeholder:'Ex: SKU-NET-001'},
-      {id:'productFamily',label:'FAMILIA',type:'select',options:['--Selecione--','Connectivity','Internet','Cloud','IoT','UCaaS','Security','Managed Services']},
+      {id:'productFamily',label:'FAMILIA',type:'text',placeholder:'Digite ou selecione (ex: Connectivity, Cloud, IoT)',datalist:'familyList'},
       {id:'recordType',label:'RECORD TYPE',type:'select',options:['Commercial','Internal','Sample']},
       {id:'productDescription',label:'DESCRICAO',type:'textarea',placeholder:'Descrição detalhada do produto...',full:true},
     ]},
@@ -507,12 +507,19 @@ const wizardSteps = [
 let wizStep = 0;
 let wizData = {};
 
-function showWizard() {
+async function showWizard() {
   document.getElementById('productList').style.display = 'none';
   document.getElementById('productWizard').style.display = 'block';
   wizStep = 0;
   wizData = {};
   renderWizardStep();
+  // Load families for datalist
+  try {
+    const prods = await api('/products');
+    const families = [...new Set(prods.map(p=>p.product_family).filter(Boolean))];
+    const dl = document.getElementById('familyList');
+    if (dl) dl.innerHTML = families.map(f=>`<option value="${esc(f)}">`).join('');
+  } catch {}
 }
 
 function closeWizard() {
@@ -559,7 +566,8 @@ function renderWizardStep() {
     } else if (f.type === 'number') {
       input = `<input type="number" step="0.01" id="wiz-${f.id}" class="wiz-field" placeholder="${f.placeholder||''}" value="${val}">`;
     } else {
-      input = `<input type="text" id="wiz-${f.id}" class="wiz-field" placeholder="${f.placeholder||''}" value="${esc(val)}">`;
+      input = `<input type="text" id="wiz-${f.id}" class="wiz-field" placeholder="${f.placeholder||''}" value="${esc(val)}" ${f.datalist?'list="'+f.datalist+'"':''}>`;
+      if (f.datalist) input += `<datalist id="${f.datalist}"></datalist>`;
     }
     return `<div class="${cls}"><div class="form-group"><label>${f.label}${f.required?' <span style="color:var(--red);">*</span>':''}</label>${input}</div></div>`;
   }).join('');
@@ -1014,18 +1022,107 @@ async function saveCurrentTemplate() {
 }
 
 function renderDetailsTab(t) {
-  const product = t.product || {};
-  const classification = t.classification || {};
-  const lifecycle = t.lifecycle || {};
-  const pricing = t.pricing || {};
-  const all = {...product, ...classification, ...lifecycle, ...pricing};
-  const entries = Object.entries(all).filter(([k,v]) => v !== null && v !== undefined && v !== '');
-  if (!entries.length) return '<div style="color:var(--text2);padding:20px;text-align:center;">Nenhum detalhe cadastrado</div>';
-  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-    ${entries.map(([k,v]) => `<div style="background:var(--surface);padding:10px 14px;border-radius:6px;border:1px solid var(--border);">
-      <div style="font-size:0.75em;color:var(--text2);text-transform:uppercase;">${esc(k)}</div>
-      <div style="font-weight:500;margin-top:2px;">${typeof v==='boolean'?(v?'<span style="color:var(--green);">Sim</span>':'<span style="color:var(--red);">Não</span>'):esc(String(v))}</div>
-    </div>`).join('')}
+  const r = t.related || {};
+  const detCard = (label, val, color) => {
+    if (val===null||val===undefined||val==='') return '';
+    let display = val;
+    if (typeof val==='boolean') display = val ? '<span style="color:var(--green);">Sim</span>' : '<span style="color:var(--red);">Não</span>';
+    else display = esc(String(val));
+    return `<div style="background:var(--surface);padding:8px 12px;border-radius:6px;border:1px solid var(--border);border-left:3px solid ${color||'var(--border)'};">
+      <div style="font-size:0.7em;color:var(--text2);text-transform:uppercase;letter-spacing:0.3px;">${label}</div>
+      <div style="font-weight:500;margin-top:1px;font-size:0.9em;">${display}</div></div>`;
+  };
+  const sectionTitle = (title, color) => `<div style="grid-column:1/-1;font-size:0.75em;color:${color};text-transform:uppercase;letter-spacing:0.5px;margin-top:8px;padding-bottom:4px;border-bottom:1px solid ${color}33;">${title}</div>`;
+  
+  const p = t.product || {};
+  const c = t.classification || {};
+  const l = t.lifecycle || {};
+  const pr = t.pricing || {};
+
+  let cards = '';
+  // Product
+  cards += sectionTitle('PRODUTO','var(--primary)');
+  cards += detCard('Name', p.Name, 'var(--primary)');
+  cards += detCard('Product Code', p.ProductCode, 'var(--primary)');
+  cards += detCard('SKU', p.StockKeepingUnit, 'var(--primary)');
+  cards += detCard('Family', p.Family, 'var(--primary)');
+  cards += detCard('Active', p.IsActive, 'var(--primary)');
+  cards += detCard('Unit of Measure', p.QuantityUnitOfMeasure, 'var(--primary)');
+  if (p.Description) cards += `<div style="grid-column:1/-1;background:var(--surface);padding:8px 12px;border-radius:6px;border:1px solid var(--border);border-left:3px solid var(--primary);"><div style="font-size:0.7em;color:var(--text2);text-transform:uppercase;">Description</div><div style="font-size:0.85em;margin-top:2px;">${esc(p.Description)}</div></div>`;
+
+  // Classification
+  if (Object.keys(c).some(k=>c[k])) {
+    cards += sectionTitle('CLASSIFICACAO','var(--blue)');
+    cards += detCard('Product Type', c.productType, 'var(--blue)');
+    cards += detCard('Selling Model', c.sellingModel, 'var(--blue)');
+    cards += detCard('Configure During Sale', c.configureDuringSale, 'var(--blue)');
+    cards += detCard('Sell Only With Others', c.sellOnlyWithOthers, 'var(--blue)');
+    cards += detCard('Based On', c.basedOn, 'var(--blue)');
+  }
+
+  // Lifecycle
+  if (Object.keys(l).some(k=>l[k])) {
+    cards += sectionTitle('CICLO DE VIDA','var(--green)');
+    cards += detCard('Assetizable', l.isAssetizable, 'var(--green)');
+    cards += detCard('Availability Date', l.availabilityDate, 'var(--green)');
+    cards += detCard('End of Life', l.endOfLifeDate, 'var(--green)');
+    cards += detCard('Discontinued', l.discontinuedDate, 'var(--green)');
+    cards += detCard('Display URL', l.displayURL, 'var(--green)');
+  }
+
+  // Pricing
+  if (Object.keys(pr).some(k=>pr[k])) {
+    cards += sectionTitle('PRECIFICACAO','var(--orange)');
+    cards += detCard('List Price', pr.listPrice, 'var(--orange)');
+    cards += detCard('Currency', pr.currency, 'var(--orange)');
+    cards += detCard('Charge Type', pr.chargeType, 'var(--orange)');
+    cards += detCard('Billing Frequency', pr.billingFrequency, 'var(--orange)');
+    cards += detCard('Tax Policy', pr.taxPolicy, 'var(--orange)');
+    cards += detCard('Pricebook', pr.pricebook, 'var(--orange)');
+  }
+
+  // Related: Price Book Entries
+  if (r.priceBookEntries?.length) {
+    cards += sectionTitle('PRICE BOOK ENTRIES ('+r.priceBookEntries.length+')','var(--orange)');
+    r.priceBookEntries.forEach(e => {
+      cards += detCard(e.pricebook||'Standard', `${e.currency||'BRL'} ${Number(e.listPrice).toLocaleString('pt-BR',{minimumFractionDigits:2})} — ${e.chargeType||''} ${e.frequency||''}`, 'var(--orange)');
+    });
+  }
+
+  // Related: Selling Models
+  if (r.sellingModelOptions?.length) {
+    cards += sectionTitle('SELLING MODELS ('+r.sellingModelOptions.length+')','var(--primary)');
+    r.sellingModelOptions.forEach(s => {
+      cards += detCard(s.model, `${s.chargeType||''} ${s.billingFrequency||''} ${s.termMonths?s.termMonths+'m':''}`, 'var(--primary)');
+    });
+  }
+
+  // Related: Child Components
+  if (r.childComponents?.length) {
+    cards += sectionTitle('COMPONENTES ('+r.childComponents.length+')','var(--green)');
+    r.childComponents.forEach(c => {
+      cards += detCard(c.productName, `${c.required?'Required':'Optional'} | Qty: ${c.minQty||1}${c.maxQty?'-'+c.maxQty:'+'}`, 'var(--green)');
+    });
+  }
+
+  // Related: Attributes
+  if (r.attributes?.length) {
+    cards += sectionTitle('ATRIBUTOS ('+r.attributes.length+')','#f472b6');
+    r.attributes.forEach(a => {
+      cards += detCard(a.name + (a.priceImpacting?' 💰':''), a.value, '#f472b6');
+    });
+  }
+
+  // Related: Categories
+  if (r.categories?.length) {
+    cards += sectionTitle('CATEGORIAS ('+r.categories.length+')','var(--cyan)');
+    r.categories.forEach(c => {
+      cards += detCard('Categoria', typeof c==='string'?c:c.name, 'var(--cyan)');
+    });
+  }
+
+  return `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+    ${cards}
   </div>
   <details style="margin-top:16px;"><summary style="cursor:pointer;color:var(--text2);font-size:0.85em;">JSON COMPLETO</summary>
     <pre style="margin-top:8px;background:var(--bg);padding:12px;border-radius:6px;font-size:0.8em;color:var(--cyan);white-space:pre-wrap;">${esc(JSON.stringify(t,null,2))}</pre>
