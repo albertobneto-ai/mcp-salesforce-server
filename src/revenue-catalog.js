@@ -117,6 +117,20 @@ async function initRevenueCatalogDB() {
       uploaded_at TIMESTAMPTZ DEFAULT NOW()
     )`);
 
+    // Regras de Negócio
+    await client.query(`CREATE TABLE IF NOT EXISTS rc_business_rules (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      category VARCHAR(100),
+      rule_type VARCHAR(50) DEFAULT 'constraint',
+      description TEXT NOT NULL,
+      applicable_families JSONB,
+      applicable_objects JSONB,
+      priority VARCHAR(20) DEFAULT 'medium',
+      is_active BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+
     // Perfis de acesso do Ever i9
     await client.query(`CREATE TABLE IF NOT EXISTS rc_profiles (
       id SERIAL PRIMARY KEY,
@@ -446,6 +460,61 @@ export function registerRevenueCatalogRoutes(app) {
   });
 
   // =============================================
+  // BUSINESS RULES (Regras de Negócio)
+  // =============================================
+
+  app.get('/api/rc/business-rules', async (req, res) => {
+    try {
+      const { category, active_only } = req.query;
+      let q = 'SELECT * FROM rc_business_rules WHERE 1=1';
+      const params = [];
+      if (category) { params.push(category); q += ` AND category = $${params.length}`; }
+      if (active_only === 'true') q += ' AND is_active = true';
+      q += ' ORDER BY priority DESC, name';
+      const result = await pool.query(q, params);
+      res.json(result.rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post('/api/rc/business-rules', async (req, res) => {
+    try {
+      const { name, category, rule_type, description, applicable_families, applicable_objects, priority } = req.body;
+      if (!name || !description) return res.status(400).json({ error: 'Nome e descrição são obrigatórios' });
+      const result = await pool.query(
+        `INSERT INTO rc_business_rules (name, category, rule_type, description, applicable_families, applicable_objects, priority)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+        [name, category || 'geral', rule_type || 'constraint', description,
+         JSON.stringify(applicable_families || []), JSON.stringify(applicable_objects || []), priority || 'medium']
+      );
+      res.json(result.rows[0]);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.put('/api/rc/business-rules/:id', async (req, res) => {
+    try {
+      const { name, category, rule_type, description, applicable_families, applicable_objects, priority, is_active } = req.body;
+      const result = await pool.query(
+        `UPDATE rc_business_rules SET name=COALESCE($1,name), category=COALESCE($2,category),
+         rule_type=COALESCE($3,rule_type), description=COALESCE($4,description),
+         applicable_families=COALESCE($5,applicable_families), applicable_objects=COALESCE($6,applicable_objects),
+         priority=COALESCE($7,priority), is_active=COALESCE($8,is_active) WHERE id=$9 RETURNING *`,
+        [name, category, rule_type, description,
+         applicable_families ? JSON.stringify(applicable_families) : null,
+         applicable_objects ? JSON.stringify(applicable_objects) : null,
+         priority, is_active, req.params.id]
+      );
+      res.json(result.rows[0]);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.delete('/api/rc/business-rules/:id', async (req, res) => {
+    try {
+      await pool.query('DELETE FROM rc_business_rules WHERE id = $1', [req.params.id]);
+      res.json({ status: 'deleted' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
+  // =============================================
   // KNOWLEDGE BASE
   // =============================================
 
@@ -519,6 +588,7 @@ export function registerRevenueCatalogRoutes(app) {
       const pricings = await pool.query('SELECT name, charge_type, parameters_json FROM rc_pricing_models');
       const bundles = await pool.query('SELECT name, items_json, rules_json FROM rc_bundles');
       const configs = await pool.query("SELECT name, config_type, config_json FROM rc_catalog_config");
+      const rules = await pool.query("SELECT name, category, rule_type, description, applicable_families, priority FROM rc_business_rules WHERE is_active = true ORDER BY priority DESC");
 
       const libraryContext = `
 BIBLIOTECA DE ATRIBUTOS EXISTENTES:
@@ -532,6 +602,9 @@ ${bundles.rows.map(b => `- ${b.name}: ${JSON.stringify(b.items_json)}`).join('\n
 
 INFRAESTRUTURA DO CATÁLOGO:
 ${configs.rows.map(c => `- [${c.config_type}] ${c.name}: ${JSON.stringify(c.config_json)}`).join('\n') || 'Nenhuma configurada'}
+
+REGRAS DE NEGÓCIO ATIVAS (OBRIGATÓRIO considerar na modelagem):
+${rules.rows.map(r => `- [${r.priority.toUpperCase()}] [${r.category}] ${r.name}: ${r.description}${r.applicable_families?.length ? ' (Famílias: ' + r.applicable_families.join(', ') + ')' : ''}`).join('\n') || 'Nenhuma regra cadastrada'}
 `;
 
       const systemPrompt = `Você é um especialista em Salesforce Revenue Cloud / Revenue Lifecycle Management (RLM).
@@ -547,6 +620,7 @@ REGRAS:
 3. Se precisar de novo atributo/pricing/bundle, PROPONHA a criação
 4. Responda APENAS em JSON válido, sem markdown, sem backticks
 5. Se a KB não cobrir algum aspecto, sinalize em "kb_gaps"
+6. SEMPRE considere e aplique as REGRAS DE NEGÓCIO ATIVAS listadas acima. Documente no campo "business_rules_applied" quais regras foram consideradas e como impactaram a modelagem
 
 FORMATO DE RESPOSTA (JSON):
 {
@@ -584,6 +658,9 @@ FORMATO DE RESPOSTA (JSON):
     "bundles": []
   },
   "kb_gaps": ["Lista de aspectos que a KB não cobre"],
+  "business_rules_applied": [
+    { "rule": "Nome da regra", "impact": "Como a regra impactou a modelagem" }
+  ],
   "implementation_notes": "Notas de implementação"
 }`;
 
@@ -698,6 +775,7 @@ FORMATO DE RESPOSTA (JSON):
       const pricings = await pool.query('SELECT COUNT(*) as count FROM rc_pricing_models');
       const bundlesCount = await pool.query('SELECT COUNT(*) as count FROM rc_bundles');
       const kbDocs = await pool.query('SELECT COUNT(*) as count FROM rc_kb_documents WHERE is_active = true');
+      const rulesCount = await pool.query('SELECT COUNT(*) as count FROM rc_business_rules WHERE is_active = true');
       const configs = await pool.query('SELECT config_type, COUNT(*) as count FROM rc_catalog_config GROUP BY config_type');
       res.json({
         products_by_status: products.rows,
@@ -706,6 +784,7 @@ FORMATO DE RESPOSTA (JSON):
         total_pricing_models: parseInt(pricings.rows[0].count),
         total_bundles: parseInt(bundlesCount.rows[0].count),
         total_kb_docs: parseInt(kbDocs.rows[0].count),
+        total_business_rules: parseInt(rulesCount.rows[0].count),
         catalog_config: configs.rows
       });
     } catch (err) { res.status(500).json({ error: err.message }); }
