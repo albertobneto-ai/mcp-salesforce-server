@@ -533,6 +533,7 @@ async function runAiModeling() {
 
     currentAiTemplate = result.template;
     currentAiInput = desc;
+    window._lastAiModel = result.model || 'unknown';
     document.getElementById('aiResultArea').style.display = 'block';
     document.getElementById('aiSaveBtn').style.display = '';
 
@@ -554,7 +555,8 @@ async function runAiModeling() {
 function renderAiTemplate(t, kbUsed) {
   const view = document.getElementById('aiTemplateView');
   const mapping = t.revenue_cloud_mapping || [];
-  view.innerHTML = `
+  const modelBadge = window._lastAiModel ? `<div style="margin-bottom:12px;"><span class="badge badge-validado">MODELO: ${esc(window._lastAiModel)}</span></div>` : '';
+  view.innerHTML = `${modelBadge}
     ${!kbUsed ? '<div style="background:var(--orange-bg);color:var(--orange);padding:10px;border-radius:var(--radius);margin-bottom:12px;font-size:0.85em;">KB vazia — modelagem baseada em conhecimento geral. Adicione documentos na aba KNOWLEDGE BASE para resultados mais precisos.</div>' : ''}
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;">
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
