@@ -16,6 +16,7 @@ import { registerDevToolsRoutes } from "./devtools-ai.js";
 import { registerPartnerUserRoutes } from "./partner-users.js";
 import specGeneratorRouter from "./routes/spec-generator.js";
 import { registerRevenueCatalogRoutes } from "./revenue-catalog.js";
+import { registerWorkerEngineRoutes } from "./worker-engine.js";
 
 const app = express();
 app.use(express.json({ limit: "10mb" }));
@@ -2216,6 +2217,7 @@ registerKmlRoutes(app);
 registerDevToolsRoutes(app);
 registerPartnerUserRoutes(app, sfClient);
 registerRevenueCatalogRoutes(app);
+registerWorkerEngineRoutes(app);
   
   // TechEnglish
   app.use('/english', englishRouter);
