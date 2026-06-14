@@ -89,7 +89,16 @@ textarea { resize:vertical; min-height:80px; }
 
 /* ── CARDS ── */
 .lib-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:12px; }
-.lib-card { background:rgba(255,255,255,0.72); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.4); border-radius:16px; padding:16px; position:relative; box-shadow:0 4px 24px rgba(20,99,58,0.06); overflow:hidden; }
+.lib-card { background:rgba(255,255,255,0.72); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.4); border-radius:16px; padding:16px; position:relative; box-shadow:0 4px 24px rgba(20,99,58,0.06); overflow:hidden; word-break:break-word; }
+
+.agent-bar { display:flex; align-items:center; gap:8px; padding:10px 16px; background:linear-gradient(135deg,#0a2e1a,#14633a); border-radius:10px; margin-bottom:16px; }
+.agent-bar input { flex:1; padding:8px 12px; border:1px solid rgba(255,255,255,0.2); border-radius:6px; background:rgba(255,255,255,0.1); color:#fff; font-size:0.85em; }
+.agent-bar input::placeholder { color:rgba(255,255,255,0.5); }
+.agent-bar button { padding:8px 16px; border:none; border-radius:6px; background:#2ecc71; color:#fff; font-weight:700; font-size:0.8em; cursor:pointer; white-space:nowrap; }
+.agent-bar button:hover { background:#27ae60; }
+.agent-response { background:rgba(10,46,26,0.05); border:1px solid rgba(20,99,58,0.15); border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:0.82em; line-height:1.5; display:none; }
+.agent-response .agent-actions { margin-top:10px; display:flex; gap:8px; }
+
 .lib-card h4 { font-size:0.9em; margin-bottom:5px; color:#0a2e1a; font-weight:600; }
 .lib-card .meta { font-size:0.8em; color:#14633a; margin-bottom:8px; }
 .lib-card .tags { display:flex; gap:4px; flex-wrap:wrap; }
@@ -212,8 +221,6 @@ textarea { resize:vertical; min-height:80px; }
   <div class="tab active" data-tab="dashboard">DASHBOARD</div>
   <div class="tab" data-tab="products">PRODUTOS</div>
   <div class="tab" data-tab="ai-model">AI MODELING</div>
-  <div class="tab" data-tab="worker">AUTO-MODELAGEM</div>
-  <div class="tab" data-tab="worker">⚡ WORKER</div>
   <div class="tab" data-tab="attributes">ATRIBUTOS</div>
   <div class="tab" data-tab="pricing">PRECIFICACAO</div>
   <div class="tab" data-tab="bundles">BUNDLES</div>
@@ -262,6 +269,12 @@ textarea { resize:vertical; min-height:80px; }
         <option value="DESCONTINUADO">Descontinuado</option>
       </select>
       <div class="spacer"></div>
+  <div class="agent-bar">
+    <span style="color:#2ecc71;font-size:1.1em;">🤖</span>
+    <input type="text" id="agent-input-products" placeholder="Pergunte ao agente sobre produtos: "liste produtos sem charges", "quais precisam de PE?"..." onkeydown="if(event.key==='Enter')askAgent('products',this.value)">
+    <button onclick="askAgent('products',document.getElementById('agent-input-products').value)">PERGUNTAR</button>
+  </div>
+  <div class="agent-response" id="agent-resp-products"></div>
       <button class="btn btn-primary" onclick="showWizard()">+ NOVO PRODUTO</button>
     </div>
     <table class="data-table">
@@ -454,6 +467,12 @@ textarea { resize:vertical; min-height:80px; }
   <div class="toolbar">
     <h3 style="font-size:1em;">BIBLIOTECA DE BUNDLES</h3>
     <div class="spacer"></div>
+  <div class="agent-bar">
+    <span style="color:#2ecc71;font-size:1.1em;">🤖</span>
+    <input type="text" id="agent-input-bundles" placeholder="Pergunte sobre bundles: "crie um bundle de IoT + Managed", "quais são soft?"..." onkeydown="if(event.key==='Enter')askAgent('bundles',this.value)">
+    <button onclick="askAgent('bundles',document.getElementById('agent-input-bundles').value)">PERGUNTAR</button>
+  </div>
+  <div class="agent-response" id="agent-resp-bundles"></div>
     <button class="btn btn-primary" onclick="openBundleModal()">+ NOVO BUNDLE</button>
   </div>
   <div class="lib-grid" id="bundleGrid"><div style="color:var(--text2);padding:40px;text-align:center;">Carregando...</div></div>
@@ -464,6 +483,12 @@ textarea { resize:vertical; min-height:80px; }
   <div class="toolbar">
     <h3 style="font-size:1em;">REGRAS DE NEGOCIO</h3>
     <div class="spacer"></div>
+  <div class="agent-bar">
+    <span style="color:#2ecc71;font-size:1.1em;">🤖</span>
+    <input type="text" id="agent-input-rules" placeholder="Pergunte sobre regras: "quais RNs estão pendentes?", "mostre regras de elegibilidade"..." onkeydown="if(event.key==='Enter')askAgent('rules',this.value)">
+    <button onclick="askAgent('rules',document.getElementById('agent-input-rules').value)">PERGUNTAR</button>
+  </div>
+  <div class="agent-response" id="agent-resp-rules"></div>
     <button class="btn btn-primary" onclick="openRuleModal()">+ NOVA REGRA</button>
   </div>
   <p style="font-size:0.85em;color:var(--text2);margin-bottom:16px;">Regras de negócio que a AI deve considerar ao modelar produtos. Restrições, políticas, condições obrigatórias.</p>
@@ -484,6 +509,12 @@ textarea { resize:vertical; min-height:80px; }
   <div class="toolbar">
     <h3 style="font-size:1em;">PRICING RULES (RLM)</h3>
     <div class="spacer"></div>
+  <div class="agent-bar">
+    <span style="color:#2ecc71;font-size:1.1em;">🤖</span>
+    <input type="text" id="agent-input-pricing-rules" placeholder="Pergunte sobre pricing: "quais famílias não têm desconto por prazo?"..." onkeydown="if(event.key==='Enter')askAgent('pricing-rules',this.value)">
+    <button onclick="askAgent('pricing-rules',document.getElementById('agent-input-pricing-rules').value)">PERGUNTAR</button>
+  </div>
+  <div class="agent-response" id="agent-resp-pricing-rules"></div>
     <button class="btn btn-primary" onclick="openPricingRuleModal()">+ NOVA PRICING RULE</button>
   </div>
   <p style="font-size:0.85em;color:var(--text2);margin-bottom:16px;">Regras de precificação Revenue Cloud. Definem descontos, sobretaxas, overrides e ajustes automáticos de preço baseados em condições.</p>
@@ -504,6 +535,12 @@ textarea { resize:vertical; min-height:80px; }
   <div class="toolbar">
     <h3 style="font-size:1em;">INFRAESTRUTURA DO CATALOGO</h3>
     <div class="spacer"></div>
+  <div class="agent-bar">
+    <span style="color:#2ecc71;font-size:1.1em;">🤖</span>
+    <input type="text" id="agent-input-catalog" placeholder="Pergunte sobre configurações: "quais decision tables temos?", "crie uma regra de viabilidade"..." onkeydown="if(event.key==='Enter')askAgent('catalog',this.value)">
+    <button onclick="askAgent('catalog',document.getElementById('agent-input-catalog').value)">PERGUNTAR</button>
+  </div>
+  <div class="agent-response" id="agent-resp-catalog"></div>
     <button class="btn btn-primary" onclick="openCatalogModal()">+ NOVA CONFIGURACAO</button>
   </div>
   <p style="font-size:0.85em;color:var(--text2);margin-bottom:16px;">Pricebooks, Catálogos, Discount Schedules e outras configurações de infraestrutura Revenue Cloud.</p>
@@ -577,22 +614,22 @@ textarea { resize:vertical; min-height:80px; }
   <div class="lib-card" style="padding:20px;margin-bottom:24px;">
     <h4 style="margin:0 0 16px;font-size:0.85em;text-transform:uppercase;color:#14633a;letter-spacing:0.5px;">Mapeamento De → Para (Builder → Revenue Cloud)</h4>
     <table class="data-table" style="font-size:0.82em;">
-      <thead><tr><th>SEQ</th><th>BUILDER (DE)</th><th>RC OBJECT (PARA)</th><th>API</th><th>QTD</th><th>MÉTODO</th><th>STATUS</th></tr></thead>
+      <thead><tr><th><input type="checkbox" id="dp-check-all" checked onclick="toggleAllSteps(this.checked)" style="transform:scale(1.2);cursor:pointer;"></th><th>BUILDER (DE)</th><th>RC OBJECT (PARA)</th><th>API</th><th>QTD</th><th>MÉTODO</th><th>STATUS</th></tr></thead>
       <tbody id="dp-mapping">
-        <tr><td>01</td><td>Product Families (8)</td><td>Product2.Family (Picklist Values)</td><td>Metadata API</td><td>8</td><td>MCP metadata-update</td><td id="dp-st-01" class="dp-status">—</td></tr>
-        <tr><td>02</td><td>Record Types (8)</td><td>RecordType (Product2)</td><td>Metadata API</td><td>8</td><td>MCP metadata-create</td><td id="dp-st-02" class="dp-status">—</td></tr>
-        <tr><td>03</td><td>Selling Models (3)</td><td>ProductSellingModel</td><td>REST API</td><td>3</td><td>REST sObject insert</td><td id="dp-st-03" class="dp-status">—</td></tr>
-        <tr><td>04</td><td>Pricebooks (4)</td><td>Pricebook2</td><td>REST API</td><td>4</td><td>REST sObject insert</td><td id="dp-st-04" class="dp-status">—</td></tr>
-        <tr><td>05</td><td>Products (72)</td><td>Product2</td><td>REST Composite</td><td>72</td><td>MCP composite insert</td><td id="dp-st-05" class="dp-status">—</td></tr>
-        <tr><td>06</td><td>PricebookEntries</td><td>PricebookEntry</td><td>REST Composite</td><td>~288</td><td>MCP composite insert</td><td id="dp-st-06" class="dp-status">—</td></tr>
-        <tr><td>07</td><td>Attribute Sets + Attrs (789)</td><td>ProductAttributeSet + ProductAttribute</td><td>REST API</td><td>~810</td><td>REST sObject insert</td><td id="dp-st-07" class="dp-status">—</td></tr>
-        <tr><td>08</td><td>Bundles (8)</td><td>ProductComponentGroup + ProductComponent</td><td>REST API</td><td>~40</td><td>REST sObject insert</td><td id="dp-st-08" class="dp-status">—</td></tr>
-        <tr><td>09</td><td>Pricing Rules (10) + DTs (6)</td><td>PricingRule + PricingRuleCondition + PricingRuleAction + DecisionTable</td><td>REST API</td><td>~50</td><td>REST sObject insert</td><td id="dp-st-09" class="dp-status">—</td></tr>
-        <tr><td>10</td><td>Discount Schedules (3)</td><td>DiscountSchedule + DiscountScheduleTier</td><td>REST API</td><td>~15</td><td>REST sObject insert</td><td id="dp-st-10" class="dp-status">—</td></tr>
-        <tr><td>11</td><td>Product Selling Model Options</td><td>ProductSellingModelOption</td><td>REST API</td><td>~150</td><td>REST sObject insert</td><td id="dp-st-11" class="dp-status">—</td></tr>
-        <tr><td>12</td><td>Catalog Flags (6 custom fields)</td><td>Product2 custom fields</td><td>Metadata API</td><td>6</td><td>MCP metadata-create</td><td id="dp-st-12" class="dp-status">—</td></tr>
-        <tr><td>13</td><td>Eligibility Rules (3)</td><td>ProductQualificationRule / Custom</td><td>REST/Metadata</td><td>3</td><td>MCP deploy</td><td id="dp-st-13" class="dp-status">—</td></tr>
-        <tr><td>14</td><td>Limpeza Org (dados default)</td><td>Delete Trailhead defaults</td><td>REST API</td><td>—</td><td>MCP delete-records</td><td id="dp-st-14" class="dp-status">—</td></tr>
+        <tr><td><input type="checkbox" class="dp-check" data-step="01" checked style="transform:scale(1.2);cursor:pointer;"> 01</td><td>Product Families (8)</td><td>Product2.Family (Picklist Values)</td><td>Metadata API</td><td>8</td><td>MCP metadata-update</td><td id="dp-st-01" class="dp-status">—</td></tr>
+        <tr><td><input type="checkbox" class="dp-check" data-step="02" checked style="transform:scale(1.2);cursor:pointer;"> 02</td><td>Record Types (8)</td><td>RecordType (Product2)</td><td>Metadata API</td><td>8</td><td>MCP metadata-create</td><td id="dp-st-02" class="dp-status">—</td></tr>
+        <tr><td><input type="checkbox" class="dp-check" data-step="03" checked style="transform:scale(1.2);cursor:pointer;"> 03</td><td>Selling Models (3)</td><td>ProductSellingModel</td><td>REST API</td><td>3</td><td>REST sObject insert</td><td id="dp-st-03" class="dp-status">—</td></tr>
+        <tr><td><input type="checkbox" class="dp-check" data-step="04" checked style="transform:scale(1.2);cursor:pointer;"> 04</td><td>Pricebooks (4)</td><td>Pricebook2</td><td>REST API</td><td>4</td><td>REST sObject insert</td><td id="dp-st-04" class="dp-status">—</td></tr>
+        <tr><td><input type="checkbox" class="dp-check" data-step="05" checked style="transform:scale(1.2);cursor:pointer;"> 05</td><td>Products (72)</td><td>Product2</td><td>REST Composite</td><td>72</td><td>MCP composite insert</td><td id="dp-st-05" class="dp-status">—</td></tr>
+        <tr><td><input type="checkbox" class="dp-check" data-step="06" checked style="transform:scale(1.2);cursor:pointer;"> 06</td><td>PricebookEntries</td><td>PricebookEntry</td><td>REST Composite</td><td>~288</td><td>MCP composite insert</td><td id="dp-st-06" class="dp-status">—</td></tr>
+        <tr><td><input type="checkbox" class="dp-check" data-step="07" checked style="transform:scale(1.2);cursor:pointer;"> 07</td><td>Attribute Sets + Attrs (789)</td><td>ProductAttributeSet + ProductAttribute</td><td>REST API</td><td>~810</td><td>REST sObject insert</td><td id="dp-st-07" class="dp-status">—</td></tr>
+        <tr><td><input type="checkbox" class="dp-check" data-step="08" checked style="transform:scale(1.2);cursor:pointer;"> 08</td><td>Bundles (8)</td><td>ProductComponentGroup + ProductComponent</td><td>REST API</td><td>~40</td><td>REST sObject insert</td><td id="dp-st-08" class="dp-status">—</td></tr>
+        <tr><td><input type="checkbox" class="dp-check" data-step="09" checked style="transform:scale(1.2);cursor:pointer;"> 09</td><td>Pricing Rules (10) + DTs (6)</td><td>PricingRule + PricingRuleCondition + PricingRuleAction + DecisionTable</td><td>REST API</td><td>~50</td><td>REST sObject insert</td><td id="dp-st-09" class="dp-status">—</td></tr>
+        <tr><td><input type="checkbox" class="dp-check" data-step="10" checked style="transform:scale(1.2);cursor:pointer;"> 10</td><td>Discount Schedules (3)</td><td>DiscountSchedule + DiscountScheduleTier</td><td>REST API</td><td>~15</td><td>REST sObject insert</td><td id="dp-st-10" class="dp-status">—</td></tr>
+        <tr><td><input type="checkbox" class="dp-check" data-step="11" checked style="transform:scale(1.2);cursor:pointer;"> 11</td><td>Product Selling Model Options</td><td>ProductSellingModelOption</td><td>REST API</td><td>~150</td><td>REST sObject insert</td><td id="dp-st-11" class="dp-status">—</td></tr>
+        <tr><td><input type="checkbox" class="dp-check" data-step="12" checked style="transform:scale(1.2);cursor:pointer;"> 12</td><td>Catalog Flags (6 custom fields)</td><td>Product2 custom fields</td><td>Metadata API</td><td>6</td><td>MCP metadata-create</td><td id="dp-st-12" class="dp-status">—</td></tr>
+        <tr><td><input type="checkbox" class="dp-check" data-step="13" checked style="transform:scale(1.2);cursor:pointer;"> 13</td><td>Eligibility Rules (3)</td><td>ProductQualificationRule / Custom</td><td>REST/Metadata</td><td>3</td><td>MCP deploy</td><td id="dp-st-13" class="dp-status">—</td></tr>
+        <tr><td><input type="checkbox" class="dp-check" data-step="14" checked style="transform:scale(1.2);cursor:pointer;"> 14</td><td>Limpeza Org (dados default)</td><td>Delete Trailhead defaults</td><td>REST API</td><td>—</td><td>MCP delete-records</td><td id="dp-st-14" class="dp-status">—</td></tr>
       </tbody>
     </table>
   </div>
@@ -2075,21 +2112,25 @@ async function loadRules() {
   if (!rules.length) { grid.innerHTML = '<div style="color:var(--text2);padding:40px;text-align:center;">Nenhuma regra cadastrada</div>'; return; }
   const prioColors = { high:'var(--red)', medium:'var(--orange)', low:'var(--blue)' };
   const prioLabels = { high:'ALTA', medium:'MEDIA', low:'BAIXA' };
-  grid.innerHTML = rules.map(r => `<div class="lib-card" style="border-left:3px solid ${prioColors[r.priority]||'var(--border)'}; ${!r.is_active ? 'opacity:0.5;' : ''}">
-    <div class="actions">
-      <button class="btn-icon" onclick="toggleRule(${r.id}, ${!r.is_active})" title="${r.is_active ? 'Desativar' : 'Ativar'}">${r.is_active ? '✅' : '⏸'}</button>
-      <button class="btn-icon" onclick="deleteRule(${r.id})" title="Excluir">🗑</button>
+  grid.innerHTML = rules.map(r => {
+    const desc = (r.description||'').length > 180 ? r.description.slice(0,180) + '...' : r.description;
+    return `<div class="lib-card" style="border-left:4px solid ${prioColors[r.priority]||'var(--border)'}; ${!r.is_active ? 'opacity:0.45;background:rgba(200,200,200,0.15);' : ''}display:flex;flex-direction:column;min-height:160px;">
+    <div class="actions" style="display:flex;gap:2px;">
+      <button class="btn-icon" onclick="toggleRule(${r.id}, ${!r.is_active})" title="${r.is_active ? 'Desativar' : 'Ativar'}" style="font-size:0.9em;">${r.is_active ? '🟢' : '⏸'}</button>
+      <button class="btn-icon" onclick="editRule(${r.id})" title="Editar" style="font-size:0.9em;">✏️</button>
+      <button class="btn-icon" onclick="deleteRule(${r.id})" title="Excluir" style="font-size:0.9em;">🗑</button>
     </div>
-    <h4>${esc(r.name)}</h4>
-    <div class="meta">
-      <span class="badge" style="background:${prioColors[r.priority]||'var(--border)'}22;color:${prioColors[r.priority]||'var(--text2)'};">${prioLabels[r.priority] || r.priority}</span>
-      <span class="badge badge-validado" style="margin-left:4px;">${esc(r.category || 'geral')}</span>
-      <span class="badge" style="margin-left:4px;background:var(--surface2);color:var(--text2);">${esc(r.rule_type || 'constraint')}</span>
-      ${!r.is_active ? '<span class="badge badge-descontinuado" style="margin-left:4px;">INATIVA</span>' : ''}
+    <h4 style="font-size:0.82em;line-height:1.3;margin:0 0 6px;padding-right:60px;">${esc(r.name)}</h4>
+    <div class="meta" style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;">
+      <span class="badge" style="font-size:0.65em;padding:2px 6px;background:${prioColors[r.priority]||'var(--border)'}22;color:${prioColors[r.priority]||'var(--text2)'};">${prioLabels[r.priority] || r.priority}</span>
+      <span class="badge badge-validado" style="font-size:0.65em;padding:2px 6px;">${esc(r.category || 'geral')}</span>
+      <span class="badge" style="font-size:0.65em;padding:2px 6px;background:var(--surface2);color:var(--text2);">${esc(r.rule_type || 'constraint')}</span>
+      ${!r.is_active ? '<span class="badge" style="font-size:0.65em;padding:2px 6px;background:#e74c3c22;color:#e74c3c;">PENDENTE</span>' : ''}
     </div>
-    <div style="margin-top:8px;font-size:0.9em;color:var(--text);">${esc(r.description)}</div>
-    ${r.applicable_families?.length ? '<div style="margin-top:6px;" class="tags">' + r.applicable_families.map(f => '<span class="tag">' + esc(f) + '</span>').join('') + '</div>' : ''}
-  </div>`).join('');
+    <div style="font-size:0.78em;color:#444;line-height:1.4;flex:1;overflow:hidden;">${esc(desc)}</div>
+    ${r.applicable_families?.length ? '<div style="margin-top:auto;padding-top:6px;display:flex;flex-wrap:wrap;gap:3px;">' + r.applicable_families.slice(0,4).map(f => '<span style="font-size:0.62em;padding:1px 5px;border-radius:4px;background:#e0f2ec;color:#14633a;">' + esc(f) + '</span>').join('') + (r.applicable_families.length > 4 ? '<span style="font-size:0.62em;color:#888;">+' + (r.applicable_families.length-4) + '</span>' : '') + '</div>' : ''}
+  </div>`;
+  }).join('');
 }
 
 function filterRules(btn, cat) {
@@ -2153,6 +2194,47 @@ async function deleteRule(id) {
   if (!confirm('Excluir regra?')) return;
   await api('/business-rules/' + id, { method: 'DELETE' });
   loadRules();
+}
+
+async function editRule(id) {
+  const rules = await api('/business-rules?active_only=false');
+  const r = rules.find(x => x.id === id);
+  if (!r) return;
+  openModal('EDITAR REGRA — ' + r.name, `
+    <div class="form-group"><label>NOME</label><input type="text" id="m-rule-name" value="${esc(r.name)}"></div>
+    <div class="form-group"><label>DESCRICAO</label><textarea id="m-rule-desc" rows="4">${esc(r.description)}</textarea></div>
+    <div class="form-group"><label>CATEGORIA</label><select id="m-rule-cat">
+      ${['geral','pricing','contrato','desconto','bundle','compliance','aprovacao','comissao'].map(c => '<option value="'+c+'"'+(r.category===c?' selected':'')+'>'+c.charAt(0).toUpperCase()+c.slice(1)+'</option>').join('')}
+    </select></div>
+    <div class="form-group"><label>TIPO</label><select id="m-rule-type">
+      ${['constraint','policy','condition','validation','automation','process','informational','exception','pending'].map(t => '<option value="'+t+'"'+(r.rule_type===t?' selected':'')+'>'+t+'</option>').join('')}
+    </select></div>
+    <div class="form-group"><label>PRIORIDADE</label><select id="m-rule-prio">
+      <option value="alta"${r.priority==='alta'?' selected':''}>Alta</option>
+      <option value="media"${r.priority==='media'?' selected':''}>Média</option>
+      <option value="baixa"${r.priority==='baixa'?' selected':''}>Baixa</option>
+    </select></div>
+    <div class="form-group"><label>FAMILIAS (vírgula)</label><input type="text" id="m-rule-families" value="${(r.applicable_families||[]).join(', ')}"></div>
+    <div class="form-group"><label>STATUS</label><select id="m-rule-active">
+      <option value="true"${r.is_active?' selected':''}>Ativa</option>
+      <option value="false"${!r.is_active?' selected':''}>Inativa / Pendente</option>
+    </select></div>
+  `, `<button class="btn btn-secondary" onclick="closeModal()">CANCELAR</button>
+     <button class="btn btn-primary" onclick="updateRule(${id})">SALVAR</button>`);
+}
+
+async function updateRule(id) {
+  const body = {
+    name: document.getElementById('m-rule-name').value,
+    description: document.getElementById('m-rule-desc').value,
+    category: document.getElementById('m-rule-cat').value,
+    rule_type: document.getElementById('m-rule-type').value,
+    priority: document.getElementById('m-rule-prio').value,
+    applicable_families: document.getElementById('m-rule-families').value.split(',').map(s => s.trim()).filter(Boolean),
+    is_active: document.getElementById('m-rule-active').value === 'true'
+  };
+  await api('/business-rules/' + id, { method: 'PUT', body });
+  closeModal(); loadRules();
 }
 
 // ── RC WORKER (AUTO-MODELAGEM) ──
@@ -2831,6 +2913,66 @@ function logDeploy(msg, type = 'info') {
   if (el) { el.textContent = deployLog.join('\n'); el.scrollTop = el.scrollHeight; }
 }
 
+async function askAgent(context, question) {
+  if (!question.trim()) return;
+  const respEl = document.getElementById('agent-resp-' + context);
+  respEl.style.display = 'block';
+  respEl.innerHTML = '<span style="color:#888;">🔄 Pensando...</span>';
+  
+  try {
+    const resp = await fetch(ROOT_API + '/rc/agent/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ context, question })
+    });
+    const data = await resp.json();
+    
+    if (data.answer) {
+      const hasAction = data.action;
+      respEl.innerHTML = `<div style="color:#0a2e1a;white-space:pre-wrap;">${data.answer}</div>
+        ${hasAction ? '<div class="agent-actions"><button class="btn btn-primary" onclick="executeAgentAction(\'' + context + '\',\'' + btoa(JSON.stringify(data.action)) + '\')">✅ AUTORIZAR EXECUÇÃO</button><button class="btn btn-secondary" onclick="this.closest(\'.agent-response\').style.display=\'none\'">CANCELAR</button></div>' : '<div style="margin-top:8px;"><button class="btn btn-secondary" style="font-size:0.75em;" onclick="this.closest(\'.agent-response\').style.display=\'none\'">FECHAR</button></div>'}`;
+    } else {
+      respEl.innerHTML = '<span style="color:#e74c3c;">Erro: ' + (data.error||'sem resposta') + '</span>';
+    }
+  } catch(e) {
+    respEl.innerHTML = '<span style="color:#888;">Agente contextual disponível após registro do endpoint /api/rc/agent/ask no backend. Use o chat AI Modeling para consultas avançadas.</span>';
+  }
+  document.getElementById('agent-input-' + context).value = '';
+}
+
+async function executeAgentAction(context, actionB64) {
+  const action = JSON.parse(atob(actionB64));
+  const respEl = document.getElementById('agent-resp-' + context);
+  respEl.innerHTML = '<span style="color:#f39c12;">⏳ Executando...</span>';
+  try {
+    const resp = await fetch(ROOT_API + '/rc/agent/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ context, action })
+    });
+    const data = await resp.json();
+    respEl.innerHTML = '<span style="color:#27ae60;">✅ ' + (data.result || 'Ação executada com sucesso') + '</span>';
+    // Reload current tab data
+    setTimeout(() => {
+      if (context === 'products') loadProducts();
+      if (context === 'bundles') loadBundles();
+      if (context === 'pricing-rules') loadPricingRules();
+      if (context === 'rules') loadRules();
+      if (context === 'catalog') loadCatalogConfig();
+    }, 1000);
+  } catch(e) {
+    respEl.innerHTML = '<span style="color:#e74c3c;">Erro na execução: ' + e.message + '</span>';
+  }
+}
+
+function toggleAllSteps(checked) {
+  document.querySelectorAll('.dp-check').forEach(c => c.checked = checked);
+}
+
+function getSelectedSteps() {
+  return [...document.querySelectorAll('.dp-check:checked')].map(c => c.dataset.step);
+}
+
 function clearLog() { deployLog = []; document.getElementById('dp-log').textContent = ''; }
 
 function downloadLog() {
@@ -2989,7 +3131,8 @@ async function runDeploy() {
   const user = document.getElementById('dp-user').value.trim();
   const pass = document.getElementById('dp-pass').value.trim();
 
-  const steps = [
+  const selectedIds = new Set(getSelectedSteps());
+  const allSteps = [
     { id: 14, name: 'Limpeza da Org (dados default)', endpoint: '/rc/deploy/clean' },
     { id: 12, name: 'Custom Fields (catalog flags)', endpoint: '/rc/deploy/custom-fields' },
     { id: 1,  name: 'Product Families (Picklist)', endpoint: '/rc/deploy/families' },
@@ -3014,6 +3157,10 @@ async function runDeploy() {
 
   let completed = 0;
   let errors = 0;
+
+  const steps = allSteps.filter(s => selectedIds.has(String(s.id)));
+  if (!steps.length) { alert('Selecione pelo menos um step'); document.getElementById('btnDeploy').disabled = false; document.getElementById('btnDeploy').textContent = '▶ EXECUTAR DEPLOY'; return; }
+  logDeploy(`Steps selecionados: ${steps.length}/${allSteps.length}`, 'info');
 
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i];
