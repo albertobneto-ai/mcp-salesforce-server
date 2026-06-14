@@ -1438,7 +1438,7 @@ export function registerRcWorkerRoutes(app) {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + openrouterKey, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'qwen/qwen3-30b-a3b:free',
+          model: 'google/gemma-4-31b-it:free',
           max_tokens: 2000,
           messages: [
             { role: 'system', content: systemPrompt + '\n\nDados atuais:\n' + contextData + '\n\nSe a pergunta pedir uma AÇÃO (criar, alterar, excluir), responda com um resumo do que será feito e inclua no final uma linha com formato JSON: ACTION:{"type":"create|update|delete","target":"products|bundles|rules|configs","data":{...}}. Se for apenas consulta, responda normalmente sem ACTION.' },
