@@ -131,6 +131,34 @@ async function initRevenueCatalogDB() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )`);
 
+    // Pricing Rules (RLM)
+    await client.query(`CREATE TABLE IF NOT EXISTS rc_pricing_rules (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      rule_type VARCHAR(50) NOT NULL,
+      evaluation_scope VARCHAR(50) DEFAULT 'Product',
+      evaluation_event VARCHAR(50) DEFAULT 'OnCalculate',
+      sequence INT DEFAULT 10,
+      is_active BOOLEAN DEFAULT TRUE,
+      conditions_json JSONB DEFAULT '[]',
+      actions_json JSONB DEFAULT '[]',
+      applicable_families JSONB DEFAULT '[]',
+      applicable_products JSONB DEFAULT '[]',
+      description TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+
+    // Pricing Procedures (RLM)
+    await client.query(`CREATE TABLE IF NOT EXISTS rc_pricing_procedures (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      procedure_type VARCHAR(50) DEFAULT 'Standard',
+      steps_json JSONB DEFAULT '[]',
+      is_active BOOLEAN DEFAULT TRUE,
+      description TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+
     // Perfis de acesso do Ever i9
     await client.query(`CREATE TABLE IF NOT EXISTS rc_profiles (
       id SERIAL PRIMARY KEY,
@@ -515,6 +543,95 @@ export function registerRevenueCatalogRoutes(app) {
   });
 
   // =============================================
+  // PRICING RULES (RLM)
+  // =============================================
+
+  app.get('/api/rc/pricing-rules', async (req, res) => {
+    try {
+      const { rule_type, active_only } = req.query;
+      let q = 'SELECT * FROM rc_pricing_rules WHERE 1=1';
+      const params = [];
+      if (rule_type) { params.push(rule_type); q += ` AND rule_type = $${params.length}`; }
+      if (active_only === 'true') q += ' AND is_active = true';
+      q += ' ORDER BY sequence, name';
+      const result = await pool.query(q, params);
+      res.json(result.rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post('/api/rc/pricing-rules', async (req, res) => {
+    try {
+      const { name, rule_type, evaluation_scope, evaluation_event, sequence, conditions_json, actions_json, applicable_families, applicable_products, description } = req.body;
+      if (!name || !rule_type) return res.status(400).json({ error: 'Nome e tipo são obrigatórios' });
+      const result = await pool.query(
+        `INSERT INTO rc_pricing_rules (name, rule_type, evaluation_scope, evaluation_event, sequence, conditions_json, actions_json, applicable_families, applicable_products, description)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+        [name, rule_type, evaluation_scope||'Product', evaluation_event||'OnCalculate', sequence||10,
+         JSON.stringify(conditions_json||[]), JSON.stringify(actions_json||[]),
+         JSON.stringify(applicable_families||[]), JSON.stringify(applicable_products||[]), description||'']
+      );
+      res.json(result.rows[0]);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.put('/api/rc/pricing-rules/:id', async (req, res) => {
+    try {
+      const { name, rule_type, evaluation_scope, evaluation_event, sequence, conditions_json, actions_json, applicable_families, applicable_products, description, is_active } = req.body;
+      const result = await pool.query(
+        `UPDATE rc_pricing_rules SET name=COALESCE($1,name), rule_type=COALESCE($2,rule_type),
+         evaluation_scope=COALESCE($3,evaluation_scope), evaluation_event=COALESCE($4,evaluation_event),
+         sequence=COALESCE($5,sequence), conditions_json=COALESCE($6,conditions_json),
+         actions_json=COALESCE($7,actions_json), applicable_families=COALESCE($8,applicable_families),
+         applicable_products=COALESCE($9,applicable_products), description=COALESCE($10,description),
+         is_active=COALESCE($11,is_active) WHERE id=$12 RETURNING *`,
+        [name, rule_type, evaluation_scope, evaluation_event, sequence,
+         conditions_json?JSON.stringify(conditions_json):null, actions_json?JSON.stringify(actions_json):null,
+         applicable_families?JSON.stringify(applicable_families):null, applicable_products?JSON.stringify(applicable_products):null,
+         description, is_active, req.params.id]
+      );
+      res.json(result.rows[0]);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.delete('/api/rc/pricing-rules/:id', async (req, res) => {
+    try {
+      await pool.query('DELETE FROM rc_pricing_rules WHERE id = $1', [req.params.id]);
+      res.json({ status: 'deleted' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
+  // =============================================
+  // PRICING PROCEDURES (RLM)
+  // =============================================
+
+  app.get('/api/rc/pricing-procedures', async (req, res) => {
+    try {
+      const result = await pool.query('SELECT * FROM rc_pricing_procedures ORDER BY name');
+      res.json(result.rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post('/api/rc/pricing-procedures', async (req, res) => {
+    try {
+      const { name, procedure_type, steps_json, description } = req.body;
+      if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
+      const result = await pool.query(
+        `INSERT INTO rc_pricing_procedures (name, procedure_type, steps_json, description)
+         VALUES ($1,$2,$3,$4) RETURNING *`,
+        [name, procedure_type||'Standard', JSON.stringify(steps_json||[]), description||'']
+      );
+      res.json(result.rows[0]);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.delete('/api/rc/pricing-procedures/:id', async (req, res) => {
+    try {
+      await pool.query('DELETE FROM rc_pricing_procedures WHERE id = $1', [req.params.id]);
+      res.json({ status: 'deleted' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
+  // =============================================
   // KNOWLEDGE BASE
   // =============================================
 
@@ -805,6 +922,8 @@ FORMATO DE RESPOSTA (JSON):
       const bundlesCount = await pool.query('SELECT COUNT(*) as count FROM rc_bundles');
       const kbDocs = await pool.query('SELECT COUNT(*) as count FROM rc_kb_documents WHERE is_active = true');
       const rulesCount = await pool.query('SELECT COUNT(*) as count FROM rc_business_rules WHERE is_active = true');
+      const pricingRulesCount = await pool.query('SELECT COUNT(*) as count FROM rc_pricing_rules WHERE is_active = true');
+      const pricingProcsCount = await pool.query('SELECT COUNT(*) as count FROM rc_pricing_procedures');
       const configs = await pool.query('SELECT config_type, COUNT(*) as count FROM rc_catalog_config GROUP BY config_type');
       res.json({
         products_by_status: products.rows,
@@ -814,6 +933,8 @@ FORMATO DE RESPOSTA (JSON):
         total_bundles: parseInt(bundlesCount.rows[0].count),
         total_kb_docs: parseInt(kbDocs.rows[0].count),
         total_business_rules: parseInt(rulesCount.rows[0].count),
+        total_pricing_rules: parseInt(pricingRulesCount.rows[0].count),
+        total_pricing_procedures: parseInt(pricingProcsCount.rows[0].count),
         catalog_config: configs.rows
       });
     } catch (err) { res.status(500).json({ error: err.message }); }
