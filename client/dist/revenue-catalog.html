@@ -216,6 +216,7 @@ textarea { resize:vertical; min-height:80px; }
   <div class="tab" data-tab="pricing">PRECIFICACAO</div>
   <div class="tab" data-tab="bundles">BUNDLES</div>
   <div class="tab" data-tab="rules">REGRAS</div>
+  <div class="tab" data-tab="pricing-rules">PRICING RULES</div>
   <div class="tab" data-tab="catalog">CATALOGO</div>
   <div class="tab" data-tab="kb">KNOWLEDGE BASE</div>
 </div>
@@ -228,6 +229,7 @@ textarea { resize:vertical; min-height:80px; }
     <div class="stat-card"><div class="label">MODELOS PRICING</div><div class="value green" id="st-pricing">-</div></div>
     <div class="stat-card"><div class="label">BUNDLES</div><div class="value orange" id="st-bundles">-</div></div>
     <div class="stat-card"><div class="label">REGRAS ATIVAS</div><div class="value orange" id="st-rules">-</div></div>
+    <div class="stat-card"><div class="label">PRICING RULES</div><div class="value green" id="st-prules">-</div></div>
     <div class="stat-card"><div class="label">DOCS KB</div><div class="value purple" id="st-kb">-</div></div>
     <div class="stat-card"><div class="label">CONFIG CATALOGO</div><div class="value blue" id="st-config">-</div></div>
   </div>
@@ -366,6 +368,26 @@ textarea { resize:vertical; min-height:80px; }
   <div class="lib-grid" id="rulesGrid"><div style="color:var(--text2);padding:40px;text-align:center;">Carregando...</div></div>
 </div>
 
+<!-- ═══════ PRICING RULES (RLM) ═══════ -->
+<div class="panel" id="panel-pricing-rules">
+  <div class="toolbar">
+    <h3 style="font-size:1em;">PRICING RULES (RLM)</h3>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" onclick="openPricingRuleModal()">+ NOVA PRICING RULE</button>
+  </div>
+  <p style="font-size:0.85em;color:var(--text2);margin-bottom:16px;">Regras de precificação Revenue Cloud. Definem descontos, sobretaxas, overrides e ajustes automáticos de preço baseados em condições.</p>
+  <div id="pricingRuleFilterBar" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+    <button class="btn btn-sm btn-secondary pr-cat-btn active" onclick="filterPricingRules(this,'')">TODAS</button>
+    <button class="btn btn-sm btn-secondary pr-cat-btn" onclick="filterPricingRules(this,'Discount')">DISCOUNT</button>
+    <button class="btn btn-sm btn-secondary pr-cat-btn" onclick="filterPricingRules(this,'Surcharge')">SURCHARGE</button>
+    <button class="btn btn-sm btn-secondary pr-cat-btn" onclick="filterPricingRules(this,'PriceOverride')">OVERRIDE</button>
+    <button class="btn btn-sm btn-secondary pr-cat-btn" onclick="filterPricingRules(this,'Markup')">MARKUP</button>
+    <button class="btn btn-sm btn-secondary pr-cat-btn" onclick="filterPricingRules(this,'Floor')">FLOOR</button>
+    <button class="btn btn-sm btn-secondary pr-cat-btn" onclick="filterPricingRules(this,'Ceiling')">CEILING</button>
+  </div>
+  <div class="lib-grid" id="pricingRulesGrid"><div style="color:var(--text2);padding:40px;text-align:center;">Carregando...</div></div>
+</div>
+
 <!-- ═══════ CATALOG CONFIG ═══════ -->
 <div class="panel" id="panel-catalog">
   <div class="toolbar">
@@ -432,6 +454,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (t === 'pricing') loadPricingModels();
     if (t === 'bundles') loadBundles();
     if (t === 'rules') loadRules();
+    if (t === 'pricing-rules') loadPricingRules();
     if (t === 'catalog') loadCatalogConfig();
     if (t === 'kb') loadKb();
   });
@@ -465,6 +488,7 @@ async function loadStats() {
   document.getElementById('st-pricing').textContent = stats.total_pricing_models || 0;
   document.getElementById('st-bundles').textContent = stats.total_bundles || 0;
   document.getElementById('st-rules').textContent = stats.total_business_rules || 0;
+  document.getElementById('st-prules').textContent = stats.total_pricing_rules || 0;
   document.getElementById('st-kb').textContent = stats.total_kb_docs || 0;
   const totalConfig = (stats.catalog_config || []).reduce((s, r) => s + parseInt(r.count), 0);
   document.getElementById('st-config').textContent = totalConfig;
@@ -811,6 +835,7 @@ const sectionHelp = {
   sellingModelOptions: '<strong>Product Selling Model Options</strong> — Define COMO o produto é vendido: One-Time (venda única), Evergreen (recorrente sem prazo), ou Term-Based (contrato com prazo definido). Configura tipo de cobrança e frequência.',
   priceBookEntries: '<strong>Price Books</strong> — Entradas de preço do produto nos Pricebooks. Cada entrada define preço, moeda, tipo de cobrança e frequência para um Pricebook específico. Selecione um Pricebook já cadastrado na aba CATALOGO.',
   categories: '<strong>Categories</strong> — Classificações do produto no catálogo. Usadas para organizar e filtrar produtos na experiência de venda. Ex: Enterprise, SMB, Connectivity.',
+  pricingRules: '<strong>Pricing Rules</strong> — Regras de precificação que se aplicam a este produto. Definem descontos automáticos, sobretaxas, overrides e ajustes de preço baseados em condições. Selecione regras já cadastradas na aba PRICING RULES.',
   attributes: '<strong>Attributes</strong> — Atributos técnicos e comerciais do produto. Selecione atributos já cadastrados na aba ATRIBUTOS, defina o valor, e indique se impacta no preço (Price Impacting).'
 };
 
@@ -831,6 +856,9 @@ function renderRelatedSections(data, t) {
     ),
     renderRelSection('categories','📋','var(--cyan)','Categories', r.categories||[],
       (items) => items.map((c,i) => relRow(esc(typeof c==='string'?c:c.name), remBtn('categories',i)))
+    ),
+    renderRelSection('pricingRules','📐','var(--blue)','Pricing Rules', r.pricingRules||[],
+      (items) => items.map((p,i) => relRow(`<strong>${esc(p.name)}</strong> <span style="color:var(--text2);">— ${p.ruleType||''} ${p.adjustmentType||''} ${p.value||''}</span>`, remBtn('pricingRules',i)))
     ),
     renderRelSection('attributes','🏷','#0d9488','Attributes', r.attributes||[],
       (items) => items.map((a,i) => relRow(`<strong>${esc(a.name)}</strong> <span style="color:var(--text2);">= ${esc(a.value||'')}</span> ${a.priceImpacting?'<span class="badge" style="background:var(--orange-bg);color:var(--orange);margin-left:6px;">Price Impacting</span>':''}`, remBtn('attributes',i)))
@@ -965,6 +993,15 @@ async function openRelForm(key) {
     } else if (key === 'categories') {
       html = `<div class="form-group"><label>CATEGORIA</label><input type="text" id="rel-cat-name" placeholder="Ex: Enterprise, SMB, Connectivity, Data"></div>`;
 
+    } else if (key === 'pricingRules') {
+      const pRules = await api('/pricing-rules?active_only=true');
+      const opts = pRules.map(r => `<option value="${esc(r.name)}" data-type="${r.rule_type}" data-actions='${JSON.stringify(r.actions_json||[])}'>${esc(r.name)} (${r.rule_type})</option>`).join('');
+      html = `<div class="form-group"><label>SELECIONE A PRICING RULE</label>
+        <div class="rel-lib-select">
+          <select id="rel-pr-sel"><option value="">-- Selecione da biblioteca --</option>${opts}</select>
+          <button class="btn btn-sm btn-secondary btn-new" onclick="document.querySelector('[data-tab=pricing-rules]').click();closeProductDetail()">+ Criar Rule</button>
+        </div></div>`;
+
     } else if (key === 'parentProducts') {
       const products = await api('/products');
       const others = products.filter(p => p.id !== currentProductData.id);
@@ -1046,6 +1083,16 @@ function buildRelItem(key) {
     const name=gv('rel-cat-name');
     if(!name) { alert('Informe a categoria'); return null; }
     return name;
+  }
+  if (key==='pricingRules') {
+    const name = gv('rel-pr-sel');
+    if(!name) { alert('Selecione uma pricing rule'); return null; }
+    const sel = document.getElementById('rel-pr-sel');
+    const opt = sel.selectedOptions[0];
+    const ruleType = opt?.dataset?.type || '';
+    let actions = [];
+    try { actions = JSON.parse(opt?.dataset?.actions||'[]'); } catch {}
+    return {name, ruleType, adjustmentType: actions[0]?.adjustmentType||'', value: actions[0]?.value||''};
   }
   if (key==='parentProducts') {
     const sel=gv('rel-pp-name');
@@ -1181,6 +1228,14 @@ function renderDetailsTab(t) {
     cards += sectionTitle('ATRIBUTOS ('+r.attributes.length+')','#0d9488');
     r.attributes.forEach(a => {
       cards += relDetailCard(a.name, a.value||'(sem valor)', a.priceImpacting?'Price Impacting':'', '#0d9488');
+    });
+  }
+
+  // Related: Pricing Rules
+  if (r.pricingRules?.length) {
+    cards += sectionTitle('PRICING RULES ('+r.pricingRules.length+')','var(--blue)');
+    r.pricingRules.forEach(p => {
+      cards += relDetailCard(p.name, (p.adjustmentType||'')+' '+(p.value||''), p.ruleType||'', 'var(--blue)');
     });
   }
 
@@ -1672,6 +1727,155 @@ async function deleteRule(id) {
   if (!confirm('Excluir regra?')) return;
   await api('/business-rules/' + id, { method: 'DELETE' });
   loadRules();
+}
+
+// ── PRICING RULES (RLM) ──
+let currentPRFilter = '';
+async function loadPricingRules() {
+  let q = '/pricing-rules?';
+  if (currentPRFilter) q += 'rule_type=' + currentPRFilter;
+  const rules = await api(q);
+  const grid = document.getElementById('pricingRulesGrid');
+  if (!rules.length) { grid.innerHTML = '<div style="color:var(--text2);padding:40px;text-align:center;">Nenhuma pricing rule cadastrada</div>'; return; }
+  const typeColors = {Discount:'var(--green)',Surcharge:'var(--red)',PriceOverride:'var(--blue)',Markup:'var(--orange)',Floor:'var(--cyan)',Ceiling:'#f472b6'};
+  grid.innerHTML = rules.map(r => `<div class="lib-card" style="border-left:3px solid ${typeColors[r.rule_type]||'var(--border)'}; ${!r.is_active?'opacity:0.5;':''}">
+    <div class="actions">
+      <button class="btn-icon" onclick="togglePricingRule(${r.id},${!r.is_active})" title="${r.is_active?'Desativar':'Ativar'}">${r.is_active?'✅':'⏸'}</button>
+      <button class="btn-icon" onclick="deletePricingRule(${r.id})" title="Excluir">🗑</button>
+    </div>
+    <h4>${esc(r.name)}</h4>
+    <div class="meta">
+      <span class="badge" style="background:${typeColors[r.rule_type]||'var(--border)'}22;color:${typeColors[r.rule_type]||'var(--text2)'};">${r.rule_type}</span>
+      <span class="badge badge-validado" style="margin-left:4px;">${esc(r.evaluation_scope)}</span>
+      <span class="badge" style="margin-left:4px;background:rgba(255,255,255,0.3);color:var(--text2);">Seq: ${r.sequence}</span>
+      ${!r.is_active?'<span class="badge badge-descontinuado" style="margin-left:4px;">INATIVA</span>':''}
+    </div>
+    ${r.description?'<div style="margin-top:6px;font-size:0.85em;color:var(--text);">'+esc(r.description)+'</div>':''}
+    ${r.conditions_json?.length?'<div style="margin-top:6px;font-size:0.8em;color:var(--text2);"><strong>Condições:</strong> '+r.conditions_json.map(c=>esc(c.field+' '+c.operator+' '+c.value)).join(', ')+'</div>':''}
+    ${r.actions_json?.length?'<div style="margin-top:4px;font-size:0.8em;color:var(--text2);"><strong>Ações:</strong> '+r.actions_json.map(a=>esc(a.targetField+' '+a.adjustmentType+' '+a.value)).join(', ')+'</div>':''}
+    ${r.applicable_families?.length?'<div style="margin-top:4px;" class="tags">'+r.applicable_families.map(f=>'<span class="tag">'+esc(f)+'</span>').join('')+'</div>':''}
+  </div>`).join('');
+}
+
+function filterPricingRules(btn, type) {
+  document.querySelectorAll('.pr-cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentPRFilter = type;
+  loadPricingRules();
+}
+
+function openPricingRuleModal() {
+  openModal('NOVA PRICING RULE (RLM)', `
+    <div class="form-group"><label>NOME</label><input type="text" id="m-pr-name" placeholder="Ex: Desconto Volume Enterprise"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="form-group"><label>TIPO</label><select id="m-pr-type">
+        <option value="Discount">Discount (Desconto)</option>
+        <option value="Surcharge">Surcharge (Sobretaxa)</option>
+        <option value="PriceOverride">Price Override</option>
+        <option value="Markup">Markup</option>
+        <option value="Floor">Floor (Preço Mínimo)</option>
+        <option value="Ceiling">Ceiling (Preço Máximo)</option>
+      </select></div>
+      <div class="form-group"><label>ESCOPO</label><select id="m-pr-scope">
+        <option value="Product">Product</option>
+        <option value="OrderItem">Order Item</option>
+        <option value="QuoteLineItem">Quote Line Item</option>
+        <option value="Order">Order (Inteiro)</option>
+      </select></div>
+      <div class="form-group"><label>EVENTO</label><select id="m-pr-event">
+        <option value="OnInit">On Init</option>
+        <option value="OnCalculate">On Calculate</option>
+        <option value="BeforeSave">Before Save</option>
+        <option value="AfterSave">After Save</option>
+      </select></div>
+      <div class="form-group"><label>SEQUENCIA</label><input type="number" id="m-pr-seq" value="10" placeholder="Ordem de execução"></div>
+    </div>
+    <div style="background:rgba(255,255,255,0.3);border:1px solid var(--border);border-radius:8px;padding:12px;margin:12px 0;">
+      <div style="font-size:0.75em;color:var(--text2);text-transform:uppercase;margin-bottom:8px;">CONDIÇÃO (quando aplicar)</div>
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;">
+        <div class="form-group"><label>CAMPO</label><select id="m-pr-cond-field">
+          <option value="">-- Sem condição --</option>
+          <option value="Product.Family">Família do Produto</option>
+          <option value="Product.ProductType">Tipo do Produto</option>
+          <option value="Quantity">Quantidade</option>
+          <option value="ListPrice">Preço de Lista</option>
+          <option value="TotalPrice">Preço Total</option>
+          <option value="SellingModel">Selling Model</option>
+          <option value="ContractTerm">Prazo Contrato</option>
+        </select></div>
+        <div class="form-group"><label>OPERADOR</label><select id="m-pr-cond-op">
+          <option value="equals">Igual</option><option value="notEquals">Diferente</option>
+          <option value="greaterThan">Maior que</option><option value="lessThan">Menor que</option>
+          <option value="greaterOrEqual">Maior ou igual</option><option value="contains">Contém</option>
+        </select></div>
+        <div class="form-group"><label>VALOR</label><input type="text" id="m-pr-cond-val" placeholder="Valor da condição"></div>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,0.3);border:1px solid var(--border);border-radius:8px;padding:12px;margin:12px 0;">
+      <div style="font-size:0.75em;color:var(--text2);text-transform:uppercase;margin-bottom:8px;">AÇÃO (o que fazer)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div class="form-group"><label>CAMPO ALVO</label><select id="m-pr-act-field">
+          <option value="UnitPrice">Preço Unitário</option>
+          <option value="TotalPrice">Preço Total</option>
+          <option value="DiscountPercent">% Desconto</option>
+          <option value="DiscountAmount">Valor Desconto</option>
+          <option value="ListPrice">Preço de Lista</option>
+        </select></div>
+        <div class="form-group"><label>TIPO AJUSTE</label><select id="m-pr-act-type">
+          <option value="PercentDiscount">% Desconto</option>
+          <option value="AmountDiscount">Valor Fixo Desconto</option>
+          <option value="PercentMarkup">% Markup</option>
+          <option value="FixedPrice">Preço Fixo</option>
+          <option value="Formula">Fórmula</option>
+        </select></div>
+        <div class="form-group"><label>VALOR</label><input type="text" id="m-pr-act-val" placeholder="Ex: 10, 15.5"></div>
+      </div>
+    </div>
+    <div class="form-group"><label>FAMILIAS APLICAVEIS (separadas por vírgula, vazio = todas)</label><input type="text" id="m-pr-families" placeholder="Ex: Connectivity, Internet"></div>
+    <div class="form-group"><label>DESCRICAO</label><textarea id="m-pr-desc" rows="2" placeholder="Descrição da regra"></textarea></div>
+  `, `<button class="btn btn-secondary" onclick="closeModal()">CANCELAR</button>
+     <button class="btn btn-primary" onclick="savePricingRule()">SALVAR</button>`);
+}
+
+async function savePricingRule() {
+  const name = gv('m-pr-name');
+  if (!name) return alert('Nome é obrigatório');
+  const conditions = [];
+  const condField = gv('m-pr-cond-field');
+  if (condField) {
+    conditions.push({ field: condField, operator: gv('m-pr-cond-op'), value: gv('m-pr-cond-val') });
+  }
+  const actions = [{
+    targetField: gv('m-pr-act-field'),
+    adjustmentType: gv('m-pr-act-type'),
+    value: gv('m-pr-act-val')
+  }];
+  const body = {
+    name,
+    rule_type: gv('m-pr-type'),
+    evaluation_scope: gv('m-pr-scope'),
+    evaluation_event: gv('m-pr-event'),
+    sequence: parseInt(gv('m-pr-seq')) || 10,
+    conditions_json: conditions,
+    actions_json: actions,
+    applicable_families: gv('m-pr-families').split(',').map(s=>s.trim()).filter(Boolean),
+    description: gv('m-pr-desc')
+  };
+  await api('/pricing-rules', { method: 'POST', body });
+  showToast('Pricing Rule criada');
+  closeModal();
+  loadPricingRules();
+}
+
+async function togglePricingRule(id, activate) {
+  await api('/pricing-rules/' + id, { method: 'PUT', body: { is_active: activate } });
+  loadPricingRules();
+}
+
+async function deletePricingRule(id) {
+  if (!confirm('Excluir pricing rule?')) return;
+  await api('/pricing-rules/' + id, { method: 'DELETE' });
+  loadPricingRules();
 }
 
 // ── CATALOG CONFIG ──
