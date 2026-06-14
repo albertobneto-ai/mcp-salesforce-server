@@ -29,54 +29,82 @@ const SID_MAPPING = {
 };
 
 // ── HIERARQUIA DE CLASSIFICAÇÃO TELECOM B2B (TM Forum SID aligned) ──
-// Service Domain > Service Category > Service Specification
+// Alinhado com catálogo Algar Telecom B2B — 8 famílias, 67 produtos reais
 const TELECOM_HIERARCHY = {
   'Connectivity': {
     sidDomain: 'Connectivity Services',
+    productCount: 21,
     categories: {
-      'MPLS':      { specs: ['MPLS Standard', 'MPLS Premium', 'MPLS Burst'] },
-      'SD-WAN':    { specs: ['SD-WAN Basic', 'SD-WAN Advanced', 'SD-WAN Secure'] },
-      'DIA':       { specs: ['Dedicated Internet Standard', 'Dedicated Internet Premium'] },
-      'Fiber':     { specs: ['Fiber Dedicated', 'Fiber Shared', 'Fiber GPON'] },
-      'Ethernet':  { specs: ['E-Line', 'E-LAN', 'E-Tree'] },
-      'Wireless':  { specs: ['4G Backup', '5G Primary', 'Satellite Backup'] }
+      'Broadband':    { products: ['Banda Larga', 'Banda Larga Exp Soluções', 'Banda Larga Expansão', 'Banda Larga Smart', 'Banda Larga Sul'] },
+      'MPLS/VPN':     { products: ['VPN Network', 'VPN Node', 'LAN to LAN Network', 'LAN to LAN Node'] },
+      'SD-WAN':       { products: ['SD-WAN 2.0 Network', 'SD-WAN 2.0 Node'] },
+      'Internet':     { products: ['Internet Link', 'IP Trânsito', 'EILD Novo'] },
+      'Wavelength':   { products: ['Wavelength Network', 'Wavelength Node'] },
+      'WiFi':         { products: ['SmartFi Pro', 'Super WiFi', 'Smart Connect', 'Ponto de Acesso'] },
+      'Access':       { products: ['Connect+ Controle'] }
     }
   },
-  'Cloud': {
-    sidDomain: 'Cloud Services',
-    categories: {
-      'IaaS':      { specs: ['Compute', 'Storage', 'Network'] },
-      'Hosting':   { specs: ['Colocation', 'Managed Hosting', 'Cloud Hosting'] },
-      'Backup':    { specs: ['Cloud Backup', 'DRaaS'] }
-    }
-  },
-  'IoT': {
-    sidDomain: 'IoT Services',
-    categories: {
-      'Connectivity': { specs: ['NB-IoT', 'LTE-M', 'IoT SIM'] },
-      'Platform':     { specs: ['Device Management', 'Data Analytics'] }
-    }
-  },
-  'UCaaS': {
+  'Voice & Collaboration': {
     sidDomain: 'Unified Communications',
+    productCount: 10,
     categories: {
-      'Voice':         { specs: ['SIP Trunk', 'Hosted PBX', 'Cloud Voice'] },
-      'Collaboration': { specs: ['Video Conferencing', 'Team Messaging'] },
-      'ContactCenter': { specs: ['CCaaS Basic', 'CCaaS Omnichannel'] }
+      'Fixed Voice':    { products: ['Voz Fixa', 'Voz Total', 'Voz 0300', 'Did Fixo', 'Tridígito', 'DDG', 'Número Único'] },
+      'Mobile':         { products: ['Celular', 'Aparelho Celular'] },
+      'Cloud Voice':    { products: ['Cloud Phone Pro'] }
+    }
+  },
+  'Cloud & IT': {
+    sidDomain: 'Cloud Services',
+    productCount: 10,
+    categories: {
+      'IaaS':           { products: ['Cloud Server', 'MultiCloud', 'Microsoft Azure'] },
+      'SaaS':           { products: ['Microsoft 365', 'Gestão Financeira', 'Gestão Fiscal', 'Gestão Fiscal Pró'] },
+      'Hosting':        { products: ['Hospedagem Dedicada'] },
+      'Backup':         { products: ['Cloud Backup'] },
+      'Fintech':        { products: ['ALGAR FINTECH'] }
+    }
+  },
+  'Digital & Media': {
+    sidDomain: 'Digital Services',
+    productCount: 7,
+    categories: {
+      'Communication':  { products: ['Message Solution', 'API Connect'] },
+      'Platform':       { products: ['Algar Simples Digital', 'Presença Digital', 'Vida Hub'] },
+      'Energy':         { products: ['Compartilhe Energia'] },
+      'TV':             { products: ['TV'] }
     }
   },
   'Security': {
     sidDomain: 'Security Services',
+    productCount: 4,
     categories: {
-      'Network':   { specs: ['Managed Firewall', 'DDoS Protection', 'SASE'] },
-      'Endpoint':  { specs: ['Endpoint Protection', 'MDR'] }
+      'Network':        { products: ['Anti DDoS', 'Gerenciamento de Rede'] },
+      'Endpoint':       { products: ['Antivírus Endpoint', 'Gerenciamento de Segurança'] }
     }
   },
-  'Managed': {
-    sidDomain: 'Managed Services',
+  'IoT': {
+    sidDomain: 'IoT Services',
+    productCount: 4,
     categories: {
-      'NetworkOps': { specs: ['NOC Monitoring', 'Managed Router'] },
-      'FieldOps':   { specs: ['On-Site Support', 'Installation'] }
+      'Connectivity':   { products: ['IoT Connect', 'IoT Connect - Node'] },
+      'Platform':       { products: ['IoT', 'MoT Management of Things'] }
+    }
+  },
+  'Managed Services': {
+    sidDomain: 'Managed Services',
+    productCount: 6,
+    categories: {
+      'Support':        { products: ['ServiceHub', 'Atendimento Premium', 'Algar Aluguel de Equipamentos'] },
+      'Operations':     { products: ['Gestão de Operações em Campo', 'SWAP Infraestrutura'] },
+      'Outsourcing':    { products: ['Serviços Profissionais'] }
+    }
+  },
+  'Professional Services': {
+    sidDomain: 'Professional Services',
+    productCount: 5,
+    categories: {
+      'Projects':       { products: ['Projeto Especial', 'Best Guess Genérico'] },
+      'Interconnect':   { products: ['Interconexão', 'Terminação de Tráfego', 'ITX'] }
     }
   }
 };
@@ -85,138 +113,117 @@ const TELECOM_HIERARCHY = {
 // Cada template codifica: selling models válidos, charge types, atributos
 // obrigatórios, padrão de pricing, UoM, assetização — derivado da doc oficial.
 const PRODUCT_TEMPLATES = {
-  // ─── CONNECTIVITY ───
-  'MPLS': {
-    domain: 'Connectivity', category: 'MPLS',
-    productType: 'Base',
-    sellingModels: ['Term-Based', 'Evergreen'],
-    defaultSellingModel: 'Term-Based',
-    termOptions: [12, 24, 36, 48, 60],
-    chargeStructure: ['MRC', 'NRC'],   // Monthly Recurring + Non-Recurring (setup)
-    uom: 'Each',
-    assetizable: true,
-    configurable: true,
+// ─── CONNECTIVITY (21 produtos Algar) ───
+  'Connectivity': {
+    domain: 'Connectivity', category: 'Connectivity', productType: 'Base',
+    uom: 'Each', assetizable: true, configurable: true, taxPolicy: 'TaxInclusive',
+    sellingModels: ['Term-Based', 'Evergreen'], defaultSellingModel: 'Term-Based',
+    termOptions: [12, 24, 36, 48, 60], chargeStructure: ['MRC', 'NRC'],
+    chargePatterns: { MRC: 'Assinatura/Mensalidade', NRC: 'Instalação/Ativação', Equipment: 'CPE Aluguel' },
     attributeGroups: ['Network Specifications', 'Service Parameters', 'Commercial Terms'],
     pricingPattern: 'MRC_NRC_TERM_VOLUME',
-    taxPolicy: 'Taxable'
   },
   'SD-WAN': {
-    domain: 'Connectivity', category: 'SD-WAN',
-    productType: 'Base',
-    sellingModels: ['Term-Based', 'Evergreen'],
-    defaultSellingModel: 'Term-Based',
-    termOptions: [12, 24, 36],
-    chargeStructure: ['MRC', 'NRC'],
-    uom: 'Each', assetizable: true, configurable: true,
+    domain: 'Connectivity', category: 'SD-WAN', productType: 'Bundle',
+    uom: 'Each', assetizable: true, configurable: true, taxPolicy: 'TaxInclusive',
+    sellingModels: ['Term-Based', 'Evergreen'], defaultSellingModel: 'Term-Based',
+    termOptions: [24, 36, 48, 60], chargeStructure: ['MRC', 'NRC'],
+    chargePatterns: { MRC: 'Assinatura SD-WAN', NRC: 'Instalação', Equipment: 'CPE SD-WAN' },
     attributeGroups: ['Network Specifications', 'Service Parameters', 'Commercial Terms'],
     pricingPattern: 'MRC_NRC_TERM_SITE',
-    taxPolicy: 'Taxable'
   },
-  'DIA': {
-    domain: 'Connectivity', category: 'DIA',
-    productType: 'Base',
-    sellingModels: ['Term-Based', 'Evergreen'],
-    defaultSellingModel: 'Term-Based',
-    termOptions: [12, 24, 36],
-    chargeStructure: ['MRC', 'NRC'],
-    uom: 'Each', assetizable: true, configurable: true,
+  'Broadband': {
+    domain: 'Connectivity', category: 'Broadband', productType: 'Base',
+    uom: 'Each', assetizable: true, configurable: true, taxPolicy: 'TaxInclusive',
+    sellingModels: ['Term-Based', 'Evergreen'], defaultSellingModel: 'Term-Based',
+    termOptions: [12, 24, 36], chargeStructure: ['MRC', 'NRC'],
     attributeGroups: ['Network Specifications', 'Service Parameters', 'Commercial Terms'],
     pricingPattern: 'MRC_NRC_BANDWIDTH',
-    taxPolicy: 'Taxable'
   },
-  'Fiber': {
-    domain: 'Connectivity', category: 'Fiber',
-    productType: 'Base',
-    sellingModels: ['Term-Based'],
-    defaultSellingModel: 'Term-Based',
-    termOptions: [12, 24, 36, 60],
-    chargeStructure: ['MRC', 'NRC'],
-    uom: 'Each', assetizable: true, configurable: true,
+  'Wavelength': {
+    domain: 'Connectivity', category: 'Wavelength', productType: 'Bundle',
+    uom: 'Each', assetizable: true, configurable: true, taxPolicy: 'TaxInclusive',
+    sellingModels: ['Term-Based'], defaultSellingModel: 'Term-Based',
+    termOptions: [36, 48, 60], chargeStructure: ['MRC', 'NRC'],
     attributeGroups: ['Network Specifications', 'Service Parameters', 'Commercial Terms'],
     pricingPattern: 'MRC_NRC_BANDWIDTH',
-    taxPolicy: 'Taxable'
   },
-  'Ethernet': {
-    domain: 'Connectivity', category: 'Ethernet',
-    productType: 'Base',
-    sellingModels: ['Term-Based', 'Evergreen'],
-    defaultSellingModel: 'Term-Based',
-    termOptions: [12, 24, 36],
-    chargeStructure: ['MRC', 'NRC'],
-    uom: 'Each', assetizable: true, configurable: true,
+  'VPN': {
+    domain: 'Connectivity', category: 'VPN', productType: 'Bundle',
+    uom: 'Each', assetizable: true, configurable: true, taxPolicy: 'TaxInclusive',
+    sellingModels: ['Term-Based', 'Evergreen'], defaultSellingModel: 'Term-Based',
+    termOptions: [24, 36, 48, 60], chargeStructure: ['MRC', 'NRC'],
     attributeGroups: ['Network Specifications', 'Service Parameters', 'Commercial Terms'],
-    pricingPattern: 'MRC_NRC_BANDWIDTH',
-    taxPolicy: 'Taxable'
+    pricingPattern: 'MRC_NRC_TERM_VOLUME',
   },
-  // ─── CLOUD ───
-  'IaaS': {
-    domain: 'Cloud', category: 'IaaS',
-    productType: 'Base',
-    sellingModels: ['Evergreen', 'Term-Based'],
-    defaultSellingModel: 'Evergreen',
-    termOptions: [1, 12, 36],
-    chargeStructure: ['MRC', 'Usage'],   // Recorrente + uso medido
-    uom: 'Each', assetizable: true, configurable: true,
-    attributeGroups: ['Cloud Specifications', 'Commercial Terms'],
-    pricingPattern: 'MRC_USAGE',
-    taxPolicy: 'Taxable'
-  },
-  // ─── IoT ───
-  'Connectivity_IoT': {
-    domain: 'IoT', category: 'Connectivity',
-    productType: 'Base',
-    sellingModels: ['Evergreen', 'Usage-Based'],
-    defaultSellingModel: 'Usage-Based',
-    termOptions: [1, 12, 24],
-    chargeStructure: ['MRC', 'Usage'],
-    uom: 'Each', assetizable: true, configurable: true,
-    attributeGroups: ['IoT Specifications', 'Commercial Terms'],
-    pricingPattern: 'MRC_USAGE_VOLUME',
-    taxPolicy: 'Taxable'
-  },
-  // ─── UCaaS ───
-  'Voice': {
-    domain: 'UCaaS', category: 'Voice',
-    productType: 'Base',
-    sellingModels: ['Evergreen', 'Term-Based'],
-    defaultSellingModel: 'Term-Based',
-    termOptions: [12, 24, 36],
-    chargeStructure: ['MRC', 'NRC', 'Usage'],   // licença + setup + uso (chamadas)
-    uom: 'Seat', assetizable: true, configurable: true,
+// ─── VOICE & COLLABORATION (10 produtos Algar) ───
+  'Voice & Collaboration': {
+    domain: 'Voice & Collaboration', category: 'Voice & Collaboration', productType: 'Base',
+    uom: 'Each', assetizable: true, configurable: true, taxPolicy: 'TaxInclusive',
+    sellingModels: ['Evergreen', 'Term-Based'], defaultSellingModel: 'Term-Based',
+    termOptions: [12, 24, 36], chargeStructure: ['MRC', 'NRC', 'Usage'],
+    chargePatterns: { MRC: 'Assinatura', NRC: 'Habilitação', Usage: 'Tarifa Local/LDN/LDI' },
     attributeGroups: ['Voice Specifications', 'Commercial Terms'],
     pricingPattern: 'MRC_PER_SEAT_USAGE',
-    taxPolicy: 'Taxable'
   },
-  // ─── SECURITY ───
-  'Network_Security': {
-    domain: 'Security', category: 'Network',
-    productType: 'Add-On',
-    sellingModels: ['Term-Based', 'Evergreen'],
-    defaultSellingModel: 'Term-Based',
-    termOptions: [12, 24, 36],
-    chargeStructure: ['MRC', 'NRC'],
-    uom: 'Each', assetizable: true, configurable: true,
+// ─── CLOUD & IT (10 produtos Algar) ───
+  'Cloud & IT': {
+    domain: 'Cloud & IT', category: 'Cloud & IT', productType: 'Base',
+    uom: 'Each', assetizable: true, configurable: true, taxPolicy: 'TaxInclusive',
+    sellingModels: ['Evergreen', 'Term-Based'], defaultSellingModel: 'Evergreen',
+    termOptions: [12, 24, 36], chargeStructure: ['MRC'],
+    chargePatterns: { MRC: 'Licença/Assinatura', NRC: 'Setup' },
+    attributeGroups: ['Cloud Specifications', 'Commercial Terms'],
+    pricingPattern: 'MRC_USAGE',
+  },
+// ─── DIGITAL & MEDIA (7 produtos Algar) ───
+  'Digital & Media': {
+    domain: 'Digital & Media', category: 'Digital & Media', productType: 'Base',
+    uom: 'Each', assetizable: true, configurable: true, taxPolicy: 'TaxInclusive',
+    sellingModels: ['Evergreen', 'Term-Based'], defaultSellingModel: 'Term-Based',
+    termOptions: [12, 24], chargeStructure: ['MRC', 'NRC'],
+    chargePatterns: { MRC: 'Assinatura', NRC: 'Instalação' },
+    attributeGroups: ['Digital Specifications', 'Commercial Terms'],
+    pricingPattern: 'MRC_NRC_TERM',
+  },
+// ─── SECURITY (4 produtos Algar) ───
+  'Security': {
+    domain: 'Security', category: 'Security', productType: 'Base',
+    uom: 'Each', assetizable: true, configurable: true, taxPolicy: 'TaxInclusive',
+    sellingModels: ['Term-Based', 'Evergreen'], defaultSellingModel: 'Term-Based',
+    termOptions: [12, 24, 36], chargeStructure: ['MRC', 'NRC'],
     attributeGroups: ['Security Specifications', 'Commercial Terms'],
     pricingPattern: 'MRC_NRC_TERM',
-    taxPolicy: 'Taxable'
   },
-  // ─── MANAGED ───
-  'NetworkOps': {
-    domain: 'Managed', category: 'NetworkOps',
-    productType: 'Add-On',
-    sellingModels: ['Term-Based', 'Evergreen'],
-    defaultSellingModel: 'Evergreen',
-    termOptions: [12, 24, 36],
-    chargeStructure: ['MRC'],
-    uom: 'Each', assetizable: true, configurable: false,
+// ─── IoT (4 produtos Algar) ───
+  'IoT': {
+    domain: 'IoT', category: 'IoT', productType: 'Base',
+    uom: 'Each', assetizable: true, configurable: true, taxPolicy: 'TaxInclusive',
+    sellingModels: ['Evergreen', 'Usage-Based'], defaultSellingModel: 'Evergreen',
+    termOptions: [12, 24], chargeStructure: ['MRC'],
+    attributeGroups: ['IoT Specifications', 'Commercial Terms'],
+    pricingPattern: 'MRC_USAGE_VOLUME',
+  },
+// ─── MANAGED SERVICES (6 produtos Algar) ───
+  'Managed Services': {
+    domain: 'Managed Services', category: 'Managed Services', productType: 'Base',
+    uom: 'Each', assetizable: false, configurable: true, taxPolicy: 'TaxInclusive',
+    sellingModels: ['Term-Based', 'Evergreen'], defaultSellingModel: 'Evergreen',
+    termOptions: [12, 24, 36], chargeStructure: ['MRC'],
     attributeGroups: ['Service Parameters', 'Commercial Terms'],
     pricingPattern: 'MRC_FLAT',
-    taxPolicy: 'Taxable'
+  },
+// ─── PROFESSIONAL SERVICES (5 produtos Algar) ───
+  'Professional Services': {
+    domain: 'Professional Services', category: 'Professional Services', productType: 'Base',
+    uom: 'Each', assetizable: false, configurable: false, taxPolicy: 'TaxInclusive',
+    sellingModels: ['One-Time', 'Term-Based'], defaultSellingModel: 'Term-Based',
+    termOptions: [12, 24, 36], chargeStructure: ['MRC', 'NRC'],
+    attributeGroups: ['Commercial Terms'],
+    pricingPattern: 'MRC_FLAT',
   }
 };
 
-// ── BIBLIOTECA DE ATRIBUTOS POR GRUPO (telecom B2B padrão) ──
-// Atributos padrão Revenue Cloud por grupo de atributo, com tipo e valores.
 const ATTRIBUTE_LIBRARY = {
   'Network Specifications': [
     { name: 'Bandwidth', type: 'Picklist', values: ['10Mbps','50Mbps','100Mbps','200Mbps','500Mbps','1Gbps','10Gbps'], priceImpacting: true, required: true },
@@ -262,6 +269,13 @@ const ATTRIBUTE_LIBRARY = {
     { name: 'SIP Channels', type: 'Number', priceImpacting: true, required: true },
     { name: 'DID Numbers', type: 'Number', priceImpacting: true, required: false },
     { name: 'Call Recording', type: 'Checkbox', priceImpacting: true, required: false }
+  ],
+    'Digital Specifications': [
+    { name: 'Platform Type', type: 'Picklist', values: ['Web','Mobile','API','Hybrid'], priceImpacting: false, required: true },
+    { name: 'Users/Seats', type: 'Number', priceImpacting: true, required: true },
+    { name: 'Storage (GB)', type: 'Number', priceImpacting: true, required: false },
+    { name: 'API Calls/Month', type: 'Number', priceImpacting: true, required: false },
+    { name: 'White Label', type: 'Checkbox', priceImpacting: true, required: false }
   ],
   'Security Specifications': [
     { name: 'Firewall Type', type: 'Picklist', values: ['UTM','NGFW','Cloud Firewall'], priceImpacting: true, required: true },
@@ -399,32 +413,69 @@ const PRICING_PATTERNS = {
 
 // ── TEMPLATES DE BUNDLE TELECOM (composições padrão) ──
 const BUNDLE_TEMPLATES = {
-  'Enterprise Connectivity Package': {
-    domain: 'Connectivity',
-    description: 'Pacote completo de conectividade enterprise',
+  'SD-WAN 2.0': {
+    domain: 'Connectivity', description: 'SD-WAN com concentrador + sites remotos',
     components: [
-      { categoryHint: 'MPLS', role: 'Link Base', required: true, minQty: 1, maxQty: 10 },
-      { categoryHint: 'DIA', role: 'Backup Link', required: false, minQty: 0, maxQty: 5 },
-      { categoryHint: 'Network_Security', role: 'Firewall', required: false, minQty: 0, maxQty: 1 },
-      { categoryHint: 'NetworkOps', role: 'Managed Router', required: false, minQty: 0, maxQty: 1 }
+      { productName: 'SD-WAN 2.0 Network', role: 'Core', required: true, minQty: 1, maxQty: 1 },
+      { productName: 'SD-WAN 2.0 Node', role: 'Sites', required: true, minQty: 1, maxQty: 100 }
     ]
   },
-  'UCaaS Enterprise': {
-    domain: 'UCaaS',
-    description: 'Solução completa de comunicação unificada',
+  'VPN Corporativa': {
+    domain: 'Connectivity', description: 'VPN com concentrador + pontos remotos',
     components: [
-      { categoryHint: 'Voice', role: 'Voice Licenses', required: true, minQty: 1, maxQty: 1000 },
-      { categoryHint: 'Voice', role: 'SIP Trunk', required: true, minQty: 1, maxQty: 50 },
-      { categoryHint: 'ContactCenter', role: 'Contact Center', required: false, minQty: 0, maxQty: 1 }
+      { productName: 'VPN Network', role: 'Core', required: true, minQty: 1, maxQty: 1 },
+      { productName: 'VPN Node', role: 'Sites', required: true, minQty: 1, maxQty: 200 }
     ]
   },
-  'SD-WAN Managed Solution': {
-    domain: 'Connectivity',
-    description: 'SD-WAN gerenciado multi-site',
+  'Wavelength': {
+    domain: 'Connectivity', description: 'Wavelength backbone + terminações',
     components: [
-      { categoryHint: 'SD-WAN', role: 'SD-WAN Edge', required: true, minQty: 1, maxQty: 100 },
-      { categoryHint: 'Network_Security', role: 'Integrated Security', required: false, minQty: 0, maxQty: 1 },
-      { categoryHint: 'NetworkOps', role: 'NOC Monitoring', required: false, minQty: 0, maxQty: 1 }
+      { productName: 'Wavelength Network', role: 'Core', required: true, minQty: 1, maxQty: 1 },
+      { productName: 'Wavelength Node', role: 'Terminações', required: true, minQty: 1, maxQty: 50 }
+    ]
+  },
+  'LAN to LAN': {
+    domain: 'Connectivity', description: 'LAN to LAN backbone + pontos',
+    components: [
+      { productName: 'LAN to LAN Network', role: 'Core', required: true, minQty: 1, maxQty: 1 },
+      { productName: 'LAN to LAN Node', role: 'Pontos', required: true, minQty: 1, maxQty: 100 }
+    ]
+  },
+  'Pacote Enterprise Connectivity': {
+    domain: 'Connectivity', description: 'Conectividade enterprise: internet + SD-WAN + segurança + gerenciamento',
+    components: [
+      { productName: 'Internet Link', role: 'Conectividade', required: true, minQty: 1, maxQty: 10 },
+      { productName: 'SD-WAN 2.0 Network', role: 'Conectividade', required: false, minQty: 0, maxQty: 1 },
+      { productName: 'SD-WAN 2.0 Node', role: 'Conectividade', required: false, minQty: 0, maxQty: 50 },
+      { productName: 'Anti DDoS', role: 'Segurança', required: false, minQty: 0, maxQty: 1 },
+      { productName: 'Gerenciamento de Rede', role: 'Gerenciamento', required: false, minQty: 0, maxQty: 1 }
+    ]
+  },
+  'Pacote UCaaS Enterprise': {
+    domain: 'Voice & Collaboration', description: 'Comunicações Unificadas: telefonia cloud + voz + numeração',
+    components: [
+      { productName: 'Cloud Phone Pro', role: 'Plataforma', required: true, minQty: 1, maxQty: 1 },
+      { productName: 'Voz Total', role: 'Voz', required: true, minQty: 1, maxQty: 1 },
+      { productName: 'Número Único', role: 'Numeração', required: false, minQty: 0, maxQty: 5 },
+      { productName: 'DDG', role: 'Numeração', required: false, minQty: 0, maxQty: 3 }
+    ]
+  },
+  'Pacote Digital Workplace': {
+    domain: 'Cloud & IT', description: 'Produtividade e segurança para ambiente de trabalho digital',
+    components: [
+      { productName: 'Microsoft 365', role: 'Produtividade', required: true, minQty: 1, maxQty: 1 },
+      { productName: 'Cloud Backup', role: 'Proteção', required: true, minQty: 1, maxQty: 1 },
+      { productName: 'Antivírus Endpoint', role: 'Segurança', required: false, minQty: 0, maxQty: 1 },
+      { productName: 'Gerenciamento de Segurança', role: 'Segurança', required: false, minQty: 0, maxQty: 1 }
+    ]
+  },
+  'Pacote IoT Enterprise': {
+    domain: 'IoT', description: 'IoT completo: plataforma + conectividade + gestão',
+    components: [
+      { productName: 'IoT Connect', role: 'Conectividade', required: true, minQty: 1, maxQty: 1 },
+      { productName: 'IoT', role: 'Plataforma', required: true, minQty: 1, maxQty: 1 },
+      { productName: 'MoT Management of Things', role: 'Gestão', required: false, minQty: 0, maxQty: 1 },
+      { productName: 'IoT Connect - Node', role: 'Dispositivos', required: false, minQty: 0, maxQty: 1000 }
     ]
   }
 };
@@ -461,7 +512,18 @@ const ORDER_DECOMPOSITION = {
 // STEP 1 — Match Template
 function matchTemplate(input) {
   const key = input.category || input.family;
-  let template = PRODUCT_TEMPLATES[key];
+  // NLP: normalize family aliases to template keys
+  const familyAliases = {
+    'Cloud': 'Cloud & IT', 'Cloud & IT': 'Cloud & IT',
+    'UCaaS': 'Voice & Collaboration', 'Voice': 'Voice & Collaboration', 'Voice & Collaboration': 'Voice & Collaboration',
+    'Managed': 'Managed Services', 'Managed Services': 'Managed Services',
+    'Professional': 'Professional Services', 'Professional Services': 'Professional Services',
+    'Digital': 'Digital & Media', 'Digital & Media': 'Digital & Media',
+    'Media': 'Digital & Media',
+    'Connectivity': 'Connectivity', 'Security': 'Security', 'IoT': 'IoT'
+  };
+  const normalizedKey = familyAliases[key] || key;
+  let template = PRODUCT_TEMPLATES[normalizedKey] || PRODUCT_TEMPLATES[key];
   // Fallback: tentar resolver por domínio
   if (!template) {
     for (const [k, t] of Object.entries(PRODUCT_TEMPLATES)) {
