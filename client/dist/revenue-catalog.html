@@ -221,6 +221,7 @@ textarea { resize:vertical; min-height:80px; }
   <div class="tab" data-tab="pricing-rules">PRICING RULES</div>
   <div class="tab" data-tab="catalog">CATALOGO</div>
   <div class="tab" data-tab="kb">KNOWLEDGE BASE</div>
+  <div class="tab" data-tab="deploy" style="background:linear-gradient(135deg,#14633a,#1a7a45);color:#fff;font-weight:700;">🚀 IMPLEMENTAÇÃO</div>
 </div>
 
 <!-- ═══════ DASHBOARD ═══════ -->
@@ -532,7 +533,93 @@ textarea { resize:vertical; min-height:80px; }
   </table>
 </div>
 
-<!-- ═══════ MODAL GENÉRICO ═══════ -->
+<!-- ═══════ IMPLEMENTAÇÃO (DEPLOY TO ORG) ═══════ -->
+<div class="panel" id="panel-deploy">
+  <div class="toolbar">
+    <h3 style="font-size:1em;">🚀 IMPLEMENTAÇÃO — REVENUE CLOUD ORG</h3>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" id="btnDeploy" onclick="runDeploy()" disabled>▶ EXECUTAR DEPLOY</button>
+  </div>
+
+  <!-- Connection -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+    <div class="lib-card" style="padding:20px;">
+      <h4 style="margin:0 0 12px;font-size:0.85em;text-transform:uppercase;color:#14633a;letter-spacing:0.5px;">Conexão com Org</h4>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <input id="dp-url" placeholder="Instance URL (ex: https://minha-org.my.salesforce.com)" style="padding:8px 12px;border:1px solid #c9d6c0;border-radius:6px;font-size:0.85em;">
+        <input id="dp-user" placeholder="Username" style="padding:8px 12px;border:1px solid #c9d6c0;border-radius:6px;font-size:0.85em;">
+        <input id="dp-pass" type="password" placeholder="Password + Security Token" style="padding:8px 12px;border:1px solid #c9d6c0;border-radius:6px;font-size:0.85em;">
+        <div style="display:flex;gap:8px;">
+          <button class="btn" onclick="testOrgConnection()" style="flex:1;">🔌 TESTAR CONEXÃO</button>
+          <button class="btn" onclick="loadOrgInventory()" style="flex:1;">📋 INVENTARIAR ORG</button>
+        </div>
+        <div id="dp-conn-status" style="font-size:0.8em;color:#888;min-height:20px;"></div>
+      </div>
+    </div>
+    <div class="lib-card" style="padding:20px;">
+      <h4 style="margin:0 0 12px;font-size:0.85em;text-transform:uppercase;color:#14633a;letter-spacing:0.5px;">Resumo do Deploy</h4>
+      <div id="dp-summary" style="font-size:0.85em;color:#333;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+          <span>Produtos:</span><strong id="dp-s-prod">72</strong>
+          <span>Atributos:</span><strong id="dp-s-attr">789</strong>
+          <span>Bundles:</span><strong id="dp-s-bun">8</strong>
+          <span>Pricing Rules:</span><strong id="dp-s-pr">10</strong>
+          <span>Decision Tables:</span><strong id="dp-s-dt">6</strong>
+          <span>Pricebooks:</span><strong id="dp-s-pb">4</strong>
+          <span>Regras de Negócio:</span><strong id="dp-s-rn">54/56</strong>
+          <span>Configs:</span><strong id="dp-s-cfg">31</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Object Mapping -->
+  <div class="lib-card" style="padding:20px;margin-bottom:24px;">
+    <h4 style="margin:0 0 16px;font-size:0.85em;text-transform:uppercase;color:#14633a;letter-spacing:0.5px;">Mapeamento De → Para (Builder → Revenue Cloud)</h4>
+    <table class="data-table" style="font-size:0.82em;">
+      <thead><tr><th>SEQ</th><th>BUILDER (DE)</th><th>RC OBJECT (PARA)</th><th>API</th><th>QTD</th><th>MÉTODO</th><th>STATUS</th></tr></thead>
+      <tbody id="dp-mapping">
+        <tr><td>01</td><td>Product Families (8)</td><td>Product2.Family (Picklist Values)</td><td>Metadata API</td><td>8</td><td>MCP metadata-update</td><td id="dp-st-01" class="dp-status">—</td></tr>
+        <tr><td>02</td><td>Record Types (8)</td><td>RecordType (Product2)</td><td>Metadata API</td><td>8</td><td>MCP metadata-create</td><td id="dp-st-02" class="dp-status">—</td></tr>
+        <tr><td>03</td><td>Selling Models (3)</td><td>ProductSellingModel</td><td>REST API</td><td>3</td><td>REST sObject insert</td><td id="dp-st-03" class="dp-status">—</td></tr>
+        <tr><td>04</td><td>Pricebooks (4)</td><td>Pricebook2</td><td>REST API</td><td>4</td><td>REST sObject insert</td><td id="dp-st-04" class="dp-status">—</td></tr>
+        <tr><td>05</td><td>Products (72)</td><td>Product2</td><td>REST Composite</td><td>72</td><td>MCP composite insert</td><td id="dp-st-05" class="dp-status">—</td></tr>
+        <tr><td>06</td><td>PricebookEntries</td><td>PricebookEntry</td><td>REST Composite</td><td>~288</td><td>MCP composite insert</td><td id="dp-st-06" class="dp-status">—</td></tr>
+        <tr><td>07</td><td>Attribute Sets + Attrs (789)</td><td>ProductAttributeSet + ProductAttribute</td><td>REST API</td><td>~810</td><td>REST sObject insert</td><td id="dp-st-07" class="dp-status">—</td></tr>
+        <tr><td>08</td><td>Bundles (8)</td><td>ProductComponentGroup + ProductComponent</td><td>REST API</td><td>~40</td><td>REST sObject insert</td><td id="dp-st-08" class="dp-status">—</td></tr>
+        <tr><td>09</td><td>Pricing Rules (10) + DTs (6)</td><td>PricingRule + PricingRuleCondition + PricingRuleAction + DecisionTable</td><td>REST API</td><td>~50</td><td>REST sObject insert</td><td id="dp-st-09" class="dp-status">—</td></tr>
+        <tr><td>10</td><td>Discount Schedules (3)</td><td>DiscountSchedule + DiscountScheduleTier</td><td>REST API</td><td>~15</td><td>REST sObject insert</td><td id="dp-st-10" class="dp-status">—</td></tr>
+        <tr><td>11</td><td>Product Selling Model Options</td><td>ProductSellingModelOption</td><td>REST API</td><td>~150</td><td>REST sObject insert</td><td id="dp-st-11" class="dp-status">—</td></tr>
+        <tr><td>12</td><td>Catalog Flags (6 custom fields)</td><td>Product2 custom fields</td><td>Metadata API</td><td>6</td><td>MCP metadata-create</td><td id="dp-st-12" class="dp-status">—</td></tr>
+        <tr><td>13</td><td>Eligibility Rules (3)</td><td>ProductQualificationRule / Custom</td><td>REST/Metadata</td><td>3</td><td>MCP deploy</td><td id="dp-st-13" class="dp-status">—</td></tr>
+        <tr><td>14</td><td>Limpeza Org (dados default)</td><td>Delete Trailhead defaults</td><td>REST API</td><td>—</td><td>MCP delete-records</td><td id="dp-st-14" class="dp-status">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Progress -->
+  <div class="lib-card" style="padding:20px;margin-bottom:16px;display:none;" id="dp-progress-card">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+      <h4 style="margin:0;font-size:0.85em;text-transform:uppercase;color:#14633a;">Progresso</h4>
+      <div style="flex:1;background:#e0f2ec;border-radius:8px;height:12px;overflow:hidden;">
+        <div id="dp-progress-bar" style="height:100%;background:linear-gradient(90deg,#14633a,#2ecc71);border-radius:8px;width:0%;transition:width 0.5s;"></div>
+      </div>
+      <span id="dp-progress-pct" style="font-size:0.85em;font-weight:700;color:#14633a;">0%</span>
+    </div>
+    <div id="dp-current-step" style="font-size:0.82em;color:#555;margin-bottom:8px;"></div>
+  </div>
+
+  <!-- Log -->
+  <div class="lib-card" style="padding:20px;display:none;" id="dp-log-card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <h4 style="margin:0;font-size:0.85em;text-transform:uppercase;color:#14633a;">Log de Execução</h4>
+      <div class="spacer"></div>
+      <button class="btn" onclick="clearLog()" style="font-size:0.75em;">LIMPAR</button>
+      <button class="btn" onclick="downloadLog()" style="font-size:0.75em;">📥 DOWNLOAD</button>
+    </div>
+    <div id="dp-log" style="background:#0a2e1a;color:#a8e6cf;font-family:'JetBrains Mono',monospace;font-size:0.75em;padding:16px;border-radius:8px;max-height:400px;overflow-y:auto;white-space:pre-wrap;line-height:1.6;"></div>
+  </div>
+</div>
 <div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <div class="modal-header">
@@ -570,6 +657,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (t === 'worker') loadWorker();
     if (t === 'catalog') loadCatalogConfig();
     if (t === 'kb') loadKb();
+    if (t === 'deploy') loadDeployTab();
   });
 });
 
@@ -2726,6 +2814,252 @@ function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.
 
 // ── INIT ──
 loadStats();
+// ══════════════════════════════════════════════════════════
+// IMPLEMENTAÇÃO (DEPLOY TO ORG)
+// ══════════════════════════════════════════════════════════
+let deployLog = [];
+let deployConnected = false;
+let orgAccessToken = '';
+let orgInstanceUrl = '';
+
+function logDeploy(msg, type = 'info') {
+  const ts = new Date().toLocaleTimeString('pt-BR');
+  const prefix = type === 'ok' ? '✅' : type === 'err' ? '❌' : type === 'warn' ? '⚠️' : type === 'step' ? '▶' : '  ';
+  const line = `[${ts}] ${prefix} ${msg}`;
+  deployLog.push(line);
+  const el = document.getElementById('dp-log');
+  if (el) { el.textContent = deployLog.join('\n'); el.scrollTop = el.scrollHeight; }
+}
+
+function clearLog() { deployLog = []; document.getElementById('dp-log').textContent = ''; }
+
+function downloadLog() {
+  const blob = new Blob([deployLog.join('\n')], { type: 'text/plain' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `deploy-log-${new Date().toISOString().slice(0,10)}.txt`; a.click();
+}
+
+function setStepStatus(step, status) {
+  const el = document.getElementById('dp-st-' + String(step).padStart(2,'0'));
+  if (!el) return;
+  const colors = { pending: '#888', running: '#f39c12', ok: '#27ae60', error: '#e74c3c', skip: '#95a5a6' };
+  const labels = { pending: '⏳ Pendente', running: '🔄 Executando...', ok: '✅ Concluído', error: '❌ Erro', skip: '⏭ Pulado' };
+  el.textContent = labels[status] || status;
+  el.style.color = colors[status] || '#333';
+  el.style.fontWeight = status === 'running' ? '700' : '500';
+}
+
+function setProgress(pct, label) {
+  document.getElementById('dp-progress-bar').style.width = pct + '%';
+  document.getElementById('dp-progress-pct').textContent = pct + '%';
+  if (label) document.getElementById('dp-current-step').textContent = label;
+}
+
+async function loadDeployTab() {
+  // Load current counts from builder
+  try {
+    const [prods, attrs, rules, bundles, configs] = await Promise.all([
+      api('/products'), api('/attributes'), api('/pricing-rules'), api('/bundles'), api('/catalog-config')
+    ]);
+    document.getElementById('dp-s-prod').textContent = prods.length;
+    document.getElementById('dp-s-attr').textContent = attrs.length;
+    document.getElementById('dp-s-bun').textContent = bundles.length;
+    document.getElementById('dp-s-pr').textContent = rules.length;
+    const dts = configs.filter(c => c.config_type === 'decision_table');
+    document.getElementById('dp-s-dt').textContent = dts.length;
+    const pbs = configs.filter(c => c.config_type === 'pricebook');
+    document.getElementById('dp-s-pb').textContent = pbs.length;
+    document.getElementById('dp-s-cfg').textContent = configs.length;
+  } catch(e) {}
+}
+
+async function testOrgConnection() {
+  const url = document.getElementById('dp-url').value.trim().replace(/\/$/,'');
+  const user = document.getElementById('dp-user').value.trim();
+  const pass = document.getElementById('dp-pass').value.trim();
+  const status = document.getElementById('dp-conn-status');
+
+  if (!url || !user || !pass) { status.textContent = '❌ Preencha todos os campos'; status.style.color = '#e74c3c'; return; }
+  status.textContent = '🔄 Testando conexão...'; status.style.color = '#f39c12';
+
+  document.getElementById('dp-log-card').style.display = 'block';
+  logDeploy(`Testando conexão com ${url}...`, 'step');
+
+  try {
+    const loginUrl = url.includes('test.salesforce.com') ? 'https://test.salesforce.com' : 'https://login.salesforce.com';
+    const resp = await fetch(loginUrl + '/services/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `grant_type=password&client_id=SalesforceDevelopmentExperience&client_secret=1384510088588713504&username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`
+    });
+    const data = await resp.json();
+    if (data.access_token) {
+      orgAccessToken = data.access_token;
+      orgInstanceUrl = data.instance_url;
+      deployConnected = true;
+      status.innerHTML = `✅ Conectado — <strong>${data.instance_url}</strong> | Org ID: ${data.id?.split('/').pop() || '?'}`;
+      status.style.color = '#27ae60';
+      document.getElementById('btnDeploy').disabled = false;
+      logDeploy(`Conectado com sucesso: ${data.instance_url}`, 'ok');
+      logDeploy(`User: ${user} | OrgId: ${data.id?.split('/').pop() || '?'}`, 'info');
+    } else {
+      status.textContent = `❌ ${data.error_description || data.error || 'Falha na autenticação'}`;
+      status.style.color = '#e74c3c';
+      logDeploy(`Erro: ${data.error_description || data.error}`, 'err');
+    }
+  } catch(e) {
+    // CORS block expected - use MCP server proxy instead
+    logDeploy('CORS bloqueou chamada direta. Usando proxy MCP Server...', 'warn');
+    try {
+      const resp = await fetch(ROOT_API + '/rc/deploy/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instance_url: url, username: user, password: pass })
+      });
+      const data = await resp.json();
+      if (data.connected) {
+        deployConnected = true;
+        orgInstanceUrl = data.instance_url || url;
+        status.innerHTML = `✅ Conectado via proxy — <strong>${orgInstanceUrl}</strong>`;
+        status.style.color = '#27ae60';
+        document.getElementById('btnDeploy').disabled = false;
+        logDeploy(`Conectado via proxy: ${orgInstanceUrl}`, 'ok');
+      } else {
+        status.textContent = `❌ ${data.error || 'Falha'}`;
+        status.style.color = '#e74c3c';
+        logDeploy(`Erro proxy: ${data.error}`, 'err');
+      }
+    } catch(e2) {
+      status.textContent = '❌ Servidor indisponível. Configure as credenciais no MCP Server primeiro.';
+      status.style.color = '#e74c3c';
+      logDeploy(`Deploy endpoint não encontrado. Backend precisa da rota /api/rc/deploy/*`, 'warn');
+      logDeploy(`Alternativa: registre a org no MCP Server e use o botão EXECUTAR`, 'info');
+      // Still enable deploy button to use MCP server registered org
+      document.getElementById('btnDeploy').disabled = false;
+      deployConnected = true;
+    }
+  }
+}
+
+async function loadOrgInventory() {
+  if (!deployConnected) { alert('Conecte à org primeiro'); return; }
+  const status = document.getElementById('dp-conn-status');
+  status.textContent = '🔄 Inventariando objetos Revenue Cloud...';
+  document.getElementById('dp-log-card').style.display = 'block';
+  logDeploy('Inventariando org Revenue Cloud...', 'step');
+
+  const rcObjects = [
+    'Product2', 'Pricebook2', 'PricebookEntry', 'ProductSellingModel',
+    'ProductSellingModelOption', 'ProductAttribute', 'ProductAttributeSet',
+    'ProductComponentGroup', 'ProductComponent', 'PricingRule',
+    'PricingRuleCondition', 'PricingRuleAction', 'DecisionTable',
+    'DiscountSchedule', 'DiscountScheduleTier', 'ProductQualification'
+  ];
+
+  for (const obj of rcObjects) {
+    try {
+      const r = await fetch(ROOT_API + `/rc/deploy/describe/${obj}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instance_url: orgInstanceUrl })
+      });
+      const data = await r.json();
+      if (data.fields) {
+        logDeploy(`${obj}: ${data.fields?.length || 0} fields, ${data.recordCount || '?'} records`, 'ok');
+      } else if (data.error) {
+        logDeploy(`${obj}: NÃO DISPONÍVEL (${data.error})`, 'warn');
+      }
+    } catch(e) {
+      logDeploy(`${obj}: verificação pendente (usar após registro no MCP)`, 'info');
+    }
+  }
+  status.textContent = '✅ Inventário concluído — veja o log';
+  status.style.color = '#27ae60';
+}
+
+async function runDeploy() {
+  if (!confirm('Iniciar deploy de 72 produtos + configs para a org Revenue Cloud?\n\nIsso vai:\n1. Limpar dados default do Trailhead\n2. Criar toda a estrutura do catálogo\n\nContinuar?')) return;
+
+  document.getElementById('dp-progress-card').style.display = 'block';
+  document.getElementById('dp-log-card').style.display = 'block';
+  document.getElementById('btnDeploy').disabled = true;
+  document.getElementById('btnDeploy').textContent = '⏳ EXECUTANDO...';
+
+  const url = document.getElementById('dp-url').value.trim().replace(/\/$/,'');
+  const user = document.getElementById('dp-user').value.trim();
+  const pass = document.getElementById('dp-pass').value.trim();
+
+  const steps = [
+    { id: 14, name: 'Limpeza da Org (dados default)', endpoint: '/rc/deploy/clean' },
+    { id: 12, name: 'Custom Fields (catalog flags)', endpoint: '/rc/deploy/custom-fields' },
+    { id: 1,  name: 'Product Families (Picklist)', endpoint: '/rc/deploy/families' },
+    { id: 2,  name: 'Record Types', endpoint: '/rc/deploy/record-types' },
+    { id: 3,  name: 'Selling Models', endpoint: '/rc/deploy/selling-models' },
+    { id: 4,  name: 'Pricebooks', endpoint: '/rc/deploy/pricebooks' },
+    { id: 5,  name: 'Products (72)', endpoint: '/rc/deploy/products' },
+    { id: 6,  name: 'PricebookEntries', endpoint: '/rc/deploy/pricebook-entries' },
+    { id: 7,  name: 'Attribute Sets + Attributes', endpoint: '/rc/deploy/attributes' },
+    { id: 11, name: 'Product Selling Model Options', endpoint: '/rc/deploy/selling-model-options' },
+    { id: 8,  name: 'Bundles (ComponentGroups)', endpoint: '/rc/deploy/bundles' },
+    { id: 9,  name: 'Pricing Rules + Decision Tables', endpoint: '/rc/deploy/pricing-rules' },
+    { id: 10, name: 'Discount Schedules', endpoint: '/rc/deploy/discount-schedules' },
+    { id: 13, name: 'Eligibility / Qualification Rules', endpoint: '/rc/deploy/eligibility' },
+  ];
+
+  logDeploy('═══════════════════════════════════════════', 'info');
+  logDeploy('DEPLOY REVENUE CLOUD — INÍCIO', 'step');
+  logDeploy(`Org: ${url || 'via MCP Server'}`, 'info');
+  logDeploy(`Steps: ${steps.length}`, 'info');
+  logDeploy('═══════════════════════════════════════════', 'info');
+
+  let completed = 0;
+  let errors = 0;
+
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
+    const pct = Math.round(((i) / steps.length) * 100);
+    setProgress(pct, `Step ${i+1}/${steps.length}: ${step.name}`);
+    setStepStatus(step.id, 'running');
+    logDeploy(`[Step ${i+1}/${steps.length}] ${step.name}...`, 'step');
+
+    try {
+      const resp = await fetch(ROOT_API + step.endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instance_url: url, username: user, password: pass })
+      });
+      const data = await resp.json();
+
+      if (data.status === 'ok' || data.status === 'success' || data.created || data.deployed) {
+        setStepStatus(step.id, 'ok');
+        const detail = data.count ? ` (${data.count} records)` : data.created ? ` (${data.created} created)` : '';
+        logDeploy(`${step.name}${detail}`, 'ok');
+        completed++;
+      } else if (data.status === 'skip') {
+        setStepStatus(step.id, 'skip');
+        logDeploy(`${step.name}: ${data.reason || 'pulado'}`, 'warn');
+        completed++;
+      } else {
+        setStepStatus(step.id, 'error');
+        logDeploy(`${step.name}: ${data.error || data.message || JSON.stringify(data).slice(0,200)}`, 'err');
+        errors++;
+      }
+    } catch(e) {
+      setStepStatus(step.id, 'error');
+      logDeploy(`${step.name}: endpoint não implementado (${step.endpoint}). Registre a org e implemente a rota no backend.`, 'warn');
+      errors++;
+    }
+  }
+
+  setProgress(100, errors ? `Concluído com ${errors} erros` : 'Deploy concluído com sucesso!');
+  logDeploy('═══════════════════════════════════════════', 'info');
+  logDeploy(`DEPLOY FINALIZADO — ${completed} ok, ${errors} erros`, completed === steps.length ? 'ok' : 'warn');
+  logDeploy('═══════════════════════════════════════════', 'info');
+
+  document.getElementById('btnDeploy').disabled = false;
+  document.getElementById('btnDeploy').textContent = errors ? '🔄 RETRY DEPLOY' : '✅ DEPLOY OK';
+}
+
 </script>
 </body>
 </html>
