@@ -16,6 +16,7 @@ import { registerDevToolsRoutes } from "./devtools-ai.js";
 import { registerPartnerUserRoutes } from "./partner-users.js";
 import specGeneratorRouter from "./routes/spec-generator.js";
 import { registerRevenueCatalogRoutes } from "./revenue-catalog.js";
+import { registerRcWorkerRoutes } from "./rc-worker.js";
 import { registerWorkerEngineRoutes } from "./worker-engine.js";
 
 const app = express();
@@ -2217,6 +2218,7 @@ registerKmlRoutes(app);
 registerDevToolsRoutes(app);
 registerPartnerUserRoutes(app, sfClient);
 registerRevenueCatalogRoutes(app);
+registerRcWorkerRoutes(app);
 registerWorkerEngineRoutes(app);
   
   // TechEnglish
