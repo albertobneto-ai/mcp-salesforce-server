@@ -1035,5 +1035,103 @@ export function registerRcWorkerRoutes(app) {
     } catch (err) { res.status(500).json({ error: err.message }); }
   });
 
+  // ════════════════════════════════════════════════════════════════
+  // MIGRATE — separa billing items (Kenan) de child components (RC)
+  // Move charges legado para "chargesLegacy", limpa childComponents
+  // ════════════════════════════════════════════════════════════════
+
+  app.post('/api/rc/worker/migrate-separate-billing', async (req, res) => {
+    try {
+      // Get all products with latest version
+      const prods = (await pool.query(`
+        SELECT p.id, p.name, v.version_number, v.template_json
+        FROM rc_products p
+        LEFT JOIN LATERAL (
+          SELECT version_number, template_json FROM rc_product_versions
+          WHERE product_id = p.id ORDER BY version_number DESC LIMIT 1
+        ) v ON true
+      `)).rows;
+
+      let migrated = 0, skipped = 0;
+      for (const prod of prods) {
+        const tj = prod.template_json || {};
+        const related = tj.related || {};
+        const cc = related.childComponents || [];
+
+        // Se não tem childComponents, pula
+        if (!cc.length) { skipped++; continue; }
+
+        // Separa: billing items (do Kenan) vs product components reais
+        // Billing items têm padrões: nome com [ID], chargeType definido, ou vieram do import
+        const chargesLegacy = [];
+        const realComponents = [];
+
+        for (const c of cc) {
+          const name = c.productName || c.name || '';
+          const isBillingItem =
+            /\[\d+\]/.test(name) ||           // tem [123456] no nome
+            name.includes('Assinatura') ||     // padrão billing Kenan
+            name.includes('Telecom') ||
+            name.includes('Concessao') ||
+            name.includes('Concessão') ||
+            name.includes('Locação') ||
+            name.includes('Locacao') ||
+            name.includes('Venda ') ||
+            name.includes('Instalação') ||
+            name.includes('Instalacao') ||
+            name.includes('Habilitação') ||
+            name.includes('Habilitacao') ||
+            name.includes('Cancelamento') ||
+            name.includes('Suspensão') ||
+            name.includes('Reativação') ||
+            name.includes('Cobrança') ||
+            name.includes('Kit ') ||
+            name.includes('KIT ') ||
+            name.includes('Multa') ||
+            name.includes('Mudança') ||
+            name.includes('Alteração') ||
+            name.includes('Ativação') ||
+            (c.billingGroup && c.billingGroup !== '') ||  // veio do billing sheet
+            (c.chargeType && !c.productId);    // tem chargeType mas não é produto real
+
+          if (isBillingItem) {
+            chargesLegacy.push({
+              name: name,
+              chargeType: c.chargeType || 'Recurring',
+              billingGroup: c.billingGroup || '',
+              source: 'Kenan'
+            });
+          } else {
+            realComponents.push(c);
+          }
+        }
+
+        // Atualiza template
+        related.chargesLegacy = chargesLegacy;
+        related.childComponents = realComponents;
+        tj.related = related;
+        tj.worker_meta = tj.worker_meta || {};
+        tj.worker_meta.billingMigratedAt = new Date().toISOString();
+        tj.worker_meta.chargesLegacyCount = chargesLegacy.length;
+
+        // Nova versão
+        await pool.query(
+          `INSERT INTO rc_product_versions (product_id, version_number, template_json, notes)
+           VALUES ($1, $2, $3, 'Migrate: billing separado de child components')`,
+          [(prod.id), (prod.version_number || 1) + 1, JSON.stringify(tj)]
+        );
+        migrated++;
+      }
+
+      await pool.query(
+        `INSERT INTO rc_worker_runs (run_type, input_json, output_json, products_created, trace_json)
+         VALUES ('migrate-billing', '{}', $1, $2, '{}')`,
+        [JSON.stringify({migrated, skipped}), migrated]
+      );
+
+      res.json({ status: 'completed', migrated, skipped, total: prods.length });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
   console.log('[RC Worker] Engine determinístico registrado — /api/rc/worker/*');
 }
