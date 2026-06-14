@@ -1447,7 +1447,7 @@ export function registerRcWorkerRoutes(app) {
         })
       });
       const aiData = await aiResp.json();
-      const aiText = aiData.choices?.[0]?.message?.content || 'Sem resposta do modelo';
+      const aiText = aiData.choices?.[0]?.message?.content || 'Sem resposta do modelo: ' + JSON.stringify(aiData).slice(0,200);
 
       // Parse action if present
       const actionMatch = aiText.match(/ACTION:(\{.*\})/);
