@@ -2951,7 +2951,8 @@ async function executeAgentAction(context, actionB64) {
       body: JSON.stringify({ context, action })
     });
     const data = await resp.json();
-    respEl.innerHTML = '<span style="color:#27ae60;">✅ ' + (data.result || 'Ação executada com sucesso') + '</span>';
+    const resultHtml = (data.result || 'Ação executada com sucesso').replace(/\n/g, '<br>');
+    respEl.innerHTML = '<div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:12px 16px;color:#1b5e20;font-size:0.88em;line-height:1.6;">' + resultHtml + '</div><div style="margin-top:8px;"><button class="btn btn-secondary" style="font-size:0.75em;" onclick="this.closest(\'.agent-response\').style.display=\'none\'">FECHAR</button></div>';
     // Reload current tab data
     setTimeout(() => {
       if (context === 'products') loadProducts();
