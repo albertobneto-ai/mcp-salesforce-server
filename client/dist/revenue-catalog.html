@@ -89,7 +89,7 @@ textarea { resize:vertical; min-height:80px; }
 
 /* ── CARDS ── */
 .lib-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:12px; }
-.lib-card { background:rgba(255,255,255,0.72); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.4); border-radius:16px; padding:16px; position:relative; box-shadow:0 4px 24px rgba(20,99,58,0.06); }
+.lib-card { background:rgba(255,255,255,0.72); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.4); border-radius:16px; padding:16px; position:relative; box-shadow:0 4px 24px rgba(20,99,58,0.06); overflow:hidden; }
 .lib-card h4 { font-size:0.9em; margin-bottom:5px; color:#0a2e1a; font-weight:600; }
 .lib-card .meta { font-size:0.8em; color:#14633a; margin-bottom:8px; }
 .lib-card .tags { display:flex; gap:4px; flex-wrap:wrap; }
@@ -1916,12 +1916,34 @@ async function loadBundles() {
   const bundles = await api('/bundles');
   const grid = document.getElementById('bundleGrid');
   if (!bundles.length) { grid.innerHTML = '<div style="color:var(--text2);padding:40px;text-align:center;">Nenhum bundle cadastrado</div>'; return; }
-  grid.innerHTML = bundles.map(b => `<div class="lib-card">
+  grid.innerHTML = bundles.map(b => {
+    const items = b.items_json || [];
+    const rules = b.rules_json || {};
+    const itemsHtml = items.map(i => {
+      const req = i.required ? '●' : '○';
+      const reqColor = i.required ? '#14633a' : '#888';
+      const qty = i.max_qty > 1 ? ` (${i.min_qty}–${i.max_qty})` : '';
+      return `<div style="display:flex;align-items:center;gap:5px;padding:2px 0;font-size:0.78em;">
+        <span style="color:${reqColor};font-size:0.7em;">${req}</span>
+        <span style="color:#0a2e1a;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(i.product_name||i.product||'?')}</span>
+        <span style="color:#888;font-size:0.85em;white-space:nowrap;">${qty}</span>
+      </div>`;
+    }).join('');
+    const chargeTypes = (rules.charge_types||[]).join(' + ');
+    const term = rules.min_term_months ? rules.min_term_months + 'm' : '';
+    const disc = rules.discount_bundle_pct ? rules.discount_bundle_pct + '% bundle' : '';
+    const rulesLine = [chargeTypes, term, disc].filter(Boolean).join(' · ');
+    return `<div class="lib-card">
     <div class="actions"><button class="btn-icon" onclick="deleteBundle(${b.id})" title="Excluir">🗑</button></div>
     <h4>${esc(b.name)}</h4>
     <div class="meta">${b.description ? esc(b.description) : ''}</div>
-    <div style="font-size:0.8em;color:var(--text2);margin-top:6px;">Itens: ${esc(JSON.stringify(b.items_json || []))}</div>
-  </div>`).join('');
+    <div style="margin-top:8px;border-top:1px solid rgba(20,99,58,0.1);padding-top:6px;">
+      <div style="font-size:0.7em;color:#888;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Componentes <span style="float:right;">● required  ○ optional</span></div>
+      ${itemsHtml}
+    </div>
+    ${rulesLine ? `<div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(20,99,58,0.1);font-size:0.75em;color:#14633a;font-weight:500;">${esc(rulesLine)}</div>` : ''}
+  </div>`;
+  }).join('');
 }
 
 function openBundleModal() {
