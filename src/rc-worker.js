@@ -1441,7 +1441,12 @@ export function registerRcWorkerRoutes(app) {
           model: 'google/gemma-4-31b-it:free',
           max_tokens: 2000,
           messages: [
-            { role: 'system', content: systemPrompt + '\n\nDados atuais:\n' + contextData + '\n\nSe a pergunta pedir uma AÇÃO (criar, alterar, excluir), responda com um resumo do que será feito e inclua no final uma linha com formato JSON: ACTION:{"type":"create|update|delete","target":"products|bundles|rules|configs","data":{...}}. Se for apenas consulta, responda normalmente sem ACTION.' },
+            { role: 'system', content: systemPrompt + '\n\nDados atuais:\n' + contextData + '\n\nSe a pergunta pedir uma AÇÃO (criar, alterar, excluir), responda com um resumo do que será feito e inclua no final uma linha com formato JSON:
+ACTION:{"type":"create","target":"rules","data":{"name":"RN-XXX — Nome da Regra","category":"compliance","rule_type":"constraint","description":"Descrição completa","priority":"alta","applicable_families":["IoT"]}}
+Targets válidos: rules, bundles, products, pricing-rules, configs.
+Para rules: category deve ser um de: geral, pricing, contrato, desconto, bundle, compliance. rule_type: constraint, process, informational, exception, pending. priority: alta, media, baixa.
+O campo "name" é OBRIGATÓRIO em qualquer ação.
+Se for apenas consulta, responda normalmente sem ACTION.' },
             { role: 'user', content: question }
           ]
         })
@@ -1475,7 +1480,7 @@ export function registerRcWorkerRoutes(app) {
       if (action.type === 'create' && action.target === 'rules' && action.data) {
         const r = await pool.query(
           'INSERT INTO rc_business_rules (name, category, rule_type, description, priority, is_active, applicable_families) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, name, category, rule_type, priority',
-          [action.data.name, action.data.category||'geral', action.data.rule_type||'constraint', action.data.description||'', action.data.priority||'media', true, JSON.stringify(action.data.applicable_families||[])]
+          [action.data.name||action.data.id||'Regra sem nome', action.data.category?.split('/')[0]||'geral', action.data.rule_type||'constraint', action.data.description||'', action.data.priority||'media', action.data.is_active!==false, JSON.stringify(action.data.applicable_families||[])]
         );
         const created = r.rows[0];
         return res.json({ result: `✅ Regra criada com sucesso.\n\n📋 Detalhes:\n• ID: ${created.id}\n• Nome: ${created.name}\n• Categoria: ${created.category}\n• Tipo: ${created.rule_type}\n• Prioridade: ${created.priority}\n• Status: Ativa\n\n📍 Onde encontrar: Tab REGRAS → filtro ${created.category.toUpperCase()}` });
