@@ -1394,6 +1394,105 @@ export function registerRcWorkerRoutes(app) {
     res.json({ status: 'ok', count: rules.length, note: 'ProductQualificationRule — requires RC license.' });
   });
 
+
+  // ════════════════════════════════════════════════════════════════
+  // CONTEXTUAL AI AGENT — per-section intelligent assistant
+  // ════════════════════════════════════════════════════════════════
+
+  app.post('/api/rc/agent/ask', async (req, res) => {
+    const { context, question } = req.body;
+    if (!question) return res.json({ error: 'No question' });
+
+    try {
+      // Build context-specific data
+      let contextData = '';
+      let systemPrompt = 'Você é o agente AI do Revenue Cloud Catalog Builder da Algar Telecom B2B. Responda em PT-BR, direto e conciso.';
+
+      if (context === 'products') {
+        const prods = (await pool.query('SELECT id, name, product_family, description FROM rc_products ORDER BY name')).rows;
+        contextData = 'Produtos no catálogo:\n' + prods.map(p => `- ${p.name} [${p.product_family}]: ${p.description||''}`).join('\n');
+        systemPrompt += ' Contexto: aba PRODUTOS. Você tem acesso ao catálogo de ' + prods.length + ' produtos.';
+      } else if (context === 'bundles') {
+        const bundles = (await pool.query('SELECT id, name, description, items_json, rules_json FROM rc_bundles ORDER BY name')).rows;
+        contextData = 'Bundles:\n' + bundles.map(b => `- ${b.name}: ${b.description||''} | ${(b.items_json||[]).length} itens | tipo: ${(b.rules_json||{}).bundle_type||'hard'}`).join('\n');
+        systemPrompt += ' Contexto: aba BUNDLES. Você pode sugerir criação de novos bundles.';
+      } else if (context === 'pricing-rules') {
+        const rules = (await pool.query('SELECT id, name, rule_type, product_family FROM rc_pricing_rules ORDER BY name')).rows;
+        contextData = 'Pricing Rules:\n' + rules.map(r => `- ${r.name} (${r.rule_type}) família: ${r.product_family||'all'}`).join('\n');
+        systemPrompt += ' Contexto: aba PRICING RULES.';
+      } else if (context === 'rules') {
+        const rules = (await pool.query('SELECT id, name, category, rule_type, priority, is_active, description FROM rc_business_rules ORDER BY name')).rows;
+        contextData = 'Regras de Negócio (' + rules.length + '):\n' + rules.map(r => `- [${r.is_active?'ATIVA':'PENDENTE'}] ${r.name} (${r.category}/${r.rule_type}) P:${r.priority}`).join('\n');
+        systemPrompt += ' Contexto: aba REGRAS DE NEGÓCIO. ' + rules.length + ' regras cadastradas.';
+      } else if (context === 'catalog') {
+        const configs = (await pool.query('SELECT id, name, config_type FROM rc_catalog_config ORDER BY config_type, name')).rows;
+        contextData = 'Configs do Catálogo:\n' + configs.map(c => `- [${c.config_type}] ${c.name}`).join('\n');
+        systemPrompt += ' Contexto: aba CATÁLOGO. Configurações gerais do catálogo RC.';
+      }
+
+      // Call OpenRouter with context
+      const openrouterKey = process.env.OPENROUTER_KEY;
+      if (!openrouterKey) return res.json({ answer: 'OPENROUTER_KEY não configurada. Configure no Heroku.' });
+
+      const aiResp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + openrouterKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'deepseek/deepseek-chat-v3-0324:free',
+          max_tokens: 2000,
+          messages: [
+            { role: 'system', content: systemPrompt + '\n\nDados atuais:\n' + contextData + '\n\nSe a pergunta pedir uma AÇÃO (criar, alterar, excluir), responda com um resumo do que será feito e inclua no final uma linha com formato JSON: ACTION:{"type":"create|update|delete","target":"products|bundles|rules|configs","data":{...}}. Se for apenas consulta, responda normalmente sem ACTION.' },
+            { role: 'user', content: question }
+          ]
+        })
+      });
+      const aiData = await aiResp.json();
+      const aiText = aiData.choices?.[0]?.message?.content || 'Sem resposta do modelo';
+
+      // Parse action if present
+      const actionMatch = aiText.match(/ACTION:(\{.*\})/);
+      let action = null;
+      let answer = aiText;
+      if (actionMatch) {
+        try {
+          action = JSON.parse(actionMatch[1]);
+          answer = aiText.replace(/ACTION:.*$/, '').trim();
+        } catch(e) {}
+      }
+
+      res.json({ answer, action });
+    } catch(e) {
+      res.json({ error: e.message });
+    }
+  });
+
+  app.post('/api/rc/agent/execute', async (req, res) => {
+    const { context, action } = req.body;
+    if (!action) return res.json({ error: 'No action' });
+
+    try {
+      if (action.type === 'create' && action.target === 'rules' && action.data) {
+        await pool.query(
+          'INSERT INTO rc_business_rules (name, category, rule_type, description, priority, is_active, applicable_families) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+          [action.data.name, action.data.category||'geral', action.data.rule_type||'constraint', action.data.description||'', action.data.priority||'media', true, JSON.stringify(action.data.applicable_families||[])]
+        );
+        return res.json({ result: 'Regra criada: ' + action.data.name });
+      }
+      if (action.type === 'create' && action.target === 'bundles' && action.data) {
+        await pool.query(
+          'INSERT INTO rc_bundles (name, description, items_json, rules_json) VALUES ($1,$2,$3,$4)',
+          [action.data.name, action.data.description||'', JSON.stringify(action.data.items_json||[]), JSON.stringify(action.data.rules_json||{})]
+        );
+        return res.json({ result: 'Bundle criado: ' + action.data.name });
+      }
+      res.json({ result: 'Ação registrada. Tipo: ' + action.type + ', Target: ' + action.target });
+    } catch(e) {
+      res.json({ error: e.message });
+    }
+  });
+
+  console.log('[RC Agent] Contextual agent registered — /api/rc/agent/*');
+
   console.log('[RC Deploy] Implementation routes registered — /api/rc/deploy/*');
 
   console.log('[RC Worker] Engine determinístico registrado — /api/rc/worker/*');
