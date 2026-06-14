@@ -819,5 +819,103 @@ export function registerRcWorkerRoutes(app) {
     } catch (err) { res.status(500).json({ error: err.message }); }
   });
 
+  // ════════════════════════════════════════════════════════════════
+  // IMPORT ALGAR — carrega produtos reais da Algar (taxonomia + TM Forum)
+  // ════════════════════════════════════════════════════════════════
+
+  // Importa Component Structures como bibliotecas de atributos
+  app.post('/api/rc/worker/import-structures', async (req, res) => {
+    try {
+      const { structures } = req.body;
+      let created = 0;
+      for (const [key, struct] of Object.entries(structures)) {
+        for (const attrName of struct.attributes) {
+          await pool.query(
+            `INSERT INTO rc_attributes (name, attr_type, applicable_families, description)
+             VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
+            [attrName, 'Picklist', JSON.stringify([struct.name]), 'Component Structure Algar: ' + struct.name]
+          ).then(()=>created++).catch(()=>{});
+        }
+      }
+      res.json({ status: 'imported', attributes_created: created });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
+  // Importa os produtos Algar (com taxonomia real + tag TM Forum + componentes)
+  app.post('/api/rc/worker/import-algar', async (req, res) => {
+    try {
+      const { products } = req.body;
+      const created = [], skipped = [];
+      for (const ap of products) {
+        // Determina selling model e charge structure pela linha de negócio
+        const isEquip = ap.linha_negocio?.includes('Equipamento');
+        const isMobile = ap.linha_negocio?.includes('Móvel');
+        const sellingModel = isMobile ? 'Evergreen' : 'Term-Based';
+
+        // Monta template_json com taxonomia Algar + tag TM Forum
+        const childComponents = [];
+        for (const rc of (ap.rc_components || [])) {
+          childComponents.push({ productName: rc, required: false, chargeType: 'Recurring', minQty: 0, maxQty: 999 });
+        }
+        for (const nrc of (ap.nrc_components || [])) {
+          childComponents.push({ productName: nrc, required: false, chargeType: 'One-Time', minQty: 0, maxQty: 999 });
+        }
+
+        const tj = {
+          product: {
+            Name: ap.name, ProductCode: 'CRM-' + ap.crm_id, Description: ap.produto_demanda || ap.name,
+            IsActive: true, QuantityUnitOfMeasure: 'Each', Family: ap.linha_negocio
+          },
+          recordType: ap.tmf_domain,
+          classification: {
+            domain: ap.tmf_domain, category: ap.linha_negocio, sidDomain: ap.tmf_sid,
+            algar_linha_negocio: ap.linha_negocio, algar_produto_demanda: ap.produto_demanda, crm_product_id: ap.crm_id
+          },
+          lifecycle: { isAssetizable: true },
+          pricing: { pattern: 'MRC_NRC_TERM', currency: 'BRL',
+            charges: [
+              { type: 'Recurring', label: 'MRC', frequency: 'Monthly', listPrice: 0 },
+              { type: 'One-Time', label: 'NRC / Setup', listPrice: 0 }
+            ], listPrice: 0, chargeType: 'Recurring', billingFrequency: 'Monthly' },
+          classification_meta: { productType: childComponents.length > 3 ? 'Bundle' : 'Base', configurable: true, taxPolicy: 'Taxable' },
+          related: {
+            sellingModelOptions: [{ model: sellingModel, chargeType: 'Recurring', billingFrequency: 'Monthly', termMonths: sellingModel === 'Term-Based' ? 12 : null }],
+            attributes: [],
+            pricingRules: [],
+            childComponents: childComponents.slice(0, 50)
+          },
+          worker_meta: {
+            source: 'Algar Import (BASE_COMPONENTE + MATRIZ)',
+            importedAt: new Date().toISOString(),
+            tmf_mapping: ap.tmf_domain + ' / ' + ap.tmf_sid,
+            total_components: ap.total_components
+          }
+        };
+
+        // Verifica se já existe (por ProductCode)
+        const existing = await pool.query('SELECT id FROM rc_products WHERE product_code = $1', ['CRM-' + ap.crm_id]);
+        if (existing.rows.length) { skipped.push(ap.name); continue; }
+
+        const prod = (await pool.query(
+          `INSERT INTO rc_products (name, product_code, product_family, description, status)
+           VALUES ($1,$2,$3,$4,'RASCUNHO') RETURNING id, name`,
+          [ap.name, 'CRM-' + ap.crm_id, ap.linha_negocio, ap.produto_demanda || ap.name]
+        )).rows[0];
+        await pool.query(
+          `INSERT INTO rc_product_versions (product_id, version_number, template_json, notes)
+           VALUES ($1, 1, $2, 'Import Algar - dados reais CRM/Billing')`,
+          [prod.id, JSON.stringify(tj)]
+        );
+        created.push({ id: prod.id, name: prod.name, linha: ap.linha_negocio, tmf: ap.tmf_domain, components: childComponents.length });
+      }
+      await pool.query(
+        `INSERT INTO rc_worker_runs (run_type, input_json, output_json, products_created, trace_json)
+         VALUES ('algar-import', $1, $2, $3, $4)`,
+        [JSON.stringify({count: products.length}), JSON.stringify(created), created.length, JSON.stringify({skipped})]
+      );
+      res.json({ status: 'imported', created: created.length, skipped: skipped.length, products: created });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
   console.log('[RC Worker] Engine determinístico registrado — /api/rc/worker/*');
 }
