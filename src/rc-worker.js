@@ -712,7 +712,14 @@ export function registerRcWorkerRoutes(app) {
   // Preview — roda o pipeline sem salvar
   app.post('/api/rc/worker/preview', async (req, res) => {
     try {
-      const allProducts = (await pool.query('SELECT id, name, template_json FROM rc_products')).rows;
+      const allProducts = (await pool.query(`
+        SELECT p.id, p.name, v.template_json
+        FROM rc_products p
+        LEFT JOIN LATERAL (
+          SELECT template_json FROM rc_product_versions
+          WHERE product_id = p.id ORDER BY version_number DESC LIMIT 1
+        ) v ON true
+      `)).rows;
       const result = await runPipeline(req.body, allProducts);
       res.json(result);
     } catch (err) { res.status(500).json({ error: err.message }); }
@@ -721,7 +728,14 @@ export function registerRcWorkerRoutes(app) {
   // Model — roda o pipeline E salva o produto
   app.post('/api/rc/worker/model', async (req, res) => {
     try {
-      const allProducts = (await pool.query('SELECT id, name, template_json FROM rc_products')).rows;
+      const allProducts = (await pool.query(`
+        SELECT p.id, p.name, v.template_json
+        FROM rc_products p
+        LEFT JOIN LATERAL (
+          SELECT template_json FROM rc_product_versions
+          WHERE product_id = p.id ORDER BY version_number DESC LIMIT 1
+        ) v ON true
+      `)).rows;
       const result = await runPipeline(req.body, allProducts);
       if (!result.validation.valid) {
         return res.status(422).json({ error: 'Validação falhou', validation: result.validation, trace: result.trace });
@@ -761,7 +775,14 @@ export function registerRcWorkerRoutes(app) {
     try {
       const { domain, categories } = req.body;
       const cats = categories || Object.keys(TELECOM_HIERARCHY[domain]?.categories || {});
-      const allProducts = (await pool.query('SELECT id, name, template_json FROM rc_products')).rows;
+      const allProducts = (await pool.query(`
+        SELECT p.id, p.name, v.template_json
+        FROM rc_products p
+        LEFT JOIN LATERAL (
+          SELECT template_json FROM rc_product_versions
+          WHERE product_id = p.id ORDER BY version_number DESC LIMIT 1
+        ) v ON true
+      `)).rows;
       const created = [], traces = [];
       for (const cat of cats) {
         const input = { domain, category: cat, productName: `${cat} ${domain}` };
