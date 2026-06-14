@@ -212,6 +212,7 @@ textarea { resize:vertical; min-height:80px; }
   <div class="tab active" data-tab="dashboard">DASHBOARD</div>
   <div class="tab" data-tab="products">PRODUTOS</div>
   <div class="tab" data-tab="ai-model">AI MODELING</div>
+  <div class="tab" data-tab="worker">⚡ WORKER</div>
   <div class="tab" data-tab="attributes">ATRIBUTOS</div>
   <div class="tab" data-tab="pricing">PRECIFICACAO</div>
   <div class="tab" data-tab="bundles">BUNDLES</div>
@@ -319,6 +320,65 @@ textarea { resize:vertical; min-height:80px; }
 </div>
 
 <!-- ═══════ ATTRIBUTES ═══════ -->
+<!-- ═══════ WORKER ENGINE (determinístico) ═══════ -->
+<div class="panel" id="panel-worker">
+  <div class="toolbar">
+    <h3 style="font-size:1em;">⚡ WORKER ENGINE — MODELAGEM AUTÔNOMA</h3>
+  </div>
+  <div style="background:linear-gradient(135deg,rgba(26,122,69,0.08),rgba(20,99,58,0.04));border:1px solid rgba(26,122,69,0.2);border-radius:14px;padding:16px;margin-bottom:16px;">
+    <div style="font-weight:600;color:#14633a;margin-bottom:6px;">Engine determinístico — zero AI, zero tokens</div>
+    <div style="font-size:0.85em;color:var(--text2);line-height:1.5;">
+      O Worker aplica conhecimento Salesforce cristalizado em blueprints por nuvem. Você fornece o mínimo (nome + família + tipo) e o engine monta o produto completo: classificação, atributos, selling model, pricing scaffold, bundles e plano de fulfillment — tudo baseado na documentação oficial Revenue Cloud e padrões TM Forum telecom B2B.
+    </div>
+  </div>
+
+  <div class="grid-2" style="display:grid;grid-template-columns:380px 1fr;gap:20px;align-items:start;">
+    <!-- INPUT FORM -->
+    <div class="lib-card" style="position:sticky;top:12px;">
+      <h4 style="margin-bottom:14px;">CONFIGURAÇÃO</h4>
+      <div class="form-group"><label>NUVEM</label>
+        <select id="wk-cloud" onchange="loadWorkerFamilies()"></select>
+      </div>
+      <div class="form-group"><label>NOME DO PRODUTO</label>
+        <input type="text" id="wk-name" placeholder="Ex: MPLS Enterprise 100Mbps">
+      </div>
+      <div class="form-group"><label>FAMÍLIA</label>
+        <select id="wk-family" onchange="updateWorkerSubtypes()"></select>
+      </div>
+      <div class="form-group"><label>TIPO DE PRODUTO</label>
+        <select id="wk-type">
+          <option value="Base">Base</option>
+          <option value="Add-On">Add-On</option>
+          <option value="Bundle">Bundle</option>
+        </select>
+      </div>
+      <div class="form-group"><label>SELLING MODEL (opcional — usa default da família)</label>
+        <select id="wk-sm">
+          <option value="">Default da família</option>
+          <option value="One-Time">One-Time</option>
+          <option value="Evergreen">Evergreen</option>
+          <option value="Term-Based">Term-Based</option>
+        </select>
+      </div>
+      <div class="form-group"><label>MOEDA</label>
+        <select id="wk-currency"><option value="BRL">BRL</option><option value="USD">USD</option></select>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn btn-secondary" style="flex:1;" onclick="workerPreview()">👁 PREVIEW</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="workerRun()">⚡ GERAR PRODUTO</button>
+      </div>
+      <div id="wk-subtypes-hint" style="margin-top:12px;font-size:0.8em;color:var(--text2);"></div>
+    </div>
+
+    <!-- OUTPUT -->
+    <div id="wk-output">
+      <div style="color:var(--text2);padding:60px 20px;text-align:center;background:rgba(255,255,255,0.4);border-radius:14px;">
+        Configure à esquerda e clique <strong>Preview</strong> para ver o mapeamento determinístico, ou <strong>Gerar Produto</strong> para criar diretamente.
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="panel" id="panel-attributes">
   <div class="toolbar">
     <h3 style="font-size:1em;">BIBLIOTECA DE ATRIBUTOS</h3>
@@ -436,6 +496,7 @@ textarea { resize:vertical; min-height:80px; }
 
 <script>
 const API = window.location.origin + '/api/rc';
+const ROOT_API = window.location.origin + '/api';
 let currentAiTemplate = null;
 let currentAiInput = '';
 
@@ -450,6 +511,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     const t = tab.dataset.tab;
     if (t === 'dashboard') loadStats();
     if (t === 'products') loadProducts();
+    if (t === 'worker') loadWorker();
     if (t === 'attributes') loadAttributes();
     if (t === 'pricing') loadPricingModels();
     if (t === 'bundles') loadBundles();
@@ -462,7 +524,8 @@ document.querySelectorAll('.tab').forEach(tab => {
 
 // ── FETCH HELPER ──
 async function api(path, opts = {}) {
-  const r = await fetch(API + path, {
+  const base = opts._base === 'root' ? ROOT_API : API;
+  const r = await fetch(base + path, {
     headers: { 'Content-Type': 'application/json', ...opts.headers },
     ...opts,
     body: opts.body ? JSON.stringify(opts.body) : undefined
@@ -1381,6 +1444,187 @@ async function deleteProduct(id) {
   if (!confirm('Excluir este produto?')) return;
   await api('/products/' + id, { method: 'DELETE' });
   loadProducts();
+}
+
+// ── WORKER ENGINE ──
+let workerBlueprints = [];
+
+async function loadWorker() {
+  if (!workerBlueprints.length) {
+    workerBlueprints = await api('/worker/blueprints', { _base: 'root' });
+  }
+  const sel = document.getElementById('wk-cloud');
+  sel.innerHTML = workerBlueprints.map(b =>
+    `<option value="${b.id}" ${b.status!=='active'?'disabled':''}>${b.label}${b.status!=='active'?' (em breve)':''}</option>`
+  ).join('');
+  loadWorkerFamilies();
+}
+
+async function loadWorkerFamilies() {
+  const cloudId = document.getElementById('wk-cloud').value;
+  const bp = workerBlueprints.find(b => b.id === cloudId);
+  const famSel = document.getElementById('wk-family');
+  if (bp && bp.families.length) {
+    famSel.innerHTML = bp.families.map(f => `<option value="${f}">${f}</option>`).join('');
+  } else {
+    famSel.innerHTML = '<option value="">—</option>';
+  }
+  updateWorkerSubtypes();
+}
+
+async function updateWorkerSubtypes() {
+  const cloudId = document.getElementById('wk-cloud').value;
+  const family = document.getElementById('wk-family').value;
+  const hint = document.getElementById('wk-subtypes-hint');
+  if (!family) { hint.innerHTML = ''; return; }
+  try {
+    const bp = await api('/worker/blueprints/' + cloudId, { _base: 'root' });
+    const fam = bp.productFamilies?.[family];
+    if (fam) {
+      hint.innerHTML = `<strong>Sub-tipos:</strong> ${(fam.subTypes||[]).join(', ')}<br>
+        <strong>Default:</strong> ${fam.defaultSellingModel} / ${fam.defaultChargeType}<br>
+        <strong>Atributos:</strong> ${fam.attributes.length} | <strong>Pricing:</strong> ${fam.pricingPatterns.join(', ')}`;
+    }
+  } catch {}
+}
+
+function getWorkerInput() {
+  return {
+    cloud: document.getElementById('wk-cloud').value,
+    input: {
+      name: document.getElementById('wk-name').value,
+      family: document.getElementById('wk-family').value,
+      productType: document.getElementById('wk-type').value,
+      sellingModel: document.getElementById('wk-sm').value || undefined,
+      currency: document.getElementById('wk-currency').value,
+    }
+  };
+}
+
+async function workerPreview() {
+  const body = getWorkerInput();
+  if (!body.input.name) { alert('Informe o nome do produto'); return; }
+  document.getElementById('wk-output').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2);">Processando...</div>';
+  const r = await api('/worker/preview', { method: 'POST', body, _base: 'root' });
+  renderWorkerOutput(r, false);
+}
+
+async function workerRun() {
+  const body = getWorkerInput();
+  if (!body.input.name) { alert('Informe o nome do produto'); return; }
+  if (!confirm('Gerar e salvar o produto "' + body.input.name + '"?')) return;
+  document.getElementById('wk-output').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2);">Gerando produto...</div>';
+  const r = await api('/worker/run', { method: 'POST', body, _base: 'root' });
+  if (r.ok) {
+    showToast('Produto criado: ' + body.input.name + ' (' + r.rulesCreated + ' pricing rules)');
+    renderWorkerOutput(r, true);
+  } else {
+    document.getElementById('wk-output').innerHTML = '<div style="padding:20px;color:var(--red);">Erro: ' + (r.error||'desconhecido') + '</div>';
+  }
+}
+
+function renderWorkerOutput(r, saved) {
+  if (!r.ok) {
+    document.getElementById('wk-output').innerHTML = '<div class="lib-card" style="border-left:3px solid var(--red);"><h4 style="color:var(--red);">Erro</h4><div>' + esc(r.error||'') + '</div>' + (r.trace?'<div style="margin-top:10px;font-size:0.85em;">'+r.trace.map(t=>'• '+esc(t.step)+': '+esc(t.log||t.error||'')).join('<br>')+'</div>':'') + '</div>';
+    return;
+  }
+  const tj = r.template_json;
+  const v = r.validation;
+  let html = '';
+
+  if (saved) {
+    html += '<div class="lib-card" style="border-left:3px solid var(--green);margin-bottom:12px;"><h4 style="color:var(--green);">✓ Produto criado (ID '+r.productId+')</h4><div style="font-size:0.85em;color:var(--text2);">'+r.rulesCreated+' pricing rules persistidas na biblioteca</div></div>';
+  }
+
+  // Trace
+  html += '<div class="lib-card" style="margin-bottom:12px;"><h4>PIPELINE EXECUTADO</h4><div style="font-size:0.82em;line-height:1.8;margin-top:8px;">';
+  r.trace.forEach(t => {
+    const icon = t.ok===false ? '✗' : '✓';
+    const col = t.ok===false ? 'var(--red)' : 'var(--green)';
+    html += '<div><span style="color:'+col+';font-weight:700;">'+icon+'</span> <strong>'+esc(t.step)+'</strong>: <span style="color:var(--text2);">'+esc(t.log||'')+'</span></div>';
+    if (t.issues && t.issues.length) html += '<div style="color:var(--orange);padding-left:20px;font-size:0.9em;">⚠ '+t.issues.map(esc).join('; ')+'</div>';
+  });
+  html += '</div></div>';
+
+  // Summary cards
+  const s = r.summary;
+  html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px;">';
+  html += workerStat('Atributos', s.attributes, 'var(--cyan)');
+  html += workerStat('Price Books', s.priceBookEntries, 'var(--orange)');
+  html += workerStat('Pricing Rules', s.pricingRules, 'var(--blue)');
+  html += workerStat('Componentes', s.components, 'var(--green)');
+  html += workerStat('DRO Steps', s.decompositionSteps, 'var(--primary)');
+  html += '</div>';
+
+  // Product structure
+  html += '<div class="lib-card" style="margin-bottom:12px;"><h4>ESTRUTURA DO PRODUTO</h4><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-size:0.85em;">';
+  html += workerField('Name', tj.product.Name);
+  html += workerField('Product Code', tj.product.ProductCode);
+  html += workerField('SKU', tj.product.StockKeepingUnit);
+  html += workerField('Classification', tj.recordType);
+  html += workerField('Product Type', tj.classification.productType);
+  html += workerField('Selling Model', tj.classification.sellingModel);
+  html += workerField('Charge Type', tj.classification.chargeType);
+  html += workerField('Billing Freq', tj.pricing.billingFrequency || '—');
+  html += '</div></div>';
+
+  // Attributes
+  if (tj.related.attributes?.length) {
+    html += '<div class="lib-card" style="margin-bottom:12px;"><h4>ATRIBUTOS ('+tj.related.attributes.length+')</h4><div style="margin-top:8px;">';
+    tj.related.attributes.forEach(a => {
+      html += '<span class="tag" style="margin:2px;display:inline-block;">'+esc(a.name)+(a.priceImpacting?' 💰':'')+'</span>';
+    });
+    html += '</div></div>';
+  }
+
+  // Price Book Entries
+  if (tj.related.priceBookEntries?.length) {
+    html += '<div class="lib-card" style="margin-bottom:12px;"><h4>PRICE BOOK ENTRIES</h4><div style="margin-top:8px;font-size:0.85em;">';
+    tj.related.priceBookEntries.forEach(p => {
+      html += '<div>• <strong>'+esc(p.label)+'</strong>: '+esc(p.chargeType)+' '+esc(p.frequency||'')+' ('+esc(p.currency)+')</div>';
+    });
+    html += '</div></div>';
+  }
+
+  // Pricing Rules
+  if (tj.related.pricingRules?.length) {
+    html += '<div class="lib-card" style="margin-bottom:12px;"><h4>PRICING RULES</h4><div style="margin-top:8px;font-size:0.85em;">';
+    tj.related.pricingRules.forEach(pr => {
+      html += '<div>• <strong>'+esc(pr.name)+'</strong>: '+esc(pr.ruleType)+' '+esc(pr.adjustmentType||'')+' '+esc(pr.value||'')+'</div>';
+    });
+    html += '</div></div>';
+  }
+
+  // Components (bundle)
+  if (tj.related.childComponents?.length) {
+    html += '<div class="lib-card" style="margin-bottom:12px;"><h4>COMPONENTES DO BUNDLE</h4><div style="margin-top:8px;font-size:0.85em;">';
+    tj.related.childComponents.forEach(c => {
+      html += '<div>• <strong>'+esc(c.productName)+'</strong>: '+(c.required?'Obrigatório':'Opcional')+' (qty '+c.minQty+'-'+c.maxQty+')</div>';
+    });
+    html += '</div></div>';
+  }
+
+  // DRO Plan
+  if (tj._worker?.decompositionPlan?.length) {
+    html += '<div class="lib-card" style="margin-bottom:12px;"><h4>PLANO DE FULFILLMENT (DRO)</h4><div style="margin-top:8px;font-size:0.85em;">';
+    tj._worker.decompositionPlan.forEach(d => {
+      html += '<div>'+d.sequence+'. <strong>'+esc(d.step)+'</strong> → '+esc(d.assignee)+(d.integration?' <span style="color:var(--cyan);">['+esc(d.integration)+']</span>':'')+(d.createsAsset?' <span style="color:var(--green);">[cria asset]</span>':'')+'</div>';
+    });
+    html += '</div></div>';
+  }
+
+  // Validation
+  const vcol = v.issues.length ? 'var(--orange)' : 'var(--green)';
+  html += '<div class="lib-card" style="border-left:3px solid '+vcol+';"><h4 style="color:'+vcol+';">VALIDAÇÃO</h4><div style="font-size:0.85em;margin-top:6px;">'+v.passed.length+' regras OK'+(v.issues.length?', '+v.issues.length+' issues: '+v.issues.map(esc).join('; '):'')+'</div></div>';
+
+  document.getElementById('wk-output').innerHTML = html;
+}
+
+function workerStat(label, val, color) {
+  return '<div style="background:rgba(255,255,255,0.6);border-radius:10px;padding:10px;text-align:center;border-top:2px solid '+color+';"><div style="font-size:1.4em;font-weight:700;color:'+color+';">'+val+'</div><div style="font-size:0.7em;color:var(--text2);text-transform:uppercase;">'+label+'</div></div>';
+}
+function workerField(label, val) {
+  return '<div><span style="color:var(--text2);font-size:0.9em;">'+esc(label)+':</span> <strong>'+esc(String(val))+'</strong></div>';
 }
 
 // ── AI MODELING ──
