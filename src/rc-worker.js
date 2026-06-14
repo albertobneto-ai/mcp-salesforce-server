@@ -1471,21 +1471,78 @@ export function registerRcWorkerRoutes(app) {
     if (!action) return res.json({ error: 'No action' });
 
     try {
+      // ── CREATE ──
       if (action.type === 'create' && action.target === 'rules' && action.data) {
-        await pool.query(
-          'INSERT INTO rc_business_rules (name, category, rule_type, description, priority, is_active, applicable_families) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        const r = await pool.query(
+          'INSERT INTO rc_business_rules (name, category, rule_type, description, priority, is_active, applicable_families) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, name, category, rule_type, priority',
           [action.data.name, action.data.category||'geral', action.data.rule_type||'constraint', action.data.description||'', action.data.priority||'media', true, JSON.stringify(action.data.applicable_families||[])]
         );
-        return res.json({ result: 'Regra criada: ' + action.data.name });
+        const created = r.rows[0];
+        return res.json({ result: `✅ Regra criada com sucesso.\n\n📋 Detalhes:\n• ID: ${created.id}\n• Nome: ${created.name}\n• Categoria: ${created.category}\n• Tipo: ${created.rule_type}\n• Prioridade: ${created.priority}\n• Status: Ativa\n\n📍 Onde encontrar: Tab REGRAS → filtro ${created.category.toUpperCase()}` });
       }
       if (action.type === 'create' && action.target === 'bundles' && action.data) {
-        await pool.query(
-          'INSERT INTO rc_bundles (name, description, items_json, rules_json) VALUES ($1,$2,$3,$4)',
+        const r = await pool.query(
+          'INSERT INTO rc_bundles (name, description, items_json, rules_json) VALUES ($1,$2,$3,$4) RETURNING id, name',
           [action.data.name, action.data.description||'', JSON.stringify(action.data.items_json||[]), JSON.stringify(action.data.rules_json||{})]
         );
-        return res.json({ result: 'Bundle criado: ' + action.data.name });
+        const created = r.rows[0];
+        const itemCount = (action.data.items_json||[]).length;
+        const bundleType = (action.data.rules_json||{}).bundle_type || 'hard';
+        return res.json({ result: `✅ Bundle criado com sucesso.\n\n📋 Detalhes:\n• ID: ${created.id}\n• Nome: ${created.name}\n• Componentes: ${itemCount}\n• Tipo: ${bundleType}\n\n📍 Onde encontrar: Tab BUNDLES` });
       }
-      res.json({ result: 'Ação registrada. Tipo: ' + action.type + ', Target: ' + action.target });
+      if (action.type === 'create' && action.target === 'products' && action.data) {
+        const r = await pool.query(
+          'INSERT INTO rc_products (name, product_code, product_family, description) VALUES ($1,$2,$3,$4) RETURNING id, name, product_family',
+          [action.data.name, action.data.product_code||'', action.data.product_family||'Professional Services', action.data.description||'']
+        );
+        const created = r.rows[0];
+        return res.json({ result: `✅ Produto criado com sucesso.\n\n📋 Detalhes:\n• ID: ${created.id}\n• Nome: ${created.name}\n• Família: ${created.product_family}\n\n📍 Onde encontrar: Tab PRODUTOS → família ${created.product_family}` });
+      }
+      if (action.type === 'create' && action.target === 'pricing-rules' && action.data) {
+        const r = await pool.query(
+          'INSERT INTO rc_pricing_rules (name, rule_type, product_family, description, rule_json) VALUES ($1,$2,$3,$4,$5) RETURNING id, name, rule_type',
+          [action.data.name, action.data.rule_type||'Discount', action.data.product_family||'all', action.data.description||'', JSON.stringify(action.data.rule_json||{})]
+        );
+        const created = r.rows[0];
+        return res.json({ result: `✅ Pricing Rule criada com sucesso.\n\n📋 Detalhes:\n• ID: ${created.id}\n• Nome: ${created.name}\n• Tipo: ${created.rule_type}\n\n📍 Onde encontrar: Tab PRICING RULES` });
+      }
+      if (action.type === 'create' && action.target === 'configs' && action.data) {
+        const r = await pool.query(
+          'INSERT INTO rc_catalog_config (name, config_type, config_json) VALUES ($1,$2,$3) RETURNING id, name, config_type',
+          [action.data.name, action.data.config_type||'general', JSON.stringify(action.data.config_json||{})]
+        );
+        const created = r.rows[0];
+        return res.json({ result: `✅ Configuração criada com sucesso.\n\n📋 Detalhes:\n• ID: ${created.id}\n• Nome: ${created.name}\n• Tipo: ${created.config_type}\n\n📍 Onde encontrar: Tab CATÁLOGO → tipo ${created.config_type}` });
+      }
+
+      // ── UPDATE ──
+      if (action.type === 'update' && action.target === 'rules' && action.data?.id) {
+        const fields = [];
+        const values = [];
+        let idx = 1;
+        for (const [k, v] of Object.entries(action.data)) {
+          if (k === 'id') continue;
+          if (k === 'applicable_families') { fields.push(k + ' = $' + idx); values.push(JSON.stringify(v)); }
+          else { fields.push(k + ' = $' + idx); values.push(v); }
+          idx++;
+        }
+        values.push(action.data.id);
+        await pool.query('UPDATE rc_business_rules SET ' + fields.join(', ') + ' WHERE id = $' + idx, values);
+        return res.json({ result: `✅ Regra ID=${action.data.id} atualizada.\n\n📋 Campos alterados: ${Object.keys(action.data).filter(k=>k!=='id').join(', ')}\n\n📍 Onde encontrar: Tab REGRAS` });
+      }
+
+      // ── DELETE ──
+      if (action.type === 'delete' && action.data?.id) {
+        const table = action.target === 'rules' ? 'rc_business_rules' : action.target === 'bundles' ? 'rc_bundles' : action.target === 'products' ? 'rc_products' : action.target === 'pricing-rules' ? 'rc_pricing_rules' : null;
+        if (table) {
+          const before = await pool.query('SELECT name FROM ' + table + ' WHERE id = $1', [action.data.id]);
+          await pool.query('DELETE FROM ' + table + ' WHERE id = $1', [action.data.id]);
+          const name = before.rows[0]?.name || 'ID ' + action.data.id;
+          return res.json({ result: `🗑️ ${name} excluído de ${action.target}.\n\n📍 Removido da Tab ${action.target === 'rules' ? 'REGRAS' : action.target === 'bundles' ? 'BUNDLES' : action.target === 'products' ? 'PRODUTOS' : 'PRICING RULES'}` });
+        }
+      }
+
+      res.json({ result: `Ação registrada mas não executada automaticamente.\n\nTipo: ${action.type}\nTarget: ${action.target}\nDados: ${JSON.stringify(action.data||{}).slice(0,200)}\n\nUse a interface manual para executar.` });
     } catch(e) {
       res.json({ error: e.message });
     }
