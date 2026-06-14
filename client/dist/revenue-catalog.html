@@ -212,6 +212,7 @@ textarea { resize:vertical; min-height:80px; }
   <div class="tab active" data-tab="dashboard">DASHBOARD</div>
   <div class="tab" data-tab="products">PRODUTOS</div>
   <div class="tab" data-tab="ai-model">AI MODELING</div>
+  <div class="tab" data-tab="worker">AUTO-MODELAGEM</div>
   <div class="tab" data-tab="worker">⚡ WORKER</div>
   <div class="tab" data-tab="attributes">ATRIBUTOS</div>
   <div class="tab" data-tab="pricing">PRECIFICACAO</div>
@@ -291,6 +292,55 @@ textarea { resize:vertical; min-height:80px; }
 </div>
 
 <!-- ═══════ AI MODELING ═══════ -->
+<!-- ═══════ AUTO-MODELAGEM (RC WORKER) ═══════ -->
+<div class="panel" id="panel-worker">
+  <div class="toolbar">
+    <h3 style="font-size:1em;">AUTO-MODELAGEM REVENUE CLOUD</h3>
+    <span style="font-size:0.75em;background:var(--green-bg);color:var(--green);padding:3px 10px;border-radius:6px;margin-left:10px;">ENGINE DETERMINÍSTICO · ZERO AI · ZERO TOKENS</span>
+    <div class="spacer"></div>
+    <button class="btn btn-secondary" onclick="loadWorkerRuns()">HISTÓRICO</button>
+  </div>
+  <p style="font-size:0.85em;color:var(--text2);margin-bottom:16px;">Modelagem automática de produtos Revenue Cloud baseada em conhecimento codificado: Salesforce Revenue Cloud + TM Forum SID + práticas telecom B2B. O engine aplica regras determinísticas — mesmo input gera sempre o mesmo output, sem alucinação.</p>
+
+  <div class="grid-2" style="gap:16px;">
+    <!-- COLUNA ESQUERDA: Input -->
+    <div>
+      <div class="lib-card">
+        <h4 style="margin-bottom:12px;">MODELAGEM INDIVIDUAL</h4>
+        <div class="form-group"><label>NOME DO PRODUTO</label><input type="text" id="w-name" placeholder="Ex: Link MPLS 100M Enterprise"></div>
+        <div class="form-group"><label>DOMÍNIO</label><select id="w-domain" onchange="updateWorkerCategories()"></select></div>
+        <div class="form-group"><label>CATEGORIA</label><select id="w-category" onchange="updateWorkerTerms()"></select></div>
+        <div class="form-group"><label>SELLING MODEL</label><select id="w-selling"><option value="">Auto (recomendado)</option><option value="Term-Based">Term-Based</option><option value="Evergreen">Evergreen</option><option value="One-Time">One-Time</option><option value="Usage-Based">Usage-Based</option></select></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="form-group"><label>MRC (R$)</label><input type="number" id="w-mrc" placeholder="0"></div>
+          <div class="form-group"><label>NRC / Setup (R$)</label><input type="number" id="w-nrc" placeholder="0"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="btn btn-secondary" onclick="workerPreview()" style="flex:1;">PREVIEW</button>
+          <button class="btn btn-primary" onclick="workerModel()" style="flex:1;">MODELAR E SALVAR</button>
+        </div>
+      </div>
+
+      <div class="lib-card" style="margin-top:16px;">
+        <h4 style="margin-bottom:12px;">MODELAGEM EM LOTE (PORTFÓLIO)</h4>
+        <p style="font-size:0.8em;color:var(--text2);margin-bottom:10px;">Gera todos os produtos de um domínio de uma vez.</p>
+        <div class="form-group"><label>DOMÍNIO COMPLETO</label><select id="w-batch-domain"></select></div>
+        <button class="btn btn-primary" onclick="workerBatch()" style="width:100%;">GERAR PORTFÓLIO COMPLETO</button>
+      </div>
+    </div>
+
+    <!-- COLUNA DIREITA: Resultado -->
+    <div>
+      <div class="lib-card" id="w-result-card" style="min-height:300px;">
+        <h4 style="margin-bottom:12px;">RESULTADO DA MODELAGEM</h4>
+        <div id="w-result" style="font-size:0.85em;color:var(--text2);">
+          Preencha os campos e clique em PREVIEW para ver o que o engine vai gerar, ou MODELAR E SALVAR para criar o produto direto.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="panel" id="panel-ai-model">
   <div class="ai-section">
     <h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 1 7 7c0 2.4-1.2 4.5-3 5.7V17a1 1 0 0 1-1 1h-6a1 1 0 0 1-1-1v-2.3C6.2 13.5 5 11.4 5 9a7 7 0 0 1 7-7z"/><path d="M9 21h6"/><path d="M10 17v4"/><path d="M14 17v4"/></svg> MODELAGEM AI DE PRODUTO</h3>
@@ -517,6 +567,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (t === 'bundles') loadBundles();
     if (t === 'rules') loadRules();
     if (t === 'pricing-rules') loadPricingRules();
+    if (t === 'worker') loadWorker();
     if (t === 'catalog') loadCatalogConfig();
     if (t === 'kb') loadKb();
   });
@@ -1971,6 +2022,140 @@ async function deleteRule(id) {
   if (!confirm('Excluir regra?')) return;
   await api('/business-rules/' + id, { method: 'DELETE' });
   loadRules();
+}
+
+// ── RC WORKER (AUTO-MODELAGEM) ──
+let workerKnowledge = null;
+
+async function loadWorker() {
+  if (!workerKnowledge) {
+    workerKnowledge = await api('/worker/knowledge');
+  }
+  // Populate domain selects
+  const domains = Object.keys(workerKnowledge.hierarchy);
+  const domSel = document.getElementById('w-domain');
+  const batchSel = document.getElementById('w-batch-domain');
+  if (domSel && !domSel.options.length) {
+    domSel.innerHTML = domains.map(d => `<option value="${d}">${d}</option>`).join('');
+    batchSel.innerHTML = domains.map(d => `<option value="${d}">${d} (${Object.keys(workerKnowledge.hierarchy[d].categories).length} categorias)</option>`).join('');
+    updateWorkerCategories();
+  }
+}
+
+function updateWorkerCategories() {
+  const domain = document.getElementById('w-domain').value;
+  const cats = Object.keys(workerKnowledge.hierarchy[domain]?.categories || {});
+  // Map category to template key (templates use category names)
+  const catSel = document.getElementById('w-category');
+  catSel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function updateWorkerTerms() { /* reservado para futuras opções */ }
+
+function buildWorkerInput() {
+  return {
+    productName: gv('w-name'),
+    domain: gv('w-domain'),
+    category: gv('w-category'),
+    sellingModel: gv('w-selling') || undefined,
+    mrc: parseFloat(gv('w-mrc')) || 0,
+    nrc: parseFloat(gv('w-nrc')) || 0
+  };
+}
+
+function renderWorkerResult(r) {
+  if (r.error) { document.getElementById('w-result').innerHTML = `<div style="color:var(--red);">Erro: ${esc(r.error)}</div>`; return; }
+  const p = r.product;
+  const v = r.validation;
+  let html = `
+    <div style="margin-bottom:12px;padding:10px;background:${v.valid?'var(--green-bg)':'var(--red-bg)'};border-radius:8px;">
+      <strong style="color:${v.valid?'var(--green)':'var(--red)'};">${v.valid?'✓ PRODUTO VÁLIDO (Revenue Cloud compliant)':'✗ VALIDAÇÃO FALHOU'}</strong>
+      ${v.warnings.length?'<div style="font-size:0.8em;color:var(--orange);margin-top:4px;">⚠ '+v.warnings.join('; ')+'</div>':''}
+      ${v.errors.length?'<div style="font-size:0.8em;color:var(--red);margin-top:4px;">'+v.errors.join('; ')+'</div>':''}
+    </div>
+    <div style="font-weight:600;font-size:1em;color:var(--text);">${esc(p.name)}</div>
+    <div style="font-size:0.8em;color:var(--text2);margin-bottom:10px;">${esc(p.classification.domain)} › ${esc(p.classification.category)} · SID: ${esc(p.classification.sidDomain)} · ${esc(p.productType)} · ${esc(p.uom)}</div>
+
+    <div style="font-size:0.72em;text-transform:uppercase;color:var(--primary);font-weight:700;margin:10px 0 4px;">Selling Models (${p.sellingModel.options.length})</div>
+    ${p.sellingModel.options.map(o=>`<span class="tag">${o.sellingModel}${o.termMonths?' '+o.termMonths+'m':''} · ${o.chargeType}</span>`).join(' ')}
+
+    <div style="font-size:0.72em;text-transform:uppercase;color:var(--primary);font-weight:700;margin:12px 0 4px;">Atributos (${p.attributes.length})</div>
+    <div style="font-size:0.8em;">${p.attributes.map(a=>`${esc(a.name)}${a.priceImpacting?' 💰':''}${a.required?' ★':''}`).join(' · ')}</div>
+
+    <div style="font-size:0.72em;text-transform:uppercase;color:var(--primary);font-weight:700;margin:12px 0 4px;">Pricing — ${esc(p.pricing.pattern)}</div>
+    <div style="font-size:0.8em;">Charges: ${p.pricing.charges.map(c=>esc(c.label)).join(', ')}</div>
+    ${p.pricing.pricingRules.length?'<div style="font-size:0.8em;margin-top:4px;">Rules: '+p.pricing.pricingRules.map(r2=>esc(r2.name)).join(', ')+'</div>':''}
+    ${p.pricing.decisionTables.length?'<div style="font-size:0.8em;margin-top:4px;">Decision Tables: '+p.pricing.decisionTables.map(d=>esc(d.name)).join(', ')+'</div>':''}
+
+    ${p.bundle?`<div style="font-size:0.72em;text-transform:uppercase;color:var(--primary);font-weight:700;margin:12px 0 4px;">Bundle (${p.bundle.components.length} componentes)</div><div style="font-size:0.8em;">${p.bundle.components.map(c=>esc(c.role)+(c.required?' ★':'')).join(', ')}</div>`:''}
+
+    ${r.decomposition?`<div style="font-size:0.72em;text-transform:uppercase;color:var(--primary);font-weight:700;margin:12px 0 4px;">Order Decomposition (DRO) — ${r.decomposition.length} steps</div><div style="font-size:0.78em;color:var(--text2);">${r.decomposition.map(s=>s.step+'. '+esc(s.task)).join(' → ')}</div>`:''}
+
+    <div style="font-size:0.72em;text-transform:uppercase;color:var(--text2);font-weight:700;margin:14px 0 4px;border-top:1px solid var(--border);padding-top:10px;">Pipeline Trace (determinístico)</div>
+    ${r.trace.map(t=>`<div style="font-size:0.78em;color:var(--text2);">${t.step}. <strong>${esc(t.name)}</strong>: ${esc(t.result)}</div>`).join('')}
+  `;
+  document.getElementById('w-result').innerHTML = html;
+}
+
+async function workerPreview() {
+  if (!gv('w-name')) return alert('Informe o nome do produto');
+  document.getElementById('w-result').innerHTML = 'Processando (determinístico, ~1s)...';
+  const r = await api('/worker/preview', { method:'POST', body: buildWorkerInput() });
+  renderWorkerResult(r);
+}
+
+async function workerModel() {
+  if (!gv('w-name')) return alert('Informe o nome do produto');
+  document.getElementById('w-result').innerHTML = 'Modelando e salvando...';
+  try {
+    const r = await api('/worker/model', { method:'POST', body: buildWorkerInput() });
+    renderWorkerResult({ product: r.template ? resultFromTemplate(r) : null, validation: r.validation, trace: r.trace, decomposition: null });
+    showToast('Produto criado: ' + r.product.name);
+    loadProducts();
+  } catch(e) {
+    // 422 validation error
+    document.getElementById('w-result').innerHTML = `<div style="color:var(--red);">Validação falhou. Verifique os campos.</div>`;
+  }
+}
+
+function resultFromTemplate(r) {
+  // Reconstrói estrutura para render a partir do template salvo
+  const t = r.template;
+  return {
+    name: t.product.Name,
+    classification: t.classification,
+    productType: t.classification_meta.productType,
+    uom: t.product.QuantityUnitOfMeasure,
+    sellingModel: { options: t.related.sellingModelOptions },
+    attributes: t.related.attributes,
+    pricing: { pattern: t.pricing.pattern, charges: t.pricing.charges, pricingRules: t.related.pricingRules, decisionTables: [] },
+    bundle: t.related.childComponents.length ? { components: t.related.childComponents.map(c=>({role:c.productName,required:c.required})) } : null
+  };
+}
+
+async function workerBatch() {
+  const domain = gv('w-batch-domain');
+  if (!confirm('Gerar todos os produtos do domínio ' + domain + '?')) return;
+  document.getElementById('w-result').innerHTML = 'Gerando portfólio completo...';
+  const r = await api('/worker/batch', { method:'POST', body: { domain } });
+  document.getElementById('w-result').innerHTML = `
+    <div style="padding:10px;background:var(--green-bg);border-radius:8px;margin-bottom:12px;">
+      <strong style="color:var(--green);">✓ ${r.count} produtos criados</strong>
+    </div>
+    ${r.created.map(c=>`<div style="font-size:0.85em;padding:4px 0;border-bottom:1px solid var(--border);">${esc(c.name)} <span style="color:var(--text2);">(${esc(c.category)})</span></div>`).join('')}
+  `;
+  showToast(r.count + ' produtos criados');
+  loadProducts();
+}
+
+async function loadWorkerRuns() {
+  const runs = await api('/worker/runs');
+  document.getElementById('w-result').innerHTML = `
+    <h4 style="margin-bottom:10px;">HISTÓRICO DE EXECUÇÕES</h4>
+    ${runs.length ? runs.map(r=>`<div style="font-size:0.82em;padding:6px 0;border-bottom:1px solid var(--border);">
+      <span class="tag">${r.run_type}</span> ${r.products_created} produto(s) · ${new Date(r.created_at).toLocaleString('pt-BR')}
+    </div>`).join('') : '<div style="color:var(--text2);">Nenhuma execução ainda</div>'}
+  `;
 }
 
 // ── PRICING RULES (RLM) ──
