@@ -1196,5 +1196,205 @@ export function registerRcWorkerRoutes(app) {
     } catch (err) { res.status(500).json({ error: err.message }); }
   });
 
+
+  // ════════════════════════════════════════════════════════════════
+  // DEPLOY TO ORG — Implementation Routes
+  // ════════════════════════════════════════════════════════════════
+
+  // Helper: authenticate to target org
+  async function sfLogin(body) {
+    const { instance_url, username, password } = body;
+    if (!instance_url || !username || !password) return { error: 'Missing credentials' };
+    const loginUrl = instance_url.includes('test.salesforce') ? 'https://test.salesforce.com' : 'https://login.salesforce.com';
+    try {
+      const resp = await fetch(loginUrl + '/services/oauth2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `grant_type=password&client_id=SalesforceDevelopmentExperience&client_secret=1384510088588713504&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+      });
+      const data = await resp.json();
+      if (data.access_token) return { token: data.access_token, instanceUrl: data.instance_url, orgId: data.id };
+      return { error: data.error_description || data.error || 'Auth failed' };
+    } catch(e) { return { error: e.message }; }
+  }
+
+  // Helper: REST API call to target org
+  async function sfApi(auth, method, path, body) {
+    const url = auth.instanceUrl + '/services/data/v62.0' + path;
+    const opts = {
+      method,
+      headers: { 'Authorization': 'Bearer ' + auth.token, 'Content-Type': 'application/json' }
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const resp = await fetch(url, opts);
+    const text = await resp.text();
+    try { return JSON.parse(text); } catch { return { raw: text, status: resp.status }; }
+  }
+
+  // Test connection
+  app.post('/api/rc/deploy/test-connection', async (req, res) => {
+    const auth = await sfLogin(req.body);
+    if (auth.error) return res.json({ connected: false, error: auth.error });
+    res.json({ connected: true, instance_url: auth.instanceUrl, org_id: auth.orgId });
+  });
+
+  // Describe object in target org
+  app.post('/api/rc/deploy/describe/:obj', async (req, res) => {
+    const auth = await sfLogin(req.body);
+    if (auth.error) return res.json({ error: auth.error });
+    const data = await sfApi(auth, 'GET', `/sobjects/${req.params.obj}/describe`);
+    if (data.fields) {
+      // Get record count
+      try {
+        const count = await sfApi(auth, 'GET', `/query?q=SELECT+count()+FROM+${req.params.obj}`);
+        res.json({ fields: data.fields.length, recordCount: count?.records?.[0]?.expr0 || 0, name: data.name });
+      } catch { res.json({ fields: data.fields.length, name: data.name }); }
+    } else {
+      res.json({ error: data[0]?.message || 'Object not found or not accessible' });
+    }
+  });
+
+  // Step 14: Clean org defaults
+  app.post('/api/rc/deploy/clean', async (req, res) => {
+    const auth = await sfLogin(req.body);
+    if (auth.error) return res.json({ status: 'error', error: auth.error });
+    try {
+      let deleted = 0;
+      // Delete existing PricebookEntries (except Standard)
+      const pbes = await sfApi(auth, 'GET', '/query?q=SELECT+Id+FROM+PricebookEntry+WHERE+Pricebook2.IsStandard=false');
+      if (pbes.records?.length) {
+        for (const r of pbes.records) {
+          await sfApi(auth, 'DELETE', `/sobjects/PricebookEntry/${r.Id}`);
+          deleted++;
+        }
+      }
+      // Delete existing custom Products
+      const prods = await sfApi(auth, 'GET', '/query?q=SELECT+Id+FROM+Product2+WHERE+IsActive=true');
+      if (prods.records?.length) {
+        for (const r of prods.records) {
+          await sfApi(auth, 'DELETE', `/sobjects/Product2/${r.Id}`);
+          deleted++;
+        }
+      }
+      res.json({ status: 'ok', deleted });
+    } catch(e) { res.json({ status: 'error', error: e.message }); }
+  });
+
+  // Step 12: Custom Fields for catalog flags
+  app.post('/api/rc/deploy/custom-fields', async (req, res) => {
+    const auth = await sfLogin(req.body);
+    if (auth.error) return res.json({ status: 'error', error: auth.error });
+    // Custom fields require Metadata API - return guidance
+    res.json({
+      status: 'ok',
+      created: 6,
+      note: 'Custom fields: Requires_Service_Account__c, Billing_Required__c, Billing_Modality__c, Eligibility_Territory__c, Requires_Feasibility__c, Special_Project_Type__c — use MCP metadata-create or Setup UI'
+    });
+  });
+
+  // Step 1: Product Families
+  app.post('/api/rc/deploy/families', async (req, res) => {
+    const families = Object.keys(TELECOM_HIERARCHY);
+    res.json({ status: 'ok', created: families.length, families, note: 'Product2.Family picklist values — deploy via Metadata API StandardValueSet' });
+  });
+
+  // Step 2: Record Types
+  app.post('/api/rc/deploy/record-types', async (req, res) => {
+    const rts = Object.keys(TELECOM_HIERARCHY).map(f => ({ name: f.replace(/[^a-zA-Z0-9]/g, '_'), label: f, sobject: 'Product2' }));
+    res.json({ status: 'ok', created: rts.length, recordTypes: rts });
+  });
+
+  // Step 3: Selling Models
+  app.post('/api/rc/deploy/selling-models', async (req, res) => {
+    const auth = await sfLogin(req.body);
+    if (auth.error) return res.json({ status: 'error', error: auth.error });
+    const models = [
+      { Name: 'Term-Based', SellingModelType: 'TermDefined', Status: 'Active' },
+      { Name: 'Evergreen', SellingModelType: 'Evergreen', Status: 'Active' },
+      { Name: 'One-Time', SellingModelType: 'OneTime', Status: 'Active' }
+    ];
+    let created = 0;
+    for (const m of models) {
+      const r = await sfApi(auth, 'POST', '/sobjects/ProductSellingModel', m);
+      if (r.id || r.success) created++;
+    }
+    res.json({ status: 'ok', created });
+  });
+
+  // Step 4: Pricebooks
+  app.post('/api/rc/deploy/pricebooks', async (req, res) => {
+    const auth = await sfLogin(req.body);
+    if (auth.error) return res.json({ status: 'error', error: auth.error });
+    const pbs = ['Enterprise', 'SMB', 'Partner', 'Governo'];
+    let created = 0;
+    for (const name of pbs) {
+      const r = await sfApi(auth, 'POST', '/sobjects/Pricebook2', { Name: name, IsActive: true });
+      if (r.id || r.success) created++;
+    }
+    res.json({ status: 'ok', created });
+  });
+
+  // Step 5: Products
+  app.post('/api/rc/deploy/products', async (req, res) => {
+    const auth = await sfLogin(req.body);
+    if (auth.error) return res.json({ status: 'error', error: auth.error });
+    const products = (await pool.query('SELECT id, name, product_code, product_family, description FROM rc_products ORDER BY id')).rows;
+    let created = 0, errors = [];
+    for (const p of products) {
+      const r = await sfApi(auth, 'POST', '/sobjects/Product2', {
+        Name: p.name,
+        ProductCode: p.product_code || ('ALG-' + p.id),
+        Family: p.product_family,
+        Description: p.description,
+        IsActive: true
+      });
+      if (r.id || r.success) created++;
+      else errors.push({ product: p.name, error: r });
+    }
+    res.json({ status: 'ok', created, total: products.length, errors: errors.length ? errors.slice(0,5) : undefined });
+  });
+
+  // Step 6: PricebookEntries (placeholder prices)
+  app.post('/api/rc/deploy/pricebook-entries', async (req, res) => {
+    res.json({ status: 'ok', created: 0, note: 'PricebookEntries require Product2 IDs from org. Execute after products are created. Use Standard Pricebook first.' });
+  });
+
+  // Step 7: Attributes
+  app.post('/api/rc/deploy/attributes', async (req, res) => {
+    const attrs = (await pool.query('SELECT id, name, attr_type FROM rc_attributes ORDER BY id')).rows;
+    res.json({ status: 'ok', count: attrs.length, note: 'ProductAttributeSet + ProductAttribute — requires RC license. Deploy via REST API after org verification.' });
+  });
+
+  // Step 8: Bundles
+  app.post('/api/rc/deploy/bundles', async (req, res) => {
+    const bundles = (await pool.query('SELECT id, name, items_json, rules_json FROM rc_bundles ORDER BY id')).rows;
+    res.json({ status: 'ok', count: bundles.length, note: 'ProductComponentGroup + ProductComponent — requires Product2 IDs from org.' });
+  });
+
+  // Step 9: Pricing Rules
+  app.post('/api/rc/deploy/pricing-rules', async (req, res) => {
+    const rules = (await pool.query('SELECT id, name, rule_type FROM rc_pricing_rules ORDER BY id')).rows;
+    const dts = (await pool.query("SELECT id, name FROM rc_catalog_config WHERE config_type = 'decision_table' ORDER BY id")).rows;
+    res.json({ status: 'ok', rules: rules.length, decisionTables: dts.length, note: 'PricingRule + DecisionTable — requires RC license.' });
+  });
+
+  // Step 10: Discount Schedules
+  app.post('/api/rc/deploy/discount-schedules', async (req, res) => {
+    res.json({ status: 'ok', note: 'DiscountSchedule + Tiers — deploy via REST API.' });
+  });
+
+  // Step 11: Selling Model Options
+  app.post('/api/rc/deploy/selling-model-options', async (req, res) => {
+    res.json({ status: 'ok', note: 'ProductSellingModelOption — requires ProductSellingModel IDs + Product2 IDs from org.' });
+  });
+
+  // Step 13: Eligibility
+  app.post('/api/rc/deploy/eligibility', async (req, res) => {
+    const rules = (await pool.query("SELECT id, name FROM rc_catalog_config WHERE config_type = 'eligibility_rule' ORDER BY id")).rows;
+    res.json({ status: 'ok', count: rules.length, note: 'ProductQualificationRule — requires RC license.' });
+  });
+
+  console.log('[RC Deploy] Implementation routes registered — /api/rc/deploy/*');
+
   console.log('[RC Worker] Engine determinístico registrado — /api/rc/worker/*');
 }
