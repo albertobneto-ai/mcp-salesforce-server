@@ -917,5 +917,123 @@ export function registerRcWorkerRoutes(app) {
     } catch (err) { res.status(500).json({ error: err.message }); }
   });
 
+  // ════════════════════════════════════════════════════════════════
+  // ENRICH ALGAR — atualiza produto existente com Product Structure
+  // hierárquica (componentes + atributos com tipo e picklist + assets)
+  // ════════════════════════════════════════════════════════════════
+
+  // Helper: converte tipo Algar para tipo Revenue Cloud
+  function mapAttrType(algarType) {
+    const t = (algarType||'').toLowerCase();
+    if (t.includes('numérico') || t.includes('numerico')) return 'Number';
+    if (t.includes('lista de valores')) return 'Picklist';
+    if (t.includes('data')) return 'Date';
+    if (t.includes('texto')) return 'Text';
+    if (t.includes('booleano') || t.includes('sim') && t.includes('não')) return 'Checkbox';
+    if (t.includes('moeda') || t.includes('valor')) return 'Currency';
+    return 'Text';
+  }
+
+  app.post('/api/rc/worker/enrich-algar', async (req, res) => {
+    try {
+      const { products } = req.body;
+      const enriched = [], notFound = [];
+
+      for (const [productName, data] of Object.entries(products)) {
+        // Localiza produto por nome (case-insensitive partial)
+        const existing = await pool.query(
+          `SELECT p.id, p.name, v.template_json, v.version_number FROM rc_products p
+           LEFT JOIN LATERAL (SELECT template_json, version_number FROM rc_product_versions
+                              WHERE product_id = p.id ORDER BY version_number DESC LIMIT 1) v ON true
+           WHERE LOWER(p.name) = LOWER($1)`, [productName]
+        );
+        if (!existing.rows.length) { notFound.push(productName); continue; }
+
+        const prod = existing.rows[0];
+        const tj = prod.template_json || {};
+        const tree = data.tree || [];
+        const billing = data.billing || [];
+        const assets = data.assets || [];
+
+        // 1) Parse tree -> componentes + atributos hierárquicos
+        const components = [], attributes = [];
+        let currentParent = null;
+        for (const item of tree) {
+          if (item.type === 'COMPONENT') {
+            components.push({
+              name: item.name, depth: item.depth, parent: item.depth>1 ? currentParent : null
+            });
+            currentParent = item.name;
+          } else if (item.type === 'ATTRIBUTE') {
+            attributes.push({
+              name: item.name,
+              group: currentParent || 'General',
+              type: mapAttrType(item.attr_type),
+              algarType: item.attr_type,
+              values: item.options || [],
+              priceImpacting: false,
+              required: false,
+              value: ''
+            });
+          }
+        }
+
+        // 2) Billing components -> childComponents
+        const childComponents = billing.map(b => ({
+          productName: b.name, billingGroup: b.linked_in,
+          chargeType: (b.component_type||'').toLowerCase().includes('recorrente') ? 'Recurring' : 'One-Time',
+          required: false, minQty: 0, maxQty: 999
+        }));
+
+        // 3) Merge no template_json
+        tj.related = tj.related || {};
+        tj.related.attributes = attributes;
+        tj.related.childComponents = childComponents.length ? childComponents : (tj.related.childComponents||[]);
+        tj.related.hierarchicalComponents = components;
+
+        // 4) Assets como metadados (referência)
+        tj.assets_history = assets.map(a => ({
+          customer_type: a.customer_type, segment: a.segment,
+          description: a.description, years: a.years, total: a.total
+        }));
+
+        // 5) Marca como enriquecido
+        tj.worker_meta = tj.worker_meta || {};
+        tj.worker_meta.enrichedAt = new Date().toISOString();
+        tj.worker_meta.source = (tj.worker_meta.source||'') + ' + Product Structure';
+        tj.worker_meta.componentsCount = components.length;
+        tj.worker_meta.attributesCount = attributes.length;
+        tj.worker_meta.assetsCount = assets.length;
+
+        // Atualiza productType se tem muitos componentes
+        if (childComponents.length >= 3 || components.length >= 3) {
+          tj.classification_meta = tj.classification_meta || {};
+          tj.classification_meta.productType = 'Bundle';
+        }
+
+        // Nova versão
+        await pool.query(
+          `INSERT INTO rc_product_versions (product_id, version_number, template_json, notes)
+           VALUES ($1, $2, $3, 'Enriched com Product Structure Algar')`,
+          [prod.id, (prod.version_number||1)+1, JSON.stringify(tj)]
+        );
+
+        enriched.push({
+          id: prod.id, name: prod.name,
+          components: components.length, attributes: attributes.length,
+          billing: childComponents.length, assets: assets.length
+        });
+      }
+
+      await pool.query(
+        `INSERT INTO rc_worker_runs (run_type, input_json, output_json, products_created, trace_json)
+         VALUES ('algar-enrich', $1, $2, $3, $4)`,
+        [JSON.stringify({count:Object.keys(products).length}), JSON.stringify(enriched), enriched.length, JSON.stringify({notFound})]
+      );
+
+      res.json({ status: 'enriched', enriched, notFound });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
   console.log('[RC Worker] Engine determinístico registrado — /api/rc/worker/*');
 }
