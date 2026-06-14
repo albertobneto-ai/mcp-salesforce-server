@@ -978,17 +978,18 @@ export function registerRcWorkerRoutes(app) {
           }
         }
 
-        // 2) Billing components -> childComponents
-        const childComponents = billing.map(b => ({
-          productName: b.name, billingGroup: b.linked_in,
+        // 2) Billing components -> chargesLegacy (NOT childComponents)
+        const chargesLegacy = billing.map(b => ({
+          name: b.name, billingGroup: b.linked_in,
           chargeType: (b.component_type||'').toLowerCase().includes('recorrente') ? 'Recurring' : 'One-Time',
-          required: false, minQty: 0, maxQty: 999
+          source: 'Kenan'
         }));
 
         // 3) Merge no template_json
         tj.related = tj.related || {};
         tj.related.attributes = attributes;
-        tj.related.childComponents = childComponents.length ? childComponents : (tj.related.childComponents||[]);
+        tj.related.chargesLegacy = chargesLegacy.length ? chargesLegacy : (tj.related.chargesLegacy||[]);
+        tj.related.childComponents = tj.related.childComponents || [];
         tj.related.hierarchicalComponents = components;
 
         // 4) Assets como metadados (referência)
@@ -1006,7 +1007,7 @@ export function registerRcWorkerRoutes(app) {
         tj.worker_meta.assetsCount = assets.length;
 
         // Atualiza productType se tem muitos componentes
-        if (childComponents.length >= 3 || components.length >= 3) {
+        if (chargesLegacy.length >= 3 || components.length >= 3) {
           tj.classification_meta = tj.classification_meta || {};
           tj.classification_meta.productType = 'Bundle';
         }
