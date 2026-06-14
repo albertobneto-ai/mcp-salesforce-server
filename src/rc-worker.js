@@ -1022,7 +1022,7 @@ export function registerRcWorkerRoutes(app) {
         enriched.push({
           id: prod.id, name: prod.name,
           components: components.length, attributes: attributes.length,
-          billing: childComponents.length, assets: assets.length
+          billing: chargesLegacy.length, assets: assets.length
         });
       }
 
