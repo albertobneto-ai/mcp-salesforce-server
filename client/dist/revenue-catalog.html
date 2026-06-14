@@ -949,6 +949,7 @@ const sectionHelp = {
   sellingModelOptions: '<strong>Product Selling Model Options</strong> — Define COMO o produto é vendido: One-Time (venda única), Evergreen (recorrente sem prazo), ou Term-Based (contrato com prazo definido). Configura tipo de cobrança e frequência.',
   priceBookEntries: '<strong>Price Books</strong> — Entradas de preço do produto nos Pricebooks. Cada entrada define preço, moeda, tipo de cobrança e frequência para um Pricebook específico. Selecione um Pricebook já cadastrado na aba CATALOGO.',
   categories: '<strong>Categories</strong> — Classificações do produto no catálogo. Usadas para organizar e filtrar produtos na experiência de venda. Ex: Enterprise, SMB, Connectivity.',
+  chargesLegacy: '<strong>Charges Legado (Kenan)</strong> — Itens de cobrança importados do sistema de billing legado (Kenan). São referência histórica — NÃO são Product Components do Revenue Cloud. Incluem assinaturas, instalações, habilitações e outros charges do faturamento legado.',
   pricingRules: '<strong>Pricing Rules</strong> — Regras de precificação que se aplicam a este produto. Definem descontos automáticos, sobretaxas, overrides e ajustes de preço baseados em condições. Selecione regras já cadastradas na aba PRICING RULES.',
   attributes: '<strong>Attributes</strong> — Atributos técnicos e comerciais do produto. Selecione atributos já cadastrados na aba ATRIBUTOS, defina o valor, e indique se impacta no preço (Price Impacting).'
 };
@@ -973,6 +974,10 @@ function renderRelatedSections(data, t) {
     ),
     renderRelSection('pricingRules','📐','var(--blue)','Pricing Rules', r.pricingRules||[],
       (items) => items.map((p,i) => relRow(`<strong>${esc(p.name)}</strong> <span style="color:var(--text2);">— ${p.ruleType||''} ${p.adjustmentType||''} ${p.value||''}</span>`, remBtn('pricingRules',i)))
+    ),
+    renderRelSection('chargesLegacy','💳','#94a3b8','Charges Legado (Kenan)', r.chargesLegacy||[],
+      (items) => items.map((c,i) => relRow(`<strong>${esc(c.name)}</strong> <span style="color:var(--text2);">— ${c.chargeType||''}</span>`, remBtn('chargesLegacy',i))),
+      true
     ),
     renderRelSection('attributes','🏷','#0d9488','Attributes', r.attributes||[],
       (items) => items.map((a,i) => relRow(`<strong>${esc(a.name)}</strong> <span style="color:var(--text2);">= ${esc(a.value||'')}</span> ${a.priceImpacting?'<span class="badge" style="background:var(--orange-bg);color:var(--orange);margin-left:6px;">Price Impacting</span>':''}`, remBtn('attributes',i)))
@@ -1350,6 +1355,22 @@ function renderDetailsTab(t) {
     cards += sectionTitle('PRICING RULES ('+r.pricingRules.length+')','var(--blue)');
     r.pricingRules.forEach(p => {
       cards += relDetailCard(p.name, (p.adjustmentType||'')+' '+(p.value||''), p.ruleType||'', 'var(--blue)');
+    });
+  }
+
+  // Related: Charges Legado
+  if (r.chargesLegacy?.length) {
+    cards += sectionTitle('CHARGES LEGADO KENAN ('+r.chargesLegacy.length+')','#94a3b8');
+    r.chargesLegacy.forEach(c => {
+      cards += relDetailCard(c.name, c.chargeType||'', c.source||'Kenan', '#94a3b8');
+    });
+  }
+
+  // Related: Componentes Hierárquicos (estrutura do produto)
+  if (r.hierarchicalComponents?.length) {
+    cards += sectionTitle('ESTRUTURA HIERÁRQUICA ('+r.hierarchicalComponents.length+')','#8b5cf6');
+    r.hierarchicalComponents.forEach(c => {
+      cards += relDetailCard(c.name, c.parent||'(raiz)', '', '#8b5cf6');
     });
   }
 
