@@ -289,6 +289,7 @@ textarea { resize:vertical; min-height:80px; }
   <div class="tab" data-tab="catalog">CATALOGO</div>
   <div class="tab" data-tab="kb">KNOWLEDGE BASE</div>
   <div class="tab" data-tab="deploy" style="background:linear-gradient(135deg,#14633a,#1a7a45);color:#fff;font-weight:700;">🚀 IMPLEMENTAÇÃO</div>
+  <div class="tab" data-tab="files">📁 ARQUIVOS</div>
 </div>
 
 <!-- ═══════ DASHBOARD ═══════ -->
@@ -717,6 +718,32 @@ textarea { resize:vertical; min-height:80px; }
     <div id="dp-log" style="background:#0a2e1a;color:#a8e6cf;font-family:'JetBrains Mono',monospace;font-size:0.75em;padding:16px;border-radius:8px;max-height:400px;overflow-y:auto;white-space:pre-wrap;line-height:1.6;"></div>
   </div>
 </div>
+
+<!-- ═══════ ARQUIVOS DE PRODUTOS ═══════ -->
+<div class="panel" id="panel-files">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+    <h3 style="font-size:1em;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.5px;">Arquivos de Produtos</h3>
+    <div style="flex:1"></div>
+    <label class="btn btn-primary" style="cursor:pointer;">
+      📤 UPLOAD ARQUIVO
+      <input type="file" id="rcFileInput" style="display:none" onchange="rcUploadFile(this)" multiple accept=".xlsx,.xls,.csv,.pdf,.docx,.doc,.txt,.json,.xml,.zip">
+    </label>
+  </div>
+  <div class="lib-card" style="padding:0;overflow:hidden;">
+    <table class="data-table">
+      <thead><tr>
+        <th style="width:35%">NOME</th>
+        <th style="width:12%">TIPO</th>
+        <th style="width:10%">TAMANHO</th>
+        <th style="width:18%">CATEGORIA</th>
+        <th style="width:15%">DATA</th>
+        <th style="width:10%;text-align:center;">AÇÕES</th>
+      </tr></thead>
+      <tbody id="filesTableBody"><tr><td colspan="6" style="color:var(--text2);text-align:center;padding:40px;">Carregando...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <div class="modal-header">
@@ -755,6 +782,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (t === 'catalog') loadCatalogConfig();
     if (t === 'kb') loadKb();
     if (t === 'deploy') loadDeployTab();
+    if (t === 'files') loadFiles();
   });
 });
 
@@ -3266,6 +3294,89 @@ async function runDeploy() {
 
   document.getElementById('btnDeploy').disabled = false;
   document.getElementById('btnDeploy').textContent = errors ? '🔄 RETRY DEPLOY' : '✅ DEPLOY OK';
+}
+
+// ═══════ ARQUIVOS DE PRODUTOS ═══════
+async function loadFiles() {
+  try {
+    const r = await fetch(API + '/api/rc/files');
+    const data = await r.json();
+    const tb = document.getElementById('filesTableBody');
+    if (!data || !data.length) {
+      tb.innerHTML = '<tr><td colspan="6" style="color:var(--text2);text-align:center;padding:40px;">Nenhum arquivo enviado</td></tr>';
+      return;
+    }
+    tb.innerHTML = data.map(function(f) {
+      var ext = (f.file_name || '').split('.').pop().toUpperCase();
+      var sz = f.file_size > 1048576 ? (f.file_size/1048576).toFixed(1)+' MB' : f.file_size > 1024 ? (f.file_size/1024).toFixed(0)+' KB' : f.file_size+' B';
+      var dt = new Date(f.created_at).toLocaleDateString('pt-BR') + ' ' + new Date(f.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      var cat = f.category || 'produto';
+      var catColor = cat === 'configuracao' ? 'blue' : cat === 'pricing' ? 'green' : cat === 'estrutura' ? 'orange' : 'rascunho';
+      return '<tr>' +
+        '<td style="font-weight:600;">' + (f.file_name||'-') + '</td>' +
+        '<td><span class="badge badge-validado">' + ext + '</span></td>' +
+        '<td>' + sz + '</td>' +
+        '<td><span class="badge badge-' + catColor + '">' + cat.toUpperCase() + '</span></td>' +
+        '<td style="font-size:0.8em;color:var(--text2);">' + dt + '</td>' +
+        '<td style="text-align:center;">' +
+          '<button class="btn-icon" title="Download" onclick="rcDownloadFile(' + f.id + ',\'' + (f.file_name||'file').replace(/'/g,"\\'") + '\')">⬇</button> ' +
+          '<button class="btn-icon" title="Excluir" onclick="rcDeleteFile(' + f.id + ')" style="color:#dc2626;">✕</button>' +
+        '</td></tr>';
+    }).join('');
+  } catch(e) { console.error('loadFiles:', e); }
+}
+
+async function rcUploadFile(input) {
+  var files = input.files;
+  if (!files || !files.length) return;
+  for (var i = 0; i < files.length; i++) {
+    var f = files[i];
+    var reader = new FileReader();
+    reader.onload = async function(ev) {
+      var b64 = ev.target.result.split(',')[1];
+      try {
+        var resp = await fetch(API + '/api/rc/files', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            file_name: f.name,
+            file_type: f.type || 'application/octet-stream',
+            file_size: f.size,
+            file_content: b64,
+            category: 'produto',
+            uploaded_by: 'standalone'
+          })
+        });
+        if (resp.ok) loadFiles();
+      } catch(e) { alert('Erro ao enviar: ' + e.message); }
+    };
+    reader.readAsDataURL(f);
+  }
+  input.value = '';
+}
+
+async function rcDownloadFile(id, name) {
+  try {
+    var resp = await fetch(API + '/api/rc/files/' + id + '/download');
+    if (!resp.ok) { alert('Arquivo não encontrado'); return; }
+    var blob = await resp.blob();
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = name || 'file';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch(e) { alert('Erro download: ' + e.message); }
+}
+
+async function rcDeleteFile(id) {
+  if (!confirm('Excluir este arquivo?')) return;
+  try {
+    await fetch(API + '/api/rc/files/' + id, { method: 'DELETE' });
+    loadFiles();
+  } catch(e) { alert('Erro: ' + e.message); }
 }
 
 </script>
