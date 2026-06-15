@@ -1441,12 +1441,7 @@ export function registerRcWorkerRoutes(app) {
           model: 'google/gemma-4-31b-it:free',
           max_tokens: 2000,
           messages: [
-            { role: 'system', content: systemPrompt + '\n\nDados atuais:\n' + contextData + '\n\nSe a pergunta pedir uma AÇÃO (criar, alterar, excluir), responda com um resumo do que será feito e inclua no final uma linha com formato JSON:
-ACTION:{"type":"create","target":"rules","data":{"name":"RN-XXX — Nome da Regra","category":"compliance","rule_type":"constraint","description":"Descrição completa","priority":"alta","applicable_families":["IoT"]}}
-Targets válidos: rules, bundles, products, pricing-rules, configs.
-Para rules: category deve ser um de: geral, pricing, contrato, desconto, bundle, compliance. rule_type: constraint, process, informational, exception, pending. priority: alta, media, baixa.
-O campo "name" é OBRIGATÓRIO em qualquer ação.
-Se for apenas consulta, responda normalmente sem ACTION.' },
+            { role: 'system', content: systemPrompt + `\nDados atuais:\n` + contextData + `\nSe a pergunta pedir uma ACAO (criar, alterar, excluir), responda com resumo e inclua no final: ACTION:{"type":"create","target":"rules","data":{"name":"Nome","category":"compliance","rule_type":"constraint","description":"Desc","priority":"alta","applicable_families":["IoT"]}}. Targets: rules, bundles, products, pricing-rules, configs. Campo name OBRIGATORIO. Consultas sem ACTION.` },
             { role: 'user', content: question }
           ]
         })
