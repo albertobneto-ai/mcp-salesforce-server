@@ -173,6 +173,20 @@ async function initRevenueCatalogDB() {
       VALUES ('architect', '["rc_full_access","org_read","org_write"]', 'Arquiteto Salesforce — acesso completo ao Revenue Catalog')
       ON CONFLICT (name) DO NOTHING`);
 
+    // Arquivos de Produto
+    await client.query(`CREATE TABLE IF NOT EXISTS rc_files (
+      id SERIAL PRIMARY KEY,
+      file_name VARCHAR(500) NOT NULL,
+      file_type VARCHAR(100),
+      file_size INT DEFAULT 0,
+      file_content TEXT,
+      category VARCHAR(100) DEFAULT 'produto',
+      description TEXT,
+      product_id INT REFERENCES rc_products(id) ON DELETE SET NULL,
+      uploaded_by VARCHAR(100),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+
     console.log('[RC] Revenue Catalog tables initialized');
   } finally {
     client.release();
@@ -912,6 +926,53 @@ FORMATO DE RESPOSTA (JSON):
   // =============================================
   // STATS / DASHBOARD
   // =============================================
+
+  // ── FILES ──
+  app.get('/api/rc/files', async (req, res) => {
+    try {
+      const rows = (await pool.query(
+        `SELECT id, file_name, file_type, file_size, category, description, product_id, uploaded_by, created_at
+         FROM rc_files ORDER BY created_at DESC`
+      )).rows;
+      res.json(rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post('/api/rc/files', async (req, res) => {
+    try {
+      const { file_name, file_type, file_size, file_content, category, description, product_id, uploaded_by } = req.body;
+      if (!file_name || !file_content) return res.status(400).json({ error: 'file_name and file_content required' });
+      const r = (await pool.query(
+        `INSERT INTO rc_files (file_name, file_type, file_size, file_content, category, description, product_id, uploaded_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id, file_name, file_type, file_size, category, description, product_id, uploaded_by, created_at`,
+        [file_name, file_type || '', file_size || 0, file_content, category || 'produto', description || '', product_id || null, uploaded_by || '']
+      )).rows[0];
+      res.json(r);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.get('/api/rc/files/:id/download', async (req, res) => {
+    try {
+      const r = (await pool.query('SELECT * FROM rc_files WHERE id = $1', [req.params.id])).rows[0];
+      if (!r) return res.status(404).json({ error: 'not found' });
+      if (r.file_content) {
+        const buf = Buffer.from(r.file_content, 'base64');
+        const fname = (r.file_name || 'file').replace(/[^\x20-\x7E]/g, '_');
+        const fnameUtf8 = encodeURIComponent(r.file_name || 'file');
+        res.setHeader('Content-Disposition', "attachment; filename=\"" + fname + "\"; filename*=UTF-8''" + fnameUtf8);
+        res.setHeader('Content-Type', r.file_type || 'application/octet-stream');
+        return res.send(buf);
+      }
+      res.status(404).json({ error: 'no content' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.delete('/api/rc/files/:id', async (req, res) => {
+    try {
+      await pool.query('DELETE FROM rc_files WHERE id = $1', [req.params.id]);
+      res.json({ ok: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
 
   app.get('/api/rc/stats', async (req, res) => {
     try {
