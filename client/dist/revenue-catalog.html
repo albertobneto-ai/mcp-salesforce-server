@@ -3329,30 +3329,39 @@ async function loadFiles() {
 async function rcUploadFile(input) {
   var files = input.files;
   if (!files || !files.length) return;
+  var maxSize = 30 * 1024 * 1024; // 30MB
+  var tb = document.getElementById('filesTableBody');
   for (var i = 0; i < files.length; i++) {
     var f = files[i];
-    var reader = new FileReader();
-    reader.onload = async function(ev) {
-      var b64 = ev.target.result.split(',')[1];
-      try {
-        var resp = await fetch(API + '/api/rc/files', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            file_name: f.name,
-            file_type: f.type || 'application/octet-stream',
-            file_size: f.size,
-            file_content: b64,
-            category: 'produto',
-            uploaded_by: 'standalone'
-          })
-        });
-        if (resp.ok) loadFiles();
-      } catch(e) { alert('Erro ao enviar: ' + e.message); }
-    };
-    reader.readAsDataURL(f);
+    if (f.size > maxSize) { alert('Arquivo "' + f.name + '" excede 30MB. Reduza o tamanho.'); continue; }
+    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--primary);font-weight:600;">⏳ Enviando "' + f.name + '" (' + (f.size/1024).toFixed(0) + ' KB)...</td></tr>';
+    try {
+      var b64 = await new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function(ev) { resolve(ev.target.result.split(',')[1]); };
+        reader.onerror = function() { reject(new Error('Erro leitura')); };
+        reader.readAsDataURL(f);
+      });
+      var resp = await fetch(API + '/api/rc/files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file_name: f.name,
+          file_type: f.type || 'application/octet-stream',
+          file_size: f.size,
+          file_content: b64,
+          category: 'produto',
+          uploaded_by: 'standalone'
+        })
+      });
+      if (!resp.ok) {
+        var err = await resp.text();
+        alert('Erro ao enviar "' + f.name + '": ' + err);
+      }
+    } catch(e) { alert('Erro ao enviar "' + f.name + '": ' + e.message); }
   }
   input.value = '';
+  loadFiles();
 }
 
 async function rcDownloadFile(id, name) {
