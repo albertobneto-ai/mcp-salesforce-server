@@ -132,7 +132,9 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 const API = window.location.origin + '/api/i9-connect';
 let mediaRecorder = null;
 let recordedChunks = [];
-let stream = null;
+let stream = null;       // original full stream (may have video)
+let recStream = null;     // audio-only stream for recorder
+let currentMime = '';
 let timerInterval = null;
 let startTime = 0;
 let chunkIndex = 0;
@@ -157,11 +159,28 @@ function toggleButtons(recording) {
   document.getElementById('btnStop').style.display = recording ? '' : 'none';
 }
 
+/* ─── Create a fresh MediaRecorder on recStream ─── */
+function createRecorder() {
+  const opts = currentMime ? { mimeType: currentMime } : {};
+  const rec = new MediaRecorder(recStream, opts);
+  rec.ondataavailable = (e) => {
+    if (e.data.size > 0) recordedChunks.push(e.data);
+  };
+  // When stopped, grab accumulated chunks and send
+  rec.onstop = () => {
+    const chunks = recordedChunks.slice();
+    recordedChunks = [];
+    if (chunks.length > 0) {
+      const blob = new Blob(chunks, { type: currentMime || 'audio/webm' });
+      sendForTranscription(blob, currentMime || 'audio/webm');
+    }
+  };
+  return rec;
+}
+
 /* ─── Start Recording ─── */
 async function startRecording(mode) {
   try {
-    let recStream; // stream used for MediaRecorder (audio-only)
-
     if (mode === 'mic') {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       recStream = stream;
@@ -173,69 +192,47 @@ async function startRecording(mode) {
         stream.getTracks().forEach(t => t.stop());
         return;
       }
-      // Extract audio-only stream for MediaRecorder
       recStream = new MediaStream(audioTracks);
-      // Stop screen share → stop recording
       stream.getVideoTracks().forEach(vt => vt.addEventListener('ended', () => stopRecording()));
     }
 
-    // Try mimeTypes in order of preference
+    // Find a working mimeType
     const candidates = [
-      'audio/webm;codecs=opus',
-      'audio/webm',
-      'video/webm;codecs=opus',
-      'video/webm',
-      'audio/mp4',
-      'audio/ogg;codecs=opus',
-      '' // default — let browser decide
+      'audio/webm;codecs=opus', 'audio/webm',
+      'video/webm;codecs=opus', 'video/webm',
+      'audio/mp4', 'audio/ogg;codecs=opus', ''
     ];
-    let mimeType = '';
-    let recorder = null;
+    currentMime = '';
     for (const mt of candidates) {
       try {
         const opts = mt ? { mimeType: mt } : {};
-        recorder = new MediaRecorder(recStream, opts);
-        mimeType = mt || recorder.mimeType || 'audio/webm';
+        const test = new MediaRecorder(recStream, opts);
+        currentMime = mt || test.mimeType || 'audio/webm';
+        test.stop();
         break;
       } catch (e) { continue; }
     }
-    if (!recorder) throw new Error('Nenhum formato de gravação suportado neste navegador.');
 
     recordedChunks = [];
     chunkIndex = 0;
-    mediaRecorder = recorder;
-
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) recordedChunks.push(e.data);
-    };
-
-    mediaRecorder.onstop = () => {
-      if (recordedChunks.length > 0) {
-        const blob = new Blob(recordedChunks, { type: mimeType });
-        recordedChunks = [];
-        sendForTranscription(blob, mimeType);
-      }
-    };
-
+    mediaRecorder = createRecorder();
     mediaRecorder.start();
+
     startTime = Date.now();
     timerInterval = setInterval(updateTimer, 1000);
     toggleButtons(true);
     setStatus('recording', mode === 'mic' ? 'Gravando microfone...' : 'Gravando áudio do sistema...');
 
-    // Auto-chunk interval
+    // Auto-chunk: stop current recorder + immediately start new one (no gap)
     const intervalSec = parseInt(document.getElementById('selInterval').value);
     if (intervalSec > 0) {
       autoInterval = setInterval(() => {
-        if (mediaRecorder && mediaRecorder.state === 'recording') {
+        if (mediaRecorder && mediaRecorder.state === 'recording' && recStream && recStream.active) {
+          // Stop fires onstop→sends chunk
           mediaRecorder.stop();
-          // Restart after a tiny delay
-          setTimeout(() => {
-            if (stream && stream.active) {
-              recordedChunks = [];
-              mediaRecorder.start();
-            }
-          }, 200);
+          // Immediately start a fresh recorder — no gap
+          mediaRecorder = createRecorder();
+          mediaRecorder.start();
         }
       }, intervalSec * 1000);
     }
@@ -261,6 +258,7 @@ function stopRecording() {
     stream.getTracks().forEach(t => t.stop());
     stream = null;
   }
+  recStream = null;
   toggleButtons(false);
 }
 
@@ -271,7 +269,6 @@ async function sendForTranscription(blob, mimeType) {
   const idx = chunkIndex;
 
   try {
-    // Convert blob to base64
     const base64 = await blobToBase64(blob);
     const lang = document.getElementById('selLang').value;
 
@@ -286,9 +283,11 @@ async function sendForTranscription(blob, mimeType) {
 
     if (data.text && data.text.trim()) {
       appendChunk(idx, data.text.trim(), data.duration);
+    } else {
+      // Silent chunk — no text detected
+      console.log('Chunk #' + idx + ': no speech detected');
     }
 
-    // If still recording, set status back
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       setStatus('recording', 'Gravando...');
     } else {
@@ -308,10 +307,7 @@ async function sendForTranscription(blob, mimeType) {
 function blobToBase64(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result;
-      resolve(result.split(',')[1]); // strip data:...;base64,
-    };
+    reader.onloadend = () => resolve(reader.result.split(',')[1]);
     reader.onerror = reject;
     reader.readAsDataURL(blob);
   });
@@ -322,8 +318,8 @@ function appendChunk(idx, text, duration) {
   const box = document.getElementById('transcript');
   const div = document.createElement('div');
   div.className = 'chunk';
-  const dur = duration ? ` — ${duration.toFixed(1)}s` : '';
-  div.innerHTML = `<div class="ts">Bloco #${idx}${dur} — ${new Date().toLocaleTimeString('pt-BR')}</div><div class="text">${escHtml(text)}</div>`;
+  const dur = duration ? ' — ' + duration.toFixed(1) + 's' : '';
+  div.innerHTML = '<div class="ts">Bloco #' + idx + dur + ' — ' + new Date().toLocaleTimeString('pt-BR') + '</div><div class="text">' + escHtml(text) + '</div>';
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
@@ -333,7 +329,7 @@ function appendError(idx, msg) {
   const div = document.createElement('div');
   div.className = 'chunk';
   div.style.borderLeftColor = 'var(--danger)';
-  div.innerHTML = `<div class="ts" style="color:var(--danger)">Bloco #${idx} — ERRO</div><div class="text" style="color:var(--danger)">${escHtml(msg)}</div>`;
+  div.innerHTML = '<div class="ts" style="color:var(--danger)">Bloco #' + idx + ' — ERRO</div><div class="text" style="color:var(--danger)">' + escHtml(msg) + '</div>';
   box.appendChild(div);
 }
 
@@ -362,7 +358,7 @@ function downloadTranscript() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `transcricao_${new Date().toISOString().slice(0,10)}.txt`;
+  a.download = 'transcricao_' + new Date().toISOString().slice(0,10) + '.txt';
   a.click();
   URL.revokeObjectURL(url);
 }
