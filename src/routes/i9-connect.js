@@ -5,6 +5,7 @@ const router = express.Router();
 /* ───────────────────────────────────────────────
    POST /api/i9-connect/transcribe
    Body: { audio: <base64>, mimeType, language }
+   Uses xAI /v1/stt endpoint
    ─────────────────────────────────────────────── */
 router.post('/transcribe', async (req, res) => {
   try {
@@ -16,18 +17,17 @@ router.post('/transcribe', async (req, res) => {
 
     const audioBuffer = Buffer.from(audio, 'base64');
     const mime = mimeType || 'audio/webm';
-    const ext = mime.includes('mp4') ? 'mp4' : mime.includes('ogg') ? 'ogg' : 'webm';
+    const ext = mime.includes('wav') ? 'wav' : mime.includes('mp4') ? 'mp4' : mime.includes('ogg') ? 'ogg' : 'webm';
 
     const blob = new Blob([audioBuffer], { type: mime });
     const formData = new FormData();
     formData.append('file', blob, `recording.${ext}`);
-    formData.append('model', 'whisper-large-v3');
     formData.append('language', language || 'pt');
-    formData.append('response_format', 'verbose_json');
+    formData.append('format', 'true');
 
     console.log(`[i9-connect] Transcribing ${(audioBuffer.length / 1024).toFixed(0)}KB ${mime} lang=${language || 'pt'}`);
 
-    const xaiRes = await fetch('https://api.x.ai/v1/audio/transcriptions', {
+    const xaiRes = await fetch('https://api.x.ai/v1/stt', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${grokKey}` },
       body: formData
@@ -40,13 +40,13 @@ router.post('/transcribe', async (req, res) => {
     }
 
     const result = await xaiRes.json();
-    console.log(`[i9-connect] OK — ${(result.duration || 0).toFixed(1)}s transcribed`);
+    console.log(`[i9-connect] OK — ${(result.duration || 0).toFixed(1)}s transcribed, ${(result.text || '').length} chars`);
 
     res.json({
       text: result.text || '',
       language: result.language || language || 'pt',
       duration: result.duration || 0,
-      segments: result.segments || []
+      segments: result.segments || result.words || []
     });
   } catch (err) {
     console.error('[i9-connect] error:', err);
@@ -56,7 +56,7 @@ router.post('/transcribe', async (req, res) => {
 
 /* Health */
 router.get('/health', (req, res) => {
-  res.json({ status: 'ok', module: 'i9-connect', features: ['transcribe'] });
+  res.json({ status: 'ok', module: 'i9-connect', features: ['transcribe'], engine: 'xAI /v1/stt' });
 });
 
 export default router;
