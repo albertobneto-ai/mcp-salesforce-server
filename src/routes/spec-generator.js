@@ -1,5 +1,6 @@
 // src/routes/spec-generator.js — Spec-to-Runbook with fallback: DeepSeek → Grok → Sonnet
 import express from 'express';
+import { authMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -298,7 +299,7 @@ async function streamFromModel(modelCfg, messages, res, log) {
 }
 
 // ── POST /convert (streaming SSE with fallback) ──
-router.post('/convert', async (req, res) => {
+router.post('/convert', authMiddleware, async (req, res) => {
   const { specText } = req.body;
   if (!specText || specText.trim().length < 50) {
     return res.status(400).json({ error: 'Especificação muito curta. Cole o conteúdo completo da spec.' });
@@ -331,7 +332,7 @@ router.post('/convert', async (req, res) => {
 });
 
 // ── POST /convert-sync (non-streaming with fallback) ──
-router.post('/convert-sync', async (req, res) => {
+router.post('/convert-sync', authMiddleware, async (req, res) => {
   const { specText } = req.body;
   if (!specText || specText.trim().length < 50) {
     return res.status(400).json({ error: 'Especificação muito curta.' });
