@@ -1,4 +1,5 @@
 import fetch from 'node-fetch';
+import { authMiddleware } from './middleware/auth.js';
 
 export function registerDevToolsRoutes(app) {
 
@@ -148,7 +149,7 @@ RESPONDA APENAS JSON, sem markdown, sem backticks:
   });
 
   // ─── AI Plan endpoint ────────────────────────────────────────
-  app.post('/api/devtools/plan', async (req, res) => {
+  app.post('/api/devtools/plan', authMiddleware, async (req, res) => {
     try {
       const { prompt } = req.body;
       if (!prompt) return res.status(400).json({ error: 'prompt obrigatório' });
