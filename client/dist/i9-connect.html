@@ -282,7 +282,7 @@ async function sendForTranscription(blob, mimeType) {
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || data.details || 'API error');
+    if (!res.ok) throw new Error(data.details || data.error || 'API error ' + res.status);
 
     if (data.text && data.text.trim()) {
       appendChunk(idx, data.text.trim(), data.duration);
