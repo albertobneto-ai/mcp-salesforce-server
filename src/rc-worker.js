@@ -5,6 +5,7 @@
 // Reproduzível, auditável, sem alucinação.
 
 import pg from 'pg';
+import { authMiddleware } from './middleware/auth.js';
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
@@ -1399,7 +1400,7 @@ export function registerRcWorkerRoutes(app) {
   // CONTEXTUAL AI AGENT — per-section intelligent assistant
   // ════════════════════════════════════════════════════════════════
 
-  app.post('/api/rc/agent/ask', async (req, res) => {
+  app.post('/api/rc/agent/ask', authMiddleware, async (req, res) => {
     const { context, question } = req.body;
     if (!question) return res.json({ error: 'No question' });
 
@@ -1466,7 +1467,7 @@ export function registerRcWorkerRoutes(app) {
     }
   });
 
-  app.post('/api/rc/agent/execute', async (req, res) => {
+  app.post('/api/rc/agent/execute', authMiddleware, async (req, res) => {
     const { context, action } = req.body;
     if (!action) return res.json({ error: 'No action' });
 
