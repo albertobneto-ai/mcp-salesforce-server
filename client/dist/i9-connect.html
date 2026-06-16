@@ -160,29 +160,50 @@ function toggleButtons(recording) {
 /* ─── Start Recording ─── */
 async function startRecording(mode) {
   try {
+    let recStream; // stream used for MediaRecorder (audio-only)
+
     if (mode === 'mic') {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recStream = stream;
     } else {
       stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-      // Check if audio track exists
       const audioTracks = stream.getAudioTracks();
       if (audioTracks.length === 0) {
-        alert('Nenhuma faixa de áudio detectada. Ao compartilhar, marque "Compartilhar áudio" / "Share audio".');
+        alert('Nenhuma faixa de áudio detectada.\nAo compartilhar, marque "Compartilhar áudio do sistema" / "Share system audio".');
         stream.getTracks().forEach(t => t.stop());
         return;
       }
+      // Extract audio-only stream for MediaRecorder
+      recStream = new MediaStream(audioTracks);
+      // Stop screen share → stop recording
+      stream.getVideoTracks().forEach(vt => vt.addEventListener('ended', () => stopRecording()));
     }
 
-    // Determine supported mimeType
-    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-      ? 'audio/webm;codecs=opus'
-      : MediaRecorder.isTypeSupported('audio/webm')
-        ? 'audio/webm'
-        : 'audio/mp4';
+    // Try mimeTypes in order of preference
+    const candidates = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'video/webm;codecs=opus',
+      'video/webm',
+      'audio/mp4',
+      'audio/ogg;codecs=opus',
+      '' // default — let browser decide
+    ];
+    let mimeType = '';
+    let recorder = null;
+    for (const mt of candidates) {
+      try {
+        const opts = mt ? { mimeType: mt } : {};
+        recorder = new MediaRecorder(recStream, opts);
+        mimeType = mt || recorder.mimeType || 'audio/webm';
+        break;
+      } catch (e) { continue; }
+    }
+    if (!recorder) throw new Error('Nenhum formato de gravação suportado neste navegador.');
 
     recordedChunks = [];
     chunkIndex = 0;
-    mediaRecorder = new MediaRecorder(stream, { mimeType });
+    mediaRecorder = recorder;
 
     mediaRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) recordedChunks.push(e.data);
@@ -195,11 +216,6 @@ async function startRecording(mode) {
         sendForTranscription(blob, mimeType);
       }
     };
-
-    // Handle screen share ending
-    if (mode === 'screen') {
-      stream.getVideoTracks()[0].addEventListener('ended', () => stopRecording());
-    }
 
     mediaRecorder.start();
     startTime = Date.now();
