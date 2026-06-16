@@ -18,6 +18,7 @@ import specGeneratorRouter from "./routes/spec-generator.js";
 import { registerRevenueCatalogRoutes } from "./revenue-catalog.js";
 import { registerRcWorkerRoutes } from "./rc-worker.js";
 import { registerWorkerEngineRoutes } from "./worker-engine.js";
+import i9ConnectRouter from "./routes/i9-connect.js";
 
 const app = express();
 app.use(express.json({ limit: "50mb" }));
@@ -2229,6 +2230,9 @@ registerWorkerEngineRoutes(app);
 
   // Spec Generator
   app.use('/api/spec-generator', specGeneratorRouter);
+
+  // i9 Connect - Transcription
+  app.use('/api/i9-connect', i9ConnectRouter);
 
 // --- Everi9 Chat App ---
 mountChatApp(app);
