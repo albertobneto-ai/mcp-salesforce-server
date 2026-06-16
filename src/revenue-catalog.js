@@ -2,6 +2,7 @@
 // Plataforma de modelagem de produtos Revenue Cloud com AI
 
 import pg from 'pg';
+import { authMiddleware } from './middleware/auth.js';
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
@@ -694,7 +695,7 @@ export function registerRevenueCatalogRoutes(app) {
   // AI MODELING
   // =============================================
 
-  app.post('/api/rc/ai/model', async (req, res) => {
+  app.post('/api/rc/ai/model', authMiddleware, async (req, res) => {
     try {
       const ANTHROPIC_KEY = process.env.ANTHROPIC_KEY;
       const GROK_KEY = process.env.GROK_KEY;
