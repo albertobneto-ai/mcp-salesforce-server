@@ -56,7 +56,7 @@ router.get('/search', authMiddleware, async (req, res) => {
 export default router;
 
 // Teste de modelos Claude (diagnóstico temporário)
-router.get('/test-model/:model', async (req, res) => {
+router.get('/test-model/:model', authMiddleware, async (req, res) => {
   try {
     const claude = await import('../services/claude.js');
     const model = req.params.model;
