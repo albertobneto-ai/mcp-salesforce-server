@@ -304,7 +304,8 @@ function App(){
           h("div",{style:{display:"flex",alignItems:"center",gap:"12px"}},
             h("img",{src:LOGO,alt:"Ever i9",style:{height:"40px",borderRadius:"4px"}}),
             h("h1",{style:{margin:0,fontSize:"18px",fontWeight:"700",color:"#fafafa",letterSpacing:"-0.01em"}},tab==="atividades"?"Atividades":"Mem\u00f3rias")
-          )
+          ),
+          h("button",{onClick:function(){if(window.parent&&window.parent.__closeLabOverlay)window.parent.__closeLabOverlay();else window.location.href="/";},style:{background:"transparent",border:"1px solid #27272a",borderRadius:"8px",padding:"8px 16px",fontSize:"12px",fontWeight:"500",color:"#71717a",cursor:"pointer",display:"flex",alignItems:"center",gap:"6px",transition:"all .15s"},onMouseEnter:function(e){e.currentTarget.style.background="#141414";e.currentTarget.style.color="#fafafa"},onMouseLeave:function(e){e.currentTarget.style.background="transparent";e.currentTarget.style.color="#71717a"}},"\u2190 Ever i9")
         ),
         h("div",{style:{display:"flex",gap:"0"}},
           h(TabBtn,{label:"Atividades",icon:"\u2630",active:tab==="atividades",onClick:()=>setTab("atividades"),count:tasks.filter(t=>t.status!=="Conclu\u00edda").length}),
