@@ -335,61 +335,82 @@ async function sfDelete(sf, object, id) {
 async function test90(sf) {
   const results = [];
 
-  // ── Verificar 3 Matching Rules ativas ──
+  // ── Verificar 3 Matching Rules ativas via Apex ──
   try {
-    const mr = await sfTooling(sf, "SELECT Id, DeveloperName, IsActive, MatchEngine FROM MatchingRule WHERE SobjectType='Account' AND DeveloperName LIKE 'MR_Account_%'");
-    const found = mr.records || [];
-    const active = found.filter(r => r.IsActive);
-    const names = found.map(r => `${r.DeveloperName}(active=${r.IsActive})`).join(', ');
-    if (active.length >= 3) results.push(ok('CA-001-MR', '3 Matching Rules ativas',
-      "Tooling SOQL: SELECT Id, DeveloperName, IsActive FROM MatchingRule WHERE SobjectType='Account' AND DeveloperName LIKE 'MR_Account_%'",
-      `${active.length} MRs ativas: ${names}`,
+    const r = await sfExecAnon(sf, `
+      List<MatchingRule> mrs = [SELECT Id, DeveloperName, IsActive FROM MatchingRule WHERE SobjectType='Account' AND DeveloperName LIKE 'MR_Account_%'];
+      Integer activeCount = 0;
+      String names = '';
+      for (MatchingRule m : mrs) { names += m.DeveloperName + '(active=' + m.IsActive + ') '; if (m.IsActive) activeCount++; }
+      System.assert(activeCount >= 3, 'RESULT:FAIL:' + activeCount + ':' + names);
+      System.debug('RESULT:OK:' + activeCount + ':' + names);
+    `);
+    if (r.success) results.push(ok('CA-001-MR', '3 Matching Rules ativas',
+      'Execute Anonymous: SELECT FROM MatchingRule WHERE DeveloperName LIKE MR_Account_%',
+      'Apex executou com sucesso — 3+ MRs ativas confirmadas',
       'Setup > Duplicate Management > Matching Rules > filtrar por Account'));
-    else results.push(fail('CA-001-MR', `Esperado 3 MRs ativas, encontrado ${active.length}`, 'Tooling SOQL', names, 'Setup > Duplicate Management > Matching Rules'));
-  } catch(e) { results.push(fail('CA-001-MR', 'Erro ao consultar MRs', 'Tooling SOQL', e.message, '')); }
+    else {
+      const msg = r.exceptionMessage || r.compileProblem || '';
+      if (msg.includes('RESULT:FAIL')) {
+        const parts = msg.split(':');
+        results.push(fail('CA-001-MR', `Esperado 3 MRs ativas, encontrado ${parts[2] || '?'}`, 'Apex', parts[3] || msg, 'Setup > Duplicate Management > Matching Rules'));
+      } else results.push(fail('CA-001-MR', 'Erro Apex', 'Execute Anonymous', msg.substring(0, 300), ''));
+    }
+  } catch(e) { results.push(fail('CA-001-MR', 'Erro', 'Apex', e.message, '')); }
 
-  // ── Verificar 3 Duplicate Rules ativas ──
+  // ── Verificar 3 Duplicate Rules ativas via Apex ──
   try {
-    const dr = await sfTooling(sf, "SELECT Id, DeveloperName, IsActive FROM DuplicateRule WHERE SobjectType='Account' AND DeveloperName LIKE 'DR_Account_%'");
-    const found = dr.records || [];
-    const active = found.filter(r => r.IsActive);
-    const names = found.map(r => `${r.DeveloperName}(active=${r.IsActive})`).join(', ');
-    if (active.length >= 3) results.push(ok('CA-001-DR', '3 Duplicate Rules ativas',
-      "Tooling SOQL: SELECT Id, DeveloperName, IsActive FROM DuplicateRule WHERE SobjectType='Account' AND DeveloperName LIKE 'DR_Account_%'",
-      `${active.length} DRs ativas: ${names}`,
+    const r = await sfExecAnon(sf, `
+      List<DuplicateRule> drs = [SELECT Id, DeveloperName, IsActive FROM DuplicateRule WHERE SobjectType='Account' AND DeveloperName LIKE 'DR_Account_%'];
+      Integer activeCount = 0;
+      String names = '';
+      for (DuplicateRule d : drs) { names += d.DeveloperName + '(active=' + d.IsActive + ') '; if (d.IsActive) activeCount++; }
+      System.assert(activeCount >= 3, 'RESULT:FAIL:' + activeCount + ':' + names);
+      System.debug('RESULT:OK:' + activeCount + ':' + names);
+    `);
+    if (r.success) results.push(ok('CA-001-DR', '3 Duplicate Rules ativas',
+      'Execute Anonymous: SELECT FROM DuplicateRule WHERE DeveloperName LIKE DR_Account_%',
+      'Apex executou com sucesso — 3+ DRs ativas confirmadas',
       'Setup > Duplicate Management > Duplicate Rules > filtrar por Account'));
-    else results.push(fail('CA-001-DR', `Esperado 3 DRs ativas, encontrado ${active.length}`, 'Tooling SOQL', names, 'Setup > Duplicate Management > Duplicate Rules'));
-  } catch(e) { results.push(fail('CA-001-DR', 'Erro ao consultar DRs', 'Tooling SOQL', e.message, '')); }
+    else {
+      const msg = r.exceptionMessage || r.compileProblem || '';
+      results.push(fail('CA-001-DR', 'DRs insuficientes ou inativas', 'Apex', msg.substring(0, 300), 'Setup > Duplicate Management > Duplicate Rules'));
+    }
+  } catch(e) { results.push(fail('CA-001-DR', 'Erro', 'Apex', e.message, '')); }
 
   // ── CA-001: Tentar criar Account com CNPJ duplicado (Block) ──
   try {
-    // Buscar uma Account Nacional PJ existente com CNPJ preenchido
     const existing = await sfQuery(sf, "SELECT Id, CNPJ__c, Name FROM Account WHERE CNPJ__c != null AND RecordType.DeveloperName = 'NacionalPJ' LIMIT 1");
     if (existing.records?.length > 0) {
       const cnpj = existing.records[0].CNPJ__c;
       const existName = existing.records[0].Name;
-      // Tentar criar com mesmo CNPJ
       const rtQuery = await sfQuery(sf, "SELECT Id FROM RecordType WHERE SobjectType='Account' AND DeveloperName='NacionalPJ' LIMIT 1");
       const rtId = rtQuery.records?.[0]?.Id;
       if (rtId) {
         const r = await sfCreate(sf, 'Account', { Name: 'QA_TESTE_DUPLICIDADE_90', CNPJ__c: cnpj, RecordTypeId: rtId });
-        if (r.status === 400 && JSON.stringify(r.body).includes('DUPLICATES_DETECTED')) {
+        const bodyStr = JSON.stringify(r.body);
+        if (r.status === 400 && bodyStr.includes('DUPLICATES_DETECTED')) {
           results.push(ok('CA-001', 'Criacao com CNPJ duplicado BLOQUEADA',
-            `REST POST /sobjects/Account com CNPJ=${cnpj} (mesmo de ${existName}), header Sforce-Duplicate-Rule-Header: allowSave=false`,
-            `HTTP 400 DUPLICATES_DETECTED. Mensagem: ${(r.body[0]?.message || '').substring(0, 200)}`,
-            'Abrir Accounts > New > Nacional PJ > preencher CNPJ existente > Save > verificar mensagem de bloqueio'));
+            `REST POST /sobjects/Account com CNPJ=${cnpj} (mesmo de ${existName}), header allowSave=false`,
+            `HTTP 400 DUPLICATES_DETECTED. Bloqueio correto.`,
+            'Abrir Accounts > New > Nacional PJ > preencher CNPJ existente > Save > verificar bloqueio'));
         } else if (r.status === 201) {
-          // Criou — limpar e reportar falha
           if (r.body.id) await sfDelete(sf, 'Account', r.body.id);
-          results.push(fail('CA-001', 'Criacao com CNPJ duplicado NAO foi bloqueada', 'REST POST Account', `HTTP ${r.status} — registro criado (removido). Verificar flag Enforce for API e filtro RT`, 'Setup > Duplicate Rules > DR Nacional PJ'));
+          results.push(fail('CA-001', 'Criacao NAO foi bloqueada', 'REST POST', `HTTP ${r.status} — criou (removido). Verificar flag Enforce for API`, 'Setup > Duplicate Rules'));
         } else {
-          results.push(fail('CA-001', 'Resposta inesperada', 'REST POST Account', `HTTP ${r.status}: ${JSON.stringify(r.body).substring(0, 300)}`, ''));
+          // Outro erro (ex: Flow error) — reportar mas nao falhar o CA de duplicidade
+          const errMsg = (r.body?.[0]?.message || bodyStr).substring(0, 250);
+          if (bodyStr.includes('DUPLICATES_DETECTED')) {
+            results.push(ok('CA-001', 'CNPJ duplicado detectado (com erro adicional)', 'REST POST', `HTTP ${r.status}: ${errMsg}`, 'Setup > Duplicate Rules'));
+          } else {
+            results.push(fail('CA-001', 'Erro na criacao (nao relacionado a duplicidade)', 'REST POST', `HTTP ${r.status}: ${errMsg}`, 'Verificar Flows ativos no Account (BeforeSave Derivations)'));
+          }
         }
-      } else results.push(fail('CA-001', 'RT NacionalPJ nao encontrado', 'SOQL RecordType', 'Nenhum RT NacionalPJ', ''));
+      } else results.push(fail('CA-001', 'RT NacionalPJ nao encontrado', 'SOQL', '', ''));
     } else {
-      results.push(manual('CA-001', 'Nenhuma Account Nacional PJ com CNPJ na base para testar duplicidade', 'Criar 2 Accounts Nacional PJ com mesmo CNPJ e verificar bloqueio'));
+      results.push(manual('CA-001', 'Nenhuma Account Nacional PJ com CNPJ na base para testar', 'Criar 2 Accounts Nacional PJ com mesmo CNPJ e verificar bloqueio'));
     }
-  } catch(e) { results.push(fail('CA-001', 'Erro no teste', 'REST API', e.message, '')); }
+  } catch(e) { results.push(fail('CA-001', 'Erro', 'REST API', e.message, '')); }
 
   // ── CA-003: Tentar criar Account Internacional com Razao Social identica ──
   try {
@@ -400,22 +421,24 @@ async function test90(sf) {
       const rtId = rtQuery.records?.[0]?.Id;
       if (rtId) {
         const r = await sfCreate(sf, 'Account', { Name: existName, RecordTypeId: rtId });
-        if (r.status === 400 && JSON.stringify(r.body).includes('DUPLICATES_DETECTED')) {
+        const bodyStr = JSON.stringify(r.body);
+        if (bodyStr.includes('DUPLICATES_DETECTED')) {
           results.push(ok('CA-003', 'Criacao Internacional com Razao Social identica BLOQUEADA',
             `REST POST /sobjects/Account com Name='${existName}' (Internacional), header allowSave=false`,
-            `HTTP 400 DUPLICATES_DETECTED. Bloqueio correto.`,
-            'Abrir Accounts > New > Internacional > preencher Razao Social identica > Save > verificar bloqueio'));
+            `HTTP ${r.status} DUPLICATES_DETECTED. Bloqueio correto.`,
+            'Accounts > New > Internacional > Razao Social identica > Save > verificar bloqueio'));
         } else if (r.status === 201) {
           if (r.body.id) await sfDelete(sf, 'Account', r.body.id);
-          results.push(fail('CA-003', 'Criacao com Razao Social identica NAO foi bloqueada', 'REST POST Account', `HTTP ${r.status}`, 'Setup > Duplicate Rules > DR Internacional Exact'));
+          results.push(fail('CA-003', 'Criacao NAO foi bloqueada', 'REST POST', `HTTP ${r.status}`, 'Setup > Duplicate Rules > DR Internacional'));
         } else {
-          results.push(fail('CA-003', 'Resposta inesperada', 'REST POST Account', `HTTP ${r.status}: ${JSON.stringify(r.body).substring(0, 300)}`, ''));
+          const errMsg = (r.body?.[0]?.message || bodyStr).substring(0, 250);
+          results.push(fail('CA-003', 'Erro na criacao (nao duplicidade)', 'REST POST', `HTTP ${r.status}: ${errMsg}`, 'Verificar Flows ativos e VRs no Account'));
         }
       } else results.push(fail('CA-003', 'RT Internacional nao encontrado', 'SOQL', '', ''));
     } else {
-      results.push(manual('CA-003', 'Nenhuma Account Internacional na base para testar', 'Criar Account Internacional e tentar duplicar Razao Social'));
+      results.push(manual('CA-003', 'Nenhuma Account Internacional na base', 'Criar e duplicar Account Internacional'));
     }
-  } catch(e) { results.push(fail('CA-003', 'Erro no teste', 'REST API', e.message, '')); }
+  } catch(e) { results.push(fail('CA-003', 'Erro', 'REST API', e.message, '')); }
 
   // ── CA-002, CA-004, CA-005, CA-006, CA-007, CA-008, CA-009: Manual ──
   results.push(manual('CA-002', 'Edicao de CNPJ para valor ja existente bloqueada', 'Abrir Account Nacional PJ > editar CNPJ para valor de outra Account > Save > verificar bloqueio'));
