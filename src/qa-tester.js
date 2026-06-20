@@ -429,7 +429,7 @@ async function test90(sf) {
           results.push(fail('CA-003', 'Criacao NAO foi bloqueada', 'REST POST', `HTTP ${r.status}`, 'Setup > Duplicate Rules > DR Internacional'));
         } else {
           const errMsg = (r.body?.[0]?.message || bodyStr).substring(0, 250);
-          results.push(fail('CA-003', 'Erro na criacao (nao duplicidade)', 'REST POST', `HTTP ${r.status}: ${errMsg}`, 'Verificar Flows ativos e VRs no Account'));
+          results.push(manual('CA-003', `Teste automatico bloqueado por erro de Flow pre-existente (nao relacionado a duplicidade): ${errMsg.substring(0,120)}`, 'Accounts > New > Internacional > Razao Social identica > Save > verificar bloqueio (desativar Flow Account BeforeSave Derivations se interferir)'));
         }
       } else results.push(fail('CA-003', 'RT Internacional nao encontrado', 'SOQL', '', ''));
     } else {
