@@ -318,7 +318,118 @@ async function test50A(sf) {
   return results;
 }
 
-const TESTS = { '83': test83, '84': test84, '85': test85, 'usbase': testUSBase, '50a': test50A };
+// ── CRMB2B-90: Gestao de Duplicidade nos Registros de Contas ──
+
+async function sfCreate(sf, object, data, enforceDuplicateRules = true) {
+  const headers = { 'Authorization': `Bearer ${sf.token}`, 'Content-Type': 'application/json' };
+  if (enforceDuplicateRules) headers['Sforce-Duplicate-Rule-Header'] = 'allowSave=false';
+  const r = await fetch(`${sf.url}/services/data/v62.0/sobjects/${object}`, { method: 'POST', headers, body: JSON.stringify(data) });
+  return { status: r.status, body: await r.json() };
+}
+
+async function sfDelete(sf, object, id) {
+  const r = await fetch(`${sf.url}/services/data/v62.0/sobjects/${object}/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${sf.token}` } });
+  return r.status;
+}
+
+async function test90(sf) {
+  const results = [];
+
+  // ── Verificar 3 Matching Rules ativas ──
+  try {
+    const mr = await sfTooling(sf, "SELECT Id, DeveloperName, IsActive, MatchEngine FROM MatchingRule WHERE SobjectType='Account' AND DeveloperName LIKE 'MR_Account_%'");
+    const found = mr.records || [];
+    const active = found.filter(r => r.IsActive);
+    const names = found.map(r => `${r.DeveloperName}(active=${r.IsActive})`).join(', ');
+    if (active.length >= 3) results.push(ok('CA-001-MR', '3 Matching Rules ativas',
+      "Tooling SOQL: SELECT Id, DeveloperName, IsActive FROM MatchingRule WHERE SobjectType='Account' AND DeveloperName LIKE 'MR_Account_%'",
+      `${active.length} MRs ativas: ${names}`,
+      'Setup > Duplicate Management > Matching Rules > filtrar por Account'));
+    else results.push(fail('CA-001-MR', `Esperado 3 MRs ativas, encontrado ${active.length}`, 'Tooling SOQL', names, 'Setup > Duplicate Management > Matching Rules'));
+  } catch(e) { results.push(fail('CA-001-MR', 'Erro ao consultar MRs', 'Tooling SOQL', e.message, '')); }
+
+  // ── Verificar 3 Duplicate Rules ativas ──
+  try {
+    const dr = await sfTooling(sf, "SELECT Id, DeveloperName, IsActive FROM DuplicateRule WHERE SobjectType='Account' AND DeveloperName LIKE 'DR_Account_%'");
+    const found = dr.records || [];
+    const active = found.filter(r => r.IsActive);
+    const names = found.map(r => `${r.DeveloperName}(active=${r.IsActive})`).join(', ');
+    if (active.length >= 3) results.push(ok('CA-001-DR', '3 Duplicate Rules ativas',
+      "Tooling SOQL: SELECT Id, DeveloperName, IsActive FROM DuplicateRule WHERE SobjectType='Account' AND DeveloperName LIKE 'DR_Account_%'",
+      `${active.length} DRs ativas: ${names}`,
+      'Setup > Duplicate Management > Duplicate Rules > filtrar por Account'));
+    else results.push(fail('CA-001-DR', `Esperado 3 DRs ativas, encontrado ${active.length}`, 'Tooling SOQL', names, 'Setup > Duplicate Management > Duplicate Rules'));
+  } catch(e) { results.push(fail('CA-001-DR', 'Erro ao consultar DRs', 'Tooling SOQL', e.message, '')); }
+
+  // ── CA-001: Tentar criar Account com CNPJ duplicado (Block) ──
+  try {
+    // Buscar uma Account Nacional PJ existente com CNPJ preenchido
+    const existing = await sfQuery(sf, "SELECT Id, CNPJ__c, Name FROM Account WHERE CNPJ__c != null AND RecordType.DeveloperName = 'NacionalPJ' LIMIT 1");
+    if (existing.records?.length > 0) {
+      const cnpj = existing.records[0].CNPJ__c;
+      const existName = existing.records[0].Name;
+      // Tentar criar com mesmo CNPJ
+      const rtQuery = await sfQuery(sf, "SELECT Id FROM RecordType WHERE SobjectType='Account' AND DeveloperName='NacionalPJ' LIMIT 1");
+      const rtId = rtQuery.records?.[0]?.Id;
+      if (rtId) {
+        const r = await sfCreate(sf, 'Account', { Name: 'QA_TESTE_DUPLICIDADE_90', CNPJ__c: cnpj, RecordTypeId: rtId });
+        if (r.status === 400 && JSON.stringify(r.body).includes('DUPLICATES_DETECTED')) {
+          results.push(ok('CA-001', 'Criacao com CNPJ duplicado BLOQUEADA',
+            `REST POST /sobjects/Account com CNPJ=${cnpj} (mesmo de ${existName}), header Sforce-Duplicate-Rule-Header: allowSave=false`,
+            `HTTP 400 DUPLICATES_DETECTED. Mensagem: ${(r.body[0]?.message || '').substring(0, 200)}`,
+            'Abrir Accounts > New > Nacional PJ > preencher CNPJ existente > Save > verificar mensagem de bloqueio'));
+        } else if (r.status === 201) {
+          // Criou — limpar e reportar falha
+          if (r.body.id) await sfDelete(sf, 'Account', r.body.id);
+          results.push(fail('CA-001', 'Criacao com CNPJ duplicado NAO foi bloqueada', 'REST POST Account', `HTTP ${r.status} — registro criado (removido). Verificar flag Enforce for API e filtro RT`, 'Setup > Duplicate Rules > DR Nacional PJ'));
+        } else {
+          results.push(fail('CA-001', 'Resposta inesperada', 'REST POST Account', `HTTP ${r.status}: ${JSON.stringify(r.body).substring(0, 300)}`, ''));
+        }
+      } else results.push(fail('CA-001', 'RT NacionalPJ nao encontrado', 'SOQL RecordType', 'Nenhum RT NacionalPJ', ''));
+    } else {
+      results.push(manual('CA-001', 'Nenhuma Account Nacional PJ com CNPJ na base para testar duplicidade', 'Criar 2 Accounts Nacional PJ com mesmo CNPJ e verificar bloqueio'));
+    }
+  } catch(e) { results.push(fail('CA-001', 'Erro no teste', 'REST API', e.message, '')); }
+
+  // ── CA-003: Tentar criar Account Internacional com Razao Social identica ──
+  try {
+    const existing = await sfQuery(sf, "SELECT Id, Name FROM Account WHERE RecordType.DeveloperName = 'Internacional' LIMIT 1");
+    if (existing.records?.length > 0) {
+      const existName = existing.records[0].Name;
+      const rtQuery = await sfQuery(sf, "SELECT Id FROM RecordType WHERE SobjectType='Account' AND DeveloperName='Internacional' LIMIT 1");
+      const rtId = rtQuery.records?.[0]?.Id;
+      if (rtId) {
+        const r = await sfCreate(sf, 'Account', { Name: existName, RecordTypeId: rtId });
+        if (r.status === 400 && JSON.stringify(r.body).includes('DUPLICATES_DETECTED')) {
+          results.push(ok('CA-003', 'Criacao Internacional com Razao Social identica BLOQUEADA',
+            `REST POST /sobjects/Account com Name='${existName}' (Internacional), header allowSave=false`,
+            `HTTP 400 DUPLICATES_DETECTED. Bloqueio correto.`,
+            'Abrir Accounts > New > Internacional > preencher Razao Social identica > Save > verificar bloqueio'));
+        } else if (r.status === 201) {
+          if (r.body.id) await sfDelete(sf, 'Account', r.body.id);
+          results.push(fail('CA-003', 'Criacao com Razao Social identica NAO foi bloqueada', 'REST POST Account', `HTTP ${r.status}`, 'Setup > Duplicate Rules > DR Internacional Exact'));
+        } else {
+          results.push(fail('CA-003', 'Resposta inesperada', 'REST POST Account', `HTTP ${r.status}: ${JSON.stringify(r.body).substring(0, 300)}`, ''));
+        }
+      } else results.push(fail('CA-003', 'RT Internacional nao encontrado', 'SOQL', '', ''));
+    } else {
+      results.push(manual('CA-003', 'Nenhuma Account Internacional na base para testar', 'Criar Account Internacional e tentar duplicar Razao Social'));
+    }
+  } catch(e) { results.push(fail('CA-003', 'Erro no teste', 'REST API', e.message, '')); }
+
+  // ── CA-002, CA-004, CA-005, CA-006, CA-007, CA-008, CA-009: Manual ──
+  results.push(manual('CA-002', 'Edicao de CNPJ para valor ja existente bloqueada', 'Abrir Account Nacional PJ > editar CNPJ para valor de outra Account > Save > verificar bloqueio'));
+  results.push(manual('CA-004', 'Fuzzy Match Internacional (alerta sem bloqueio)', 'Criar Account Internacional com Razao Social similar (>= 75%) a uma existente > verificar alerta com opcao Salvar mesmo assim'));
+  results.push(manual('CA-005', 'Conversao de Lead com CNPJ existente', 'Abrir Lead com CNPJ de Account existente > Convert > verificar que Account existente e apresentada'));
+  results.push(manual('CA-006', 'Importacao Data Loader com CNPJ duplicado', 'Importar CSV com CNPJ existente via Data Loader > verificar rejeicao no log de erros'));
+  results.push(manual('CA-007', 'Integracao MuleSoft descarta CNPJ duplicado', 'Enviar payload via MuleSoft com CNPJ existente > verificar rejeicao no log MuleSoft'));
+  results.push(manual('CA-008', 'Duplicate Job identifica duplicatas', 'Setup > Duplicate Management > Duplicate Jobs > executar Job > verificar agrupamento'));
+  results.push(manual('CA-009', 'Mensagem orientativa nos cenarios de bloqueio', 'Repetir cenarios de bloqueio e verificar que mensagens sao claras e orientativas'));
+
+  return results;
+}
+
+const TESTS = { '83': test83, '84': test84, '85': test85, 'usbase': testUSBase, '50a': test50A, '90': test90 };
 
 router.get('/run/:historia', async (req, res) => {
   const historia = req.params.historia.toLowerCase();
