@@ -20,6 +20,7 @@ import { registerRcWorkerRoutes } from "./rc-worker.js";
 import { registerWorkerEngineRoutes } from "./worker-engine.js";
 import i9ConnectRouter from "./routes/i9-connect.js";
 import serasaMockRouter from "./serasa-mock.js";
+import qaTesterRouter from "./qa-tester.js";
 
 const app = express();
 app.use(express.json({ limit: "50mb" }));
@@ -2238,6 +2239,10 @@ registerWorkerEngineRoutes(app);
   // CRMB2B-95 Mock Serasa API
   app.use('/api/serasa', serasaMockRouter);
   console.log('[serasa-mock] Mounted at /api/serasa');
+
+  // QA Tester - automated functional testing
+  app.use('/api/qa', qaTesterRouter);
+  console.log('[qa-tester] Mounted at /api/qa');
 
 // --- Everi9 Chat App ---
 mountChatApp(app);
