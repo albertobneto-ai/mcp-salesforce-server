@@ -417,7 +417,7 @@ async function test90(sf) {
       const rtQuery = await sfQuery(sf, "SELECT Id FROM RecordType WHERE SobjectType='Account' AND DeveloperName='Internacional' LIMIT 1");
       const rtId = rtQuery.records?.[0]?.Id;
       if (rtId) {
-        const r = await sfCreate(sf, 'Account', { Name: existName, RecordTypeId: rtId, BillingStreet: 'QA Test Street', BillingCity: 'Test City', BillingPostalCode: '12345', BillingCountry: 'US', NomeFantasia__c: 'QA90 Dup Test', Segmento__c: 'CORPORATIVO', StatusCadastro__c: 'Pendente Dados', InscricaoMunicipal__c: 'QA00000' });
+        const r = await sfCreate(sf, 'Account', { Name: existName, RecordTypeId: rtId, ShippingStreet: 'QA Test Street', ShippingCity: 'Test City', ShippingPostalCode: '12345', ShippingCountry: 'US', NomeFantasia__c: 'QA90 Dup Test', Segmento__c: 'CORPORATIVO', StatusCadastro__c: 'Pendente Dados', InscricaoMunicipal__c: 'QA00000' });
         const bodyStr = JSON.stringify(r.body);
         if (bodyStr.includes('DUPLICATES_DETECTED')) {
           results.push(ok('CA-003', 'Criacao Internacional com Razao Social identica BLOQUEADA',
@@ -513,7 +513,7 @@ async function test91(sf) {
     }
     if (rtId) {
       const testCnpj = '99' + Date.now().toString().slice(-12);
-      const payload = { Name: 'QA91_TESTE_IMPORT_' + Date.now(), RecordTypeId: rtId, StatusCadastro__c: 'Pendente Dados', OrigemConta__c: 'Importacao', Segmento__c: 'CORPORATIVO', NomeFantasia__c: 'QA91 Teste', BillingStreet: 'QA Test Street 123', BillingCity: 'Test City', BillingPostalCode: '12345', BillingCountry: 'US', InscricaoMunicipal__c: 'QA00000' };
+      const payload = { Name: 'QA91_TESTE_IMPORT_' + Date.now(), RecordTypeId: rtId, StatusCadastro__c: 'Pendente Dados', OrigemConta__c: 'Importacao', Segmento__c: 'CORPORATIVO', NomeFantasia__c: 'QA91 Teste', ShippingStreet: 'QA Test Street 123', ShippingCity: 'Test City', ShippingPostalCode: '12345', ShippingCountry: 'US', InscricaoMunicipal__c: 'QA00000' };
       if (rtName === 'NacionalPJ') payload.CNPJ__c = testCnpj;
       const r = await sfCreate(sf, 'Account', payload, false);
       if (r.status === 201 && r.body.id) {
