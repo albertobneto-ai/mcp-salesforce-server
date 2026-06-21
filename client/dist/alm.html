@@ -30,7 +30,9 @@
 </head>
 <body>
 <div id="root"></div>
-<script type="text/babel">
+<script type="text/babel" data-presets="env,react">
+/** @jsxRuntime classic */
+/* @jsx React.createElement */
 const { useState, useMemo, useCallback } = React;
 
 const T='#00897B',TL='#4DB6AC',DK='#2D2D2D',DC='#363636',DH='#404040',BG='#E8E8E8',W='#FFF',G='#AAA',BD='#4A4A4A';
