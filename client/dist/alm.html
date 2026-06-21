@@ -7,14 +7,13 @@
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Inter',-apple-system,sans-serif; background:#E8E8E8; color:#FFF; min-height:100vh; }
-  ::-webkit-scrollbar { width:6px; height:6px; }
-  ::-webkit-scrollbar-track { background:#2D2D2D; border-radius:3px; }
-  ::-webkit-scrollbar-thumb { background:#4A4A4A; border-radius:3px; }
-  ::-webkit-scrollbar-thumb:hover { background:#AAA; }
-  button { font-family: inherit; }
-  input, select { font-family: inherit; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"Inter",-apple-system,sans-serif;background:#EEEDF1;min-height:100vh}
+  ::-webkit-scrollbar{width:5px;height:5px}
+  ::-webkit-scrollbar-track{background:#F0F0F0;border-radius:3px}
+  ::-webkit-scrollbar-thumb{background:#CCC;border-radius:3px}
+  ::-webkit-scrollbar-thumb:hover{background:#AAA}
+  button,input,select{font-family:inherit}
 </style>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -28,14 +27,16 @@ const {
   useCallback
 } = React;
 const T = '#00897B',
-  TL = '#4DB6AC',
-  DK = '#2D2D2D',
-  DC = '#363636',
-  DH = '#404040',
-  BG = '#E8E8E8',
-  W = '#FFF',
-  G = '#AAA',
-  BD = '#4A4A4A';
+  TL = '#00897B',
+  DK = '#F5F5F5',
+  DC = '#FFFFFF',
+  DH = '#F0F0F0',
+  BG = '#EEEDF1',
+  W = '#1E1E2E',
+  G = '#8890A0',
+  BD = '#D8D8E0';
+const NV = '#2D2D2D',
+  NVH = '#404040';
 const PRI = {
   critical: '#E53935',
   high: '#FB8C00',
@@ -268,6 +269,7 @@ const Card = ({
     background: DC,
     borderRadius: 10,
     overflow: 'hidden',
+    boxShadow: '0 1px 4px rgba(0,0,0,.06)',
     display: 'flex',
     flexDirection: 'column'
   }
@@ -279,7 +281,7 @@ const Card = ({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    borderLeft: `4px solid ${accent || T}`,
+    borderLeft: `3px solid ${accent || T}`,
     minHeight: 44
   }
 }, /*#__PURE__*/React.createElement("span", {
@@ -304,7 +306,8 @@ const MC = ({
     background: DC,
     borderRadius: 10,
     padding: '16px 18px',
-    borderLeft: `4px solid ${color || T}`,
+    borderLeft: `3px solid ${color || T}`,
+    boxShadow: '0 1px 4px rgba(0,0,0,.06)',
     display: 'flex',
     flexDirection: 'column',
     gap: 3
@@ -341,7 +344,7 @@ const Btn = ({
   onClick: disabled ? undefined : onClick,
   style: {
     background: disabled ? BD : outline ? 'transparent' : color || T,
-    color: disabled ? G : W,
+    color: disabled ? G : '#FFF',
     border: outline ? `1px solid ${color || T}` : 'none',
     borderRadius: 6,
     padding: s ? '5px 12px' : '9px 18px',
@@ -434,7 +437,7 @@ const Gauge = ({
     cx: "60",
     cy: "58",
     r: "4",
-    fill: DC,
+    fill: '#FFF',
     stroke: W,
     strokeWidth: "2"
   })), /*#__PURE__*/React.createElement("span", {
@@ -469,7 +472,7 @@ const Modal = ({
   onClick: onClose
 }, /*#__PURE__*/React.createElement("div", {
   style: {
-    background: DC,
+    background: '#FFF',
     borderRadius: 12,
     width: 540,
     maxHeight: '85vh',
@@ -484,7 +487,7 @@ const Modal = ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderLeft: `4px solid ${T}`
+    borderLeft: `3px solid ${T}`
   }
 }, /*#__PURE__*/React.createElement("span", {
   style: {
@@ -584,7 +587,7 @@ const UploadZone = ({
     transition: 'border-color .2s'
   },
   onClick: onUpload,
-  onMouseEnter: e => e.currentTarget.style.borderColor = W,
+  onMouseEnter: e => e.currentTarget.style.borderColor = T,
   onMouseLeave: e => e.currentTarget.style.borderColor = color || BD
 }, /*#__PURE__*/React.createElement("div", {
   style: {
@@ -698,7 +701,7 @@ const StageProgress = ({
         width: act ? 28 : 20,
         height: act ? 28 : 20,
         borderRadius: '50%',
-        background: done ? s.color : act ? s.color : BD,
+        background: done ? s.color : act ? s.color : '#D0D0D8',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1017,7 +1020,7 @@ function GPDash({
     onClick: () => setTab(t.k),
     style: {
       background: tab === t.k ? T : 'transparent',
-      color: tab === t.k ? W : G,
+      color: tab === t.k ? '#FFF' : G,
       border: 'none',
       borderRadius: 6,
       padding: '6px 14px',
@@ -1069,7 +1072,7 @@ function GPDash({
   }, stg.label), /*#__PURE__*/React.createElement("span", {
     style: {
       background: stg.color,
-      color: W,
+      color: '#FFF',
       borderRadius: 10,
       padding: '2px 9px',
       fontSize: 16,
@@ -1120,11 +1123,11 @@ function GPDash({
         borderRadius: 8,
         padding: 12,
         cursor: 'pointer',
-        borderLeft: `4px solid ${ep.color}`,
+        borderLeft: `3px solid ${ep.color}`,
         transition: 'background .1s'
       },
-      onMouseEnter: e => e.currentTarget.style.background = DH,
-      onMouseLeave: e => e.currentTarget.style.background = DK
+      onMouseEnter: e => e.currentTarget.style.background = '#E8E8EE',
+      onMouseLeave: e => e.currentTarget.style.background = '#F5F5F5'
     }, /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
@@ -1192,8 +1195,8 @@ function GPDash({
         cursor: 'pointer',
         borderLeft: `3px solid ${st.stage === 'bugfix' ? '#FF5252' : '#E53935'}`
       },
-      onMouseEnter: e => e.currentTarget.style.background = DH,
-      onMouseLeave: e => e.currentTarget.style.background = DK
+      onMouseEnter: e => e.currentTarget.style.background = '#E8E8EE',
+      onMouseLeave: e => e.currentTarget.style.background = '#F5F5F5'
     }, /*#__PURE__*/React.createElement(Badge, {
       text: st.us,
       color: (sg || {}).color,
@@ -1266,7 +1269,7 @@ function GPDash({
         cursor: 'pointer',
         transition: 'background .1s'
       },
-      onMouseEnter: e => e.currentTarget.style.background = DH,
+      onMouseEnter: e => e.currentTarget.style.background = '#E8E8EE',
       onMouseLeave: e => e.currentTarget.style.background = i % 2 === 0 ? DK : 'transparent'
     }, /*#__PURE__*/React.createElement("td", {
       style: {
@@ -1353,7 +1356,7 @@ function GPEpicDetail({
       background: DC,
       borderRadius: 10,
       padding: '18px 22px',
-      borderLeft: `4px solid ${epic.color}`
+      borderLeft: `3px solid ${epic.color}`
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1420,7 +1423,7 @@ function GPEpicDetail({
     }
   }, /*#__PURE__*/React.createElement("span", null, stg.label.split(' ').slice(0, 2).join(' ')), /*#__PURE__*/React.createElement("span", {
     style: {
-      background: 'rgba(0,0,0,.3)',
+      background: 'rgba(0,0,0,.25)',
       borderRadius: 8,
       padding: '0 5px'
     }
@@ -1442,7 +1445,8 @@ function GPEpicDetail({
       borderRadius: 5,
       padding: '5px 7px',
       borderLeft: `3px solid ${PRI[st.priority]}`,
-      cursor: 'pointer'
+      cursor: 'pointer',
+      boxShadow: '0 1px 3px rgba(0,0,0,.05)'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1591,8 +1595,8 @@ function ArchDash({
       borderRadius: 6,
       cursor: 'pointer'
     },
-    onMouseEnter: e => e.currentTarget.style.background = DH,
-    onMouseLeave: e => e.currentTarget.style.background = DK
+    onMouseEnter: e => e.currentTarget.style.background = '#E8E8EE',
+    onMouseLeave: e => e.currentTarget.style.background = '#F5F5F5'
   }, /*#__PURE__*/React.createElement(Badge, {
     text: st.us,
     color: (SM[st.stage] || {}).color,
@@ -1668,7 +1672,8 @@ function ArchBoard({
       borderRadius: 5,
       padding: '7px 8px',
       borderLeft: `3px solid ${PRI[st.priority]}`,
-      cursor: 'pointer'
+      cursor: 'pointer',
+      boxShadow: '0 1px 3px rgba(0,0,0,.05)'
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1731,7 +1736,7 @@ function ArchDetail({
       background: DC,
       borderRadius: 10,
       padding: '18px 22px',
-      borderLeft: `4px solid ${(stg || {}).color || T}`
+      borderLeft: `3px solid ${(stg || {}).color || T}`
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1960,7 +1965,7 @@ function ArchDetail({
       fontSize: 12,
       fontWeight: 600,
       background: tab === t.k ? T : 'transparent',
-      color: tab === t.k ? W : G
+      color: tab === t.k ? '#FFF' : G
     }
   }, t.l))), tab === 'stage' && /*#__PURE__*/React.createElement(Card, {
     title: "Histórico",
@@ -2296,7 +2301,7 @@ function App() {
       right: 16,
       zIndex: 2000,
       background: toast.c || T,
-      color: W,
+      color: '#FFF',
       padding: '10px 18px',
       borderRadius: 8,
       fontWeight: 600,
@@ -2305,7 +2310,7 @@ function App() {
     }
   }, toast.msg), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: `linear-gradient(135deg,${DK},${DH})`,
+      background: `linear-gradient(135deg,${NV},${NVH})`,
       padding: '0 16px',
       display: 'flex',
       alignItems: 'center',
@@ -2325,7 +2330,7 @@ function App() {
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       background: T,
-      color: W,
+      color: '#FFF',
       padding: '3px 9px',
       borderRadius: 5,
       fontWeight: 800,
@@ -2333,7 +2338,7 @@ function App() {
     }
   }, "i9"), /*#__PURE__*/React.createElement("span", {
     style: {
-      color: W,
+      color: '#FFF',
       fontWeight: 700,
       fontSize: 14
     }
@@ -2341,7 +2346,7 @@ function App() {
     style: {
       display: 'flex',
       gap: 2,
-      background: 'rgba(255,255,255,.08)',
+      background: 'rgba(255,255,255,.12)',
       borderRadius: 7,
       padding: 2,
       marginLeft: 8
@@ -2365,7 +2370,7 @@ function App() {
     },
     style: {
       background: panel === p.k ? T : 'transparent',
-      color: panel === p.k ? W : G,
+      color: panel === p.k ? '#FFF' : G,
       border: 'none',
       borderRadius: 5,
       padding: '5px 12px',
@@ -2380,7 +2385,7 @@ function App() {
     style: {
       display: 'flex',
       gap: 2,
-      background: 'rgba(255,255,255,.06)',
+      background: 'rgba(255,255,255,.10)',
       borderRadius: 7,
       padding: 2
     }
@@ -2392,7 +2397,7 @@ function App() {
     },
     style: {
       background: archV === n.k || archV === 'detail' && n.k === 'board' ? T : 'transparent',
-      color: archV === n.k || archV === 'detail' && n.k === 'board' ? W : G,
+      color: archV === n.k || archV === 'detail' && n.k === 'board' ? '#FFF' : G,
       border: 'none',
       borderRadius: 5,
       padding: '5px 12px',
@@ -2427,7 +2432,7 @@ function App() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      color: W,
+      color: '#FFF',
       fontWeight: 700,
       fontSize: 12
     }
@@ -2651,10 +2656,10 @@ function App() {
     }
   }, "Criar"))), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: DK,
+      background: NV,
       padding: '8px 16px',
       textAlign: 'center',
-      color: G,
+      color: '#AAA',
       fontSize: 10,
       marginTop: 16
     }
