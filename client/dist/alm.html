@@ -8,11 +8,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:"Inter",-apple-system,sans-serif;background:#EEEDF1;min-height:100vh}
+  body{font-family:"Inter",-apple-system,sans-serif;background:#EDE8F5;min-height:100vh}
   ::-webkit-scrollbar{width:5px;height:5px}
-  ::-webkit-scrollbar-track{background:#F0F0F0;border-radius:3px}
-  ::-webkit-scrollbar-thumb{background:#CCC;border-radius:3px}
-  ::-webkit-scrollbar-thumb:hover{background:#AAA}
+  ::-webkit-scrollbar-track{background:#E6DFF2;border-radius:3px}
+  ::-webkit-scrollbar-thumb{background:#C4B8D8;border-radius:3px}
+  ::-webkit-scrollbar-thumb:hover{background:#A898C0}
   button,input,select{font-family:inherit}
 </style>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -28,13 +28,13 @@ const {
 } = React;
 const T = '#00897B',
   TL = '#00897B',
-  DK = '#F5F5F5',
-  DC = '#FFFFFF',
-  DH = '#F0F0F0',
-  BG = '#EEEDF1',
+  DK = '#EEE9F6',
+  DC = '#F5F1FB',
+  DH = '#E6DFF2',
+  BG = '#EDE8F5',
   W = '#1E1E2E',
-  G = '#8890A0',
-  BD = '#D8D8E0';
+  G = '#8878A8',
+  BD = '#D4CBE5';
 const NV = '#2D2D2D',
   NVH = '#404040';
 const PRI = {
@@ -472,7 +472,7 @@ const Modal = ({
   onClick: onClose
 }, /*#__PURE__*/React.createElement("div", {
   style: {
-    background: '#FFF',
+    background: '#F5F1FB',
     borderRadius: 12,
     width: 540,
     maxHeight: '85vh',
@@ -701,7 +701,7 @@ const StageProgress = ({
         width: act ? 28 : 20,
         height: act ? 28 : 20,
         borderRadius: '50%',
-        background: done ? s.color : act ? s.color : '#D0D0D8',
+        background: done ? s.color : act ? s.color : '#D4CBE5',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1126,7 +1126,7 @@ function GPDash({
         borderLeft: `3px solid ${ep.color}`,
         transition: 'background .1s'
       },
-      onMouseEnter: e => e.currentTarget.style.background = '#E8E8EE',
+      onMouseEnter: e => e.currentTarget.style.background = '#DDD5ED',
       onMouseLeave: e => e.currentTarget.style.background = '#F5F5F5'
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -1195,7 +1195,7 @@ function GPDash({
         cursor: 'pointer',
         borderLeft: `3px solid ${st.stage === 'bugfix' ? '#FF5252' : '#E53935'}`
       },
-      onMouseEnter: e => e.currentTarget.style.background = '#E8E8EE',
+      onMouseEnter: e => e.currentTarget.style.background = '#DDD5ED',
       onMouseLeave: e => e.currentTarget.style.background = '#F5F5F5'
     }, /*#__PURE__*/React.createElement(Badge, {
       text: st.us,
@@ -1269,7 +1269,7 @@ function GPDash({
         cursor: 'pointer',
         transition: 'background .1s'
       },
-      onMouseEnter: e => e.currentTarget.style.background = '#E8E8EE',
+      onMouseEnter: e => e.currentTarget.style.background = '#DDD5ED',
       onMouseLeave: e => e.currentTarget.style.background = i % 2 === 0 ? DK : 'transparent'
     }, /*#__PURE__*/React.createElement("td", {
       style: {
@@ -1595,7 +1595,7 @@ function ArchDash({
       borderRadius: 6,
       cursor: 'pointer'
     },
-    onMouseEnter: e => e.currentTarget.style.background = '#E8E8EE',
+    onMouseEnter: e => e.currentTarget.style.background = '#DDD5ED',
     onMouseLeave: e => e.currentTarget.style.background = '#F5F5F5'
   }, /*#__PURE__*/React.createElement(Badge, {
     text: st.us,
