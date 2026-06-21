@@ -94,7 +94,7 @@ const MC=({label,value,sub,color})=>(
 );
 
 const Btn=({children,onClick,color,outline,s,disabled})=>(
-  <button onClick={disabled?undefined:onClick} style={{background:disabled?BD:outline?'transparent':(color||T),color:disabled?G:W,border:outline?`1px solid ${color||T}`:'none',borderRadius:6,padding:s?'5px 12px':'9px 18px',cursor:disabled?'not-allowed':'pointer',fontSize:s?11:13,fontWeight:600,display:'inline-flex',alignItems:'center',gap:5,opacity:disabled?.5:1,transition:'opacity .15s'}}>{children}</button>
+  <button onClick={disabled?undefined:onClick} style={{background:disabled?BD:outline?'transparent':(color||T),color:disabled?G:W,border:outline?`1px solid ${color||T}`:'none',borderRadius:6,padding:s?'5px 12px':'9px 18px',cursor:disabled?'not-allowed':'pointer',fontSize:s?11:13,fontWeight:600,display:'inline-flex',alignItems:'center',gap:5,opacity:disabled?0.5:1,transition:'opacity .15s'}}>{children}</button>
 );
 
 const MBar=({value,max,color})=><div style={{background:BD,borderRadius:3,height:6,flex:1,minWidth:40}}><div style={{background:color||T,borderRadius:3,height:6,width:`${Math.min((value/Math.max(max,1))*100,100)}%`,transition:'width .3s'}}/></div>;
