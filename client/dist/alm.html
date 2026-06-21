@@ -8,11 +8,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:"Inter",-apple-system,sans-serif;background:#EDE8F5;min-height:100vh}
+  body{font-family:"Inter",-apple-system,sans-serif;background:#E9ECF0;min-height:100vh}
   ::-webkit-scrollbar{width:5px;height:5px}
-  ::-webkit-scrollbar-track{background:#E6DFF2;border-radius:3px}
-  ::-webkit-scrollbar-thumb{background:#C4B8D8;border-radius:3px}
-  ::-webkit-scrollbar-thumb:hover{background:#A898C0}
+  ::-webkit-scrollbar-track{background:#152232;border-radius:3px}
+  ::-webkit-scrollbar-thumb{background:#2E4058;border-radius:3px}
+  ::-webkit-scrollbar-thumb:hover{background:#4A6080}
   button,input,select{font-family:inherit}
 </style>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -27,16 +27,16 @@ const {
   useCallback
 } = React;
 const T = '#00897B',
-  TL = '#00897B',
-  DK = '#EEE9F6',
-  DC = '#DED6EE',
-  DH = '#E6DFF2',
-  BG = '#EDE8F5',
-  W = '#1E1E2E',
-  G = '#8878A8',
-  BD = '#D4CBE5';
-const NV = '#2D2D2D',
-  NVH = '#404040';
+  TL = '#4DB6AC',
+  DK = '#152232',
+  DC = '#1B2A3D',
+  DH = '#243548',
+  BG = '#E9ECF0',
+  W = '#FFFFFF',
+  G = '#7B8FA8',
+  BD = '#2E4058';
+const NV = '#0F1923',
+  NVH = '#1B2A3D';
 const PRI = {
   critical: '#E53935',
   high: '#FB8C00',
@@ -472,7 +472,7 @@ const Modal = ({
   onClick: onClose
 }, /*#__PURE__*/React.createElement("div", {
   style: {
-    background: '#F5F1FB',
+    background: '#1B2A3D',
     borderRadius: 12,
     width: 540,
     maxHeight: '85vh',
@@ -540,7 +540,7 @@ const Inp = ({
   placeholder: placeholder,
   style: {
     width: '100%',
-    background: DK,
+    background: '#0F1923',
     border: `1px solid ${BD}`,
     borderRadius: 6,
     padding: '9px 11px',
@@ -559,7 +559,7 @@ const Sel = ({
   onChange: e => onChange(e.target.value),
   style: {
     width: '100%',
-    background: DK,
+    background: '#0F1923',
     border: `1px solid ${BD}`,
     borderRadius: 6,
     padding: '9px 11px',
@@ -587,7 +587,7 @@ const UploadZone = ({
     transition: 'border-color .2s'
   },
   onClick: onUpload,
-  onMouseEnter: e => e.currentTarget.style.borderColor = T,
+  onMouseEnter: e => e.currentTarget.style.borderColor = '#FFF',
   onMouseLeave: e => e.currentTarget.style.borderColor = color || BD
 }, /*#__PURE__*/React.createElement("div", {
   style: {
@@ -701,7 +701,7 @@ const StageProgress = ({
         width: act ? 28 : 20,
         height: act ? 28 : 20,
         borderRadius: '50%',
-        background: done ? s.color : act ? s.color : '#D4CBE5',
+        background: done ? s.color : act ? s.color : '#2E4058',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1126,7 +1126,7 @@ function GPDash({
         borderLeft: `3px solid ${ep.color}`,
         transition: 'background .1s'
       },
-      onMouseEnter: e => e.currentTarget.style.background = '#DDD5ED',
+      onMouseEnter: e => e.currentTarget.style.background = '#2E4058',
       onMouseLeave: e => e.currentTarget.style.background = '#F5F5F5'
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -1195,7 +1195,7 @@ function GPDash({
         cursor: 'pointer',
         borderLeft: `3px solid ${st.stage === 'bugfix' ? '#FF5252' : '#E53935'}`
       },
-      onMouseEnter: e => e.currentTarget.style.background = '#DDD5ED',
+      onMouseEnter: e => e.currentTarget.style.background = '#2E4058',
       onMouseLeave: e => e.currentTarget.style.background = '#F5F5F5'
     }, /*#__PURE__*/React.createElement(Badge, {
       text: st.us,
@@ -1269,7 +1269,7 @@ function GPDash({
         cursor: 'pointer',
         transition: 'background .1s'
       },
-      onMouseEnter: e => e.currentTarget.style.background = '#DDD5ED',
+      onMouseEnter: e => e.currentTarget.style.background = '#2E4058',
       onMouseLeave: e => e.currentTarget.style.background = i % 2 === 0 ? DK : 'transparent'
     }, /*#__PURE__*/React.createElement("td", {
       style: {
@@ -1595,7 +1595,7 @@ function ArchDash({
       borderRadius: 6,
       cursor: 'pointer'
     },
-    onMouseEnter: e => e.currentTarget.style.background = '#DDD5ED',
+    onMouseEnter: e => e.currentTarget.style.background = '#2E4058',
     onMouseLeave: e => e.currentTarget.style.background = '#F5F5F5'
   }, /*#__PURE__*/React.createElement(Badge, {
     text: st.us,
@@ -2659,7 +2659,7 @@ function App() {
       background: NV,
       padding: '8px 16px',
       textAlign: 'center',
-      color: '#AAA',
+      color: '#7B8FA8',
       fontSize: 10,
       marginTop: 16
     }
