@@ -570,12 +570,12 @@ async function test91(sf) {
 
 async function test107(sf) {
   const results = [];
-  const PS_NAMES = ['PS_Vendedor_Account_FLS','PS_Gestor_Account_FLS','PS_BackOffice_Account_FLS','PS_Admin_Account_FLS'];
+  const PS_NAMES = ['PS_Account_CamposGerais_FLS','PS_Account_SomenteLeitura_FLS','PS_Account_CamposRegulatorio_FLS','PS_Account_EditTotal_FLS'];
   const EXPECTED = {
-    'PS_Vendedor_Account_FLS': { minFields: 40, maxEditable: 20, keyReadOnly: ['Account.StatusCadastro__c','Account.TipoCliente__c','Account.Segmento__c','Account.OrigemConta__c'] },
-    'PS_Gestor_Account_FLS': { minFields: 40, maxEditable: 0, keyReadOnly: ['Account.CNPJ__c','Account.StatusCadastro__c','Account.TipoCliente__c'] },
-    'PS_BackOffice_Account_FLS': { minFields: 40, maxEditable: 60, keyEditable: ['Account.CNPJ__c','Account.TipoCliente__c','Account.NomeFantasia__c'], keyReadOnly: ['Account.StatusCadastro__c','Account.Segmento__c'] },
-    'PS_Admin_Account_FLS': { minFields: 40, maxEditable: 60, keyEditable: ['Account.CNPJ__c','Account.StatusCadastro__c','Account.TipoCliente__c'] }
+    'PS_Account_CamposGerais_FLS': { minFields: 40, maxEditable: 20, keyReadOnly: ['Account.StatusCadastro__c','Account.TipoCliente__c','Account.Segmento__c','Account.OrigemConta__c'] },
+    'PS_Account_SomenteLeitura_FLS': { minFields: 40, maxEditable: 0, keyReadOnly: ['Account.CNPJ__c','Account.StatusCadastro__c','Account.TipoCliente__c'] },
+    'PS_Account_CamposRegulatorio_FLS': { minFields: 40, maxEditable: 60, keyEditable: ['Account.CNPJ__c','Account.TipoCliente__c','Account.NomeFantasia__c'], keyReadOnly: ['Account.StatusCadastro__c','Account.Segmento__c'] },
+    'PS_Account_EditTotal_FLS': { minFields: 40, maxEditable: 60, keyEditable: ['Account.CNPJ__c','Account.StatusCadastro__c','Account.TipoCliente__c'] }
   };
 
   // CA-001: 4 PSs existem
