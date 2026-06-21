@@ -8,12 +8,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:"Inter",-apple-system,sans-serif;background:#F2F4F7;min-height:100vh}
+  body{font-family:'Inter',-apple-system,sans-serif;background:#F3F5F9;min-height:100vh;color:#1B2438}
   ::-webkit-scrollbar{width:5px;height:5px}
   ::-webkit-scrollbar-track{background:#F0F2F6;border-radius:3px}
-  ::-webkit-scrollbar-thumb{background:#CDD2DA;border-radius:3px}
+  ::-webkit-scrollbar-thumb{background:#CDD3DE;border-radius:3px}
   ::-webkit-scrollbar-thumb:hover{background:#A8B0BC}
   button,input,select{font-family:inherit}
+  table{border-collapse:separate;border-spacing:0}
 </style>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -21,2651 +22,782 @@
 <body>
 <div id="root"></div>
 <script>
-const {
-  useState,
-  useMemo,
-  useCallback
-} = React;
-const T = '#00897B',
-  TL = '#00897B',
-  DK = '#F0F2F6',
-  DC = '#FFFFFF',
-  DH = '#F5F6F9',
-  BG = '#F2F4F7',
-  W = '#1A2332',
-  G = '#8C95A6',
-  BD = '#E2E6ED';
-const NV = '#111B27',
-  NVH = '#1A2940';
-const PRI = {
-  critical: '#E53935',
-  high: '#FB8C00',
-  medium: '#039BE5',
-  low: '#78909C'
-};
-const STAGES = [{
-  key: 'backlog',
-  label: 'Backlog',
-  color: '#78909C',
-  icon: '📋',
-  action: 'Iniciar Refinamento',
-  next: 'refinamento'
-}, {
-  key: 'refinamento',
-  label: 'Refinamento Funcional',
-  color: '#AB47BC',
-  icon: '🔍',
-  action: 'Concluir Refinamento',
-  next: 'hf',
-  desc: 'Analise e refine os requisitos funcionais'
-}, {
-  key: 'hf',
-  label: 'Escrita HF',
-  color: '#7E57C2',
-  icon: '📄',
-  action: 'Concluir HF',
-  next: 'spec',
-  desc: 'Escreva e anexe a História Funcional',
-  uploadHint: 'Upload da HF (.docx)'
-}, {
-  key: 'spec',
-  label: 'Escrita Spec Técnica',
-  color: '#5C6BC0',
-  icon: '📐',
-  action: 'Concluir Spec',
-  next: 'dev',
-  desc: 'Use /devops {US} no chat para gerar spec + deploy',
-  devops: true
-}, {
-  key: 'dev',
-  label: 'Desenvolvimento',
-  color: '#039BE5',
-  icon: '⚙️',
-  action: 'Concluir Dev',
-  next: 'testes',
-  desc: 'Desenvolvimento e deploy dos componentes'
-}, {
-  key: 'testes',
-  label: 'Testes',
-  color: '#00897B',
-  icon: '🧪',
-  action: 'Concluir Testes',
-  next: 'deploy',
-  desc: 'Execução de testes e validação QA'
-}, {
-  key: 'deploy',
-  label: 'Deploy',
-  color: '#F4511E',
-  icon: '🚀',
-  action: 'Concluir Deploy',
-  next: 'homologacao',
-  desc: 'Deploy na org e validação técnica'
-}, {
-  key: 'homologacao',
-  label: 'Homologação',
-  color: '#43A047',
-  icon: '✅',
-  action: null,
-  next: null,
-  desc: 'Validação final pelo negócio'
-}, {
-  key: 'bugfix',
-  label: 'Em Bugfix',
-  color: '#FF5252',
-  icon: '🐛',
-  action: 'Concluir Bugfix',
-  next: null,
-  desc: 'Correção de bug reportado'
-}];
-const SM = {};
-STAGES.forEach((s, i) => {
-  SM[s.key] = {
-    ...s,
-    idx: i
-  };
-});
-const EPICS = [{
-  id: 'EP-01',
-  name: 'Conta Master',
-  desc: 'Gestão completa Account B2B',
-  owner: 'Alberto',
-  s: '2026-05-01',
-  e: '2026-07-31',
-  color: '#5C6BC0'
-}, {
-  id: 'EP-02',
-  name: 'Dupla Convivência',
-  desc: 'Integração CRM Legado ↔ Salesforce',
-  owner: 'Alberto',
-  s: '2026-06-15',
-  e: '2026-09-30',
-  color: '#AB47BC'
-}, {
-  id: 'EP-03',
-  name: 'Leads & SE',
-  desc: 'Captação e roteamento de leads B2B',
-  owner: 'Alberto',
-  s: '2026-06-01',
-  e: '2026-08-31',
-  color: '#F4511E'
-}, {
-  id: 'EP-04',
-  name: 'Agentforce',
-  desc: 'Agentes IA para enrichment',
-  owner: 'Alberto',
-  s: '2026-06-10',
-  e: '2026-08-15',
-  color: '#00897B'
-}];
-const mk = (us, t, ep, stg, pr, a, sp, pd, ad, cr, files, arts) => ({
-  us,
-  title: t,
-  epicId: ep,
-  stage: stg,
-  prevStage: null,
-  priority: pr,
-  assignee: a,
-  sprint: sp,
-  plannedDate: pd,
-  actualDate: ad,
-  created: cr,
-  files: files || [],
-  artifacts: arts || {
-    hf: false,
-    spec: false,
-    deploy: false,
-    qa: false,
-    adr: false,
-    cenario: false,
-    zip: false
-  }
-});
-const A1 = {
-  hf: true,
-  spec: true,
-  deploy: true,
-  qa: true,
-  adr: true,
-  cenario: true,
-  zip: true
-};
-const INIT = [mk('CRMB2B-50A', 'Campos Account + RTs + CNAE + NJ + VRs', 'EP-01', 'homologacao', 'high', 'Alberto', 'Sprint 10', '2026-05-20', '2026-05-18', '2026-05-10', [{
-  name: 'HF_50A.docx',
-  type: 'hf',
-  date: '2026-05-11',
-  version: 'v1.0'
-}], A1), mk('CRMB2B-50B', 'Apex Serasa + Flows + QA + VRs', 'EP-01', 'homologacao', 'high', 'Alberto', 'Sprint 10', '2026-05-25', '2026-05-22', '2026-05-15', [], A1), mk('CRMB2B-83', 'Flows ativação + QA + Flexipage', 'EP-01', 'homologacao', 'high', 'Alberto', 'Sprint 11', '2026-06-05', '2026-06-02', '2026-05-25', [], A1), mk('CRMB2B-84', 'ListView BackOffice + PS + FLS', 'EP-01', 'homologacao', 'medium', 'Alberto', 'Sprint 11', '2026-06-08', '2026-06-05', '2026-05-28', [], A1), mk('CRMB2B-85', 'SerasaRetryBatch + CMDT + CRON', 'EP-01', 'homologacao', 'medium', 'Alberto', 'Sprint 11', '2026-06-10', '2026-06-08', '2026-06-01', [], A1), mk('CRMB2B-90', 'MatchingRules + DuplicateRules', 'EP-01', 'homologacao', 'high', 'Alberto', 'Sprint 12', '2026-06-18', '2026-06-16', '2026-06-10', [], A1), mk('CRMB2B-91', 'Enriquecimento Automático Serasa', 'EP-01', 'spec', 'high', 'Alberto', 'Sprint 12', '2026-06-25', null, '2026-06-17', [{
-  name: 'HF_CRMB2B-91.docx',
-  type: 'hf',
-  date: '2026-06-18',
-  version: 'v1.0'
-}], {
-  hf: true,
-  spec: false,
-  deploy: false,
-  qa: false,
-  adr: false,
-  cenario: false,
-  zip: false
-}), mk('CRMB2B-92', 'Account Scoring Model', 'EP-01', 'hf', 'medium', 'Alberto', 'Sprint 12', '2026-06-28', null, '2026-06-18'), mk('CRMB2B-93', 'Dashboard Gerencial Contas', 'EP-01', 'refinamento', 'medium', 'Alberto', 'Sprint 12', '2026-06-30', null, '2026-06-19'), mk('CRMB2B-94', 'Integração CDC MuleSoft Account', 'EP-02', 'backlog', 'high', '', '', '2026-07-15', null, '2026-06-20'), mk('CRMB2B-95', 'Data Cloud Activation Target', 'EP-02', 'backlog', 'high', '', '', '2026-07-20', null, '2026-06-20'), mk('CRMB2B-96', 'Lead Routing por Região', 'EP-03', 'deploy', 'critical', 'Alberto', 'Sprint 12', '2026-06-22', null, '2026-06-14', [{
-  name: 'HF_96.docx',
-  type: 'hf',
-  date: '2026-06-14',
-  version: 'v1.0'
-}], {
-  hf: true,
-  spec: true,
-  deploy: true,
-  qa: false,
-  adr: false,
-  cenario: false,
-  zip: false
-}), mk('CRMB2B-97', 'Agentforce B2B Enrichment Fix', 'EP-04', 'bugfix', 'critical', 'Alberto', 'Sprint 12', '2026-06-20', null, '2026-06-15', [{
-  name: 'HF_97.docx',
-  type: 'hf',
-  date: '2026-06-15',
-  version: 'v1.0'
-}, {
-  name: 'BugFix_97.docx',
-  type: 'bugfix',
-  date: '2026-06-19',
-  version: 'v1.0'
-}], {
-  hf: true,
-  spec: true,
-  deploy: false,
-  qa: false,
-  adr: false,
-  cenario: false,
-  zip: false
-})];
+const { useState, useMemo, useCallback } = React;
 
-/* ── Shared Components ── */
-const Badge = ({
-  text,
-  color,
-  s
-}) => /*#__PURE__*/React.createElement("span", {
-  style: {
-    background: color || T,
-    color: W,
-    padding: s ? '2px 8px' : '4px 12px',
-    borderRadius: 4,
-    fontSize: s ? 10 : 12,
-    fontWeight: 600,
-    whiteSpace: 'nowrap',
-    lineHeight: s ? '16px' : '20px',
-    display: 'inline-block'
-  }
-}, text);
-const Card = ({
-  title,
-  badge,
-  children,
-  accent,
-  noPad
-}) => /*#__PURE__*/React.createElement("div", {
-  style: {
-    background: DC,
-    borderRadius: 10,
-    overflow: 'hidden',
-    boxShadow: '0 1px 6px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.03)',
-    display: 'flex',
-    flexDirection: 'column'
-  }
-}, title && /*#__PURE__*/React.createElement("div", {
-  style: {
-    padding: '12px 16px',
-    borderBottom: `1px solid ${BD}`,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    borderLeft: `3px solid ${accent || T}`,
-    minHeight: 44
-  }
-}, /*#__PURE__*/React.createElement("span", {
-  style: {
-    color: W,
-    fontWeight: 700,
-    fontSize: 13
-  }
-}, title), badge), /*#__PURE__*/React.createElement("div", {
-  style: {
-    padding: noPad ? 0 : '14px 16px',
-    flex: 1
-  }
-}, children));
-const MC = ({
-  label,
-  value,
-  sub,
-  color
-}) => /*#__PURE__*/React.createElement("div", {
-  style: {
-    background: DC,
-    borderRadius: 10,
-    padding: '16px 18px',
-    borderLeft: `3px solid ${color || T}`,
-    boxShadow: '0 1px 6px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.03)',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 3
-  }
-}, /*#__PURE__*/React.createElement("span", {
-  style: {
-    color: G,
-    fontSize: 10,
-    fontWeight: 600,
-    textTransform: 'uppercase',
-    letterSpacing: .8
-  }
-}, label), /*#__PURE__*/React.createElement("span", {
-  style: {
-    color: W,
-    fontSize: 28,
-    fontWeight: 800,
-    lineHeight: 1
-  }
-}, value), sub && /*#__PURE__*/React.createElement("span", {
-  style: {
-    color: TL,
-    fontSize: 11
-  }
-}, sub));
-const Btn = ({
-  children,
-  onClick,
-  color,
-  outline,
-  s,
-  disabled
-}) => /*#__PURE__*/React.createElement("button", {
-  onClick: disabled ? undefined : onClick,
-  style: {
-    background: disabled ? BD : outline ? 'transparent' : color || T,
-    color: disabled ? G : '#FFF',
-    border: outline ? `1px solid ${color || T}` : 'none',
-    borderRadius: 6,
-    padding: s ? '5px 12px' : '9px 18px',
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    fontSize: s ? 11 : 13,
-    fontWeight: 600,
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 5,
-    opacity: disabled ? 0.5 : 1,
-    transition: 'opacity .15s'
-  }
-}, children);
-const MBar = ({
-  value,
-  max,
-  color
-}) => /*#__PURE__*/React.createElement("div", {
-  style: {
-    background: BD,
-    borderRadius: 3,
-    height: 6,
-    flex: 1,
-    minWidth: 40
-  }
-}, /*#__PURE__*/React.createElement("div", {
-  style: {
-    background: color || T,
-    borderRadius: 3,
-    height: 6,
-    width: `${Math.min(value / Math.max(max, 1) * 100, 100)}%`,
-    transition: 'width .3s'
-  }
-}));
-const ADot = ({
-  has
-}) => /*#__PURE__*/React.createElement("div", {
-  style: {
-    width: 18,
-    height: 18,
-    borderRadius: 3,
-    background: has ? '#43A047' : '#4A4A4A',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 10,
-    color: W,
-    flexShrink: 0
-  }
-}, has ? '✓' : '–');
-const Gauge = ({
-  value,
-  label
-}) => {
-  const angle = -90 + Math.min(value, 100) / 100 * 180;
-  const cs = ['#E53935', '#FB8C00', '#FDD835', '#7CB342', '#43A047'];
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: 4
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    viewBox: "0 0 120 68",
-    width: "108",
-    height: "62"
-  }, cs.map((c, i) => {
-    const sA = -90 + i * 36,
-      eA = sA + 36,
-      r = 46,
-      cx = 60,
-      cy = 58;
-    return /*#__PURE__*/React.createElement("path", {
-      key: i,
-      d: `M ${cx + r * Math.cos(sA * Math.PI / 180)} ${cy + r * Math.sin(sA * Math.PI / 180)} A ${r} ${r} 0 0 1 ${cx + r * Math.cos(eA * Math.PI / 180)} ${cy + r * Math.sin(eA * Math.PI / 180)}`,
-      stroke: c,
-      strokeWidth: "9",
-      fill: "none"
-    });
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "60",
-    y1: "58",
-    x2: 60 + 32 * Math.cos(angle * Math.PI / 180),
-    y2: 58 + 32 * Math.sin(angle * Math.PI / 180),
-    stroke: W,
-    strokeWidth: "2.5",
-    strokeLinecap: "round"
-  }), /*#__PURE__*/React.createElement("circle", {
-    cx: "60",
-    cy: "58",
-    r: "4",
-    fill: '#FFF',
-    stroke: W,
-    strokeWidth: "2"
-  })), /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: W,
-      fontSize: 18,
-      fontWeight: 800
-    }
-  }, value, "%"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: G,
-      fontSize: 9,
-      textTransform: 'uppercase',
-      letterSpacing: .5
-    }
-  }, label));
+/* ═══ DESIGN TOKENS — LIGHT THEME ═══ */
+const C = {
+  bg: '#F3F5F9',
+  card: '#FFFFFF',
+  cardHover: '#F7F8FB',
+  row: '#F8F9FC',
+  border: '#E3E7EE',
+  nav: '#111B2D',
+  navLight: '#1C2C44',
+  text: '#1B2438',
+  textSec: '#5A6680',
+  textMuted: '#8E99AB',
+  teal: '#00897B',
+  tealLight: '#E0F2F1',
+  shadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.03)',
+  shadowHover: '0 4px 12px rgba(0,0,0,.07)',
 };
-const Modal = ({
-  title,
-  children,
-  onClose
-}) => /*#__PURE__*/React.createElement("div", {
-  style: {
-    position: 'fixed',
-    inset: 0,
-    background: 'rgba(0,0,0,.6)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000
+const PRI = { critical:'#DC3545', high:'#F59E0B', medium:'#3B82F6', low:'#94A3B8' };
+
+/* ═══ STAGES ═══ */
+const STAGES = [
+  {key:'backlog',label:'Backlog',color:'#94A3B8',icon:'📋',action:'Iniciar Refinamento',next:'refinamento'},
+  {key:'refinamento',label:'Refinamento Funcional',color:'#A855F7',icon:'🔍',action:'Concluir Refinamento',next:'hf',desc:'Analise e refine os requisitos funcionais'},
+  {key:'hf',label:'Escrita HF',color:'#7C3AED',icon:'📄',action:'Concluir HF',next:'spec',desc:'Escreva e anexe a História Funcional',uploadHint:'Upload da HF (.docx)'},
+  {key:'spec',label:'Escrita Spec',color:'#4F46E5',icon:'📐',action:'Concluir Spec',next:'dev',desc:'Use /devops {US} no chat — Claude busca a HF e executa',devops:true},
+  {key:'dev',label:'Desenvolvimento',color:'#2563EB',icon:'⚙️',action:'Concluir Dev',next:'testes',desc:'Desenvolvimento e deploy dos componentes'},
+  {key:'testes',label:'Testes',color:'#0891B2',icon:'🧪',action:'Concluir Testes',next:'deploy',desc:'Execução de testes e validação QA'},
+  {key:'deploy',label:'Deploy',color:'#EA580C',icon:'🚀',action:'Concluir Deploy',next:'homologacao',desc:'Deploy na org e validação técnica'},
+  {key:'homologacao',label:'Homologação',color:'#16A34A',icon:'✅',action:null,next:null,desc:'Validação final pelo negócio'},
+  {key:'bugfix',label:'Em Bugfix',color:'#DC3545',icon:'🐛',action:'Concluir Bugfix',next:null,desc:'Correção de bug reportado'},
+];
+const SM = {}; STAGES.forEach(function(s,i){ SM[s.key] = Object.assign({}, s, {idx:i}); });
+function stg(key){ return SM[key] || {}; }
+
+/* ═══ DATA ═══ */
+const EPICS = [
+  {id:'EP-01',name:'Conta Master',desc:'Gestão completa Account B2B',owner:'Alberto',s:'2026-05-01',e:'2026-07-31',color:'#4F46E5'},
+  {id:'EP-02',name:'Dupla Convivência',desc:'Integração CRM Legado ↔ Salesforce',owner:'Alberto',s:'2026-06-15',e:'2026-09-30',color:'#A855F7'},
+  {id:'EP-03',name:'Leads & SE',desc:'Captação e roteamento de leads B2B',owner:'Alberto',s:'2026-06-01',e:'2026-08-31',color:'#EA580C'},
+  {id:'EP-04',name:'Agentforce',desc:'Agentes IA para enrichment',owner:'Alberto',s:'2026-06-10',e:'2026-08-15',color:'#0891B2'},
+];
+var A1 = {hf:true,spec:true,deploy:true,qa:true,adr:true,cenario:true,zip:true};
+var A0 = {hf:false,spec:false,deploy:false,qa:false,adr:false,cenario:false,zip:false};
+var INIT = [
+  {us:'CRMB2B-50A',title:'Campos Account + RTs + CNAE + NJ + VRs',epicId:'EP-01',stage:'homologacao',prevStage:null,priority:'high',assignee:'Alberto',sprint:'Sprint 10',plannedDate:'2026-05-20',actualDate:'2026-05-18',created:'2026-05-10',files:[{name:'HF_50A.docx',type:'hf',date:'2026-05-11',version:'v1.0'}],artifacts:A1},
+  {us:'CRMB2B-50B',title:'Apex Serasa + Flows + QA + VRs',epicId:'EP-01',stage:'homologacao',prevStage:null,priority:'high',assignee:'Alberto',sprint:'Sprint 10',plannedDate:'2026-05-25',actualDate:'2026-05-22',created:'2026-05-15',files:[],artifacts:A1},
+  {us:'CRMB2B-83',title:'Flows ativação + QA + Flexipage',epicId:'EP-01',stage:'homologacao',prevStage:null,priority:'high',assignee:'Alberto',sprint:'Sprint 11',plannedDate:'2026-06-05',actualDate:'2026-06-02',created:'2026-05-25',files:[],artifacts:A1},
+  {us:'CRMB2B-84',title:'ListView BackOffice + PS + FLS',epicId:'EP-01',stage:'homologacao',prevStage:null,priority:'medium',assignee:'Alberto',sprint:'Sprint 11',plannedDate:'2026-06-08',actualDate:'2026-06-05',created:'2026-05-28',files:[],artifacts:A1},
+  {us:'CRMB2B-85',title:'SerasaRetryBatch + CMDT + CRON',epicId:'EP-01',stage:'homologacao',prevStage:null,priority:'medium',assignee:'Alberto',sprint:'Sprint 11',plannedDate:'2026-06-10',actualDate:'2026-06-08',created:'2026-06-01',files:[],artifacts:A1},
+  {us:'CRMB2B-90',title:'MatchingRules + DuplicateRules',epicId:'EP-01',stage:'homologacao',prevStage:null,priority:'high',assignee:'Alberto',sprint:'Sprint 12',plannedDate:'2026-06-18',actualDate:'2026-06-16',created:'2026-06-10',files:[],artifacts:A1},
+  {us:'CRMB2B-91',title:'Enriquecimento Automático Serasa',epicId:'EP-01',stage:'spec',prevStage:null,priority:'high',assignee:'Alberto',sprint:'Sprint 12',plannedDate:'2026-06-25',actualDate:null,created:'2026-06-17',files:[{name:'HF_CRMB2B-91.docx',type:'hf',date:'2026-06-18',version:'v1.0'}],artifacts:{hf:true,spec:false,deploy:false,qa:false,adr:false,cenario:false,zip:false}},
+  {us:'CRMB2B-92',title:'Account Scoring Model',epicId:'EP-01',stage:'hf',prevStage:null,priority:'medium',assignee:'Alberto',sprint:'Sprint 12',plannedDate:'2026-06-28',actualDate:null,created:'2026-06-18',files:[],artifacts:A0},
+  {us:'CRMB2B-93',title:'Dashboard Gerencial Contas',epicId:'EP-01',stage:'refinamento',prevStage:null,priority:'medium',assignee:'Alberto',sprint:'Sprint 12',plannedDate:'2026-06-30',actualDate:null,created:'2026-06-19',files:[],artifacts:A0},
+  {us:'CRMB2B-94',title:'Integração CDC MuleSoft Account',epicId:'EP-02',stage:'backlog',prevStage:null,priority:'high',assignee:'',sprint:'',plannedDate:'2026-07-15',actualDate:null,created:'2026-06-20',files:[],artifacts:A0},
+  {us:'CRMB2B-95',title:'Data Cloud Activation Target',epicId:'EP-02',stage:'backlog',prevStage:null,priority:'high',assignee:'',sprint:'',plannedDate:'2026-07-20',actualDate:null,created:'2026-06-20',files:[],artifacts:A0},
+  {us:'CRMB2B-96',title:'Lead Routing por Região',epicId:'EP-03',stage:'deploy',prevStage:null,priority:'critical',assignee:'Alberto',sprint:'Sprint 12',plannedDate:'2026-06-22',actualDate:null,created:'2026-06-14',files:[{name:'HF_96.docx',type:'hf',date:'2026-06-14',version:'v1.0'}],artifacts:{hf:true,spec:true,deploy:true,qa:false,adr:false,cenario:false,zip:false}},
+  {us:'CRMB2B-97',title:'Agentforce B2B Enrichment Fix',epicId:'EP-04',stage:'bugfix',prevStage:'spec',priority:'critical',assignee:'Alberto',sprint:'Sprint 12',plannedDate:'2026-06-20',actualDate:null,created:'2026-06-15',files:[{name:'HF_97.docx',type:'hf',date:'2026-06-15',version:'v1.0'},{name:'BugFix_97.docx',type:'bugfix',date:'2026-06-19',version:'v1.0'}],artifacts:{hf:true,spec:true,deploy:false,qa:false,adr:false,cenario:false,zip:false}},
+];
+
+/* ═══ BASE COMPONENTS ═══ */
+
+function Badge(props) {
+  var bg = props.color || C.teal;
+  return React.createElement('span', {style:{
+    background:bg, color:'#fff', padding:props.s?'3px 10px':'5px 14px',
+    borderRadius:20, fontSize:props.s?10:11, fontWeight:600, whiteSpace:'nowrap',
+    display:'inline-block', lineHeight:props.s?'14px':'16px',
+  }}, props.text);
+}
+
+function Card(props) {
+  return React.createElement('div', {style:{
+    background:C.card, borderRadius:12, overflow:'hidden',
+    border:'1px solid '+C.border, boxShadow:C.shadow,
+  }},
+    props.title ? React.createElement('div', {style:{
+      padding:'14px 20px', borderBottom:'1px solid '+C.border,
+      display:'flex', alignItems:'center', justifyContent:'space-between',
+    }},
+      React.createElement('span', {style:{color:C.text, fontWeight:700, fontSize:14}}, props.title),
+      props.badge
+    ) : null,
+    React.createElement('div', {style:{padding:props.noPad?0:'16px 20px'}}, props.children)
+  );
+}
+
+function MetricCard(props) {
+  return React.createElement('div', {style:{
+    background:C.card, borderRadius:12, padding:'20px 22px',
+    borderLeft:'3px solid '+(props.color||C.teal),
+    border:'1px solid '+C.border, boxShadow:C.shadow,
+    display:'flex', flexDirection:'column', gap:4,
+  }},
+    React.createElement('span', {style:{color:C.textMuted, fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:1}}, props.label),
+    React.createElement('span', {style:{color:C.text, fontSize:34, fontWeight:800, lineHeight:1.1}}, props.value),
+    props.sub ? React.createElement('span', {style:{color:props.color||C.teal, fontSize:12, fontWeight:500}}, props.sub) : null
+  );
+}
+
+function Btn(props) {
+  var bg = props.disabled ? C.border : props.outline ? 'transparent' : (props.color || C.teal);
+  var fg = props.disabled ? C.textMuted : props.outline ? (props.color||C.teal) : '#fff';
+  return React.createElement('button', {onClick:props.disabled?undefined:props.onClick, style:{
+    background:bg, color:fg, border:props.outline?'1px solid '+(props.color||C.teal):'none',
+    borderRadius:8, padding:props.s?'6px 14px':'10px 20px',
+    cursor:props.disabled?'not-allowed':'pointer', fontSize:props.s?11:13, fontWeight:600,
+    display:'inline-flex', alignItems:'center', gap:6, opacity:props.disabled?0.5:1,
+  }}, props.children);
+}
+
+function ProgressBar(props) {
+  return React.createElement('div', {style:{background:C.border, borderRadius:4, height:props.h||6, flex:1, minWidth:30}},
+    React.createElement('div', {style:{background:props.color||C.teal, borderRadius:4, height:props.h||6,
+      width:Math.min((props.value/Math.max(props.max,1))*100,100)+'%', transition:'width .3s'}})
+  );
+}
+
+function Gauge(props) {
+  var pct = Math.min(props.value, 100) / 100;
+  var colors = ['#DC3545','#F59E0B','#F59E0B','#22C55E','#16A34A'];
+  var arcEls = colors.map(function(c, i) {
+    var sA = -90 + i*36, eA = sA+36, r=50, cx=60, cy=62;
+    var x1=cx+r*Math.cos(sA*Math.PI/180), y1=cy+r*Math.sin(sA*Math.PI/180);
+    var x2=cx+r*Math.cos(eA*Math.PI/180), y2=cy+r*Math.sin(eA*Math.PI/180);
+    return React.createElement('path', {key:i, d:'M '+x1+' '+y1+' A '+r+' '+r+' 0 0 1 '+x2+' '+y2,
+      stroke:c, strokeWidth:8, fill:'none', strokeLinecap:'round', opacity: i <= Math.floor(pct*5) ? 1 : 0.15});
+  });
+  var angle = -90 + pct * 180;
+  var nx = 60+36*Math.cos(angle*Math.PI/180), ny = 62+36*Math.sin(angle*Math.PI/180);
+  return React.createElement('div', {style:{display:'flex',flexDirection:'column',alignItems:'center',gap:8}},
+    React.createElement('svg', {viewBox:'0 0 120 75', width:140, height:88},
+      arcEls,
+      React.createElement('line', {x1:60,y1:62,x2:nx,y2:ny,stroke:C.text,strokeWidth:2.5,strokeLinecap:'round'}),
+      React.createElement('circle', {cx:60,cy:62,r:4,fill:C.card,stroke:C.text,strokeWidth:2})
+    ),
+    React.createElement('span', {style:{color:C.text,fontSize:28,fontWeight:800,marginTop:-4}}, props.value+'%'),
+    React.createElement('span', {style:{color:C.textMuted,fontSize:10,textTransform:'uppercase',letterSpacing:1}}, props.label)
+  );
+}
+
+function ArtifactDot(props) {
+  return React.createElement('div', {style:{
+    width:22, height:22, borderRadius:6,
+    background:props.has?'#DEF7EC':'#F3F4F6',
+    border:'1px solid '+(props.has?'#86EFAC':'#E3E7EE'),
+    display:'flex', alignItems:'center', justifyContent:'center',
+    fontSize:11, color:props.has?'#16A34A':'#C0C6D0', fontWeight:700,
+  }}, props.has?'✓':'–');
+}
+
+function Modal(props) {
+  return React.createElement('div', {style:{position:'fixed',inset:0,background:'rgba(0,0,0,.4)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000},onClick:props.onClose},
+    React.createElement('div', {style:{background:C.card,borderRadius:16,width:540,maxHeight:'85vh',overflow:'auto',boxShadow:'0 20px 60px rgba(0,0,0,.15)'},onClick:function(e){e.stopPropagation()}},
+      React.createElement('div', {style:{padding:'18px 22px',borderBottom:'1px solid '+C.border,display:'flex',justifyContent:'space-between',alignItems:'center'}},
+        React.createElement('span', {style:{color:C.text,fontWeight:700,fontSize:16}}, props.title),
+        React.createElement('button', {onClick:props.onClose,style:{background:'none',border:'none',color:C.textMuted,fontSize:20,cursor:'pointer'}}, '✕')
+      ),
+      React.createElement('div', {style:{padding:22}}, props.children)
+    )
+  );
+}
+
+function FormField(props) {
+  return React.createElement('div', {style:{marginBottom:14}},
+    React.createElement('label', {style:{color:C.textSec,fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:.5,display:'block',marginBottom:6}}, props.label),
+    props.children
+  );
+}
+
+function Input(props) {
+  return React.createElement('input', {type:props.type||'text',value:props.value,onChange:function(e){props.onChange(e.target.value)},placeholder:props.placeholder,style:{
+    width:'100%',background:C.row,border:'1px solid '+C.border,borderRadius:8,
+    padding:'10px 12px',color:C.text,fontSize:13,outline:'none',boxSizing:'border-box',
+  }});
+}
+
+function Sel(props) {
+  return React.createElement('select', {value:props.value,onChange:function(e){props.onChange(e.target.value)},style:{
+    width:'100%',background:C.row,border:'1px solid '+C.border,borderRadius:8,
+    padding:'10px 12px',color:C.text,fontSize:13,outline:'none',boxSizing:'border-box',
+  }}, props.options.map(function(o){return React.createElement('option',{key:o.v,value:o.v},o.l)}));
+}
+
+function UploadZone(props) {
+  return React.createElement('div', {style:{
+    border:'2px dashed '+C.border, borderRadius:10, padding:18, textAlign:'center',
+    cursor:'pointer', transition:'border-color .2s, background .2s',
+    background:C.row,
+  }, onClick:props.onUpload,
+    onMouseEnter:function(e){e.currentTarget.style.borderColor=C.teal;e.currentTarget.style.background=C.tealLight},
+    onMouseLeave:function(e){e.currentTarget.style.borderColor=C.border;e.currentTarget.style.background=C.row},
   },
-  onClick: onClose
-}, /*#__PURE__*/React.createElement("div", {
-  style: {
-    background: '#FFFFFF',
-    borderRadius: 12,
-    width: 540,
-    maxHeight: '85vh',
-    overflow: 'auto',
-    boxShadow: '0 20px 60px rgba(0,0,0,.5)'
-  },
-  onClick: e => e.stopPropagation()
-}, /*#__PURE__*/React.createElement("div", {
-  style: {
-    padding: '14px 18px',
-    borderBottom: `1px solid ${BD}`,
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderLeft: `3px solid ${T}`
-  }
-}, /*#__PURE__*/React.createElement("span", {
-  style: {
-    color: W,
-    fontWeight: 700,
-    fontSize: 14
-  }
-}, title), /*#__PURE__*/React.createElement("button", {
-  onClick: onClose,
-  style: {
-    background: 'none',
-    border: 'none',
-    color: G,
-    fontSize: 18,
-    cursor: 'pointer',
-    padding: 4
-  }
-}, "✕")), /*#__PURE__*/React.createElement("div", {
-  style: {
-    padding: 18
-  }
-}, children)));
-const FF = ({
-  label,
-  children
-}) => /*#__PURE__*/React.createElement("div", {
-  style: {
-    marginBottom: 12
-  }
-}, /*#__PURE__*/React.createElement("label", {
-  style: {
-    color: G,
-    fontSize: 10,
-    fontWeight: 600,
-    textTransform: 'uppercase',
-    letterSpacing: .5,
-    display: 'block',
-    marginBottom: 5
-  }
-}, label), children);
-const Inp = ({
-  value,
-  onChange,
-  placeholder,
-  type
-}) => /*#__PURE__*/React.createElement("input", {
-  type: type || 'text',
-  value: value,
-  onChange: e => onChange(e.target.value),
-  placeholder: placeholder,
-  style: {
-    width: '100%',
-    background: '#F0F2F6',
-    border: `1px solid ${BD}`,
-    borderRadius: 6,
-    padding: '9px 11px',
-    color: W,
-    fontSize: 12,
-    outline: 'none',
-    boxSizing: 'border-box'
-  }
-});
-const Sel = ({
-  value,
-  onChange,
-  options
-}) => /*#__PURE__*/React.createElement("select", {
-  value: value,
-  onChange: e => onChange(e.target.value),
-  style: {
-    width: '100%',
-    background: '#F0F2F6',
-    border: `1px solid ${BD}`,
-    borderRadius: 6,
-    padding: '9px 11px',
-    color: W,
-    fontSize: 12,
-    outline: 'none',
-    boxSizing: 'border-box'
-  }
-}, options.map(o => /*#__PURE__*/React.createElement("option", {
-  key: o.v,
-  value: o.v
-}, o.l)));
-const UploadZone = ({
-  label,
-  color,
-  onUpload
-}) => /*#__PURE__*/React.createElement("div", {
-  style: {
-    border: `2px dashed ${color || BD}`,
-    borderRadius: 8,
-    padding: 14,
-    textAlign: 'center',
-    cursor: 'pointer',
-    background: `${color || BD}10`,
-    transition: 'border-color .2s'
-  },
-  onClick: onUpload,
-  onMouseEnter: e => e.currentTarget.style.borderColor = T,
-  onMouseLeave: e => e.currentTarget.style.borderColor = color || BD
-}, /*#__PURE__*/React.createElement("div", {
-  style: {
-    fontSize: 20
-  }
-}, "📎"), /*#__PURE__*/React.createElement("div", {
-  style: {
-    color: W,
-    fontSize: 11,
-    marginTop: 3,
-    fontWeight: 600
-  }
-}, label || 'Upload de arquivo'), /*#__PURE__*/React.createElement("div", {
-  style: {
-    color: G,
-    fontSize: 10,
-    marginTop: 2
-  }
-}, "Arraste ou clique para selecionar"));
-const FileList = ({
-  files
-}) => {
-  const ic = {
-    hf: '📄',
-    spec: '📐',
-    adr: '📑',
-    cenario: '✅',
-    zip: '📦',
-    bugfix: '🐛',
-    other: '📎'
-  };
-  if (!files.length) return /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: G,
-      fontSize: 11,
-      textAlign: 'center',
-      padding: 10
-    }
-  }, "Nenhum documento");
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 2
-    }
-  }, files.map((f, i) => /*#__PURE__*/React.createElement("div", {
-    key: i,
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8,
-      padding: '6px 10px',
-      background: i % 2 === 0 ? DK : 'transparent',
-      borderRadius: 4
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 14
-    }
-  }, ic[f.type] || ic.other), /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: W,
-      fontSize: 11,
-      flex: 1,
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-      whiteSpace: 'nowrap'
-    }
-  }, f.name), f.version && /*#__PURE__*/React.createElement(Badge, {
-    text: f.version,
-    color: DH,
-    s: true
-  }), /*#__PURE__*/React.createElement(Badge, {
-    text: f.type,
-    color: (SM[f.type] || {}).color || T,
-    s: true
-  }), /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: G,
-      fontSize: 10
-    }
-  }, f.date), /*#__PURE__*/React.createElement(Btn, {
-    s: true,
-    color: T
-  }, "↓"))));
-};
-const StageProgress = ({
-  cur
-}) => {
-  const idx = (SM[cur] || {}).idx || 0;
-  const main = STAGES.filter(s => s.key !== 'bugfix');
-  const bug = cur === 'bugfix';
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 0,
-      justifyContent: 'center'
-    }
-  }, main.map((s, i) => {
-    const done = !bug && i < idx;
-    const act = !bug && i === idx;
-    return /*#__PURE__*/React.createElement("div", {
-      key: s.key,
-      style: {
-        display: 'flex',
-        alignItems: 'center'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        width: act ? 28 : 20,
-        height: act ? 28 : 20,
-        borderRadius: '50%',
-        background: done ? s.color : act ? s.color : '#E8EBF0',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: act ? 13 : 10,
-        border: act ? `2px solid ${W}` : 'none',
-        boxShadow: act ? `0 0 8px ${s.color}80` : 'none',
-        transition: 'all .2s'
-      },
-      title: s.label
-    }, done ? /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: W,
-        fontSize: 8,
-        fontWeight: 800
-      }
-    }, "✓") : /*#__PURE__*/React.createElement("span", null, s.icon)), i < main.length - 1 && /*#__PURE__*/React.createElement("div", {
-      style: {
-        width: 14,
-        height: 2,
-        background: done ? main[i + 1].color : BD,
-        borderRadius: 1
-      }
-    }));
-  }), bug && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 14,
-      height: 2,
-      background: '#FF5252',
-      borderRadius: 1,
-      marginLeft: 2
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 28,
-      height: 28,
-      borderRadius: '50%',
-      background: '#FF5252',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: 13,
-      border: `2px solid ${W}`,
-      boxShadow: '0 0 8px #FF525280'
-    }
-  }, "🐛")));
-};
-
-/* ── Calendar ── */
-function GPCalendar({
-  stories,
-  year,
-  month,
-  onStory
-}) {
-  const [cY, sY] = useState(year);
-  const [cM, sM] = useState(month);
-  const dim = new Date(cY, cM + 1, 0).getDate();
-  const fd = new Date(cY, cM, 1).getDay();
-  const mn = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-  const dn = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-  const sd = useMemo(() => {
-    const m = {};
-    stories.forEach(st => {
-      if (!st.plannedDate) return;
-      const [y, mo, da] = st.plannedDate.split('-').map(Number);
-      if (y === cY && mo - 1 === cM) {
-        if (!m[da]) m[da] = [];
-        m[da].push(st);
-      }
-    });
-    return m;
-  }, [stories, cY, cM]);
-  const prev = () => {
-    if (cM === 0) {
-      sM(11);
-      sY(cY - 1);
-    } else sM(cM - 1);
-  };
-  const next = () => {
-    if (cM === 11) {
-      sM(0);
-      sY(cY + 1);
-    } else sM(cM + 1);
-  };
-  const cells = [];
-  for (let i = 0; i < fd; i++) cells.push(null);
-  for (let d = 1; d <= dim; d++) cells.push(d);
-  const td = new Date();
-  const isT = d => d && cY === td.getFullYear() && cM === td.getMonth() && d === td.getDate();
-  return /*#__PURE__*/React.createElement(Card, {
-    title: "Calendário",
-    accent: T
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 12
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: prev,
-    style: {
-      background: DH,
-      border: 'none',
-      color: W,
-      borderRadius: 6,
-      padding: '5px 12px',
-      cursor: 'pointer',
-      fontSize: 16,
-      fontWeight: 700
-    }
-  }, "‹"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: W,
-      fontSize: 14,
-      fontWeight: 700
-    }
-  }, mn[cM], " ", cY), /*#__PURE__*/React.createElement("button", {
-    onClick: next,
-    style: {
-      background: DH,
-      border: 'none',
-      color: W,
-      borderRadius: 6,
-      padding: '5px 12px',
-      cursor: 'pointer',
-      fontSize: 16,
-      fontWeight: 700
-    }
-  }, "›")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(7,1fr)',
-      gap: 3
-    }
-  }, dn.map(d => /*#__PURE__*/React.createElement("div", {
-    key: d,
-    style: {
-      textAlign: 'center',
-      color: G,
-      fontSize: 9,
-      fontWeight: 700,
-      padding: 3,
-      textTransform: 'uppercase'
-    }
-  }, d)), cells.map((d, i) => {
-    const sts = d ? sd[d] || [] : [];
-    return /*#__PURE__*/React.createElement("div", {
-      key: i,
-      style: {
-        background: d ? isT(d) ? `${T}25` : DK : 'transparent',
-        borderRadius: 6,
-        minHeight: 58,
-        padding: 3,
-        border: isT(d) ? `2px solid ${T}` : `1px solid ${d ? BD : 'transparent'}`
-      }
-    }, d && /*#__PURE__*/React.createElement("div", {
-      style: {
-        color: isT(d) ? TL : G,
-        fontSize: 10,
-        fontWeight: 600,
-        marginBottom: 2
-      }
-    }, d), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 1
-      }
-    }, sts.slice(0, 3).map(st => {
-      const sg = SM[st.stage];
-      return /*#__PURE__*/React.createElement("div", {
-        key: st.us,
-        onClick: () => onStory(st.us),
-        style: {
-          display: 'flex',
-          alignItems: 'center',
-          gap: 3,
-          cursor: 'pointer',
-          padding: '1px 3px',
-          borderRadius: 3,
-          background: `${(sg || {}).color || G}25`
-        },
-        title: `${st.us}: ${st.title}`
-      }, /*#__PURE__*/React.createElement("div", {
-        style: {
-          width: 7,
-          height: 7,
-          borderRadius: '50%',
-          background: (sg || {}).color || G,
-          flexShrink: 0
-        }
-      }), /*#__PURE__*/React.createElement("span", {
-        style: {
-          color: W,
-          fontSize: 8,
-          fontWeight: 600,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap'
-        }
-      }, st.us.replace('CRMB2B-', '')));
-    }), sts.length > 3 && /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: G,
-        fontSize: 8,
-        textAlign: 'center'
-      }
-    }, "+", sts.length - 3)));
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: 8,
-      marginTop: 10,
-      flexWrap: 'wrap',
-      justifyContent: 'center'
-    }
-  }, STAGES.map(s => /*#__PURE__*/React.createElement("div", {
-    key: s.key,
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 3
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 7,
-      height: 7,
-      borderRadius: '50%',
-      background: s.color
-    }
-  }), /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: G,
-      fontSize: 8
-    }
-  }, s.label)))));
+    React.createElement('div', {style:{fontSize:22,marginBottom:4}}, '📎'),
+    React.createElement('div', {style:{color:C.text,fontSize:12,fontWeight:600}}, props.label||'Upload de arquivo'),
+    React.createElement('div', {style:{color:C.textMuted,fontSize:11,marginTop:2}}, 'Arraste ou clique')
+  );
 }
 
-/* ── GP Dashboard ── */
-function GPDash({
-  stories,
-  epics,
-  onStory,
-  onEpic,
-  onNewE,
-  onNewS
-}) {
-  const total = stories.length;
-  const hom = stories.filter(s => s.stage === 'homologacao').length;
-  const late = stories.filter(s => s.plannedDate && !s.actualDate && new Date(s.plannedDate) < new Date()).length;
-  const active = stories.filter(s => !['backlog', 'homologacao'].includes(s.stage)).length;
-  const bugs = stories.filter(s => s.stage === 'bugfix').length;
-  const byS = useMemo(() => {
-    const m = {};
-    STAGES.forEach(s => m[s.key] = 0);
-    stories.forEach(s => m[s.stage]++);
-    return m;
-  }, [stories]);
-  const [tab, setTab] = useState('pipeline');
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 14
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(5,1fr)',
-      gap: 10
-    }
-  }, /*#__PURE__*/React.createElement(MC, {
-    label: "Total",
-    value: total,
-    sub: `${epics.length} épicos`,
-    color: T
-  }), /*#__PURE__*/React.createElement(MC, {
-    label: "Andamento",
-    value: active,
-    color: "#039BE5"
-  }), /*#__PURE__*/React.createElement(MC, {
-    label: "Homologadas",
-    value: hom,
-    sub: `${(hom / total * 100).toFixed(0)}%`,
-    color: "#43A047"
-  }), /*#__PURE__*/React.createElement(MC, {
-    label: "Bugfix",
-    value: bugs,
-    sub: bugs > 0 ? 'Em correção' : 'Nenhum',
-    color: "#FF5252"
-  }), /*#__PURE__*/React.createElement(MC, {
-    label: "Atrasadas",
-    value: late,
-    sub: late > 0 ? 'Atenção' : 'OK',
-    color: late > 0 ? '#E53935' : '#78909C'
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: 2,
-      background: DK,
-      borderRadius: 8,
-      padding: 3,
-      alignSelf: 'flex-start'
-    }
-  }, [{
-    k: 'pipeline',
-    l: 'Pipeline',
-    i: '▦'
-  }, {
-    k: 'calendar',
-    l: 'Calendário',
-    i: '📅'
-  }].map(t => /*#__PURE__*/React.createElement("button", {
-    key: t.k,
-    onClick: () => setTab(t.k),
-    style: {
-      background: tab === t.k ? T : 'transparent',
-      color: tab === t.k ? '#FFF' : G,
-      border: 'none',
-      borderRadius: 6,
-      padding: '6px 14px',
-      cursor: 'pointer',
-      fontSize: 11,
-      fontWeight: 600,
-      display: 'flex',
-      alignItems: 'center',
-      gap: 4
-    }
-  }, /*#__PURE__*/React.createElement("span", null, t.i), t.l))), tab === 'pipeline' && /*#__PURE__*/React.createElement(Card, {
-    title: "Pipeline do Projeto",
-    accent: T
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: `repeat(${STAGES.length},1fr)`,
-      gap: 4
-    }
-  }, STAGES.map((stg, i) => /*#__PURE__*/React.createElement("div", {
-    key: stg.key,
-    style: {
-      background: DK,
-      borderRadius: 8,
-      padding: '10px 4px',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: 4,
-      borderTop: `3px solid ${stg.color}`,
-      position: 'relative',
-      minHeight: 90
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 16
-    }
-  }, stg.icon), /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: W,
-      fontSize: 8,
-      fontWeight: 700,
-      textAlign: 'center',
-      lineHeight: 1.2,
-      minHeight: 20,
-      display: 'flex',
-      alignItems: 'center'
-    }
-  }, stg.label), /*#__PURE__*/React.createElement("span", {
-    style: {
-      background: stg.color,
-      color: '#FFF',
-      borderRadius: 10,
-      padding: '2px 9px',
-      fontSize: 16,
-      fontWeight: 800
-    }
-  }, byS[stg.key]), i < STAGES.length - 1 && stg.key !== 'homologacao' && /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'absolute',
-      right: -6,
-      top: '50%',
-      transform: 'translateY(-50%)',
-      color: G,
-      fontSize: 11,
-      zIndex: 1
-    }
-  }, "›"))))), tab === 'calendar' && /*#__PURE__*/React.createElement(GPCalendar, {
-    stories: stories,
-    year: 2026,
-    month: 5,
-    onStory: onStory
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: 10
-    }
-  }, /*#__PURE__*/React.createElement(Card, {
-    title: "Épicos",
-    badge: /*#__PURE__*/React.createElement(Btn, {
-      s: true,
-      onClick: onNewE
-    }, "+ Épico")
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 8
-    }
-  }, epics.map(ep => {
-    const es = stories.filter(s => s.epicId === ep.id);
-    const d = es.filter(s => s.stage === 'homologacao').length;
-    const pct = es.length > 0 ? (d / es.length * 100).toFixed(0) : 0;
-    return /*#__PURE__*/React.createElement("div", {
-      key: ep.id,
-      onClick: () => onEpic(ep.id),
-      style: {
-        background: DK,
-        borderRadius: 8,
-        padding: 12,
-        cursor: 'pointer',
-        borderLeft: `3px solid ${ep.color}`,
-        transition: 'background .1s'
-      },
-      onMouseEnter: e => e.currentTarget.style.background = '#E8EBF0',
-      onMouseLeave: e => e.currentTarget.style.background = '#F5F5F5'
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }
-    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: TL,
-        fontSize: 10,
-        fontWeight: 700
-      }
-    }, ep.id), /*#__PURE__*/React.createElement("div", {
-      style: {
-        color: W,
-        fontSize: 13,
-        fontWeight: 700,
-        marginTop: 1
-      }
-    }, ep.name)), /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: W,
-        fontSize: 20,
-        fontWeight: 800
-      }
-    }, pct, "%")), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'flex',
-        gap: 6,
-        marginTop: 8,
-        alignItems: 'center'
-      }
-    }, /*#__PURE__*/React.createElement(MBar, {
-      value: d,
-      max: es.length,
-      color: ep.color
-    }), /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: G,
-        fontSize: 10
-      }
-    }, d, "/", es.length)));
-  }))), /*#__PURE__*/React.createElement(Card, {
-    title: "Atrasadas & Bugfix",
-    accent: "#E53935"
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 5
-    }
-  }, stories.filter(s => s.plannedDate && !s.actualDate && new Date(s.plannedDate) < new Date() || s.stage === 'bugfix').map(st => {
-    const sg = SM[st.stage];
-    const late = st.plannedDate && !st.actualDate && new Date(st.plannedDate) < new Date();
-    return /*#__PURE__*/React.createElement("div", {
-      key: st.us,
-      onClick: () => onStory(st.us),
-      style: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        padding: '7px 10px',
-        background: DK,
-        borderRadius: 6,
-        cursor: 'pointer',
-        borderLeft: `3px solid ${st.stage === 'bugfix' ? '#FF5252' : '#E53935'}`
-      },
-      onMouseEnter: e => e.currentTarget.style.background = '#E8EBF0',
-      onMouseLeave: e => e.currentTarget.style.background = '#F5F5F5'
-    }, /*#__PURE__*/React.createElement(Badge, {
-      text: st.us,
-      color: (sg || {}).color,
-      s: true
-    }), /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: W,
-        fontSize: 11,
-        flex: 1,
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap'
-      }
-    }, st.title), st.stage === 'bugfix' && /*#__PURE__*/React.createElement(Badge, {
-      text: "BUG",
-      color: "#FF5252",
-      s: true
-    }), late && /*#__PURE__*/React.createElement(Badge, {
-      text: "ATRASO",
-      color: "#E53935",
-      s: true
-    }));
-  }), stories.filter(s => s.plannedDate && !s.actualDate && new Date(s.plannedDate) < new Date() || s.stage === 'bugfix').length === 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: G,
-      fontSize: 11,
-      textAlign: 'center',
-      padding: 16
-    }
-  }, "Nenhum item atrasado ou em bugfix")))), /*#__PURE__*/React.createElement(Card, {
-    title: "Histórias",
-    badge: /*#__PURE__*/React.createElement(Btn, {
-      s: true,
-      onClick: onNewS
-    }, "+ História")
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      overflowX: 'auto'
-    }
-  }, /*#__PURE__*/React.createElement("table", {
-    style: {
-      width: '100%',
-      borderCollapse: 'separate',
-      borderSpacing: '0 2px'
-    }
-  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
-    style: {
-      background: DH
-    }
-  }, ['US', 'Título', 'Épico', 'Estágio', 'Prevista', 'Real', 'Pri'].map(h => /*#__PURE__*/React.createElement("th", {
-    key: h,
-    style: {
-      color: TL,
-      fontSize: 10,
-      fontWeight: 700,
-      textTransform: 'uppercase',
-      padding: '8px 10px',
-      textAlign: 'left',
-      whiteSpace: 'nowrap'
-    }
-  }, h)))), /*#__PURE__*/React.createElement("tbody", null, stories.map((st, i) => {
-    const sg = SM[st.stage];
-    const late = st.plannedDate && !st.actualDate && new Date(st.plannedDate) < new Date();
-    const ep = epics.find(e => e.id === st.epicId);
-    return /*#__PURE__*/React.createElement("tr", {
-      key: st.us,
-      onClick: () => onStory(st.us),
-      style: {
-        background: i % 2 === 0 ? DK : 'transparent',
-        cursor: 'pointer',
-        transition: 'background .1s'
-      },
-      onMouseEnter: e => e.currentTarget.style.background = '#E8EBF0',
-      onMouseLeave: e => e.currentTarget.style.background = i % 2 === 0 ? DK : 'transparent'
-    }, /*#__PURE__*/React.createElement("td", {
-      style: {
-        padding: '8px 10px'
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: TL,
-        fontSize: 11,
-        fontWeight: 700
-      }
-    }, st.us)), /*#__PURE__*/React.createElement("td", {
-      style: {
-        padding: '8px 10px',
-        color: W,
-        fontSize: 11,
-        maxWidth: 200,
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap'
-      }
-    }, st.title), /*#__PURE__*/React.createElement("td", {
-      style: {
-        padding: '8px 10px'
-      }
-    }, /*#__PURE__*/React.createElement(Badge, {
-      text: ((ep || {}).name || '').split(' ')[0] || '–',
-      color: (ep || {}).color,
-      s: true
-    })), /*#__PURE__*/React.createElement("td", {
-      style: {
-        padding: '8px 10px'
-      }
-    }, /*#__PURE__*/React.createElement(Badge, {
-      text: ((sg || {}).label || '').split(' ').slice(0, 2).join(' '),
-      color: (sg || {}).color,
-      s: true
-    })), /*#__PURE__*/React.createElement("td", {
-      style: {
-        padding: '8px 10px',
-        color: late ? '#E53935' : G,
-        fontSize: 11,
-        fontWeight: late ? 700 : 400
-      }
-    }, st.plannedDate || '–'), /*#__PURE__*/React.createElement("td", {
-      style: {
-        padding: '8px 10px',
-        color: st.actualDate ? '#43A047' : G,
-        fontSize: 11
-      }
-    }, st.actualDate || '–'), /*#__PURE__*/React.createElement("td", {
-      style: {
-        padding: '8px 10px'
-      }
-    }, /*#__PURE__*/React.createElement(Badge, {
-      text: st.priority[0].toUpperCase(),
-      color: PRI[st.priority],
-      s: true
-    })));
-  }))))));
-}
-function GPEpicDetail({
-  epic,
-  stories,
-  onBack,
-  onStory
-}) {
-  const es = stories.filter(s => s.epicId === epic.id);
-  const byS = {};
-  STAGES.forEach(s => byS[s.key] = []);
-  es.forEach(s => (byS[s.stage] || []).push(s));
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 12
-    }
-  }, /*#__PURE__*/React.createElement(Btn, {
-    s: true,
-    color: DH,
-    onClick: onBack
-  }, "← Voltar"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: DC,
-      borderRadius: 10,
-      padding: '18px 22px',
-      borderLeft: `3px solid ${epic.color}`
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      justifyContent: 'space-between'
-    }
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: TL,
-      fontSize: 11,
-      fontWeight: 700
-    }
-  }, epic.id), /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: W,
-      fontSize: 18,
-      fontWeight: 800,
-      marginTop: 3
-    }
-  }, epic.name), /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: G,
-      fontSize: 12,
-      marginTop: 5
-    }
-  }, epic.desc)), /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: 'center'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: W,
-      fontSize: 36,
-      fontWeight: 800
-    }
-  }, es.length > 0 ? (byS.homologacao.length / es.length * 100).toFixed(0) : 0, "%"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: G,
-      fontSize: 10
-    }
-  }, "CONCLUÍDO")))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: `repeat(${STAGES.length},1fr)`,
-      gap: 4,
-      overflowX: 'auto'
-    }
-  }, STAGES.map(stg => /*#__PURE__*/React.createElement("div", {
-    key: stg.key,
-    style: {
-      minWidth: 110
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: stg.color,
-      color: W,
-      padding: '5px 7px',
-      borderRadius: '6px 6px 0 0',
-      fontWeight: 700,
-      fontSize: 9,
-      display: 'flex',
-      justifyContent: 'space-between',
-      textTransform: 'uppercase'
-    }
-  }, /*#__PURE__*/React.createElement("span", null, stg.label.split(' ').slice(0, 2).join(' ')), /*#__PURE__*/React.createElement("span", {
-    style: {
-      background: 'rgba(0,0,0,.25)',
-      borderRadius: 8,
-      padding: '0 5px'
-    }
-  }, byS[stg.key].length)), /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: DK,
-      borderRadius: '0 0 6px 6px',
-      padding: 4,
-      minHeight: 60,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 3
-    }
-  }, byS[stg.key].map(st => /*#__PURE__*/React.createElement("div", {
-    key: st.us,
-    onClick: () => onStory(st.us),
-    style: {
-      background: DC,
-      borderRadius: 5,
-      padding: '5px 7px',
-      borderLeft: `3px solid ${PRI[st.priority]}`,
-      cursor: 'pointer',
-      boxShadow: '0 1px 4px rgba(0,0,0,.04)'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: TL,
-      fontSize: 9,
-      fontWeight: 700
-    }
-  }, st.us), /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: W,
-      fontSize: 9,
-      marginTop: 1
-    }
-  }, st.title))))))));
+function FileList(props) {
+  var ic = {hf:'📄',spec:'📐',adr:'📑',cenario:'✅',zip:'📦',bugfix:'🐛',other:'📎'};
+  if (!props.files.length) return React.createElement('div',{style:{color:C.textMuted,fontSize:12,textAlign:'center',padding:16}},'Nenhum documento');
+  return React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:4}},
+    props.files.map(function(f,i) {
+      return React.createElement('div',{key:i,style:{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',background:i%2===0?C.row:'transparent',borderRadius:8}},
+        React.createElement('span',{style:{fontSize:16}}, ic[f.type]||ic.other),
+        React.createElement('span',{style:{color:C.text,fontSize:12,flex:1}}, f.name),
+        f.version ? React.createElement(Badge,{text:f.version,color:C.textMuted,s:true}) : null,
+        React.createElement('span',{style:{color:C.textMuted,fontSize:11}}, f.date),
+        React.createElement(Btn,{s:true,color:C.teal}, '↓')
+      );
+    })
+  );
 }
 
-/* ── Architect Panel ── */
-function ArchDash({
-  stories,
-  onSelect
-}) {
-  const total = stories.length;
-  const hom = stories.filter(s => s.stage === 'homologacao').length;
-  const active = stories.filter(s => !['backlog', 'homologacao'].includes(s.stage));
-  const bugs = stories.filter(s => s.stage === 'bugfix').length;
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 14
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(5,1fr)',
-      gap: 10
-    }
-  }, /*#__PURE__*/React.createElement(MC, {
-    label: "Total",
-    value: total,
-    color: T
-  }), /*#__PURE__*/React.createElement(MC, {
-    label: "Andamento",
-    value: active.length,
-    color: "#039BE5"
-  }), /*#__PURE__*/React.createElement(MC, {
-    label: "Homologadas",
-    value: hom,
-    sub: `${(hom / total * 100).toFixed(0)}%`,
-    color: "#43A047"
-  }), /*#__PURE__*/React.createElement(MC, {
-    label: "Bugfix",
-    value: bugs,
-    color: "#FF5252"
-  }), /*#__PURE__*/React.createElement(MC, {
-    label: "Deploy",
-    value: "87%",
-    sub: "success",
-    color: "#F4511E"
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr 1fr',
-      gap: 10
-    }
-  }, /*#__PURE__*/React.createElement(Card, {
-    title: "Pipeline"
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 6
-    }
-  }, STAGES.map(s => {
-    const c = stories.filter(st => st.stage === s.key).length;
-    return /*#__PURE__*/React.createElement("div", {
-      key: s.key,
-      style: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 11
-      }
-    }, s.icon), /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: G,
-        fontSize: 9,
-        width: 55,
-        flexShrink: 0
-      }
-    }, s.label.split(' ').slice(0, 2).join(' ')), /*#__PURE__*/React.createElement(MBar, {
-      value: c,
-      max: Math.max(...STAGES.map(ss => stories.filter(st => st.stage === ss.key).length), 1),
-      color: s.color
-    }), /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: W,
-        fontSize: 11,
-        fontWeight: 700,
-        width: 16,
-        textAlign: 'right'
-      }
-    }, c));
-  }))), /*#__PURE__*/React.createElement(Card, {
-    title: "Deploy Success"
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      justifyContent: 'center',
-      paddingTop: 4
-    }
-  }, /*#__PURE__*/React.createElement(Gauge, {
-    value: 87,
-    label: "First-Pass"
-  }))), /*#__PURE__*/React.createElement(Card, {
-    title: "QA Pass Rate"
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      justifyContent: 'center',
-      paddingTop: 4
-    }
-  }, /*#__PURE__*/React.createElement(Gauge, {
-    value: 83,
-    label: "Atendidos"
-  })))), /*#__PURE__*/React.createElement(Card, {
-    title: "Itens Ativos"
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 4
-    }
-  }, active.map(st => /*#__PURE__*/React.createElement("div", {
-    key: st.us,
-    onClick: () => onSelect(st),
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8,
-      padding: '7px 10px',
-      background: DK,
-      borderRadius: 6,
-      cursor: 'pointer'
-    },
-    onMouseEnter: e => e.currentTarget.style.background = '#E8EBF0',
-    onMouseLeave: e => e.currentTarget.style.background = '#F5F5F5'
-  }, /*#__PURE__*/React.createElement(Badge, {
-    text: st.us,
-    color: (SM[st.stage] || {}).color,
-    s: true
-  }), /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: W,
-      fontSize: 11,
-      flex: 1,
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-      whiteSpace: 'nowrap'
-    }
-  }, st.title), /*#__PURE__*/React.createElement(Badge, {
-    text: ((SM[st.stage] || {}).label || "").split(' ').slice(0, 2).join(' '),
-    color: (SM[st.stage] || {}).color,
-    s: true
-  }))))));
-}
-function ArchBoard({
-  stories,
-  onSelect
-}) {
-  const gr = {};
-  STAGES.forEach(s => gr[s.key] = []);
-  stories.forEach(s => (gr[s.stage] || []).push(s));
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: `repeat(${STAGES.length},1fr)`,
-      gap: 5,
-      overflowX: 'auto'
-    }
-  }, STAGES.map(stg => /*#__PURE__*/React.createElement("div", {
-    key: stg.key,
-    style: {
-      minWidth: 120
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: stg.color,
-      color: W,
-      padding: '7px 8px',
-      borderRadius: '8px 8px 0 0',
-      fontWeight: 700,
-      fontSize: 9,
-      display: 'flex',
-      justifyContent: 'space-between',
-      textTransform: 'uppercase'
-    }
-  }, /*#__PURE__*/React.createElement("span", null, stg.label.split(' ').slice(0, 2).join(' ')), /*#__PURE__*/React.createElement("span", {
-    style: {
-      background: 'rgba(0,0,0,.3)',
-      borderRadius: 8,
-      padding: '0 6px',
-      fontSize: 9
-    }
-  }, gr[stg.key].length)), /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: DK,
-      borderRadius: '0 0 8px 8px',
-      padding: 4,
-      minHeight: 80,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 4
-    }
-  }, gr[stg.key].map(st => /*#__PURE__*/React.createElement("div", {
-    key: st.us,
-    onClick: () => onSelect(st),
-    style: {
-      background: DC,
-      borderRadius: 5,
-      padding: '7px 8px',
-      borderLeft: `3px solid ${PRI[st.priority]}`,
-      cursor: 'pointer',
-      boxShadow: '0 1px 4px rgba(0,0,0,.04)'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: TL,
-      fontSize: 9,
-      fontWeight: 700
-    }
-  }, st.us), /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: W,
-      fontSize: 9,
-      marginTop: 2
-    }
-  }, st.title), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: 2,
-      marginTop: 4
-    }
-  }, ['hf', 'spec', 'deploy', 'qa'].map(a => /*#__PURE__*/React.createElement("div", {
-    key: a,
-    style: {
-      width: 12,
-      height: 12,
-      borderRadius: 2,
-      background: st.artifacts[a] ? '#43A047' : '#4A4A4A',
-      fontSize: 7,
-      color: W,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }
-  }, st.artifacts[a] ? '✓' : '')))))))));
-}
-function ArchDetail({
-  item,
-  epics,
-  onBack,
-  onAdvance,
-  onUpload,
-  onBugfix,
-  onBugfixResolve
-}) {
-  const [tab, setTab] = useState('stage');
-  const stg = SM[item.stage];
-  const ep = epics.find(e => e.id === item.epicId);
-  const bug = item.stage === 'bugfix';
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 12
-    }
-  }, /*#__PURE__*/React.createElement(Btn, {
-    s: true,
-    color: DH,
-    onClick: onBack
-  }, "← Voltar"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: DC,
-      borderRadius: 10,
-      padding: '18px 22px',
-      borderLeft: `3px solid ${(stg || {}).color || T}`
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      gap: 12
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      minWidth: 0
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 6,
-      flexWrap: 'wrap'
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: TL,
-      fontSize: 18,
-      fontWeight: 800
-    }
-  }, item.us), /*#__PURE__*/React.createElement(Badge, {
-    text: (stg || {}).label || item.stage,
-    color: (stg || {}).color
-  }), /*#__PURE__*/React.createElement(Badge, {
-    text: item.priority,
-    color: PRI[item.priority]
-  }), ep && /*#__PURE__*/React.createElement(Badge, {
-    text: ep.name,
-    color: ep.color,
-    s: true
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: W,
-      fontSize: 14,
-      fontWeight: 600
-    }
-  }, item.title), /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: G,
-      fontSize: 11,
-      marginTop: 5,
-      display: 'flex',
-      gap: 12,
-      flexWrap: 'wrap'
-    }
-  }, /*#__PURE__*/React.createElement("span", null, "Sprint: ", /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: TL
-    }
-  }, item.sprint || '–')), /*#__PURE__*/React.createElement("span", null, "Resp: ", /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: TL
-    }
-  }, item.assignee || '–')), /*#__PURE__*/React.createElement("span", null, "Prevista: ", /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: TL
-    }
-  }, item.plannedDate || '–')))), !bug && /*#__PURE__*/React.createElement(Btn, {
-    s: true,
-    color: "#FF5252",
-    onClick: () => onBugfix(item.us)
-  }, "🐛 Bug")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 14
-    }
-  }, /*#__PURE__*/React.createElement(StageProgress, {
-    cur: item.stage
-  }))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: DC,
-      borderRadius: 10,
-      padding: '14px 18px',
-      border: `1px solid ${(stg || {}).color || BD}`
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 10
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 20
-    }
-  }, (stg || {}).icon), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: W,
-      fontSize: 13,
-      fontWeight: 700
-    }
-  }, "Etapa: ", (stg || {}).label), (stg || {}).desc && /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: G,
-      fontSize: 11,
-      marginTop: 1
-    }
-  }, stg.desc))), /*#__PURE__*/React.createElement(UploadZone, {
-    label: (stg || {}).uploadHint || `Upload — ${(stg || {}).label}`,
-    color: (stg || {}).color,
-    onUpload: () => onUpload(item.us, item.stage === 'hf' ? 'hf' : item.stage === 'spec' ? 'spec' : item.stage === 'bugfix' ? 'bugfix' : 'other')
-  }), (stg || {}).devops && /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: `${stg.color}18`,
-      borderRadius: 8,
-      padding: 12,
-      border: `1px solid ${stg.color}40`,
-      marginTop: 10
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: W,
-      fontSize: 12,
-      fontWeight: 700
-    }
-  }, "💡 No chat do Claude, digite: ", /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: TL,
-      fontFamily: 'monospace'
-    }
-  }, "/devops ", item.us)), item.files.filter(f => f.type === 'hf').length > 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 6,
-      display: 'flex',
-      alignItems: 'center',
-      gap: 5
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: '#43A047',
-      fontSize: 12
-    }
-  }, "✓"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: '#43A047',
-      fontSize: 11,
-      fontWeight: 600
-    }
-  }, "HF: ", (item.files.find(f => f.type === 'hf') || {}).name))), bug && /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: '#FF525218',
-      borderRadius: 8,
-      padding: 12,
-      border: '1px solid #FF525240',
-      marginTop: 10
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: W,
-      fontSize: 12,
-      fontWeight: 700
-    }
-  }, "🐛 Bug Reportado"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: G,
-      fontSize: 11,
-      marginTop: 3
-    }
-  }, "Suba o formulário de BugFix e evidências. Ao concluir, clique \"Concluir Bugfix\" para retornar.")), item.files.length > 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 10
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: G,
-      fontSize: 10,
-      fontWeight: 600,
-      textTransform: 'uppercase',
-      marginBottom: 4
-    }
-  }, "Arquivos"), /*#__PURE__*/React.createElement(FileList, {
-    files: item.files
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: 8,
-      justifyContent: 'flex-end',
-      marginTop: 12
-    }
-  }, bug && /*#__PURE__*/React.createElement(Btn, {
-    color: "#43A047",
-    onClick: () => onBugfixResolve(item.us)
-  }, "✓ Concluir Bugfix"), !bug && (stg || {}).action && /*#__PURE__*/React.createElement(Btn, {
-    color: (stg || {}).color,
-    onClick: () => onAdvance(item.us)
-  }, stg.action, " →"), item.stage === 'homologacao' && /*#__PURE__*/React.createElement(Badge, {
-    text: "✅ Ciclo Completo",
-    color: "#43A047"
-  }))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: 2,
-      background: DK,
-      borderRadius: 8,
-      padding: 2
-    }
-  }, [{
-    k: 'stage',
-    l: 'Histórico'
-  }, {
-    k: 'artifacts',
-    l: 'Artefatos'
-  }, {
-    k: 'files',
-    l: `Docs (${item.files.length})`
-  }].map(t => /*#__PURE__*/React.createElement("button", {
-    key: t.k,
-    onClick: () => setTab(t.k),
-    style: {
-      flex: 1,
-      padding: '8px 0',
-      border: 'none',
-      borderRadius: 6,
-      cursor: 'pointer',
-      fontSize: 12,
-      fontWeight: 600,
-      background: tab === t.k ? T : 'transparent',
-      color: tab === t.k ? '#FFF' : G
-    }
-  }, t.l))), tab === 'stage' && /*#__PURE__*/React.createElement(Card, {
-    title: "Histórico",
-    noPad: true
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '6px 16px 12px'
-    }
-  }, STAGES.filter(s => s.key !== 'bugfix').slice(0, ((SM[item.stage] || {}).idx || 0) + 1).map((s, i, arr) => /*#__PURE__*/React.createElement("div", {
-    key: s.key,
-    style: {
-      display: 'flex',
-      gap: 12
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      width: 22
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 24,
-      height: 24,
-      borderRadius: '50%',
-      background: i === arr.length - 1 && !bug ? s.color : DK,
-      border: `2px solid ${i === arr.length - 1 && !bug ? s.color : BD}`,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: 12,
-      zIndex: 1
-    }
-  }, s.icon), i < arr.length - 1 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 2,
-      flex: 1,
-      background: BD,
-      minHeight: 10
-    }
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      paddingBottom: 10
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: W,
-      fontSize: 12,
-      fontWeight: 600
-    }
-  }, s.label), /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: i === arr.length - 1 && !bug ? s.color : G,
-      fontSize: 10
-    }
-  }, i === arr.length - 1 && !bug ? '● Em andamento' : '✓ Concluído')))), bug && /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: 12
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      width: 22
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 24,
-      height: 24,
-      borderRadius: '50%',
-      background: '#FF5252',
-      border: '2px solid #FF5252',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: 12
-    }
-  }, "🐛")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: W,
-      fontSize: 12,
-      fontWeight: 600
-    }
-  }, "Em Bugfix"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: '#FF5252',
-      fontSize: 10
-    }
-  }, "● Correção em andamento"))))), tab === 'artifacts' && /*#__PURE__*/React.createElement(Card, {
-    title: "Artefatos"
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(7,1fr)',
-      gap: 6
-    }
-  }, ['hf', 'spec', 'deploy', 'qa', 'adr', 'cenario', 'zip'].map(a => /*#__PURE__*/React.createElement("div", {
-    key: a,
-    style: {
-      background: DK,
-      borderRadius: 6,
-      padding: 10,
-      textAlign: 'center',
-      border: `1px solid ${item.artifacts[a] ? '#43A047' : BD}`
-    }
-  }, /*#__PURE__*/React.createElement(ADot, {
-    has: item.artifacts[a]
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      color: item.artifacts[a] ? W : G,
-      fontSize: 9,
-      textTransform: 'uppercase',
-      marginTop: 4,
-      fontWeight: 600
-    }
-  }, a))))), tab === 'files' && /*#__PURE__*/React.createElement(Card, {
-    title: "Documentos"
-  }, /*#__PURE__*/React.createElement(UploadZone, {
-    label: "Upload adicional",
-    color: T,
-    onUpload: () => onUpload(item.us, 'other')
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 10
-    }
-  }, /*#__PURE__*/React.createElement(FileList, {
-    files: item.files
-  }))));
-}
-function ArchMatrix({
-  stories
-}) {
-  const arts = ['hf', 'spec', 'deploy', 'qa', 'adr', 'cenario', 'zip'];
-  return /*#__PURE__*/React.createElement(Card, {
-    title: "Matriz de Rastreabilidade"
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      overflowX: 'auto'
-    }
-  }, /*#__PURE__*/React.createElement("table", {
-    style: {
-      width: '100%',
-      borderCollapse: 'separate',
-      borderSpacing: '0 2px'
-    }
-  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
-    style: {
-      background: DH
-    }
-  }, /*#__PURE__*/React.createElement("th", {
-    style: {
-      color: TL,
-      fontSize: 10,
-      fontWeight: 700,
-      padding: '7px 8px',
-      textAlign: 'left'
-    }
-  }, "US"), /*#__PURE__*/React.createElement("th", {
-    style: {
-      color: TL,
-      fontSize: 10,
-      fontWeight: 700,
-      padding: '7px 8px',
-      textAlign: 'left'
-    }
-  }, "Estágio"), arts.map(a => /*#__PURE__*/React.createElement("th", {
-    key: a,
-    style: {
-      color: TL,
-      fontSize: 9,
-      fontWeight: 700,
-      padding: '7px 4px',
-      textAlign: 'center',
-      textTransform: 'uppercase'
-    }
-  }, a)))), /*#__PURE__*/React.createElement("tbody", null, stories.map((st, row) => /*#__PURE__*/React.createElement("tr", {
-    key: st.us,
-    style: {
-      background: row % 2 === 0 ? DK : 'transparent'
-    }
-  }, /*#__PURE__*/React.createElement("td", {
-    style: {
-      padding: '5px 8px'
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: TL,
-      fontSize: 10,
-      fontWeight: 700
-    }
-  }, st.us)), /*#__PURE__*/React.createElement("td", {
-    style: {
-      padding: '5px 8px'
-    }
-  }, /*#__PURE__*/React.createElement(Badge, {
-    text: ((SM[st.stage] || {}).label || "").split(' ').slice(0, 2).join(' '),
-    color: (SM[st.stage] || {}).color,
-    s: true
-  })), arts.map(a => /*#__PURE__*/React.createElement("td", {
-    key: a,
-    style: {
-      padding: '5px 4px',
-      textAlign: 'center'
-    }
-  }, /*#__PURE__*/React.createElement(ADot, {
-    has: st.artifacts[a]
-  })))))))));
+function StageProgress(props) {
+  var cur = props.cur;
+  var idx = stg(cur).idx || 0;
+  var main = STAGES.filter(function(s){return s.key!=='bugfix'});
+  var bug = cur==='bugfix';
+  var els = main.map(function(s,i) {
+    var done = !bug && i < idx;
+    var active = !bug && i === idx;
+    return React.createElement('div',{key:s.key,style:{display:'flex',alignItems:'center'}},
+      React.createElement('div',{style:{
+        width:active?32:22, height:active?32:22, borderRadius:'50%',
+        background:done?s.color:active?s.color:'#E3E7EE',
+        display:'flex', alignItems:'center', justifyContent:'center',
+        fontSize:active?14:10, border:active?'3px solid #fff':'none',
+        boxShadow:active?'0 0 0 2px '+s.color+', 0 2px 8px '+s.color+'40':'none',
+        color:done||active?'#fff':C.textMuted,
+        fontWeight:800, transition:'all .2s',
+      },title:s.label},
+        done ? '✓' : s.icon
+      ),
+      i < main.length-1 ? React.createElement('div',{style:{width:18,height:2,background:done?main[i+1].color:'#E3E7EE',borderRadius:1}}) : null
+    );
+  });
+  if (bug) {
+    els.push(React.createElement('div',{key:'bug',style:{display:'flex',alignItems:'center'}},
+      React.createElement('div',{style:{width:18,height:2,background:'#DC3545',borderRadius:1}}),
+      React.createElement('div',{style:{width:32,height:32,borderRadius:'50%',background:'#DC3545',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,border:'3px solid #fff',boxShadow:'0 0 0 2px #DC3545'}}, '🐛')
+    ));
+  }
+  return React.createElement('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:0}}, els);
 }
 
-/* ── App ── */
+/* ═══ GP CALENDAR ═══ */
+function GPCalendar(props) {
+  var _s = useState(props.year), cY=_s[0], sY=_s[1];
+  var _m = useState(props.month), cM=_m[0], sM=_m[1];
+  var dim = new Date(cY,cM+1,0).getDate();
+  var fd = new Date(cY,cM,1).getDay();
+  var mn = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var dn = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  var sd = useMemo(function(){var m={};props.stories.forEach(function(st){if(!st.plannedDate)return;var p=st.plannedDate.split('-');var y=+p[0],mo=+p[1],da=+p[2];if(y===cY&&mo-1===cM){if(!m[da])m[da]=[];m[da].push(st)}});return m},[props.stories,cY,cM]);
+  function prev(){if(cM===0){sM(11);sY(cY-1)}else sM(cM-1)}
+  function next(){if(cM===11){sM(0);sY(cY+1)}else sM(cM+1)}
+  var cells=[];for(var i=0;i<fd;i++)cells.push(null);for(var d=1;d<=dim;d++)cells.push(d);
+  var td=new Date();
+  function isT(d){return d&&cY===td.getFullYear()&&cM===td.getMonth()&&d===td.getDate()}
+
+  return React.createElement(Card, {title:'Calendário'},
+    React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}},
+      React.createElement('button',{onClick:prev,style:{background:C.row,border:'1px solid '+C.border,color:C.text,borderRadius:8,padding:'6px 14px',cursor:'pointer',fontSize:16,fontWeight:700}},'‹'),
+      React.createElement('span',{style:{color:C.text,fontSize:15,fontWeight:700}}, mn[cM]+' '+cY),
+      React.createElement('button',{onClick:next,style:{background:C.row,border:'1px solid '+C.border,color:C.text,borderRadius:8,padding:'6px 14px',cursor:'pointer',fontSize:16,fontWeight:700}},'›')
+    ),
+    React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:4}},
+      dn.map(function(d){return React.createElement('div',{key:d,style:{textAlign:'center',color:C.textMuted,fontSize:10,fontWeight:700,padding:4}},d)}),
+      cells.map(function(d,i) {
+        var sts = d ? (sd[d]||[]) : [];
+        return React.createElement('div',{key:i,style:{
+          background:d?(isT(d)?C.tealLight:C.card):'transparent',
+          borderRadius:8, minHeight:60, padding:4,
+          border:isT(d)?'2px solid '+C.teal:'1px solid '+(d?C.border:'transparent'),
+        }},
+          d ? React.createElement('div',{style:{color:isT(d)?C.teal:C.textMuted,fontSize:11,fontWeight:600,marginBottom:2}},d) : null,
+          sts.slice(0,3).map(function(st) {
+            var sg = stg(st.stage);
+            return React.createElement('div',{key:st.us,onClick:function(){props.onStory(st.us)},style:{
+              display:'flex',alignItems:'center',gap:3,cursor:'pointer',
+              padding:'1px 4px',borderRadius:4,background:sg.color+'18',marginBottom:1,
+            },title:st.us+': '+st.title},
+              React.createElement('div',{style:{width:7,height:7,borderRadius:'50%',background:sg.color,flexShrink:0}}),
+              React.createElement('span',{style:{color:C.text,fontSize:8,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},st.us.replace('CRMB2B-',''))
+            );
+          }),
+          sts.length>3?React.createElement('span',{style:{color:C.textMuted,fontSize:8,textAlign:'center',display:'block'}},'+' +(sts.length-3)):null
+        );
+      })
+    ),
+    React.createElement('div',{style:{display:'flex',gap:10,marginTop:12,flexWrap:'wrap',justifyContent:'center'}},
+      STAGES.map(function(s){return React.createElement('div',{key:s.key,style:{display:'flex',alignItems:'center',gap:4}},
+        React.createElement('div',{style:{width:8,height:8,borderRadius:'50%',background:s.color}}),
+        React.createElement('span',{style:{color:C.textMuted,fontSize:9}},s.label)
+      )})
+    )
+  );
+}
+
+/* ═══ GP DASHBOARD ═══ */
+function GPDash(props) {
+  var stories=props.stories, epics=props.epics;
+  var total=stories.length;
+  var hom=stories.filter(function(s){return s.stage==='homologacao'}).length;
+  var late=stories.filter(function(s){return s.plannedDate&&!s.actualDate&&new Date(s.plannedDate)<new Date()}).length;
+  var active=stories.filter(function(s){return !(['backlog','homologacao'].indexOf(s.stage)>=0)}).length;
+  var bugs=stories.filter(function(s){return s.stage==='bugfix'}).length;
+  var byS=useMemo(function(){var m={};STAGES.forEach(function(s){m[s.key]=0});stories.forEach(function(s){m[s.stage]++});return m},[stories]);
+  var _t=useState('pipeline'),tab=_t[0],setTab=_t[1];
+
+  return React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:20}},
+    React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:14}},
+      React.createElement(MetricCard,{label:'Total',value:total,sub:epics.length+' épicos',color:C.teal}),
+      React.createElement(MetricCard,{label:'Andamento',value:active,color:'#2563EB'}),
+      React.createElement(MetricCard,{label:'Homologadas',value:hom,sub:Math.round(hom/total*100)+'%',color:'#16A34A'}),
+      React.createElement(MetricCard,{label:'Bugfix',value:bugs,sub:bugs>0?'Em correção':'Nenhum',color:'#DC3545'}),
+      React.createElement(MetricCard,{label:'Atrasadas',value:late,sub:late>0?'Atenção':'OK',color:late>0?'#DC3545':'#94A3B8'})
+    ),
+    React.createElement('div',{style:{display:'flex',gap:4,background:C.card,borderRadius:10,padding:3,alignSelf:'flex-start',border:'1px solid '+C.border}},
+      [{k:'pipeline',l:'Pipeline',i:'▦'},{k:'calendar',l:'Calendário',i:'📅'}].map(function(t){
+        return React.createElement('button',{key:t.k,onClick:function(){setTab(t.k)},style:{
+          background:tab===t.k?C.teal:'transparent',color:tab===t.k?'#fff':C.textSec,
+          border:'none',borderRadius:8,padding:'7px 16px',cursor:'pointer',fontSize:12,fontWeight:600,
+        }},t.i+' '+t.l);
+      })
+    ),
+    tab==='pipeline' ? React.createElement(Card,{title:'Pipeline do Projeto'},
+      React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat('+STAGES.length+',1fr)',gap:6}},
+        STAGES.map(function(s,i){
+          return React.createElement('div',{key:s.key,style:{background:C.row,borderRadius:10,padding:'12px 6px',display:'flex',flexDirection:'column',alignItems:'center',gap:6,borderTop:'3px solid '+s.color,position:'relative'}},
+            React.createElement('span',{style:{fontSize:18}},s.icon),
+            React.createElement('span',{style:{color:C.textSec,fontSize:9,fontWeight:600,textAlign:'center',lineHeight:1.2,minHeight:22}},s.label),
+            React.createElement('span',{style:{background:s.color,color:'#fff',borderRadius:12,padding:'2px 10px',fontSize:18,fontWeight:800}},byS[s.key]),
+            i<STAGES.length-1&&s.key!=='homologacao'?React.createElement('div',{style:{position:'absolute',right:-7,top:'50%',transform:'translateY(-50%)',color:C.border,fontSize:12}},'›'):null
+          );
+        })
+      )
+    ) : React.createElement(GPCalendar,{stories:stories,year:2026,month:5,onStory:props.onStory}),
+    React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}},
+      React.createElement(Card,{title:'Épicos',badge:React.createElement(Btn,{s:true,onClick:props.onNewE},'+ Épico')},
+        React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:10}},
+          epics.map(function(ep){
+            var es=stories.filter(function(s){return s.epicId===ep.id});
+            var d=es.filter(function(s){return s.stage==='homologacao'}).length;
+            var pct=es.length>0?Math.round(d/es.length*100):0;
+            return React.createElement('div',{key:ep.id,onClick:function(){props.onEpic(ep.id)},style:{
+              background:C.row,borderRadius:10,padding:14,cursor:'pointer',borderLeft:'3px solid '+ep.color,transition:'background .15s',
+            },onMouseEnter:function(e){e.currentTarget.style.background=C.cardHover},onMouseLeave:function(e){e.currentTarget.style.background=C.row}},
+              React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
+                React.createElement('div',null,
+                  React.createElement('span',{style:{color:C.textMuted,fontSize:10,fontWeight:700}},ep.id),
+                  React.createElement('div',{style:{color:C.text,fontSize:14,fontWeight:700,marginTop:2}},ep.name)
+                ),
+                React.createElement('span',{style:{color:C.text,fontSize:22,fontWeight:800}},pct+'%')
+              ),
+              React.createElement('div',{style:{display:'flex',gap:8,marginTop:10,alignItems:'center'}},
+                React.createElement(ProgressBar,{value:d,max:es.length,color:ep.color}),
+                React.createElement('span',{style:{color:C.textMuted,fontSize:11}},d+'/'+es.length)
+              )
+            );
+          })
+        )
+      ),
+      React.createElement(Card,{title:'Atrasadas & Bugfix'},
+        React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+          stories.filter(function(s){return (s.plannedDate&&!s.actualDate&&new Date(s.plannedDate)<new Date())||s.stage==='bugfix'}).map(function(st){
+            var sg=stg(st.stage);
+            return React.createElement('div',{key:st.us,onClick:function(){props.onStory(st.us)},style:{
+              display:'flex',alignItems:'center',gap:10,padding:'8px 12px',background:C.row,borderRadius:8,cursor:'pointer',borderLeft:'3px solid '+(st.stage==='bugfix'?'#DC3545':'#F59E0B'),
+            },onMouseEnter:function(e){e.currentTarget.style.background=C.cardHover},onMouseLeave:function(e){e.currentTarget.style.background=C.row}},
+              React.createElement(Badge,{text:st.us,color:sg.color,s:true}),
+              React.createElement('span',{style:{color:C.text,fontSize:12,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},st.title),
+              st.stage==='bugfix'?React.createElement(Badge,{text:'BUG',color:'#DC3545',s:true}):React.createElement(Badge,{text:'ATRASO',color:'#F59E0B',s:true})
+            );
+          }),
+          stories.filter(function(s){return (s.plannedDate&&!s.actualDate&&new Date(s.plannedDate)<new Date())||s.stage==='bugfix'}).length===0?React.createElement('div',{style:{color:C.textMuted,fontSize:12,textAlign:'center',padding:20}},'Nenhum item'):null
+        )
+      )
+    ),
+    React.createElement(Card,{title:'Histórias',badge:React.createElement(Btn,{s:true,onClick:props.onNewS},'+ História')},
+      React.createElement('table',{style:{width:'100%',borderCollapse:'separate',borderSpacing:'0 3px'}},
+        React.createElement('thead',null,React.createElement('tr',null,
+          ['US','Título','Épico','Estágio','Prevista','Real','Pri'].map(function(h){return React.createElement('th',{key:h,style:{color:C.textMuted,fontSize:10,fontWeight:700,textTransform:'uppercase',padding:'8px 12px',textAlign:'left',borderBottom:'1px solid '+C.border}},h)})
+        )),
+        React.createElement('tbody',null, stories.map(function(st,i){
+          var sg=stg(st.stage); var ep=EPICS.find(function(e){return e.id===st.epicId})||{};
+          var isLate=st.plannedDate&&!st.actualDate&&new Date(st.plannedDate)<new Date();
+          return React.createElement('tr',{key:st.us,onClick:function(){props.onStory(st.us)},style:{background:i%2===0?C.row:'transparent',cursor:'pointer',transition:'background .1s'},
+            onMouseEnter:function(e){e.currentTarget.style.background=C.cardHover},onMouseLeave:function(e){e.currentTarget.style.background=i%2===0?C.row:'transparent'}},
+            React.createElement('td',{style:{padding:'9px 12px'}},React.createElement('span',{style:{color:C.teal,fontSize:12,fontWeight:700}},st.us)),
+            React.createElement('td',{style:{padding:'9px 12px',color:C.text,fontSize:12,maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},st.title),
+            React.createElement('td',{style:{padding:'9px 12px'}},React.createElement(Badge,{text:(ep.name||'–').split(' ')[0],color:ep.color||C.textMuted,s:true})),
+            React.createElement('td',{style:{padding:'9px 12px'}},React.createElement(Badge,{text:(sg.label||'–').split(' ').slice(0,2).join(' '),color:sg.color||C.textMuted,s:true})),
+            React.createElement('td',{style:{padding:'9px 12px',color:isLate?'#DC3545':C.textMuted,fontSize:12,fontWeight:isLate?700:400}},st.plannedDate||'–'),
+            React.createElement('td',{style:{padding:'9px 12px',color:st.actualDate?'#16A34A':C.textMuted,fontSize:12}},st.actualDate||'–'),
+            React.createElement('td',{style:{padding:'9px 12px'}},React.createElement(Badge,{text:st.priority[0].toUpperCase(),color:PRI[st.priority],s:true}))
+          );
+        }))
+      )
+    )
+  );
+}
+
+/* ═══ GP EPIC DETAIL ═══ */
+function GPEpicDetail(props) {
+  var epic=props.epic, stories=props.stories;
+  var es=stories.filter(function(s){return s.epicId===epic.id});
+  var byS={};STAGES.forEach(function(s){byS[s.key]=[]});es.forEach(function(s){if(byS[s.stage])byS[s.stage].push(s)});
+  var done=byS.homologacao.length;
+  return React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:14}},
+    React.createElement(Btn,{s:true,color:C.textMuted,onClick:props.onBack},'← Voltar'),
+    React.createElement('div',{style:{background:C.card,borderRadius:12,padding:'22px 26px',borderLeft:'3px solid '+epic.color,border:'1px solid '+C.border,boxShadow:C.shadow}},
+      React.createElement('div',{style:{display:'flex',justifyContent:'space-between'}},
+        React.createElement('div',null,
+          React.createElement('span',{style:{color:C.textMuted,fontSize:12,fontWeight:700}},epic.id),
+          React.createElement('div',{style:{color:C.text,fontSize:20,fontWeight:800,marginTop:4}},epic.name),
+          React.createElement('div',{style:{color:C.textSec,fontSize:13,marginTop:6}},epic.desc)
+        ),
+        React.createElement('div',{style:{textAlign:'center'}},
+          React.createElement('div',{style:{color:C.text,fontSize:40,fontWeight:800}},es.length>0?Math.round(done/es.length*100):0),
+          React.createElement('div',{style:{color:C.textMuted,fontSize:11,marginTop:2}},'% CONCLUÍDO')
+        )
+      )
+    ),
+    React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat('+STAGES.length+',1fr)',gap:5,overflowX:'auto'}},
+      STAGES.map(function(s){
+        return React.createElement('div',{key:s.key,style:{minWidth:110}},
+          React.createElement('div',{style:{background:s.color,color:'#fff',padding:'6px 8px',borderRadius:'8px 8px 0 0',fontWeight:700,fontSize:9,display:'flex',justifyContent:'space-between',textTransform:'uppercase'}},
+            React.createElement('span',null,s.label.split(' ').slice(0,2).join(' ')),
+            React.createElement('span',{style:{background:'rgba(0,0,0,.2)',borderRadius:8,padding:'0 6px'}},byS[s.key].length)
+          ),
+          React.createElement('div',{style:{background:C.row,borderRadius:'0 0 8px 8px',padding:5,minHeight:60,border:'1px solid '+C.border,borderTop:'none',display:'flex',flexDirection:'column',gap:4}},
+            byS[s.key].map(function(st){
+              return React.createElement('div',{key:st.us,onClick:function(){props.onStory(st.us)},style:{background:C.card,borderRadius:6,padding:'6px 8px',borderLeft:'3px solid '+PRI[st.priority],cursor:'pointer',boxShadow:'0 1px 2px rgba(0,0,0,.04)'}},
+                React.createElement('div',{style:{color:C.teal,fontSize:9,fontWeight:700}},st.us),
+                React.createElement('div',{style:{color:C.text,fontSize:9,marginTop:2}},st.title)
+              );
+            })
+          )
+        );
+      })
+    )
+  );
+}
+
+/* ═══ ARCHITECT DASHBOARD ═══ */
+function ArchDash(props) {
+  var stories=props.stories;
+  var total=stories.length;
+  var hom=stories.filter(function(s){return s.stage==='homologacao'}).length;
+  var active=stories.filter(function(s){return ['backlog','homologacao'].indexOf(s.stage)<0});
+  var bugs=stories.filter(function(s){return s.stage==='bugfix'}).length;
+  return React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:20}},
+    React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:14}},
+      React.createElement(MetricCard,{label:'Total',value:total,color:C.teal}),
+      React.createElement(MetricCard,{label:'Andamento',value:active.length,color:'#2563EB'}),
+      React.createElement(MetricCard,{label:'Homologadas',value:hom,sub:Math.round(hom/total*100)+'%',color:'#16A34A'}),
+      React.createElement(MetricCard,{label:'Bugfix',value:bugs,color:'#DC3545'}),
+      React.createElement(MetricCard,{label:'Deploy',value:'87%',sub:'success',color:'#EA580C'})
+    ),
+    React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:14}},
+      React.createElement(Card,{title:'Pipeline'},
+        React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:8}},
+          STAGES.map(function(s){
+            var c=stories.filter(function(st){return st.stage===s.key}).length;
+            var mx=Math.max.apply(null,STAGES.map(function(ss){return stories.filter(function(st){return st.stage===ss.key}).length}))||1;
+            return React.createElement('div',{key:s.key,style:{display:'flex',alignItems:'center',gap:8}},
+              React.createElement('span',{style:{fontSize:13}},s.icon),
+              React.createElement('span',{style:{color:C.textSec,fontSize:10,width:65,flexShrink:0}},s.label.split(' ').slice(0,2).join(' ')),
+              React.createElement(ProgressBar,{value:c,max:mx,color:s.color,h:8}),
+              React.createElement('span',{style:{color:C.text,fontSize:13,fontWeight:700,width:20,textAlign:'right'}},c)
+            );
+          })
+        )
+      ),
+      React.createElement(Card,{title:'Deploy Success'},React.createElement('div',{style:{display:'flex',justifyContent:'center',paddingTop:8}},React.createElement(Gauge,{value:87,label:'First-Pass'}))),
+      React.createElement(Card,{title:'QA Pass Rate'},React.createElement('div',{style:{display:'flex',justifyContent:'center',paddingTop:8}},React.createElement(Gauge,{value:83,label:'Atendidos'})))
+    ),
+    React.createElement(Card,{title:'Itens Ativos'},
+      React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+        active.map(function(st){
+          var sg=stg(st.stage);
+          return React.createElement('div',{key:st.us,onClick:function(){props.onSelect(st)},style:{
+            display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:C.row,borderRadius:10,cursor:'pointer',transition:'background .15s',
+          },onMouseEnter:function(e){e.currentTarget.style.background=C.cardHover},onMouseLeave:function(e){e.currentTarget.style.background=C.row}},
+            React.createElement(Badge,{text:st.us,color:sg.color,s:true}),
+            React.createElement('span',{style:{color:C.text,fontSize:12,flex:1}},st.title),
+            React.createElement(Badge,{text:(sg.label||'').split(' ').slice(0,2).join(' '),color:sg.color,s:true})
+          );
+        })
+      )
+    )
+  );
+}
+
+/* ═══ ARCHITECT BOARD ═══ */
+function ArchBoard(props) {
+  var gr={};STAGES.forEach(function(s){gr[s.key]=[]});props.stories.forEach(function(s){if(gr[s.stage])gr[s.stage].push(s)});
+  return React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat('+STAGES.length+',1fr)',gap:6,overflowX:'auto'}},
+    STAGES.map(function(s){
+      return React.createElement('div',{key:s.key,style:{minWidth:120}},
+        React.createElement('div',{style:{background:s.color,color:'#fff',padding:'8px 10px',borderRadius:'10px 10px 0 0',fontWeight:700,fontSize:10,display:'flex',justifyContent:'space-between',textTransform:'uppercase'}},
+          React.createElement('span',null,s.label.split(' ').slice(0,2).join(' ')),
+          React.createElement('span',{style:{background:'rgba(0,0,0,.2)',borderRadius:10,padding:'0 7px'}},gr[s.key].length)
+        ),
+        React.createElement('div',{style:{background:C.row,borderRadius:'0 0 10px 10px',padding:6,minHeight:90,border:'1px solid '+C.border,borderTop:'none',display:'flex',flexDirection:'column',gap:5}},
+          gr[s.key].map(function(st){
+            return React.createElement('div',{key:st.us,onClick:function(){props.onSelect(st)},style:{
+              background:C.card,borderRadius:8,padding:'9px 10px',borderLeft:'3px solid '+PRI[st.priority],
+              cursor:'pointer',boxShadow:'0 1px 2px rgba(0,0,0,.04)',transition:'box-shadow .15s',
+            },onMouseEnter:function(e){e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,.08)'},onMouseLeave:function(e){e.currentTarget.style.boxShadow='0 1px 2px rgba(0,0,0,.04)'}},
+              React.createElement('div',{style:{color:C.teal,fontSize:10,fontWeight:700}},st.us),
+              React.createElement('div',{style:{color:C.text,fontSize:10,marginTop:3}},st.title),
+              React.createElement('div',{style:{display:'flex',gap:3,marginTop:6}},
+                ['hf','spec','deploy','qa'].map(function(a){return React.createElement(ArtifactDot,{key:a,has:st.artifacts[a]})})
+              )
+            );
+          })
+        )
+      );
+    })
+  );
+}
+
+/* ═══ ARCHITECT DETAIL ═══ */
+function ArchDetail(props) {
+  var item=props.item, epics=props.epics;
+  var _t=useState('stage'),tab=_t[0],setTab=_t[1];
+  var sg=stg(item.stage);
+  var ep=(epics.find(function(e){return e.id===item.epicId})||{});
+  var bug=item.stage==='bugfix';
+
+  return React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:14}},
+    React.createElement(Btn,{s:true,color:C.textMuted,onClick:props.onBack},'← Voltar'),
+    React.createElement('div',{style:{background:C.card,borderRadius:12,padding:'22px 26px',borderLeft:'3px solid '+(sg.color||C.teal),border:'1px solid '+C.border,boxShadow:C.shadow}},
+      React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12}},
+        React.createElement('div',{style:{flex:1}},
+          React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:8,flexWrap:'wrap'}},
+            React.createElement('span',{style:{color:C.teal,fontSize:20,fontWeight:800}},item.us),
+            React.createElement(Badge,{text:sg.label||item.stage,color:sg.color}),
+            React.createElement(Badge,{text:item.priority,color:PRI[item.priority]}),
+            ep.name?React.createElement(Badge,{text:ep.name,color:ep.color,s:true}):null
+          ),
+          React.createElement('div',{style:{color:C.text,fontSize:15,fontWeight:600}},item.title),
+          React.createElement('div',{style:{color:C.textMuted,fontSize:12,marginTop:6,display:'flex',gap:14,flexWrap:'wrap'}},
+            React.createElement('span',null,'Sprint: ',React.createElement('span',{style:{color:C.teal}},item.sprint||'–')),
+            React.createElement('span',null,'Resp: ',React.createElement('span',{style:{color:C.teal}},item.assignee||'–')),
+            React.createElement('span',null,'Prevista: ',React.createElement('span',{style:{color:C.teal}},item.plannedDate||'–'))
+          )
+        ),
+        !bug?React.createElement(Btn,{s:true,color:'#DC3545',onClick:function(){props.onBugfix(item.us)}},'🐛 Bug'):null
+      ),
+      React.createElement('div',{style:{marginTop:16}},React.createElement(StageProgress,{cur:item.stage}))
+    ),
+    React.createElement('div',{style:{background:C.card,borderRadius:12,padding:'18px 22px',border:'1px solid '+(sg.color||C.border)+'40',boxShadow:C.shadow}},
+      React.createElement('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:14}},
+        React.createElement('span',{style:{fontSize:22}},sg.icon||'📋'),
+        React.createElement('div',{style:{flex:1}},
+          React.createElement('div',{style:{color:C.text,fontSize:14,fontWeight:700}},'Etapa: '+(sg.label||'')),
+          sg.desc?React.createElement('div',{style:{color:C.textSec,fontSize:12,marginTop:2}},sg.desc):null
+        )
+      ),
+      React.createElement(UploadZone,{label:sg.uploadHint||'Upload — '+(sg.label||''),onUpload:function(){props.onUpload(item.us,item.stage==='hf'?'hf':item.stage==='spec'?'spec':item.stage==='bugfix'?'bugfix':'other')}}),
+      sg.devops?React.createElement('div',{style:{background:'#EEF2FF',borderRadius:10,padding:14,border:'1px solid #C7D2FE',marginTop:12}},
+        React.createElement('div',{style:{color:C.text,fontSize:13,fontWeight:700}},'💡 No chat do Claude, digite: ',React.createElement('code',{style:{color:'#4F46E5',background:'#E0E7FF',padding:'2px 8px',borderRadius:4}},'/devops '+item.us)),
+        (item.files.filter(function(f){return f.type==='hf'}).length>0)?React.createElement('div',{style:{marginTop:8,display:'flex',alignItems:'center',gap:6}},
+          React.createElement('span',{style:{color:'#16A34A',fontSize:13}},'✓'),
+          React.createElement('span',{style:{color:'#16A34A',fontSize:12,fontWeight:600}},'HF: '+(item.files.find(function(f){return f.type==='hf'})||{}).name)
+        ):null
+      ):null,
+      bug?React.createElement('div',{style:{background:'#FEF2F2',borderRadius:10,padding:14,border:'1px solid #FECACA',marginTop:12}},
+        React.createElement('div',{style:{color:C.text,fontSize:13,fontWeight:700}},'🐛 Bug Reportado'),
+        React.createElement('div',{style:{color:C.textSec,fontSize:12,marginTop:4}},'Suba o formulário de BugFix e evidências. Ao concluir, clique "Concluir Bugfix" para retornar.')
+      ):null,
+      item.files.length>0?React.createElement('div',{style:{marginTop:14}},
+        React.createElement('div',{style:{color:C.textMuted,fontSize:10,fontWeight:600,textTransform:'uppercase',marginBottom:6}},'Arquivos'),
+        React.createElement(FileList,{files:item.files})
+      ):null,
+      React.createElement('div',{style:{display:'flex',gap:10,justifyContent:'flex-end',marginTop:16}},
+        bug?React.createElement(Btn,{color:'#16A34A',onClick:function(){props.onBugfixResolve(item.us)}},'✓ Concluir Bugfix'):null,
+        !bug&&sg.action?React.createElement(Btn,{color:sg.color,onClick:function(){props.onAdvance(item.us)}},sg.action+' →'):null,
+        item.stage==='homologacao'?React.createElement(Badge,{text:'✅ Ciclo Completo',color:'#16A34A'}):null
+      )
+    ),
+    React.createElement('div',{style:{display:'flex',gap:3,background:C.row,borderRadius:10,padding:3,border:'1px solid '+C.border}},
+      [{k:'stage',l:'Histórico'},{k:'artifacts',l:'Artefatos'},{k:'files',l:'Docs ('+item.files.length+')'}].map(function(t){
+        return React.createElement('button',{key:t.k,onClick:function(){setTab(t.k)},style:{
+          flex:1,padding:'9px 0',border:'none',borderRadius:8,cursor:'pointer',
+          fontSize:12,fontWeight:600,background:tab===t.k?C.teal:'transparent',
+          color:tab===t.k?'#fff':C.textSec,
+        }},t.l);
+      })
+    ),
+    tab==='stage'?React.createElement(Card,{title:'Histórico',noPad:true},
+      React.createElement('div',{style:{padding:'10px 20px 16px'}},
+        STAGES.filter(function(s){return s.key!=='bugfix'}).slice(0,(stg(item.stage).idx||0)+1).map(function(s,i,arr){
+          var isLast=i===arr.length-1&&!bug;
+          return React.createElement('div',{key:s.key,style:{display:'flex',gap:14}},
+            React.createElement('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',width:24}},
+              React.createElement('div',{style:{width:26,height:26,borderRadius:'50%',background:isLast?s.color:'#E3E7EE',border:'2px solid '+(isLast?s.color:'#E3E7EE'),display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,color:isLast?'#fff':C.textMuted,zIndex:1}},s.icon),
+              i<arr.length-1?React.createElement('div',{style:{width:2,flex:1,background:'#E3E7EE',minHeight:12}}):null
+            ),
+            React.createElement('div',{style:{paddingBottom:12}},
+              React.createElement('div',{style:{color:C.text,fontSize:13,fontWeight:600}},s.label),
+              React.createElement('div',{style:{color:isLast?s.color:C.textMuted,fontSize:11}},isLast?'● Em andamento':'✓ Concluído')
+            )
+          );
+        }),
+        bug?React.createElement('div',{style:{display:'flex',gap:14}},
+          React.createElement('div',{style:{width:26,height:26,borderRadius:'50%',background:'#DC3545',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,color:'#fff'}},'🐛'),
+          React.createElement('div',null,
+            React.createElement('div',{style:{color:C.text,fontSize:13,fontWeight:600}},'Em Bugfix'),
+            React.createElement('div',{style:{color:'#DC3545',fontSize:11}},'● Correção em andamento')
+          )
+        ):null
+      )
+    ):null,
+    tab==='artifacts'?React.createElement(Card,{title:'Artefatos'},
+      React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:8}},
+        ['hf','spec','deploy','qa','adr','cenario','zip'].map(function(a){
+          return React.createElement('div',{key:a,style:{background:C.row,borderRadius:10,padding:14,textAlign:'center',border:'1px solid '+(item.artifacts[a]?'#86EFAC':C.border)}},
+            React.createElement(ArtifactDot,{has:item.artifacts[a]}),
+            React.createElement('div',{style:{color:item.artifacts[a]?C.text:C.textMuted,fontSize:10,textTransform:'uppercase',marginTop:6,fontWeight:600}},a)
+          );
+        })
+      )
+    ):null,
+    tab==='files'?React.createElement(Card,{title:'Documentos'},
+      React.createElement(UploadZone,{label:'Upload adicional',onUpload:function(){props.onUpload(item.us,'other')}}),
+      React.createElement('div',{style:{marginTop:12}},React.createElement(FileList,{files:item.files}))
+    ):null
+  );
+}
+
+/* ═══ ARCHITECT MATRIX ═══ */
+function ArchMatrix(props) {
+  var arts=['hf','spec','deploy','qa','adr','cenario','zip'];
+  return React.createElement(Card,{title:'Matriz de Rastreabilidade'},
+    React.createElement('table',{style:{width:'100%',borderCollapse:'separate',borderSpacing:'0 3px'}},
+      React.createElement('thead',null,React.createElement('tr',null,
+        React.createElement('th',{style:{color:C.textMuted,fontSize:10,fontWeight:700,padding:'8px 10px',textAlign:'left',borderBottom:'1px solid '+C.border}},'US'),
+        React.createElement('th',{style:{color:C.textMuted,fontSize:10,fontWeight:700,padding:'8px 10px',textAlign:'left',borderBottom:'1px solid '+C.border}},'Estágio'),
+        arts.map(function(a){return React.createElement('th',{key:a,style:{color:C.textMuted,fontSize:9,fontWeight:700,padding:'8px 6px',textAlign:'center',textTransform:'uppercase',borderBottom:'1px solid '+C.border}},a)})
+      )),
+      React.createElement('tbody',null, props.stories.map(function(st,i){
+        var sg=stg(st.stage);
+        return React.createElement('tr',{key:st.us,style:{background:i%2===0?C.row:'transparent'}},
+          React.createElement('td',{style:{padding:'6px 10px'}},React.createElement('span',{style:{color:C.teal,fontSize:11,fontWeight:700}},st.us)),
+          React.createElement('td',{style:{padding:'6px 10px'}},React.createElement(Badge,{text:(sg.label||'').split(' ').slice(0,2).join(' '),color:sg.color,s:true})),
+          arts.map(function(a){return React.createElement('td',{key:a,style:{padding:'6px 6px',textAlign:'center'}},React.createElement(ArtifactDot,{has:st.artifacts[a]}))})
+        );
+      }))
+    )
+  );
+}
+
+/* ═══ APP ═══ */
 function App() {
-  const [panel, setPanel] = useState('gp');
-  const [gpV, setGpV] = useState('dash');
-  const [archV, setArchV] = useState('dash');
-  const [selEp, setSelEp] = useState(null);
-  const [selUs, setSelUs] = useState(null);
-  const [stories, setStories] = useState(INIT);
-  const [epics] = useState(EPICS);
-  const [showNE, setShowNE] = useState(false);
-  const [showNS, setShowNS] = useState(false);
-  const [toast, setToast] = useState(null);
-  const [fe, setFe] = useState({
-    name: '',
-    desc: '',
-    owner: 'Alberto',
-    s: '',
-    e: ''
-  });
-  const [fs, setFs] = useState({
-    us: '',
-    title: '',
-    epicId: 'EP-01',
-    priority: 'medium',
-    assignee: 'Alberto',
-    planned: '',
-    sprint: ''
-  });
-  const selStory = useMemo(() => stories.find(s => s.us === selUs), [stories, selUs]);
-  const tt = useCallback((msg, c) => {
-    setToast({
-      msg,
-      c
-    });
-    setTimeout(() => setToast(null), 3000);
-  }, []);
-  function advance(us) {
-    setStories(p => p.map(s => {
-      if (s.us !== us) return s;
-      var sd = SM[s.stage] || {};
-      if (!sd.next) return s;
-      var u = {
-        ...s,
-        stage: sd.next
-      };
-      if (sd.next === 'homologacao') u.actualDate = new Date().toISOString().slice(0, 10);
+  var _p=useState('gp'),panel=_p[0],setPanel=_p[1];
+  var _gv=useState('dash'),gpV=_gv[0],setGpV=_gv[1];
+  var _av=useState('dash'),archV=_av[0],setArchV=_av[1];
+  var _ep=useState(null),selEp=_ep[0],setSelEp=_ep[1];
+  var _us=useState(null),selUs=_us[0],setSelUs=_us[1];
+  var _st=useState(INIT),stories=_st[0],setStories=_st[1];
+  var _ne=useState(false),showNE=_ne[0],setShowNE=_ne[1];
+  var _ns=useState(false),showNS=_ns[0],setShowNS=_ns[1];
+  var _to=useState(null),toast=_to[0],setToast=_to[1];
+  var _fe=useState({name:'',desc:'',owner:'Alberto',s:'',e:''}),fe=_fe[0],setFe=_fe[1];
+  var _fs=useState({us:'',title:'',epicId:'EP-01',priority:'medium',assignee:'Alberto',planned:'',sprint:''}),fs=_fs[0],setFs=_fs[1];
+
+  var selStory=useMemo(function(){return stories.find(function(s){return s.us===selUs})},[stories,selUs]);
+  var tt=useCallback(function(msg,c){setToast({msg:msg,c:c});setTimeout(function(){setToast(null)},3000)},[]);
+
+  function advance(us){
+    setStories(function(p){return p.map(function(s){
+      if(s.us!==us)return s;
+      var sd=SM[s.stage]||{};if(!sd.next)return s;
+      var u=Object.assign({},s,{stage:sd.next});
+      if(sd.next==='homologacao')u.actualDate=new Date().toISOString().slice(0,10);
       return u;
-    }));
-    var st = stories.find(s => s.us === us) || {};
-    var cs = SM[st.stage] || {};
-    var ns = SM[cs.next] || {};
-    tt(us + ' → ' + ns.label, ns.color || T);
+    })});
+    var st=stories.find(function(s){return s.us===us})||{};
+    var cs=SM[st.stage]||{};var ns=SM[cs.next]||{};
+    tt(us+' → '+ns.label,ns.color||C.teal);
   }
-  function upload(us, type) {
-    const v = 'v' + (Math.random() * 2 + 1).toFixed(1);
-    setStories(p => p.map(s => {
-      if (s.us !== us) return s;
-      const nf = {
-        name: `${type.toUpperCase()}_${us}.docx`,
-        type,
-        date: new Date().toISOString().slice(0, 10),
-        version: v
-      };
-      const a = {
-        ...s.artifacts
-      };
-      if (type === 'hf') a.hf = true;
-      if (type === 'spec') a.spec = true;
-      return {
-        ...s,
-        files: [...s.files, nf],
-        artifacts: a
-      };
-    }));
-    tt(`Upload: ${type.toUpperCase()}_${us}.docx (${v})`, '#43A047');
+  function upload(us,type){
+    var v='v'+(Math.random()*2+1).toFixed(1);
+    setStories(function(p){return p.map(function(s){
+      if(s.us!==us)return s;
+      var nf={name:type.toUpperCase()+'_'+us+'.docx',type:type,date:new Date().toISOString().slice(0,10),version:v};
+      var a=Object.assign({},s.artifacts);if(type==='hf')a.hf=true;if(type==='spec')a.spec=true;
+      return Object.assign({},s,{files:s.files.concat([nf]),artifacts:a});
+    })});
+    tt('Upload: '+type.toUpperCase()+'_'+us+' ('+v+')','#16A34A');
   }
-  function setBug(us) {
-    setStories(p => p.map(s => s.us !== us ? s : {
-      ...s,
-      prevStage: s.stage,
-      stage: 'bugfix'
-    }));
-    tt(`${us} → Bugfix 🐛`, '#FF5252');
-  }
-  function resBug(us) {
-    setStories(p => p.map(s => s.us !== us ? s : {
-      ...s,
-      stage: s.prevStage || 'dev',
-      prevStage: null
-    }));
-    tt(`${us} → Bugfix resolvido ✓`, '#43A047');
-  }
-  function goStory(us) {
-    setSelUs(us);
-    setArchV('detail');
-    setPanel('arch');
-  }
-  const aN = [{
-    k: 'dash',
-    l: 'Dashboard',
-    i: '◉'
-  }, {
-    k: 'board',
-    l: 'Board',
-    i: '▦'
-  }, {
-    k: 'matrix',
-    l: 'Matriz',
-    i: '▤'
-  }];
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: BG,
-      minHeight: '100vh'
-    }
-  }, toast && /*#__PURE__*/React.createElement("div", {
-    className: "toast",
-    style: {
-      position: 'fixed',
-      top: 60,
-      right: 16,
-      zIndex: 2000,
-      background: toast.c || T,
-      color: '#FFF',
-      padding: '10px 18px',
-      borderRadius: 8,
-      fontWeight: 600,
-      fontSize: 12,
-      boxShadow: '0 4px 20px rgba(0,0,0,.4)'
-    }
-  }, toast.msg), /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: `linear-gradient(135deg,${NV},${NVH})`,
-      padding: '0 16px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      height: 48,
-      boxShadow: '0 2px 8px rgba(0,0,0,.3)',
-      position: 'sticky',
-      top: 0,
-      zIndex: 100
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 10
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: T,
-      color: '#FFF',
-      padding: '3px 9px',
-      borderRadius: 5,
-      fontWeight: 800,
-      fontSize: 13
-    }
-  }, "i9"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: '#FFF',
-      fontWeight: 700,
-      fontSize: 14
-    }
-  }, "ALM"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: 2,
-      background: 'rgba(255,255,255,.12)',
-      borderRadius: 7,
-      padding: 2,
-      marginLeft: 8
-    }
-  }, [{
-    k: 'gp',
-    l: 'GP',
-    i: '📊'
-  }, {
-    k: 'arch',
-    l: 'Arquiteto',
-    i: '⚙️'
-  }].map(p => /*#__PURE__*/React.createElement("button", {
-    key: p.k,
-    onClick: () => {
-      setPanel(p.k);
-      if (p.k === 'gp') setGpV('dash');else {
-        setArchV('dash');
-        setSelUs(null);
-      }
-    },
-    style: {
-      background: panel === p.k ? T : 'transparent',
-      color: panel === p.k ? '#FFF' : G,
-      border: 'none',
-      borderRadius: 5,
-      padding: '5px 12px',
-      cursor: 'pointer',
-      fontSize: 11,
-      fontWeight: 700,
-      display: 'flex',
-      alignItems: 'center',
-      gap: 4
-    }
-  }, /*#__PURE__*/React.createElement("span", null, p.i), p.l)))), panel === 'arch' && /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: 2,
-      background: 'rgba(255,255,255,.10)',
-      borderRadius: 7,
-      padding: 2
-    }
-  }, aN.map(n => /*#__PURE__*/React.createElement("button", {
-    key: n.k,
-    onClick: () => {
-      setArchV(n.k);
-      setSelUs(null);
-    },
-    style: {
-      background: archV === n.k || archV === 'detail' && n.k === 'board' ? T : 'transparent',
-      color: archV === n.k || archV === 'detail' && n.k === 'board' ? '#FFF' : G,
-      border: 'none',
-      borderRadius: 5,
-      padding: '5px 12px',
-      cursor: 'pointer',
-      fontSize: 11,
-      fontWeight: 600,
-      display: 'flex',
-      alignItems: 'center',
-      gap: 4
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 12
-    }
-  }, n.i), n.l))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 10
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: G,
-      fontSize: 10
-    }
-  }, "CRM B2B Algar"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 30,
-      height: 30,
-      borderRadius: '50%',
-      background: T,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: '#FFF',
-      fontWeight: 700,
-      fontSize: 12
-    }
-  }, "AB"))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      maxWidth: 1400,
-      margin: '0 auto',
-      padding: '14px 16px'
-    }
-  }, panel === 'gp' && gpV === 'dash' && /*#__PURE__*/React.createElement(GPDash, {
-    stories: stories,
-    epics: epics,
-    onStory: goStory,
-    onEpic: id => {
-      setSelEp(id);
-      setGpV('epic');
-    },
-    onNewE: () => setShowNE(true),
-    onNewS: () => setShowNS(true)
-  }), panel === 'gp' && gpV === 'epic' && selEp && /*#__PURE__*/React.createElement(GPEpicDetail, {
-    epic: epics.find(e => e.id === selEp),
-    stories: stories,
-    onBack: () => setGpV('dash'),
-    onStory: goStory
-  }), panel === 'arch' && archV === 'dash' && /*#__PURE__*/React.createElement(ArchDash, {
-    stories: stories,
-    onSelect: st => {
-      setSelUs(st.us);
-      setArchV('detail');
-    }
-  }), panel === 'arch' && archV === 'board' && /*#__PURE__*/React.createElement(ArchBoard, {
-    stories: stories,
-    onSelect: st => {
-      setSelUs(st.us);
-      setArchV('detail');
-    }
-  }), panel === 'arch' && archV === 'detail' && selStory && /*#__PURE__*/React.createElement(ArchDetail, {
-    item: selStory,
-    epics: epics,
-    onBack: () => setArchV('board'),
-    onAdvance: advance,
-    onUpload: upload,
-    onBugfix: setBug,
-    onBugfixResolve: resBug
-  }), panel === 'arch' && archV === 'matrix' && /*#__PURE__*/React.createElement(ArchMatrix, {
-    stories: stories
-  })), showNE && /*#__PURE__*/React.createElement(Modal, {
-    title: "Novo Épico",
-    onClose: () => setShowNE(false)
-  }, /*#__PURE__*/React.createElement(FF, {
-    label: "Nome"
-  }, /*#__PURE__*/React.createElement(Inp, {
-    value: fe.name,
-    onChange: v => setFe({
-      ...fe,
-      name: v
-    }),
-    placeholder: "Ex: Conta Master"
-  })), /*#__PURE__*/React.createElement(FF, {
-    label: "Descrição"
-  }, /*#__PURE__*/React.createElement(Inp, {
-    value: fe.desc,
-    onChange: v => setFe({
-      ...fe,
-      desc: v
-    }),
-    placeholder: "Descrição"
-  })), /*#__PURE__*/React.createElement(FF, {
-    label: "Owner"
-  }, /*#__PURE__*/React.createElement(Inp, {
-    value: fe.owner,
-    onChange: v => setFe({
-      ...fe,
-      owner: v
-    })
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: 8
-    }
-  }, /*#__PURE__*/React.createElement(FF, {
-    label: "Início"
-  }, /*#__PURE__*/React.createElement(Inp, {
-    type: "date",
-    value: fe.s,
-    onChange: v => setFe({
-      ...fe,
-      s: v
-    })
-  })), /*#__PURE__*/React.createElement(FF, {
-    label: "Fim"
-  }, /*#__PURE__*/React.createElement(Inp, {
-    type: "date",
-    value: fe.e,
-    onChange: v => setFe({
-      ...fe,
-      e: v
-    })
-  }))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      justifyContent: 'flex-end',
-      gap: 8,
-      marginTop: 8
-    }
-  }, /*#__PURE__*/React.createElement(Btn, {
-    outline: true,
-    onClick: () => setShowNE(false)
-  }, "Cancelar"), /*#__PURE__*/React.createElement(Btn, {
-    onClick: () => {
-      setShowNE(false);
-      tt('Épico criado!', T);
-    }
-  }, "Criar"))), showNS && /*#__PURE__*/React.createElement(Modal, {
-    title: "Nova História",
-    onClose: () => setShowNS(false)
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 2fr',
-      gap: 8
-    }
-  }, /*#__PURE__*/React.createElement(FF, {
-    label: "US"
-  }, /*#__PURE__*/React.createElement(Inp, {
-    value: fs.us,
-    onChange: v => setFs({
-      ...fs,
-      us: v
-    }),
-    placeholder: "CRMB2B-XX"
-  })), /*#__PURE__*/React.createElement(FF, {
-    label: "Título"
-  }, /*#__PURE__*/React.createElement(Inp, {
-    value: fs.title,
-    onChange: v => setFs({
-      ...fs,
-      title: v
-    }),
-    placeholder: "Título"
-  }))), /*#__PURE__*/React.createElement(FF, {
-    label: "Épico"
-  }, /*#__PURE__*/React.createElement(Sel, {
-    value: fs.epicId,
-    onChange: v => setFs({
-      ...fs,
-      epicId: v
-    }),
-    options: epics.map(e => ({
-      v: e.id,
-      l: e.name
-    }))
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr 1fr',
-      gap: 8
-    }
-  }, /*#__PURE__*/React.createElement(FF, {
-    label: "Prioridade"
-  }, /*#__PURE__*/React.createElement(Sel, {
-    value: fs.priority,
-    onChange: v => setFs({
-      ...fs,
-      priority: v
-    }),
-    options: [{
-      v: 'critical',
-      l: 'Critical'
-    }, {
-      v: 'high',
-      l: 'High'
-    }, {
-      v: 'medium',
-      l: 'Medium'
-    }, {
-      v: 'low',
-      l: 'Low'
-    }]
-  })), /*#__PURE__*/React.createElement(FF, {
-    label: "Responsável"
-  }, /*#__PURE__*/React.createElement(Inp, {
-    value: fs.assignee,
-    onChange: v => setFs({
-      ...fs,
-      assignee: v
-    })
-  })), /*#__PURE__*/React.createElement(FF, {
-    label: "Prevista"
-  }, /*#__PURE__*/React.createElement(Inp, {
-    type: "date",
-    value: fs.planned,
-    onChange: v => setFs({
-      ...fs,
-      planned: v
-    })
-  }))), /*#__PURE__*/React.createElement(FF, {
-    label: "Sprint"
-  }, /*#__PURE__*/React.createElement(Inp, {
-    value: fs.sprint,
-    onChange: v => setFs({
-      ...fs,
-      sprint: v
-    }),
-    placeholder: "Sprint 12"
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      justifyContent: 'flex-end',
-      gap: 8,
-      marginTop: 8
-    }
-  }, /*#__PURE__*/React.createElement(Btn, {
-    outline: true,
-    onClick: () => setShowNS(false)
-  }, "Cancelar"), /*#__PURE__*/React.createElement(Btn, {
-    onClick: () => {
-      setShowNS(false);
-      tt('História criada!', T);
-    }
-  }, "Criar"))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: '#111B27',
-      padding: '8px 16px',
-      textAlign: 'center',
-      color: '#8C95A6',
-      fontSize: 10,
-      marginTop: 16
-    }
-  }, "EVER I9 ALM · CRM B2B Algar Telecom · Confidencial"));
+  function setBug(us){setStories(function(p){return p.map(function(s){return s.us!==us?s:Object.assign({},s,{prevStage:s.stage,stage:'bugfix'})})});tt(us+' → Bugfix 🐛','#DC3545')}
+  function resBug(us){setStories(function(p){return p.map(function(s){return s.us!==us?s:Object.assign({},s,{stage:s.prevStage||'dev',prevStage:null})})});tt(us+' → Resolvido ✓','#16A34A')}
+  function goStory(us){setSelUs(us);setArchV('detail');setPanel('arch')}
+
+  var aN=[{k:'dash',l:'Dashboard',i:'◉'},{k:'board',l:'Board',i:'▦'},{k:'matrix',l:'Matriz',i:'▤'}];
+
+  return React.createElement('div',{style:{background:C.bg,minHeight:'100vh'}},
+    toast?React.createElement('div',{style:{position:'fixed',top:60,right:16,zIndex:2000,background:toast.c||C.teal,color:'#fff',padding:'12px 22px',borderRadius:10,fontWeight:600,fontSize:13,boxShadow:'0 4px 20px rgba(0,0,0,.15)'}},toast.msg):null,
+    React.createElement('div',{style:{background:'linear-gradient(135deg,#111B2D,#1C2C44)',padding:'0 20px',display:'flex',alignItems:'center',justifyContent:'space-between',height:52,boxShadow:'0 2px 8px rgba(0,0,0,.1)',position:'sticky',top:0,zIndex:100}},
+      React.createElement('div',{style:{display:'flex',alignItems:'center',gap:12}},
+        React.createElement('div',{style:{background:C.teal,color:'#fff',padding:'4px 10px',borderRadius:6,fontWeight:800,fontSize:14}},'i9'),
+        React.createElement('span',{style:{color:'#fff',fontWeight:700,fontSize:15}},'ALM'),
+        React.createElement('div',{style:{display:'flex',gap:2,background:'rgba(255,255,255,.1)',borderRadius:8,padding:3,marginLeft:10}},
+          [{k:'gp',l:'GP',i:'📊'},{k:'arch',l:'Arquiteto',i:'⚙️'}].map(function(p){
+            return React.createElement('button',{key:p.k,onClick:function(){setPanel(p.k);if(p.k==='gp')setGpV('dash');else{setArchV('dash');setSelUs(null)}},style:{
+              background:panel===p.k?C.teal:'transparent',color:panel===p.k?'#fff':'rgba(255,255,255,.6)',
+              border:'none',borderRadius:6,padding:'6px 14px',cursor:'pointer',fontSize:12,fontWeight:700,
+            }},p.i+' '+p.l);
+          })
+        )
+      ),
+      panel==='arch'?React.createElement('div',{style:{display:'flex',gap:2,background:'rgba(255,255,255,.08)',borderRadius:8,padding:3}},
+        aN.map(function(n){
+          var active=archV===n.k||(archV==='detail'&&n.k==='board');
+          return React.createElement('button',{key:n.k,onClick:function(){setArchV(n.k);setSelUs(null)},style:{
+            background:active?C.teal:'transparent',color:active?'#fff':'rgba(255,255,255,.6)',
+            border:'none',borderRadius:6,padding:'6px 14px',cursor:'pointer',fontSize:12,fontWeight:600,
+          }},n.i+' '+n.l);
+        })
+      ):null,
+      React.createElement('div',{style:{display:'flex',alignItems:'center',gap:12}},
+        React.createElement('span',{style:{color:'rgba(255,255,255,.5)',fontSize:11}},'CRM B2B Algar'),
+        React.createElement('div',{style:{width:34,height:34,borderRadius:'50%',background:C.teal,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700,fontSize:13}},'AB')
+      )
+    ),
+    React.createElement('div',{style:{maxWidth:1440,margin:'0 auto',padding:'20px 24px'}},
+      panel==='gp'&&gpV==='dash'?React.createElement(GPDash,{stories:stories,epics:EPICS,onStory:goStory,onEpic:function(id){setSelEp(id);setGpV('epic')},onNewE:function(){setShowNE(true)},onNewS:function(){setShowNS(true)}}):null,
+      panel==='gp'&&gpV==='epic'&&selEp?React.createElement(GPEpicDetail,{epic:EPICS.find(function(e){return e.id===selEp}),stories:stories,onBack:function(){setGpV('dash')},onStory:goStory}):null,
+      panel==='arch'&&archV==='dash'?React.createElement(ArchDash,{stories:stories,onSelect:function(st){setSelUs(st.us);setArchV('detail')}}):null,
+      panel==='arch'&&archV==='board'?React.createElement(ArchBoard,{stories:stories,onSelect:function(st){setSelUs(st.us);setArchV('detail')}}):null,
+      panel==='arch'&&archV==='detail'&&selStory?React.createElement(ArchDetail,{item:selStory,epics:EPICS,onBack:function(){setArchV('board')},onAdvance:advance,onUpload:upload,onBugfix:setBug,onBugfixResolve:resBug}):null,
+      panel==='arch'&&archV==='matrix'?React.createElement(ArchMatrix,{stories:stories}):null
+    ),
+    showNE?React.createElement(Modal,{title:'Novo Épico',onClose:function(){setShowNE(false)}},
+      React.createElement(FormField,{label:'Nome'},React.createElement(Input,{value:fe.name,onChange:function(v){setFe(Object.assign({},fe,{name:v}))},placeholder:'Ex: Conta Master'})),
+      React.createElement(FormField,{label:'Descrição'},React.createElement(Input,{value:fe.desc,onChange:function(v){setFe(Object.assign({},fe,{desc:v}))}})),
+      React.createElement(FormField,{label:'Owner'},React.createElement(Input,{value:fe.owner,onChange:function(v){setFe(Object.assign({},fe,{owner:v}))}})),
+      React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}},
+        React.createElement(FormField,{label:'Início'},React.createElement(Input,{type:'date',value:fe.s,onChange:function(v){setFe(Object.assign({},fe,{s:v}))}})),
+        React.createElement(FormField,{label:'Fim'},React.createElement(Input,{type:'date',value:fe.e,onChange:function(v){setFe(Object.assign({},fe,{e:v}))}}))
+      ),
+      React.createElement('div',{style:{display:'flex',justifyContent:'flex-end',gap:10,marginTop:10}},
+        React.createElement(Btn,{outline:true,onClick:function(){setShowNE(false)}},'Cancelar'),
+        React.createElement(Btn,{onClick:function(){setShowNE(false);tt('Épico criado!',C.teal)}},'Criar')
+      )
+    ):null,
+    showNS?React.createElement(Modal,{title:'Nova História',onClose:function(){setShowNS(false)}},
+      React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 2fr',gap:10}},
+        React.createElement(FormField,{label:'US'},React.createElement(Input,{value:fs.us,onChange:function(v){setFs(Object.assign({},fs,{us:v}))},placeholder:'CRMB2B-XX'})),
+        React.createElement(FormField,{label:'Título'},React.createElement(Input,{value:fs.title,onChange:function(v){setFs(Object.assign({},fs,{title:v}))}}))
+      ),
+      React.createElement(FormField,{label:'Épico'},React.createElement(Sel,{value:fs.epicId,onChange:function(v){setFs(Object.assign({},fs,{epicId:v}))},options:EPICS.map(function(e){return{v:e.id,l:e.name}})})),
+      React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}},
+        React.createElement(FormField,{label:'Prioridade'},React.createElement(Sel,{value:fs.priority,onChange:function(v){setFs(Object.assign({},fs,{priority:v}))},options:[{v:'critical',l:'Critical'},{v:'high',l:'High'},{v:'medium',l:'Medium'},{v:'low',l:'Low'}]})),
+        React.createElement(FormField,{label:'Responsável'},React.createElement(Input,{value:fs.assignee,onChange:function(v){setFs(Object.assign({},fs,{assignee:v}))}})),
+        React.createElement(FormField,{label:'Prevista'},React.createElement(Input,{type:'date',value:fs.planned,onChange:function(v){setFs(Object.assign({},fs,{planned:v}))}}))
+      ),
+      React.createElement(FormField,{label:'Sprint'},React.createElement(Input,{value:fs.sprint,onChange:function(v){setFs(Object.assign({},fs,{sprint:v}))},placeholder:'Sprint 12'})),
+      React.createElement('div',{style:{display:'flex',justifyContent:'flex-end',gap:10,marginTop:10}},
+        React.createElement(Btn,{outline:true,onClick:function(){setShowNS(false)}},'Cancelar'),
+        React.createElement(Btn,{onClick:function(){setShowNS(false);tt('História criada!',C.teal)}},'Criar')
+      )
+    ):null,
+    React.createElement('div',{style:{background:'#111B2D',padding:'10px 24px',textAlign:'center',color:'rgba(255,255,255,.4)',fontSize:10,marginTop:24}},'EVER I9 ALM · CRM B2B Algar Telecom · Confidencial')
+  );
 }
-ReactDOM.createRoot(document.getElementById('root')).render(/*#__PURE__*/React.createElement(App, null));
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
 
 </script>
 </body>
