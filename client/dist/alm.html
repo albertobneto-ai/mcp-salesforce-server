@@ -8,13 +8,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'Inter',-apple-system,sans-serif;background:#F3F5F9;min-height:100vh;color:#1B2438}
+  body{font-family:"Inter",-apple-system,sans-serif;background:#F3F5F9;min-height:100vh;color:#1B2438}
   ::-webkit-scrollbar{width:5px;height:5px}
   ::-webkit-scrollbar-track{background:#F0F2F6;border-radius:3px}
   ::-webkit-scrollbar-thumb{background:#CDD3DE;border-radius:3px}
   ::-webkit-scrollbar-thumb:hover{background:#A8B0BC}
   button,input,select{font-family:inherit}
-  table{border-collapse:separate;border-spacing:0}
 </style>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -410,7 +409,7 @@ function GPDash(props) {
           ['US','Título','Épico','Estágio','Prevista','Real','Pri'].map(function(h){return React.createElement('th',{key:h,style:{color:C.textMuted,fontSize:10,fontWeight:700,textTransform:'uppercase',padding:'8px 12px',textAlign:'left',borderBottom:'1px solid '+C.border}},h)})
         )),
         React.createElement('tbody',null, stories.map(function(st,i){
-          var sg=stg(st.stage); var ep=EPICS.find(function(e){return e.id===st.epicId})||{};
+          var sg=stg(st.stage); var ep=epics.find(function(e){return e.id===st.epicId})||{};
           var isLate=st.plannedDate&&!st.actualDate&&new Date(st.plannedDate)<new Date();
           return React.createElement('tr',{key:st.us,onClick:function(){props.onStory(st.us)},style:{background:i%2===0?C.row:'transparent',cursor:'pointer',transition:'background .1s'},
             onMouseEnter:function(e){e.currentTarget.style.background=C.cardHover},onMouseLeave:function(e){e.currentTarget.style.background=i%2===0?C.row:'transparent'}},
@@ -681,6 +680,44 @@ function ArchMatrix(props) {
   );
 }
 
+
+/* ═══ API LAYER ═══ */
+var API_BASE = '/api/alm';
+var AUTH_TOKEN = null;
+
+async function apiLogin() {
+  try {
+    var res = await fetch('/api/auth/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email:'admin@everi9.com',password:'admin2026'})
+    });
+    var data = await res.json();
+    AUTH_TOKEN = data.token;
+    return true;
+  } catch(e) { console.error('Login failed',e); return false; }
+}
+
+function apiHeaders() {
+  var h = {'Content-Type':'application/json'};
+  if (AUTH_TOKEN) h['Authorization'] = 'Bearer ' + AUTH_TOKEN;
+  return h;
+}
+
+async function apiGet(path) {
+  var res = await fetch(API_BASE + path, {headers:apiHeaders()});
+  return res.json();
+}
+
+async function apiPost(path, body) {
+  var res = await fetch(API_BASE + path, {method:'POST', headers:apiHeaders(), body:JSON.stringify(body)});
+  return res.json();
+}
+
+async function apiPut(path, body) {
+  var res = await fetch(API_BASE + path, {method:'PUT', headers:apiHeaders(), body:JSON.stringify(body)});
+  return res.json();
+}
+
 /* ═══ APP ═══ */
 function App() {
   var _p=useState('gp'),panel=_p[0],setPanel=_p[1];
@@ -688,40 +725,53 @@ function App() {
   var _av=useState('dash'),archV=_av[0],setArchV=_av[1];
   var _ep=useState(null),selEp=_ep[0],setSelEp=_ep[1];
   var _us=useState(null),selUs=_us[0],setSelUs=_us[1];
-  var _st=useState(INIT),stories=_st[0],setStories=_st[1];
+  var _st=useState([]),stories=_st[0],setStories=_st[1];
+  var _epi=useState([]),epics=_epi[0],setEpics=_epi[1];
+  var _loading=useState(true),loading=_loading[0],setLoading=_loading[1];
   var _ne=useState(false),showNE=_ne[0],setShowNE=_ne[1];
   var _ns=useState(false),showNS=_ns[0],setShowNS=_ns[1];
   var _to=useState(null),toast=_to[0],setToast=_to[1];
   var _fe=useState({name:'',desc:'',owner:'Alberto',s:'',e:''}),fe=_fe[0],setFe=_fe[1];
   var _fs=useState({us:'',title:'',epicId:'EP-01',priority:'medium',assignee:'Alberto',planned:'',sprint:''}),fs=_fs[0],setFs=_fs[1];
 
+  
+  // Load data from API
+  React.useEffect(function(){
+    async function load(){
+      await apiLogin();
+      var ep = await apiGet('/epics');
+      var st = await apiGet('/stories');
+      setEpics(ep);
+      setStories(st);
+      setLoading(false);
+    }
+    load();
+  },[]);
+
+  async function refreshStories(){
+    var st = await apiGet('/stories');
+    setStories(st);
+  }
+
   var selStory=useMemo(function(){return stories.find(function(s){return s.us===selUs})},[stories,selUs]);
   var tt=useCallback(function(msg,c){setToast({msg:msg,c:c});setTimeout(function(){setToast(null)},3000)},[]);
 
-  function advance(us){
-    setStories(function(p){return p.map(function(s){
-      if(s.us!==us)return s;
-      var sd=SM[s.stage]||{};if(!sd.next)return s;
-      var u=Object.assign({},s,{stage:sd.next});
-      if(sd.next==='homologacao')u.actualDate=new Date().toISOString().slice(0,10);
-      return u;
-    })});
+  async function advance(us){
     var st=stories.find(function(s){return s.us===us})||{};
     var cs=SM[st.stage]||{};var ns=SM[cs.next]||{};
-    tt(us+' → '+ns.label,ns.color||C.teal);
+    await apiPost('/stories/'+us+'/advance',{});
+    await refreshStories();
+    tt(us+' → '+(ns.label||''),ns.color||C.teal);
   }
-  function upload(us,type){
+  async function upload(us,type){
     var v='v'+(Math.random()*2+1).toFixed(1);
-    setStories(function(p){return p.map(function(s){
-      if(s.us!==us)return s;
-      var nf={name:type.toUpperCase()+'_'+us+'.docx',type:type,date:new Date().toISOString().slice(0,10),version:v};
-      var a=Object.assign({},s.artifacts);if(type==='hf')a.hf=true;if(type==='spec')a.spec=true;
-      return Object.assign({},s,{files:s.files.concat([nf]),artifacts:a});
-    })});
-    tt('Upload: '+type.toUpperCase()+'_'+us+' ('+v+')','#16A34A');
+    var name=type.toUpperCase()+'_'+us+'.docx';
+    await apiPost('/stories/'+us+'/files',{name:name,fileType:type,version:v});
+    await refreshStories();
+    tt('Upload: '+name+' ('+v+')','#16A34A');
   }
-  function setBug(us){setStories(function(p){return p.map(function(s){return s.us!==us?s:Object.assign({},s,{prevStage:s.stage,stage:'bugfix'})})});tt(us+' → Bugfix 🐛','#DC3545')}
-  function resBug(us){setStories(function(p){return p.map(function(s){return s.us!==us?s:Object.assign({},s,{stage:s.prevStage||'dev',prevStage:null})})});tt(us+' → Resolvido ✓','#16A34A')}
+  async function setBug(us){await apiPost('/stories/'+us+'/bugfix',{});await refreshStories();tt(us+' → Bugfix 🐛','#DC3545')}
+  async function resBug(us){await apiPost('/stories/'+us+'/bugfix-resolve',{});await refreshStories();tt(us+' → Resolvido ✓','#16A34A')}
   function goStory(us){setSelUs(us);setArchV('detail');setPanel('arch')}
 
   var aN=[{k:'dash',l:'Dashboard',i:'◉'},{k:'board',l:'Board',i:'▦'},{k:'matrix',l:'Matriz',i:'▤'}];
@@ -756,11 +806,11 @@ function App() {
       )
     ),
     React.createElement('div',{style:{maxWidth:1440,margin:'0 auto',padding:'20px 24px'}},
-      panel==='gp'&&gpV==='dash'?React.createElement(GPDash,{stories:stories,epics:EPICS,onStory:goStory,onEpic:function(id){setSelEp(id);setGpV('epic')},onNewE:function(){setShowNE(true)},onNewS:function(){setShowNS(true)}}):null,
-      panel==='gp'&&gpV==='epic'&&selEp?React.createElement(GPEpicDetail,{epic:EPICS.find(function(e){return e.id===selEp}),stories:stories,onBack:function(){setGpV('dash')},onStory:goStory}):null,
+      !loading&&panel==='gp'&&gpV==='dash'?React.createElement(GPDash,{stories:stories,epics:epics,onStory:goStory,onEpic:function(id){setSelEp(id);setGpV('epic')},onNewE:function(){setShowNE(true)},onNewS:function(){setShowNS(true)}}):null,
+      panel==='gp'&&gpV==='epic'&&selEp?React.createElement(GPEpicDetail,{epic:epics.find(function(e){return e.id===selEp}),stories:stories,onBack:function(){setGpV('dash')},onStory:goStory}):null,
       panel==='arch'&&archV==='dash'?React.createElement(ArchDash,{stories:stories,onSelect:function(st){setSelUs(st.us);setArchV('detail')}}):null,
       panel==='arch'&&archV==='board'?React.createElement(ArchBoard,{stories:stories,onSelect:function(st){setSelUs(st.us);setArchV('detail')}}):null,
-      panel==='arch'&&archV==='detail'&&selStory?React.createElement(ArchDetail,{item:selStory,epics:EPICS,onBack:function(){setArchV('board')},onAdvance:advance,onUpload:upload,onBugfix:setBug,onBugfixResolve:resBug}):null,
+      panel==='arch'&&archV==='detail'&&selStory?React.createElement(ArchDetail,{item:selStory,epics:epics,onBack:function(){setArchV('board')},onAdvance:advance,onUpload:upload,onBugfix:setBug,onBugfixResolve:resBug}):null,
       panel==='arch'&&archV==='matrix'?React.createElement(ArchMatrix,{stories:stories}):null
     ),
     showNE?React.createElement(Modal,{title:'Novo Épico',onClose:function(){setShowNE(false)}},
@@ -773,7 +823,7 @@ function App() {
       ),
       React.createElement('div',{style:{display:'flex',justifyContent:'flex-end',gap:10,marginTop:10}},
         React.createElement(Btn,{outline:true,onClick:function(){setShowNE(false)}},'Cancelar'),
-        React.createElement(Btn,{onClick:function(){setShowNE(false);tt('Épico criado!',C.teal)}},'Criar')
+        React.createElement(Btn,{onClick:function(){setShowNE(false);apiPost('/epics',{id:'EP-'+(epics.length+1).toString().padStart(2,'0'),name:fe.name,desc:fe.desc,owner:fe.owner,startDate:fe.s,endDate:fe.e}).then(function(){apiGet('/epics').then(setEpics)});tt('Épico criado!',C.teal)}},'Criar')
       )
     ):null,
     showNS?React.createElement(Modal,{title:'Nova História',onClose:function(){setShowNS(false)}},
@@ -781,7 +831,7 @@ function App() {
         React.createElement(FormField,{label:'US'},React.createElement(Input,{value:fs.us,onChange:function(v){setFs(Object.assign({},fs,{us:v}))},placeholder:'CRMB2B-XX'})),
         React.createElement(FormField,{label:'Título'},React.createElement(Input,{value:fs.title,onChange:function(v){setFs(Object.assign({},fs,{title:v}))}}))
       ),
-      React.createElement(FormField,{label:'Épico'},React.createElement(Sel,{value:fs.epicId,onChange:function(v){setFs(Object.assign({},fs,{epicId:v}))},options:EPICS.map(function(e){return{v:e.id,l:e.name}})})),
+      React.createElement(FormField,{label:'Épico'},React.createElement(Sel,{value:fs.epicId,onChange:function(v){setFs(Object.assign({},fs,{epicId:v}))},options:epics.map(function(e){return{v:e.id,l:e.name}})})),
       React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}},
         React.createElement(FormField,{label:'Prioridade'},React.createElement(Sel,{value:fs.priority,onChange:function(v){setFs(Object.assign({},fs,{priority:v}))},options:[{v:'critical',l:'Critical'},{v:'high',l:'High'},{v:'medium',l:'Medium'},{v:'low',l:'Low'}]})),
         React.createElement(FormField,{label:'Responsável'},React.createElement(Input,{value:fs.assignee,onChange:function(v){setFs(Object.assign({},fs,{assignee:v}))}})),
@@ -790,7 +840,7 @@ function App() {
       React.createElement(FormField,{label:'Sprint'},React.createElement(Input,{value:fs.sprint,onChange:function(v){setFs(Object.assign({},fs,{sprint:v}))},placeholder:'Sprint 12'})),
       React.createElement('div',{style:{display:'flex',justifyContent:'flex-end',gap:10,marginTop:10}},
         React.createElement(Btn,{outline:true,onClick:function(){setShowNS(false)}},'Cancelar'),
-        React.createElement(Btn,{onClick:function(){setShowNS(false);tt('História criada!',C.teal)}},'Criar')
+        React.createElement(Btn,{onClick:function(){setShowNS(false);apiPost('/stories',{us:fs.us,title:fs.title,epicId:fs.epicId,priority:fs.priority,assignee:fs.assignee,sprint:fs.sprint,plannedDate:fs.planned}).then(refreshStories);tt('História criada!',C.teal)}},'Criar')
       )
     ):null,
     React.createElement('div',{style:{background:'#111B2D',padding:'10px 24px',textAlign:'center',color:'rgba(255,255,255,.4)',fontSize:10,marginTop:24}},'EVER I9 ALM · CRM B2B Algar Telecom · Confidencial')
