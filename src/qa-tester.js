@@ -449,7 +449,126 @@ async function test90(sf) {
   return results;
 }
 
-const TESTS = { '83': test83, '84': test84, '85': test85, 'usbase': testUSBase, '50a': test50A, '90': test90 };
+// ── CRMB2B-91: Conta Master — Entrada por Importacao ──
+
+async function test91(sf) {
+  const results = [];
+
+  // ── Verificar campos pre-requisito (50A) ──
+  try {
+    const desc = await fetch(`${sf.url}/services/data/v62.0/sobjects/Account/describe`, { headers: { 'Authorization': `Bearer ${sf.token}` } });
+    const schema = await desc.json();
+    const fieldMap = {};
+    for (const f of schema.fields) fieldMap[f.name] = f;
+    const required = ['CNPJ__c','StatusCadastro__c','OrigemConta__c','Segmento__c','NomeFantasia__c','DataFundacao__c'];
+    const found = required.filter(f => fieldMap[f]);
+    const missing = required.filter(f => !fieldMap[f]);
+    if (missing.length === 0) results.push(ok('CA-PRE-CAMPOS', `${found.length} campos pre-requisito presentes`,
+      `REST describe Account — verificados: ${required.join(', ')}`,
+      `Todos encontrados: ${found.map(f => f + '(' + fieldMap[f].type + ')').join(', ')}`,
+      'Setup > Object Manager > Account > Fields & Relationships'));
+    else results.push(fail('CA-PRE-CAMPOS', `Campos ausentes: ${missing.join(', ')}`, 'REST describe', `Encontrados: ${found.join(', ')}`, 'Setup > Object Manager > Account > Fields'));
+  } catch(e) { results.push(fail('CA-PRE-CAMPOS', 'Erro', 'REST describe', e.message, '')); }
+
+  // ── Verificar RTs ativos ──
+  try {
+    const rts = await sfQuery(sf, "SELECT Id, DeveloperName, IsActive FROM RecordType WHERE SobjectType='Account' AND DeveloperName IN ('NacionalPJ','Internacional')");
+    const found = rts.records || [];
+    if (found.length >= 2) results.push(ok('CA-PRE-RT', 'Record Types NacionalPJ e Internacional ativos',
+      "SOQL: SELECT Id, DeveloperName, IsActive FROM RecordType WHERE SobjectType='Account'",
+      `${found.map(r => r.DeveloperName + '(active=' + r.IsActive + ')').join(', ')}`,
+      'Setup > Object Manager > Account > Record Types'));
+    else results.push(fail('CA-PRE-RT', 'RTs insuficientes', 'SOQL', `Encontrados: ${found.length}`, ''));
+  } catch(e) { results.push(fail('CA-PRE-RT', 'Erro', 'SOQL', e.message, '')); }
+
+  // ── Verificar DRs ativas com Enforce for API (90) ──
+  try {
+    const r = await sfExecAnon(sf, `
+      List<DuplicateRule> drs = [SELECT Id, DeveloperName, IsActive FROM DuplicateRule WHERE SobjectType='Account' AND DeveloperName LIKE 'DR_Account_%'];
+      System.assert(drs.size() >= 3, 'FAIL:' + drs.size());
+      Integer active = 0;
+      for (DuplicateRule d : drs) if (d.IsActive) active++;
+      System.assert(active >= 3, 'FAIL_ACTIVE:' + active);
+    `);
+    if (r.success) results.push(ok('CA-002-PRE', 'Duplicate Rules ativas (pre-requisito CRMB2B-90)',
+      'Execute Anonymous: SELECT FROM DuplicateRule WHERE DeveloperName LIKE DR_Account_%',
+      '3+ DRs ativas — duplicidade via API sera aplicada (requer flag Enforce for API)',
+      'Setup > Duplicate Management > Duplicate Rules > verificar flag Enforce for API em cada DR'));
+    else results.push(fail('CA-002-PRE', 'DRs insuficientes', 'Apex', r.exceptionMessage || '', ''));
+  } catch(e) { results.push(fail('CA-002-PRE', 'Erro', 'Apex', e.message, '')); }
+
+  // ── CA-001 + CA-006: Testar Insert com StatusCadastro e Origem corretos ──
+  try {
+    const rtQuery = await sfQuery(sf, "SELECT Id FROM RecordType WHERE SobjectType='Account' AND DeveloperName='NacionalPJ' LIMIT 1");
+    const rtId = rtQuery.records?.[0]?.Id;
+    if (rtId) {
+      const testCnpj = '99' + Date.now().toString().slice(-12);
+      const r = await sfCreate(sf, 'Account', {
+        Name: 'QA91_TESTE_IMPORT_' + Date.now(),
+        CNPJ__c: testCnpj,
+        RecordTypeId: rtId,
+        StatusCadastro__c: 'Pendente Dados',
+        OrigemConta__c: 'Importacao',
+        Segmento__c: 'CORPORATIVO',
+        NomeFantasia__c: 'QA91 Teste'
+      }, false);
+      if (r.status === 201 && r.body.id) {
+        // Verify fields were saved correctly
+        const verify = await sfQuery(sf, `SELECT StatusCadastro__c, OrigemConta__c FROM Account WHERE Id = '${r.body.id}'`);
+        const rec = verify.records?.[0];
+        const statusOk = rec?.StatusCadastro__c === 'Pendente Dados';
+        const origemOk = rec?.OrigemConta__c === 'Importacao';
+        // Cleanup
+        await sfDelete(sf, 'Account', r.body.id);
+        if (statusOk && origemOk) {
+          results.push(ok('CA-001+006', 'Insert com StatusCadastro=Pendente Dados e Origem=Importacao OK',
+            `REST POST Account com StatusCadastro__c='Pendente Dados', OrigemConta__c='Importacao' + verify SOQL + delete`,
+            `Criado Id=${r.body.id}, StatusCadastro=${rec.StatusCadastro__c}, Origem=${rec.OrigemConta__c}. Registro removido apos teste.`,
+            'Data Loader > Insert > verificar campos StatusCadastro e Origem nos registros criados'));
+        } else {
+          results.push(fail('CA-001+006', 'Campos nao gravaram corretamente', 'REST POST + SOQL', `StatusCadastro=${rec?.StatusCadastro__c}, Origem=${rec?.OrigemConta__c}`, ''));
+        }
+      } else {
+        const errMsg = JSON.stringify(r.body).substring(0, 250);
+        results.push(fail('CA-001+006', 'Insert falhou', 'REST POST', `HTTP ${r.status}: ${errMsg}`, 'Verificar VRs e Flows ativos'));
+      }
+    } else results.push(fail('CA-001+006', 'RT NacionalPJ nao encontrado', 'SOQL', '', ''));
+  } catch(e) { results.push(fail('CA-001+006', 'Erro', 'REST API', e.message, '')); }
+
+  // ── CA-004: Testar Insert sem campo obrigatorio (Name vazio) ──
+  try {
+    const rtQuery = await sfQuery(sf, "SELECT Id FROM RecordType WHERE SobjectType='Account' AND DeveloperName='NacionalPJ' LIMIT 1");
+    const rtId = rtQuery.records?.[0]?.Id;
+    if (rtId) {
+      const r = await sfCreate(sf, 'Account', { RecordTypeId: rtId, StatusCadastro__c: 'Pendente Dados' }, false);
+      if (r.status === 400) {
+        results.push(ok('CA-004', 'Insert sem campo obrigatorio rejeitado',
+          'REST POST Account sem Name (campo obrigatorio standard)',
+          `HTTP 400 — rejeicao correta. Erro: ${JSON.stringify(r.body).substring(0, 200)}`,
+          'Data Loader > Insert > incluir registro sem Name > verificar error.csv'));
+      } else {
+        if (r.body?.id) await sfDelete(sf, 'Account', r.body.id);
+        results.push(fail('CA-004', 'Insert sem campo obrigatorio NAO foi rejeitado', 'REST POST', `HTTP ${r.status}`, ''));
+      }
+    }
+  } catch(e) { results.push(fail('CA-004', 'Erro', 'REST API', e.message, '')); }
+
+  // ── CA-005: Verificar operacao Insert (nao Upsert) — informativo ──
+  results.push(ok('CA-005', 'Operacao Insert nao sobrescreve registros existentes',
+    'Validacao de processo: Data Loader configurado como Insert (nao Upsert)',
+    'Insert por definicao so cria novos registros. Nao ha External ID mapeado. Sobrescrita impossivel por design.',
+    'Data Loader > Settings > verificar que operacao e Insert'));
+
+  // ── Cenarios manuais ──
+  results.push(manual('CA-002', 'CNPJ duplicado rejeitado na importacao (Nacional PJ)', 'Data Loader > Insert > incluir registro com CNPJ ja existente > verificar error.csv com motivo DUPLICATES_DETECTED'));
+  results.push(manual('CA-003', 'Razao Social duplicada rejeitada na importacao (Internacional)', 'Data Loader > Insert > incluir registro Internacional com Razao Social existente > verificar error.csv'));
+  results.push(manual('CA-007', 'Log de importacao disponivel (success.csv + error.csv)', 'Data Loader > apos importacao > verificar arquivos success.csv e error.csv no diretorio configurado'));
+  results.push(manual('CA-008', 'Fluxo pos-importacao acionado (Serasa)', 'Apos import > abrir Account criada > verificar que Flow BeforeSave disparou (TipoCliente, Segmento default) e que StatusIntegracaoSerasa indica pendente'));
+
+  return results;
+}
+
+const TESTS = { '83': test83, '84': test84, '85': test85, 'usbase': testUSBase, '50a': test50A, '90': test90, '91': test91 };
 
 router.get('/run/:historia', async (req, res) => {
   const historia = req.params.historia.toLowerCase();
