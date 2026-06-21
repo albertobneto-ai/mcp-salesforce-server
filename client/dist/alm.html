@@ -140,11 +140,11 @@ const UploadZone=({label,color,onUpload})=>(
 const FileList=({files})=>{
   const ic={hf:'📄',spec:'📐',adr:'📑',cenario:'✅',zip:'📦',bugfix:'🐛',other:'📎'};
   if(!files.length)return<div style={{color:G,fontSize:11,textAlign:'center',padding:10}}>Nenhum documento</div>;
-  return<div style={{display:'flex',flexDirection:'column',gap:2}}>{files.map((f,i)=><div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 10px',background:i%2===0?DK:'transparent',borderRadius:4}}><span style={{fontSize:14}}>{ic[f.type]||ic.other}</span><span style={{color:W,fontSize:11,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.name}</span>{f.version&&<Badge text={f.version} color={DH} s/>}<Badge text={f.type} color={SM[f.type]?.color||T} s/><span style={{color:G,fontSize:10}}>{f.date}</span><Btn s color={T}>↓</Btn></div>)}</div>;
+  return<div style={{display:'flex',flexDirection:'column',gap:2}}>{files.map((f,i)=><div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 10px',background:i%2===0?DK:'transparent',borderRadius:4}}><span style={{fontSize:14}}>{ic[f.type]||ic.other}</span><span style={{color:W,fontSize:11,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.name}</span>{f.version&&<Badge text={f.version} color={DH} s/>}<Badge text={f.type} color={(SM[f.type]||{}).color||T} s/><span style={{color:G,fontSize:10}}>{f.date}</span><Btn s color={T}>↓</Btn></div>)}</div>;
 };
 
 const StageProgress=({cur})=>{
-  const idx=SM[cur]?.idx||0;const main=STAGES.filter(s=>s.key!=='bugfix');const bug=cur==='bugfix';
+  const idx=(SM[cur]||{}).idx||0;const main=STAGES.filter(s=>s.key!=='bugfix');const bug=cur==='bugfix';
   return<div style={{display:'flex',alignItems:'center',gap:0,justifyContent:'center'}}>{main.map((s,i)=>{const done=!bug&&i<idx;const act=!bug&&i===idx;return<div key={s.key} style={{display:'flex',alignItems:'center'}}><div style={{width:act?28:20,height:act?28:20,borderRadius:'50%',background:done?s.color:act?s.color:BD,display:'flex',alignItems:'center',justifyContent:'center',fontSize:act?13:10,border:act?`2px solid ${W}`:'none',boxShadow:act?`0 0 8px ${s.color}80`:'none',transition:'all .2s'}} title={s.label}>{done?<span style={{color:W,fontSize:8,fontWeight:800}}>✓</span>:<span>{s.icon}</span>}</div>{i<main.length-1&&<div style={{width:14,height:2,background:done?main[i+1].color:BD,borderRadius:1}}/>}</div>})}{bug&&<><div style={{width:14,height:2,background:'#FF5252',borderRadius:1,marginLeft:2}}/><div style={{width:28,height:28,borderRadius:'50%',background:'#FF5252',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,border:`2px solid ${W}`,boxShadow:'0 0 8px #FF525280'}}>🐛</div></>}</div>;
 };
 
@@ -174,8 +174,8 @@ function GPCalendar({stories,year,month,onStory}){
             {d&&<div style={{color:isT(d)?TL:G,fontSize:10,fontWeight:600,marginBottom:2}}>{d}</div>}
             <div style={{display:'flex',flexDirection:'column',gap:1}}>
               {sts.slice(0,3).map(st=>{const sg=SM[st.stage];return(
-                <div key={st.us} onClick={()=>onStory(st.us)} style={{display:'flex',alignItems:'center',gap:3,cursor:'pointer',padding:'1px 3px',borderRadius:3,background:`${sg?.color||G}25`}} title={`${st.us}: ${st.title}`}>
-                  <div style={{width:7,height:7,borderRadius:'50%',background:sg?.color||G,flexShrink:0}}/>
+                <div key={st.us} onClick={()=>onStory(st.us)} style={{display:'flex',alignItems:'center',gap:3,cursor:'pointer',padding:'1px 3px',borderRadius:3,background:`${(sg||{}).color||G}25`}} title={`${st.us}: ${st.title}`}>
+                  <div style={{width:7,height:7,borderRadius:'50%',background:(sg||{}).color||G,flexShrink:0}}/>
                   <span style={{color:W,fontSize:8,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{st.us.replace('CRMB2B-','')}</span>
                 </div>
               )})}
@@ -252,7 +252,7 @@ function GPDash({stories,epics,onStory,onEpic,onNewE,onNewS}){
           <div style={{display:'flex',flexDirection:'column',gap:5}}>
             {stories.filter(s=>(s.plannedDate&&!s.actualDate&&new Date(s.plannedDate)<new Date())||s.stage==='bugfix').map(st=>{const sg=SM[st.stage];const late=st.plannedDate&&!st.actualDate&&new Date(st.plannedDate)<new Date();return(
               <div key={st.us} onClick={()=>onStory(st.us)} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 10px',background:DK,borderRadius:6,cursor:'pointer',borderLeft:`3px solid ${st.stage==='bugfix'?'#FF5252':'#E53935'}`}} onMouseEnter={e=>e.currentTarget.style.background=DH} onMouseLeave={e=>e.currentTarget.style.background=DK}>
-                <Badge text={st.us} color={sg?.color} s/>
+                <Badge text={st.us} color={(sg||{}).color} s/>
                 <span style={{color:W,fontSize:11,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{st.title}</span>
                 {st.stage==='bugfix'&&<Badge text="BUG" color="#FF5252" s/>}
                 {late&&<Badge text="ATRASO" color="#E53935" s/>}
@@ -271,8 +271,8 @@ function GPDash({stories,epics,onStory,onEpic,onNewE,onNewS}){
               <tr key={st.us} onClick={()=>onStory(st.us)} style={{background:i%2===0?DK:'transparent',cursor:'pointer',transition:'background .1s'}} onMouseEnter={e=>e.currentTarget.style.background=DH} onMouseLeave={e=>e.currentTarget.style.background=i%2===0?DK:'transparent'}>
                 <td style={{padding:'8px 10px'}}><span style={{color:TL,fontSize:11,fontWeight:700}}>{st.us}</span></td>
                 <td style={{padding:'8px 10px',color:W,fontSize:11,maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{st.title}</td>
-                <td style={{padding:'8px 10px'}}><Badge text={ep?.name?.split(' ')[0]||'–'} color={ep?.color} s/></td>
-                <td style={{padding:'8px 10px'}}><Badge text={sg?.label?.split(' ').slice(0,2).join(' ')} color={sg?.color} s/></td>
+                <td style={{padding:'8px 10px'}}><Badge text={((ep||{}).name||'').split(' ')[0]||'–'} color={(ep||{}).color} s/></td>
+                <td style={{padding:'8px 10px'}}><Badge text={((sg||{}).label||'').split(' ').slice(0,2).join(' ')} color={(sg||{}).color} s/></td>
                 <td style={{padding:'8px 10px',color:late?'#E53935':G,fontSize:11,fontWeight:late?700:400}}>{st.plannedDate||'–'}</td>
                 <td style={{padding:'8px 10px',color:st.actualDate?'#43A047':G,fontSize:11}}>{st.actualDate||'–'}</td>
                 <td style={{padding:'8px 10px'}}><Badge text={st.priority[0].toUpperCase()} color={PRI[st.priority]} s/></td>
@@ -287,7 +287,7 @@ function GPDash({stories,epics,onStory,onEpic,onNewE,onNewS}){
 }
 
 function GPEpicDetail({epic,stories,onBack,onStory}){
-  const es=stories.filter(s=>s.epicId===epic.id);const byS={};STAGES.forEach(s=>byS[s.key]=[]);es.forEach(s=>byS[s.stage]?.push(s));
+  const es=stories.filter(s=>s.epicId===epic.id);const byS={};STAGES.forEach(s=>byS[s.key]=[]);es.forEach(s=>(byS[s.stage]||[]).push(s));
   return(
     <div style={{display:'flex',flexDirection:'column',gap:12}}>
       <Btn s color={DH} onClick={onBack}>← Voltar</Btn>
@@ -324,13 +324,13 @@ function ArchDash({stories,onSelect}){
         <Card title="Deploy Success"><div style={{display:'flex',justifyContent:'center',paddingTop:4}}><Gauge value={87} label="First-Pass"/></div></Card>
         <Card title="QA Pass Rate"><div style={{display:'flex',justifyContent:'center',paddingTop:4}}><Gauge value={83} label="Atendidos"/></div></Card>
       </div>
-      <Card title="Itens Ativos"><div style={{display:'flex',flexDirection:'column',gap:4}}>{active.map(st=><div key={st.us} onClick={()=>onSelect(st)} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 10px',background:DK,borderRadius:6,cursor:'pointer'}} onMouseEnter={e=>e.currentTarget.style.background=DH} onMouseLeave={e=>e.currentTarget.style.background=DK}><Badge text={st.us} color={SM[st.stage]?.color} s/><span style={{color:W,fontSize:11,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{st.title}</span><Badge text={SM[st.stage]?.label?.split(' ').slice(0,2).join(' ')} color={SM[st.stage]?.color} s/></div>)}</div></Card>
+      <Card title="Itens Ativos"><div style={{display:'flex',flexDirection:'column',gap:4}}>{active.map(st=><div key={st.us} onClick={()=>onSelect(st)} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 10px',background:DK,borderRadius:6,cursor:'pointer'}} onMouseEnter={e=>e.currentTarget.style.background=DH} onMouseLeave={e=>e.currentTarget.style.background=DK}><Badge text={st.us} color={(SM[st.stage]||{}).color} s/><span style={{color:W,fontSize:11,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{st.title}</span><Badge text={((SM[st.stage]||{}).label||"").split(' ').slice(0,2).join(' ')} color={(SM[st.stage]||{}).color} s/></div>)}</div></Card>
     </div>
   );
 }
 
 function ArchBoard({stories,onSelect}){
-  const gr={};STAGES.forEach(s=>gr[s.key]=[]);stories.forEach(s=>gr[s.stage]?.push(s));
+  const gr={};STAGES.forEach(s=>gr[s.key]=[]);stories.forEach(s=>(gr[s.stage]||[]).push(s));
   return(
     <div style={{display:'grid',gridTemplateColumns:`repeat(${STAGES.length},1fr)`,gap:5,overflowX:'auto'}}>
       {STAGES.map(stg=>(
@@ -350,10 +350,10 @@ function ArchDetail({item,epics,onBack,onAdvance,onUpload,onBugfix,onBugfixResol
   return(
     <div style={{display:'flex',flexDirection:'column',gap:12}}>
       <Btn s color={DH} onClick={onBack}>← Voltar</Btn>
-      <div style={{background:DC,borderRadius:10,padding:'18px 22px',borderLeft:`4px solid ${stg?.color||T}`}}>
+      <div style={{background:DC,borderRadius:10,padding:'18px 22px',borderLeft:`4px solid ${(stg||{}).color||T}`}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12}}>
           <div style={{flex:1,minWidth:0}}>
-            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,flexWrap:'wrap'}}><span style={{color:TL,fontSize:18,fontWeight:800}}>{item.us}</span><Badge text={stg?.label||item.stage} color={stg?.color}/><Badge text={item.priority} color={PRI[item.priority]}/>{ep&&<Badge text={ep.name} color={ep.color} s/>}</div>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,flexWrap:'wrap'}}><span style={{color:TL,fontSize:18,fontWeight:800}}>{item.us}</span><Badge text={(stg||{}).label||item.stage} color={(stg||{}).color}/><Badge text={item.priority} color={PRI[item.priority]}/>{ep&&<Badge text={ep.name} color={ep.color} s/>}</div>
             <div style={{color:W,fontSize:14,fontWeight:600}}>{item.title}</div>
             <div style={{color:G,fontSize:11,marginTop:5,display:'flex',gap:12,flexWrap:'wrap'}}><span>Sprint: <span style={{color:TL}}>{item.sprint||'–'}</span></span><span>Resp: <span style={{color:TL}}>{item.assignee||'–'}</span></span><span>Prevista: <span style={{color:TL}}>{item.plannedDate||'–'}</span></span></div>
           </div>
@@ -362,15 +362,15 @@ function ArchDetail({item,epics,onBack,onAdvance,onUpload,onBugfix,onBugfixResol
         <div style={{marginTop:14}}><StageProgress cur={item.stage}/></div>
       </div>
 
-      <div style={{background:DC,borderRadius:10,padding:'14px 18px',border:`1px solid ${stg?.color||BD}`}}>
-        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}><span style={{fontSize:20}}>{stg?.icon}</span><div style={{flex:1}}><div style={{color:W,fontSize:13,fontWeight:700}}>Etapa: {stg?.label}</div>{stg?.desc&&<div style={{color:G,fontSize:11,marginTop:1}}>{stg.desc}</div>}</div></div>
-        <UploadZone label={stg?.uploadHint||`Upload — ${stg?.label}`} color={stg?.color} onUpload={()=>onUpload(item.us,item.stage==='hf'?'hf':item.stage==='spec'?'spec':item.stage==='bugfix'?'bugfix':'other')}/>
-        {stg?.devops&&<div style={{background:`${stg.color}18`,borderRadius:8,padding:12,border:`1px solid ${stg.color}40`,marginTop:10}}><div style={{color:W,fontSize:12,fontWeight:700}}>💡 No chat do Claude, digite: <span style={{color:TL,fontFamily:'monospace'}}>/devops {item.us}</span></div>{item.files.filter(f=>f.type==='hf').length>0&&<div style={{marginTop:6,display:'flex',alignItems:'center',gap:5}}><span style={{color:'#43A047',fontSize:12}}>✓</span><span style={{color:'#43A047',fontSize:11,fontWeight:600}}>HF: {item.files.find(f=>f.type==='hf')?.name}</span></div>}</div>}
+      <div style={{background:DC,borderRadius:10,padding:'14px 18px',border:`1px solid ${(stg||{}).color||BD}`}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}><span style={{fontSize:20}}>{(stg||{}).icon}</span><div style={{flex:1}}><div style={{color:W,fontSize:13,fontWeight:700}}>Etapa: {(stg||{}).label}</div>{(stg||{}).desc&&<div style={{color:G,fontSize:11,marginTop:1}}>{stg.desc}</div>}</div></div>
+        <UploadZone label={(stg||{}).uploadHint||`Upload — ${(stg||{}).label}`} color={(stg||{}).color} onUpload={()=>onUpload(item.us,item.stage==='hf'?'hf':item.stage==='spec'?'spec':item.stage==='bugfix'?'bugfix':'other')}/>
+        {(stg||{}).devops&&<div style={{background:`${stg.color}18`,borderRadius:8,padding:12,border:`1px solid ${stg.color}40`,marginTop:10}}><div style={{color:W,fontSize:12,fontWeight:700}}>💡 No chat do Claude, digite: <span style={{color:TL,fontFamily:'monospace'}}>/devops {item.us}</span></div>{item.files.filter(f=>f.type==='hf').length>0&&<div style={{marginTop:6,display:'flex',alignItems:'center',gap:5}}><span style={{color:'#43A047',fontSize:12}}>✓</span><span style={{color:'#43A047',fontSize:11,fontWeight:600}}>HF: {(item.files.find(f=>f.type==='hf')||{}).name}</span></div>}</div>}
         {bug&&<div style={{background:'#FF525218',borderRadius:8,padding:12,border:'1px solid #FF525240',marginTop:10}}><div style={{color:W,fontSize:12,fontWeight:700}}>🐛 Bug Reportado</div><div style={{color:G,fontSize:11,marginTop:3}}>Suba o formulário de BugFix e evidências. Ao concluir, clique "Concluir Bugfix" para retornar.</div></div>}
         {item.files.length>0&&<div style={{marginTop:10}}><div style={{color:G,fontSize:10,fontWeight:600,textTransform:'uppercase',marginBottom:4}}>Arquivos</div><FileList files={item.files}/></div>}
         <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginTop:12}}>
           {bug&&<Btn color="#43A047" onClick={()=>onBugfixResolve(item.us)}>✓ Concluir Bugfix</Btn>}
-          {!bug&&stg?.action&&<Btn color={stg?.color} onClick={()=>onAdvance(item.us)}>{stg.action} →</Btn>}
+          {!bug&&(stg||{}).action&&<Btn color={(stg||{}).color} onClick={()=>onAdvance(item.us)}>{stg.action} →</Btn>}
           {item.stage==='homologacao'&&<Badge text="✅ Ciclo Completo" color="#43A047"/>}
         </div>
       </div>
@@ -379,7 +379,7 @@ function ArchDetail({item,epics,onBack,onAdvance,onUpload,onBugfix,onBugfixResol
         {[{k:'stage',l:'Histórico'},{k:'artifacts',l:'Artefatos'},{k:'files',l:`Docs (${item.files.length})`}].map(t=><button key={t.k} onClick={()=>setTab(t.k)} style={{flex:1,padding:'8px 0',border:'none',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:600,background:tab===t.k?T:'transparent',color:tab===t.k?W:G}}>{t.l}</button>)}
       </div>
 
-      {tab==='stage'&&<Card title="Histórico" noPad><div style={{padding:'6px 16px 12px'}}>{STAGES.filter(s=>s.key!=='bugfix').slice(0,(SM[item.stage]?.idx||0)+1).map((s,i,arr)=><div key={s.key} style={{display:'flex',gap:12}}><div style={{display:'flex',flexDirection:'column',alignItems:'center',width:22}}><div style={{width:24,height:24,borderRadius:'50%',background:i===arr.length-1&&!bug?s.color:DK,border:`2px solid ${i===arr.length-1&&!bug?s.color:BD}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,zIndex:1}}>{s.icon}</div>{i<arr.length-1&&<div style={{width:2,flex:1,background:BD,minHeight:10}}/>}</div><div style={{paddingBottom:10}}><div style={{color:W,fontSize:12,fontWeight:600}}>{s.label}</div><div style={{color:i===arr.length-1&&!bug?s.color:G,fontSize:10}}>{i===arr.length-1&&!bug?'● Em andamento':'✓ Concluído'}</div></div></div>)}{bug&&<div style={{display:'flex',gap:12}}><div style={{display:'flex',flexDirection:'column',alignItems:'center',width:22}}><div style={{width:24,height:24,borderRadius:'50%',background:'#FF5252',border:'2px solid #FF5252',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12}}>🐛</div></div><div><div style={{color:W,fontSize:12,fontWeight:600}}>Em Bugfix</div><div style={{color:'#FF5252',fontSize:10}}>● Correção em andamento</div></div></div>}</div></Card>}
+      {tab==='stage'&&<Card title="Histórico" noPad><div style={{padding:'6px 16px 12px'}}>{STAGES.filter(s=>s.key!=='bugfix').slice(0,((SM[item.stage]||{}).idx||0)+1).map((s,i,arr)=><div key={s.key} style={{display:'flex',gap:12}}><div style={{display:'flex',flexDirection:'column',alignItems:'center',width:22}}><div style={{width:24,height:24,borderRadius:'50%',background:i===arr.length-1&&!bug?s.color:DK,border:`2px solid ${i===arr.length-1&&!bug?s.color:BD}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,zIndex:1}}>{s.icon}</div>{i<arr.length-1&&<div style={{width:2,flex:1,background:BD,minHeight:10}}/>}</div><div style={{paddingBottom:10}}><div style={{color:W,fontSize:12,fontWeight:600}}>{s.label}</div><div style={{color:i===arr.length-1&&!bug?s.color:G,fontSize:10}}>{i===arr.length-1&&!bug?'● Em andamento':'✓ Concluído'}</div></div></div>)}{bug&&<div style={{display:'flex',gap:12}}><div style={{display:'flex',flexDirection:'column',alignItems:'center',width:22}}><div style={{width:24,height:24,borderRadius:'50%',background:'#FF5252',border:'2px solid #FF5252',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12}}>🐛</div></div><div><div style={{color:W,fontSize:12,fontWeight:600}}>Em Bugfix</div><div style={{color:'#FF5252',fontSize:10}}>● Correção em andamento</div></div></div>}</div></Card>}
 
       {tab==='artifacts'&&<Card title="Artefatos"><div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:6}}>{['hf','spec','deploy','qa','adr','cenario','zip'].map(a=><div key={a} style={{background:DK,borderRadius:6,padding:10,textAlign:'center',border:`1px solid ${item.artifacts[a]?'#43A047':BD}`}}><ADot has={item.artifacts[a]}/><div style={{color:item.artifacts[a]?W:G,fontSize:9,textTransform:'uppercase',marginTop:4,fontWeight:600}}>{a}</div></div>)}</div></Card>}
 
@@ -390,7 +390,7 @@ function ArchDetail({item,epics,onBack,onAdvance,onUpload,onBugfix,onBugfixResol
 
 function ArchMatrix({stories}){
   const arts=['hf','spec','deploy','qa','adr','cenario','zip'];
-  return<Card title="Matriz de Rastreabilidade"><div style={{overflowX:'auto'}}><table style={{width:'100%',borderCollapse:'separate',borderSpacing:'0 2px'}}><thead><tr style={{background:DH}}><th style={{color:TL,fontSize:10,fontWeight:700,padding:'7px 8px',textAlign:'left'}}>US</th><th style={{color:TL,fontSize:10,fontWeight:700,padding:'7px 8px',textAlign:'left'}}>Estágio</th>{arts.map(a=><th key={a} style={{color:TL,fontSize:9,fontWeight:700,padding:'7px 4px',textAlign:'center',textTransform:'uppercase'}}>{a}</th>)}</tr></thead><tbody>{stories.map((st,row)=><tr key={st.us} style={{background:row%2===0?DK:'transparent'}}><td style={{padding:'5px 8px'}}><span style={{color:TL,fontSize:10,fontWeight:700}}>{st.us}</span></td><td style={{padding:'5px 8px'}}><Badge text={SM[st.stage]?.label?.split(' ').slice(0,2).join(' ')} color={SM[st.stage]?.color} s/></td>{arts.map(a=><td key={a} style={{padding:'5px 4px',textAlign:'center'}}><ADot has={st.artifacts[a]}/></td>)}</tr>)}</tbody></table></div></Card>;
+  return<Card title="Matriz de Rastreabilidade"><div style={{overflowX:'auto'}}><table style={{width:'100%',borderCollapse:'separate',borderSpacing:'0 2px'}}><thead><tr style={{background:DH}}><th style={{color:TL,fontSize:10,fontWeight:700,padding:'7px 8px',textAlign:'left'}}>US</th><th style={{color:TL,fontSize:10,fontWeight:700,padding:'7px 8px',textAlign:'left'}}>Estágio</th>{arts.map(a=><th key={a} style={{color:TL,fontSize:9,fontWeight:700,padding:'7px 4px',textAlign:'center',textTransform:'uppercase'}}>{a}</th>)}</tr></thead><tbody>{stories.map((st,row)=><tr key={st.us} style={{background:row%2===0?DK:'transparent'}}><td style={{padding:'5px 8px'}}><span style={{color:TL,fontSize:10,fontWeight:700}}>{st.us}</span></td><td style={{padding:'5px 8px'}}><Badge text={((SM[st.stage]||{}).label||"").split(' ').slice(0,2).join(' ')} color={(SM[st.stage]||{}).color} s/></td>{arts.map(a=><td key={a} style={{padding:'5px 4px',textAlign:'center'}}><ADot has={st.artifacts[a]}/></td>)}</tr>)}</tbody></table></div></Card>;
 }
 
 /* ── App ── */
@@ -411,7 +411,7 @@ function App(){
   const selStory=useMemo(()=>stories.find(s=>s.us===selUs),[stories,selUs]);
   const tt=useCallback((msg,c)=>{setToast({msg,c});setTimeout(()=>setToast(null),3000)},[]);
 
-  function advance(us){setStories(p=>p.map(s=>{if(s.us!==us)return s;if(!SM[s.stage]?.next)return s;const nx=SM[s.stage].next;const u={...s,stage:nx};if(nx==='homologacao')u.actualDate=new Date().toISOString().slice(0,10);return u}));const st=stories.find(s=>s.us===us);tt(`${us} → ${SM[SM[st?.stage]?.next]?.label}`,SM[SM[st?.stage]?.next]?.color||T)}
+  function advance(us){setStories(p=>p.map(s=>{if(s.us!==us)return s;var sd=SM[s.stage]||{};if(!sd.next)return s;var u={...s,stage:sd.next};if(sd.next==='homologacao')u.actualDate=new Date().toISOString().slice(0,10);return u}));var st=stories.find(s=>s.us===us)||{};var cs=SM[st.stage]||{};var ns=SM[cs.next]||{};tt(us+' → '+ns.label,ns.color||T)}
   function upload(us,type){const v='v'+(Math.random()*2+1).toFixed(1);setStories(p=>p.map(s=>{if(s.us!==us)return s;const nf={name:`${type.toUpperCase()}_${us}.docx`,type,date:new Date().toISOString().slice(0,10),version:v};const a={...s.artifacts};if(type==='hf')a.hf=true;if(type==='spec')a.spec=true;return{...s,files:[...s.files,nf],artifacts:a}}));tt(`Upload: ${type.toUpperCase()}_${us}.docx (${v})`,'#43A047')}
   function setBug(us){setStories(p=>p.map(s=>s.us!==us?s:{...s,prevStage:s.stage,stage:'bugfix'}));tt(`${us} → Bugfix 🐛`,'#FF5252')}
   function resBug(us){setStories(p=>p.map(s=>s.us!==us?s:{...s,stage:s.prevStage||'dev',prevStage:null}));tt(`${us} → Bugfix resolvido ✓`,'#43A047')}
