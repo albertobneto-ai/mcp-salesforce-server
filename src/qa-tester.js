@@ -417,7 +417,7 @@ async function test90(sf) {
       const rtQuery = await sfQuery(sf, "SELECT Id FROM RecordType WHERE SobjectType='Account' AND DeveloperName='Internacional' LIMIT 1");
       const rtId = rtQuery.records?.[0]?.Id;
       if (rtId) {
-        const r = await sfCreate(sf, 'Account', { Name: existName, RecordTypeId: rtId });
+        const r = await sfCreate(sf, 'Account', { Name: existName, RecordTypeId: rtId, BillingStreet: 'QA Test Street', BillingCity: 'Test City', BillingPostalCode: '12345', BillingCountry: 'US', NomeFantasia__c: 'QA90 Dup Test', Segmento__c: 'CORPORATIVO', StatusCadastro__c: 'Pendente Dados', InscricaoMunicipal__c: 'QA00000' });
         const bodyStr = JSON.stringify(r.body);
         if (bodyStr.includes('DUPLICATES_DETECTED')) {
           results.push(ok('CA-003', 'Criacao Internacional com Razao Social identica BLOQUEADA',
@@ -429,7 +429,7 @@ async function test90(sf) {
           results.push(fail('CA-003', 'Criacao NAO foi bloqueada', 'REST POST', `HTTP ${r.status}`, 'Setup > Duplicate Rules > DR Internacional'));
         } else {
           const errMsg = (r.body?.[0]?.message || bodyStr).substring(0, 250);
-          results.push(manual('CA-003', `Teste automatico bloqueado por erro de Flow pre-existente (nao relacionado a duplicidade): ${errMsg.substring(0,120)}`, 'Accounts > New > Internacional > Razao Social identica > Save > verificar bloqueio (desativar Flow Account BeforeSave Derivations se interferir)'));
+          results.push(fail('CA-003', 'Erro na criacao (investigar)', 'REST POST', `HTTP ${r.status}: ${errMsg}`, 'Verificar VRs e Flows no Account'));
         }
       } else results.push(fail('CA-003', 'RT Internacional nao encontrado', 'SOQL', '', ''));
     } else {
@@ -513,7 +513,7 @@ async function test91(sf) {
     }
     if (rtId) {
       const testCnpj = '99' + Date.now().toString().slice(-12);
-      const payload = { Name: 'QA91_TESTE_IMPORT_' + Date.now(), RecordTypeId: rtId, StatusCadastro__c: 'Pendente Dados', OrigemConta__c: 'Importacao', Segmento__c: 'CORPORATIVO', NomeFantasia__c: 'QA91 Teste' };
+      const payload = { Name: 'QA91_TESTE_IMPORT_' + Date.now(), RecordTypeId: rtId, StatusCadastro__c: 'Pendente Dados', OrigemConta__c: 'Importacao', Segmento__c: 'CORPORATIVO', NomeFantasia__c: 'QA91 Teste', BillingStreet: 'QA Test Street 123', BillingCity: 'Test City', BillingPostalCode: '12345', BillingCountry: 'US', InscricaoMunicipal__c: 'QA00000' };
       if (rtName === 'NacionalPJ') payload.CNPJ__c = testCnpj;
       const r = await sfCreate(sf, 'Account', payload, false);
       if (r.status === 201 && r.body.id) {
