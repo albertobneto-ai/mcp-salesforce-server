@@ -568,7 +568,98 @@ async function test91(sf) {
   return results;
 }
 
-const TESTS = { '83': test83, '84': test84, '85': test85, 'usbase': testUSBase, '50a': test50A, '90': test90, '91': test91 };
+async function test107(sf) {
+  const results = [];
+  const PS_NAMES = ['PS_Vendedor_Account_FLS','PS_Gestor_Account_FLS','PS_BackOffice_Account_FLS','PS_Admin_Account_FLS'];
+  const EXPECTED = {
+    'PS_Vendedor_Account_FLS': { minFields: 40, maxEditable: 20, keyReadOnly: ['Account.StatusCadastro__c','Account.TipoCliente__c','Account.Segmento__c','Account.OrigemConta__c'] },
+    'PS_Gestor_Account_FLS': { minFields: 40, maxEditable: 0, keyReadOnly: ['Account.CNPJ__c','Account.StatusCadastro__c','Account.TipoCliente__c'] },
+    'PS_BackOffice_Account_FLS': { minFields: 40, maxEditable: 60, keyEditable: ['Account.CNPJ__c','Account.TipoCliente__c','Account.NomeFantasia__c'], keyReadOnly: ['Account.StatusCadastro__c','Account.Segmento__c'] },
+    'PS_Admin_Account_FLS': { minFields: 40, maxEditable: 60, keyEditable: ['Account.CNPJ__c','Account.StatusCadastro__c','Account.TipoCliente__c'] }
+  };
+
+  // CA-001: 4 PSs existem
+  try {
+    const r = await sfQuery(sf, `SELECT Id, Name, Label FROM PermissionSet WHERE Name IN ('${PS_NAMES.join("','")}') ORDER BY Name`);
+    const found = (r.records || []).map(p => p.Name);
+    const missing = PS_NAMES.filter(n => !found.includes(n));
+    if (missing.length === 0) results.push(ok('CA-001', '4 Permission Sets existem', `REST SOQL: SELECT Name FROM PermissionSet WHERE Name IN (${PS_NAMES.join(',')})`, `Encontrados: ${found.join(', ')}`, 'Setup > Permission Sets > buscar PS_Vendedor, PS_Gestor, PS_BackOffice, PS_Admin'));
+    else results.push(fail('CA-001', 'PSs faltando', 'REST SOQL PermissionSet', `Faltam: ${missing.join(', ')}`, 'Setup > Permission Sets'));
+  } catch(e) { results.push(fail('CA-001', 'Erro', 'REST SOQL', e.message, '')); }
+
+  // CA-002 a CA-005: FLS por PS
+  for (const psName of PS_NAMES) {
+    const exp = EXPECTED[psName];
+    const shortName = psName.replace('PS_','').replace('_Account_FLS','');
+    try {
+      const r = await sfQuery(sf, `SELECT Field, PermissionsEdit, PermissionsRead FROM FieldPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE Name='${psName}') AND SobjectType='Account'`);
+      const recs = r.records || [];
+      const editCount = recs.filter(x => x.PermissionsEdit).length;
+      const totalOk = recs.length >= exp.minFields;
+      const editOk = editCount <= exp.maxEditable;
+
+      // Check key read-only fields
+      let keyFails = [];
+      if (exp.keyReadOnly) {
+        for (const kf of exp.keyReadOnly) {
+          const fp = recs.find(x => x.Field === kf);
+          if (fp && fp.PermissionsEdit) keyFails.push(`${kf} deveria ser ReadOnly mas está Editable`);
+        }
+      }
+      // Check key editable fields
+      if (exp.keyEditable) {
+        for (const kf of exp.keyEditable) {
+          const fp = recs.find(x => x.Field === kf);
+          if (fp && !fp.PermissionsEdit) keyFails.push(`${kf} deveria ser Editable mas está ReadOnly`);
+        }
+      }
+
+      const caNum = `CA-00${PS_NAMES.indexOf(psName)+2}`;
+      if (totalOk && editOk && keyFails.length === 0)
+        results.push(ok(caNum, `FLS ${shortName} configurado`, `REST SOQL: FieldPermissions WHERE PS=${psName}`, `${recs.length} fields, ${editCount} editable. Key fields OK.`, `Setup > Permission Sets > ${psName} > Field Permissions`));
+      else {
+        const issues = [];
+        if (!totalOk) issues.push(`total=${recs.length} < minimo=${exp.minFields}`);
+        if (!editOk) issues.push(`editable=${editCount} > max=${exp.maxEditable}`);
+        if (keyFails.length) issues.push(keyFails.join('; '));
+        results.push(fail(caNum, `FLS ${shortName} incorreto`, 'REST SOQL FieldPermissions', issues.join(' | '), `Setup > Permission Sets > ${psName}`));
+      }
+    } catch(e) { results.push(fail(`CA-00${PS_NAMES.indexOf(psName)+2}`, `Erro FLS ${shortName}`, 'REST SOQL', e.message, '')); }
+  }
+
+  // CA-006: VRs protetoras ativas
+  try {
+    const expectedVRs = ['Block_RecordType_Change','VR_StatusCadastro','Prevent_CNPJ_Manual_Edit','VR_SituacaoCNPJ'];
+    const r = await sfTooling(sf, `SELECT ValidationName, Active FROM ValidationRule WHERE EntityDefinition.QualifiedApiName='Account' AND ValidationName IN ('${expectedVRs.join("','")}') AND Active=true`);
+    const found = (r.records || []).map(v => v.ValidationName);
+    const missing = expectedVRs.filter(v => !found.includes(v));
+    if (missing.length === 0) results.push(ok('CA-006', 'VRs protetoras ativas', `Tooling SOQL: ValidationRule WHERE Active=true AND Name IN (${expectedVRs.join(',')})`, `Encontradas: ${found.join(', ')}`, 'Setup > Account > Validation Rules'));
+    else results.push(fail('CA-006', 'VRs faltando', 'Tooling SOQL', `Faltam: ${missing.join(', ')}`, 'Setup > Account > Validation Rules'));
+  } catch(e) { results.push(fail('CA-006', 'Erro VRs', 'Tooling SOQL', e.message, '')); }
+
+  // CA-007: Campos formula sao read-only (plataforma)
+  try {
+    const formulas = ['CNAEFiscal__c','CNAEEscolhaCliente__c','DescricaoNaturezaJuridica__c','CNPJSemPontuacao__c','RecordTypeName__c'];
+    const desc = await fetch(`${sf.url}/services/data/v62.0/sobjects/Account/describe`, { headers: { 'Authorization': `Bearer ${sf.token}` } });
+    const dj = await desc.json();
+    const formulaFields = (dj.fields || []).filter(f => formulas.includes(f.name));
+    const allReadOnly = formulaFields.every(f => f.calculated === true || f.updateable === false);
+    if (allReadOnly && formulaFields.length >= 4)
+      results.push(ok('CA-007', 'Campos formula read-only', 'REST Describe Account > filter calculated fields', `${formulaFields.length} campos formula confirmados como non-updateable`, 'Setup > Object Manager > Account > Fields > filtrar campos Formula'));
+    else results.push(fail('CA-007', 'Campos formula nao sao read-only', 'REST Describe', `Encontrados: ${formulaFields.length}, allReadOnly=${allReadOnly}`, 'Setup > Account > Fields'));
+  } catch(e) { results.push(fail('CA-007', 'Erro', 'REST Describe', e.message, '')); }
+
+  // Cenarios manuais
+  results.push(manual('CA-003', 'Usuario Vendedor edita campo permitido (ex: Nome Fantasia) e salva com sucesso', 'Login como Vendedor > abrir conta da carteira > editar Nome Fantasia > salvar > verificar sucesso'));
+  results.push(manual('CA-004', 'Campo Serasa bloqueado para Vendedor na UI', 'Login como Vendedor > abrir conta > verificar que Razao Social, CNAE, NJ, SituacaoCNPJ estao read-only'));
+  results.push(manual('CA-005', 'Backoffice edita campos Serasa independente do status', 'Login como Backoffice > abrir qualquer conta > verificar que Razao Social, CNAE, NJ sao editaveis'));
+  results.push(manual('CA-006-UI', 'Campos derivados bloqueados para todos na UI', 'Login como qualquer perfil > abrir conta > verificar que TipoCliente, IdentificadorIE estao read-only'));
+  results.push(manual('CA-007-UI', 'Campos fiscais editaveis apenas por Backoffice', 'Login como Vendedor > verificar campos fiscais read-only. Login como Backoffice > verificar que RetencaoPIS, RetencaoISS sao editaveis.'));
+
+  return results;
+}
+
+const TESTS = { '83': test83, '84': test84, '85': test85, 'usbase': testUSBase, '50a': test50A, '90': test90, '91': test91, '107': test107 };
 
 router.get('/run/:historia', async (req, res) => {
   const historia = req.params.historia.toLowerCase();
