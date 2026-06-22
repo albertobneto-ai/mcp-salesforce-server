@@ -721,7 +721,528 @@ async function test108(sf) {
   return results;
 }
 
-const TESTS = { '83': test83, '84': test84, '85': test85, 'usbase': testUSBase, '50a': test50A, '90': test90, '91': test91, '107': test107, '108': test108 };
+
+async function testLead(sf) {
+  const results = [];
+  // ===== DESCRIBE LEAD (single call, reuse everywhere) =====
+  const descResp = await fetch(`${sf.url}/services/data/v62.0/sobjects/Lead/describe`, { headers: { 'Authorization': `Bearer ${sf.token}` } });
+  const desc = await descResp.json();
+  const fieldMap = {};
+  (desc.fields || []).forEach(f => { fieldMap[f.name] = f; });
+  const rtMap = {};
+  (desc.recordTypeInfos || []).forEach(rt => { rtMap[rt.name] = rt; });
+
+  function hasField(apiName, label, type) {
+    const f = fieldMap[apiName];
+    if (!f) return false;
+    if (type && f.type !== type) return false;
+    return true;
+  }
+  function picklistValues(apiName) {
+    const f = fieldMap[apiName];
+    if (!f) return [];
+    return (f.picklistValues || []).map(pv => pv.value);
+  }
+
+  // ===========================
+  // CRMB2B-14: Dados para criacao de lead (campos e regras)
+  // ===========================
+  const campos14 = [
+    ['CNPJ__c','string','CNPJ'],['IdentificadorClienteInternacional__c','string','Identificador Cliente Internacional'],
+    ['PorteEmpresa__c','picklist','Porte da empresa'],['FaixaFuncionarios__c','picklist','Faixa de funcionarios'],
+    ['TicketPotencial__c','currency','Ticket Potencial'],['ProdutoInteresse__c','string','Produto de interesse'],
+    ['Numero__c','string','Numero'],['Bairro__c','string','Bairro'],['Complemento__c','string','Complemento'],
+    ['Telefone3__c','phone','Telefone 3'],['Telefone4__c','phone','Telefone 4'],['Telefone5__c','phone','Telefone 5'],
+    ['Telefone6__c','phone','Telefone 6'],['Telefone7__c','phone','Telefone 7'],['LinkedIn__c','url','LinkedIn'],
+    ['Segmento__c','picklist','Segmento'],['TipoLead__c','picklist','Tipo de lead'],
+    ['OrigemCanal__c','picklist','Origem canal'],['RelacionamentoLead__c','picklist','Relacionamento do lead'],
+    ['NomeAssociado__c','string','Nome associado'],['MatriculaAssociado__c','string','Matricula associado'],
+    ['OrigemMidia__c','picklist','Origem midia'],['EtapaCarrinho__c','picklist','Etapa carrinho'],
+    ['Campaign__c','reference','Campaign'],['PercentualPreenchimento__c','double','% Preenchimento'],
+    ['Regional__c','string','Regional'],['Diretoria__c','string','Diretoria'],
+    ['Nacionalidade__c','picklist','Nacionalidade'],['DataAgendamento__c','date','Data Agendamento']
+  ];
+  let c14ok = 0, c14fail = [];
+  for (const [api,type,label] of campos14) {
+    if (hasField(api, label, type)) c14ok++;
+    else c14fail.push(api);
+  }
+  if (c14fail.length === 0) results.push(ok('14-01', `CRMB2B-14: Todos os ${campos14.length} campos custom verificados existem com tipo correto`,
+    `Describe Lead: verificados ${campos14.length} campos`,
+    `${c14ok}/${campos14.length} campos OK`,
+    'Setup > Object Manager > Lead > Fields'));
+  else results.push(fail('14-01', `CRMB2B-14: ${c14fail.length} campos AUSENTES: ${c14fail.join(', ')}`,
+    'Describe Lead', `${c14ok}/${campos14.length} OK, faltam: ${c14fail.join(', ')}`, 'Setup > Object Manager > Lead > Fields'));
+
+  // RT Nacional e Internacional
+  if (rtMap['Nacional'] && rtMap['Internacional'])
+    results.push(ok('14-02', 'CRMB2B-14: Record Types Nacional e Internacional existem e ativos',
+      'Describe Lead recordTypeInfos', `Nacional: ${rtMap['Nacional'].recordTypeId}, Internacional: ${rtMap['Internacional'].recordTypeId}`,
+      'Setup > Object Manager > Lead > Record Types'));
+  else results.push(fail('14-02', 'CRMB2B-14: Record Types Nacional/Internacional nao encontrados',
+    'Describe Lead', `Nacional: ${!!rtMap['Nacional']}, Internacional: ${!!rtMap['Internacional']}`, 'Setup > Lead > Record Types'));
+
+  // Status values
+  const statusVals = picklistValues('Status');
+  const expectedStatus = ['Novo','Qualificacao','Conversao','Cancelado','Convertido'];
+  const statusMissing = expectedStatus.filter(s => !statusVals.includes(s));
+  if (statusMissing.length === 0)
+    results.push(ok('14-03', 'CRMB2B-14/20: Todos os Status do Lead presentes (Novo, Qualificacao, Conversao, Cancelado, Convertido)',
+      'Describe Lead field Status', `Valores: ${statusVals.join(', ')}`, 'Setup > Lead > Fields > Status'));
+  else results.push(fail('14-03', `CRMB2B-14/20: Status faltando: ${statusMissing.join(', ')}`,
+    'Describe Lead', `Presentes: ${statusVals.join(', ')}`, 'Setup > Lead > Status'));
+
+  // Porte da empresa (ordem alfabetica)
+  const porteVals = picklistValues('PorteEmpresa__c');
+  const expectedPorte = ['Grande','MEI','Média','Micro','Pequena'];
+  const porteMissing = expectedPorte.filter(p => !porteVals.includes(p));
+  if (porteMissing.length === 0)
+    results.push(ok('14-04', 'CRMB2B-14: Porte da empresa com todos os valores definidos',
+      'Describe Lead field PorteEmpresa__c', `Valores: ${porteVals.join(', ')}`, 'Setup > Lead > Fields'));
+  else results.push(fail('14-04', `CRMB2B-14: Porte faltando: ${porteMissing.join(', ')}`,
+    'Describe Lead', `Presentes: ${porteVals.join(', ')}`, 'Setup > Lead > Fields'));
+
+  // Faixa de funcionarios
+  const faixaVals = picklistValues('FaixaFuncionarios__c');
+  if (faixaVals.length >= 9)
+    results.push(ok('14-05', `CRMB2B-14: Faixa de funcionarios com ${faixaVals.length} valores (esperado 9)`,
+      'Describe Lead field FaixaFuncionarios__c', `Valores: ${faixaVals.join(', ')}`, 'Setup > Lead > Fields'));
+  else results.push(fail('14-05', `CRMB2B-14: Faixa de funcionarios com apenas ${faixaVals.length} valores (esperado 9)`,
+    'Describe Lead', `Valores: ${faixaVals.join(', ')}`, 'Setup > Lead > Fields'));
+
+  // Segmento values
+  const segVals = picklistValues('Segmento__c');
+  const expectedSeg = ['Corporativo','Empresarial','Operadoras'];
+  const segMissing = expectedSeg.filter(s => !segVals.includes(s));
+  if (segMissing.length === 0)
+    results.push(ok('14-06', 'CRMB2B-14/19: Segmento com todos os valores (Corporativo, Empresarial, Operadoras)',
+      'Describe Lead field Segmento__c', `Valores: ${segVals.join(', ')}`, 'Setup > Lead > Fields'));
+  else results.push(fail('14-06', `CRMB2B-14/19: Segmento faltando: ${segMissing.join(', ')}`,
+    'Describe Lead', `Presentes: ${segVals.join(', ')}`, 'Setup > Lead > Fields'));
+
+  // Origem canal values
+  const ocVals = picklistValues('OrigemCanal__c');
+  const expectedOC = ['Landing page','Mailing','Manual','Portal','WhatsApp','Wifeed'];
+  const ocMissing = expectedOC.filter(o => !ocVals.includes(o));
+  if (ocMissing.length === 0)
+    results.push(ok('14-07', 'CRMB2B-14: Origem canal com todos os 6 valores esperados',
+      'Describe Lead field OrigemCanal__c', `Valores: ${ocVals.join(', ')}`, 'Setup > Lead > Fields'));
+  else results.push(fail('14-07', `CRMB2B-14: Origem canal faltando: ${ocMissing.join(', ')}`,
+    'Describe Lead', `Presentes: ${ocVals.join(', ')}`, 'Setup > Lead > Fields'));
+
+  // Tipo de lead values
+  const tipoVals = picklistValues('TipoLead__c');
+  const expectedTipo = ['Prospecção','Rentabilização','Fidelização','Retenção','Winback','Indicação associado','Indicação técnico ITECH'];
+  const tipoMissing = expectedTipo.filter(t => !tipoVals.includes(t));
+  if (tipoMissing.length === 0)
+    results.push(ok('14-08', `CRMB2B-14: Tipo de lead com todos os ${expectedTipo.length} valores`,
+      'Describe Lead field TipoLead__c', `Valores: ${tipoVals.join(', ')}`, 'Setup > Lead > Fields'));
+  else results.push(fail('14-08', `CRMB2B-14: Tipo de lead faltando: ${tipoMissing.join(', ')}`,
+    'Describe Lead', `Presentes: ${tipoVals.join(', ')}`, 'Setup > Lead > Fields'));
+
+  // Relacionamento do lead
+  const relVals = picklistValues('RelacionamentoLead__c');
+  if (relVals.includes('Base Existente') && relVals.includes('Novo Cliente'))
+    results.push(ok('14-09', 'CRMB2B-14: Relacionamento do lead com valores Base Existente e Novo Cliente',
+      'Describe Lead field RelacionamentoLead__c', `Valores: ${relVals.join(', ')}`, 'Setup > Lead > Fields'));
+  else results.push(fail('14-09', 'CRMB2B-14: Relacionamento do lead valores incorretos',
+    'Describe Lead', `Valores: ${relVals.join(', ')}`, 'Setup > Lead > Fields'));
+
+  // Lead Source values
+  const lsVals = picklistValues('LeadSource');
+  const expectedLS = ['Eventos','Indicação','Parceiros','Consultor','Atendimento','Outbound','Inbound','SDR'];
+  const lsMissing = expectedLS.filter(l => !lsVals.includes(l));
+  if (lsMissing.length === 0)
+    results.push(ok('14-10', `CRMB2B-14: Origem do lead (LeadSource) com todos os ${expectedLS.length} valores`,
+      'Describe Lead field LeadSource', `Valores: ${lsVals.join(', ')}`, 'Setup > Lead > Fields'));
+  else results.push(fail('14-10', `CRMB2B-14: Origem do lead faltando: ${lsMissing.join(', ')}`,
+    'Describe Lead', `Presentes: ${lsVals.join(', ')}`, 'Setup > Lead > Fields'));
+
+  // Nacionalidade values
+  const nacVals = picklistValues('Nacionalidade__c');
+  if (nacVals.includes('Nacional') && nacVals.includes('Internacional'))
+    results.push(ok('14-11', 'CRMB2B-14: Nacionalidade com valores Nacional e Internacional',
+      'Describe Lead field Nacionalidade__c', `Valores: ${nacVals.join(', ')}`, 'Setup > Lead > Fields'));
+  else results.push(fail('14-11', 'CRMB2B-14: Nacionalidade valores incorretos',
+    'Describe Lead', `Valores: ${nacVals.join(', ')}`, 'Setup > Lead > Fields'));
+
+  // ===========================
+  // CRMB2B-2: Entrada de leads via Manual — Validation Rules
+  // ===========================
+  const vrResp = await sfTooling(sf, "SELECT Id,ValidationName,Active,ErrorMessage FROM ValidationRule WHERE EntityDefinition.QualifiedApiName='Lead' ORDER BY ValidationName");
+  const vrMap = {};
+  (vrResp.records || []).forEach(vr => { vrMap[vr.ValidationName] = vr; });
+
+  // VR Email
+  if (vrMap['ValidateEmailFormat'] && vrMap['ValidateEmailFormat'].Active)
+    results.push(ok('02-01', 'CRMB2B-2: VR validacao email ativa (ValidateEmailFormat)',
+      'Tooling: ValidationRule ValidateEmailFormat', `Active=${vrMap['ValidateEmailFormat'].Active}`, 'Setup > Lead > VRs'));
+  else results.push(fail('02-01', 'CRMB2B-2: VR ValidateEmailFormat nao encontrada ou inativa',
+    'Tooling API', `Encontrada: ${!!vrMap['ValidateEmailFormat']}`, 'Setup > Lead > VRs'));
+
+  // VR Phone
+  if (vrMap['ValidatesPhoneFormat'] && vrMap['ValidatesPhoneFormat'].Active)
+    results.push(ok('02-02', 'CRMB2B-2: VR validacao telefone ativa (ValidatesPhoneFormat)',
+      'Tooling: ValidationRule ValidatesPhoneFormat', `Active=${vrMap['ValidatesPhoneFormat'].Active}`, 'Setup > Lead > VRs'));
+  else results.push(fail('02-02', 'CRMB2B-2: VR ValidatesPhoneFormat nao encontrada ou inativa',
+    'Tooling API', `Encontrada: ${!!vrMap['ValidatesPhoneFormat']}`, 'Setup > Lead > VRs'));
+
+  // VR Website
+  if (vrMap['ValidadeFormatWebsite'] && vrMap['ValidadeFormatWebsite'].Active)
+    results.push(ok('02-03', 'CRMB2B-2: VR validacao website ativa (ValidadeFormatWebsite)',
+      'Tooling: ValidationRule ValidadeFormatWebsite', `Active=${vrMap['ValidadeFormatWebsite'].Active}`, 'Setup > Lead > VRs'));
+  else results.push(fail('02-03', 'CRMB2B-2: VR ValidadeFormatWebsite nao encontrada ou inativa',
+    'Tooling API', `Encontrada: ${!!vrMap['ValidadeFormatWebsite']}`, 'Setup > Lead > VRs'));
+
+  // VR CNPJ
+  if (vrMap['ValidateCNPJFormat'] && vrMap['ValidateCNPJFormat'].Active)
+    results.push(ok('02-04', 'CRMB2B-2: VR validacao CNPJ ativa (ValidateCNPJFormat)',
+      'Tooling: ValidationRule ValidateCNPJFormat', `Active=${vrMap['ValidateCNPJFormat'].Active}`, 'Setup > Lead > VRs'));
+  else results.push(fail('02-04', 'CRMB2B-2: VR ValidateCNPJFormat nao encontrada ou inativa',
+    'Tooling API', `Encontrada: ${!!vrMap['ValidateCNPJFormat']}`, 'Setup > Lead > VRs'));
+
+  // VR Required Email
+  if (vrMap['ValidateRequiredEmail'] && vrMap['ValidateRequiredEmail'].Active)
+    results.push(ok('02-05', 'CRMB2B-2: VR email obrigatorio ativa (ValidateRequiredEmail)',
+      'Tooling API', `Active=${vrMap['ValidateRequiredEmail'].Active}`, 'Setup > Lead > VRs'));
+  else results.push(fail('02-05', 'CRMB2B-2: VR ValidateRequiredEmail nao encontrada ou inativa',
+    'Tooling API', `Encontrada: ${!!vrMap['ValidateRequiredEmail']}`, 'Setup > Lead > VRs'));
+
+  // VR Required First Name
+  if (vrMap['ValidateRequiredFirstName'] && vrMap['ValidateRequiredFirstName'].Active)
+    results.push(ok('02-06', 'CRMB2B-2: VR primeiro nome obrigatorio ativa (ValidateRequiredFirstName)',
+      'Tooling API', `Active=${vrMap['ValidateRequiredFirstName'].Active}`, 'Setup > Lead > VRs'));
+  else results.push(fail('02-06', 'CRMB2B-2: VR ValidateRequiredFirstName nao encontrada ou inativa',
+    'Tooling API', `Encontrada: ${!!vrMap['ValidateRequiredFirstName']}`, 'Setup > Lead > VRs'));
+
+  // VR CNPJ 14 digits
+  if (vrMap['VR_CNPJ_Format'] && vrMap['VR_CNPJ_Format'].Active)
+    results.push(ok('02-07', 'CRMB2B-2: VR CNPJ 14 digitos ativa (VR_CNPJ_Format)',
+      'Tooling API', `Active=${vrMap['VR_CNPJ_Format'].Active}`, 'Setup > Lead > VRs'));
+  else results.push(fail('02-07', 'CRMB2B-2: VR VR_CNPJ_Format nao encontrada ou inativa',
+    'Tooling API', `Encontrada: ${!!vrMap['VR_CNPJ_Format']}`, 'Setup > Lead > VRs'));
+
+  // ===========================
+  // CRMB2B-19: Segmentacao — VR bloqueio manual
+  // ===========================
+  if (vrMap['LeadBlockSegmentEdit'] && vrMap['LeadBlockSegmentEdit'].Active)
+    results.push(ok('19-01', 'CRMB2B-19: VR bloqueia edicao manual de Segmento (LeadBlockSegmentEdit)',
+      'Tooling API', `Active=${vrMap['LeadBlockSegmentEdit'].Active}`, 'Setup > Lead > VRs'));
+  else results.push(fail('19-01', 'CRMB2B-19: VR LeadBlockSegmentEdit nao encontrada ou inativa',
+    'Tooling API', `Encontrada: ${!!vrMap['LeadBlockSegmentEdit']}`, 'Setup > Lead > VRs'));
+
+  // ===========================
+  // CRMB2B-22: Duplicidade
+  // ===========================
+  if (hasField('Lead_Relacionado__c', 'Lead relacionado', 'reference'))
+    results.push(ok('22-01', 'CRMB2B-22: Campo Lead_Relacionado__c (lookup Lead) existe para rastreio de duplicidade',
+      'Describe Lead field Lead_Relacionado__c', `type=reference`, 'Setup > Lead > Fields'));
+  else results.push(fail('22-01', 'CRMB2B-22: Campo Lead_Relacionado__c nao encontrado',
+    'Describe Lead', 'Campo ausente', 'Setup > Lead > Fields'));
+
+  // ===========================
+  // CRMB2B-27: Priorizacao e repriorizacao
+  // ===========================
+  const ratingVals = picklistValues('Rating');
+  const expectedRating = ['VeryHot','Hot','Warm','Cold'];
+  const ratingMissing = expectedRating.filter(r => !ratingVals.includes(r));
+  if (ratingMissing.length === 0)
+    results.push(ok('27-01', 'CRMB2B-27: Rating com valores Muito Quente/Quente/Morno/Frio (VeryHot/Hot/Warm/Cold)',
+      'Describe Lead field Rating', `Valores: ${ratingVals.join(', ')}`, 'Setup > Lead > Fields'));
+  else results.push(fail('27-01', `CRMB2B-27: Rating faltando: ${ratingMissing.join(', ')}`,
+    'Describe Lead', `Presentes: ${ratingVals.join(', ')}`, 'Setup > Lead > Fields'));
+
+  if (vrMap['LeadBlockRatingEdit'] && vrMap['LeadBlockRatingEdit'].Active)
+    results.push(ok('27-02', 'CRMB2B-27: VR bloqueia edicao manual de Prioridade/Rating (LeadBlockRatingEdit)',
+      'Tooling API', `Active=${vrMap['LeadBlockRatingEdit'].Active}`, 'Setup > Lead > VRs'));
+  else results.push(fail('27-02', 'CRMB2B-27: VR LeadBlockRatingEdit nao encontrada ou inativa',
+    'Tooling API', `Encontrada: ${!!vrMap['LeadBlockRatingEdit']}`, 'Setup > Lead > VRs'));
+
+  if (hasField('PercentualPreenchimento__c', '% Preenchimento', 'double'))
+    results.push(ok('27-03', 'CRMB2B-27: Campo PercentualPreenchimento__c existe (% preenchimento para repriorizacao)',
+      'Describe Lead', `type=double`, 'Setup > Lead > Fields'));
+  else results.push(fail('27-03', 'CRMB2B-27: Campo PercentualPreenchimento__c nao encontrado',
+    'Describe Lead', 'Campo ausente', 'Setup > Lead > Fields'));
+
+  // ===========================
+  // CRMB2B-55: Status cancelamento
+  // ===========================
+  const motivoVals = picklistValues('Motivo_cancelamento__c');
+  const expectedMotivos = ['Sem_interesse','Duplicidade','Sem_orcamento','Lead_fora_perfil',
+    'Cancelamento_CNPJ_situacao_irregular','Fechou_com_o_concorrente','Lead_abandonou_atendimento'];
+  const motivoMissing = expectedMotivos.filter(m => !motivoVals.includes(m));
+  if (motivoVals.length >= 13 && motivoMissing.length === 0)
+    results.push(ok('55-01', `CRMB2B-55: Motivo de cancelamento com ${motivoVals.length} valores (esperado 13)`,
+      'Describe Lead field Motivo_cancelamento__c', `Valores: ${motivoVals.join(', ')}`, 'Setup > Lead > Fields'));
+  else results.push(fail('55-01', `CRMB2B-55: Motivo de cancelamento: ${motivoVals.length} valores, faltando: ${motivoMissing.join(', ')}`,
+    'Describe Lead', `Presentes: ${motivoVals.join(', ')}`, 'Setup > Lead > Fields'));
+
+  if (vrMap['ValidateCanceledStatus'] && vrMap['ValidateCanceledStatus'].Active)
+    results.push(ok('55-02', 'CRMB2B-55: VR exige motivo ao cancelar (ValidateCanceledStatus)',
+      'Tooling API', `Active=${vrMap['ValidateCanceledStatus'].Active}`, 'Setup > Lead > VRs'));
+  else results.push(fail('55-02', 'CRMB2B-55: VR ValidateCanceledStatus nao encontrada ou inativa',
+    'Tooling API', `Encontrada: ${!!vrMap['ValidateCanceledStatus']}`, 'Setup > Lead > VRs'));
+
+  if (vrMap['ValidateMotivoCancelamento'] && vrMap['ValidateMotivoCancelamento'].Active)
+    results.push(ok('55-03', 'CRMB2B-55: VR impede motivo fora do status Cancelado (ValidateMotivoCancelamento)',
+      'Tooling API', `Active=${vrMap['ValidateMotivoCancelamento'].Active}`, 'Setup > Lead > VRs'));
+  else results.push(fail('55-03', 'CRMB2B-55: VR ValidateMotivoCancelamento nao encontrada ou inativa',
+    'Tooling API', `Encontrada: ${!!vrMap['ValidateMotivoCancelamento']}`, 'Setup > Lead > VRs'));
+
+  // ===========================
+  // CRMB2B-54: Regras de qualificacao
+  // ===========================
+  const qualFields = [
+    ['OrcamentoDisponivel__c','picklist','Orcamento disponivel'],
+    ['NivelDecisaoContrato__c','picklist','Nivel decisao contrato'],
+    ['NecessidadeIdentificada__c','picklist','Necessidade identificada'],
+    ['PrazoContratacao__c','picklist','Prazo para contratacao'],
+    ['FornecedoresEmpresa__c','multipicklist','Fornecedores da empresa'],
+    ['ProdutosEmpresa__c','multipicklist','Produtos que a empresa possui']
+  ];
+  let q54ok = 0, q54fail = [];
+  for (const [api,type] of qualFields) {
+    if (hasField(api, '', type)) q54ok++;
+    else q54fail.push(api);
+  }
+  if (q54fail.length === 0)
+    results.push(ok('54-01', `CRMB2B-54: Todos os ${qualFields.length} campos de qualificacao existem`,
+      'Describe Lead', `${q54ok}/${qualFields.length} OK`, 'Setup > Lead > Fields'));
+  else results.push(fail('54-01', `CRMB2B-54: Campos qualificacao faltando: ${q54fail.join(', ')}`,
+    'Describe Lead', `${q54ok}/${qualFields.length} OK`, 'Setup > Lead > Fields'));
+
+  if (vrMap['RequireQualificationFieldsOnAdvance'] && vrMap['RequireQualificationFieldsOnAdvance'].Active)
+    results.push(ok('54-02', 'CRMB2B-54: VR exige campos qualificacao para avancar status (RequireQualificationFieldsOnAdvance)',
+      'Tooling API', `Active=true`, 'Setup > Lead > VRs'));
+  else results.push(fail('54-02', 'CRMB2B-54: VR RequireQualificationFieldsOnAdvance nao encontrada ou inativa',
+    'Tooling API', '', 'Setup > Lead > VRs'));
+
+  if (vrMap['LockQualificationFieldsOutsideStatus'] && vrMap['LockQualificationFieldsOutsideStatus'].Active)
+    results.push(ok('54-03', 'CRMB2B-54: VR bloqueia edicao qualificacao fora de Em qualificacao (LockQualificationFieldsOutsideStatus)',
+      'Tooling API', `Active=true`, 'Setup > Lead > VRs'));
+  else results.push(fail('54-03', 'CRMB2B-54: VR LockQualificationFieldsOutsideStatus nao encontrada ou inativa',
+    'Tooling API', '', 'Setup > Lead > VRs'));
+
+  // Fornecedores values
+  const fornVals = picklistValues('FornecedoresEmpresa__c');
+  if (fornVals.length >= 20)
+    results.push(ok('54-04', `CRMB2B-54: Fornecedores da empresa com ${fornVals.length} valores (esperado 22+)`,
+      'Describe Lead', `${fornVals.length} valores`, 'Setup > Lead > Fields'));
+  else results.push(fail('54-04', `CRMB2B-54: Fornecedores com apenas ${fornVals.length} valores`,
+    'Describe Lead', `Valores: ${fornVals.join(', ')}`, 'Setup > Lead > Fields'));
+
+  // ===========================
+  // CRMB2B-68: Conversao
+  // ===========================
+  if (vrMap['BlockUnauthorizedLeadConversion'] && vrMap['BlockUnauthorizedLeadConversion'].Active)
+    results.push(ok('68-01', 'CRMB2B-68: VR bloqueia conversao fora do status Em conversao (BlockUnauthorizedLeadConversion)',
+      'Tooling API', `Active=true`, 'Setup > Lead > VRs'));
+  else results.push(fail('68-01', 'CRMB2B-68: VR BlockUnauthorizedLeadConversion nao encontrada ou inativa',
+    'Tooling API', '', 'Setup > Lead > VRs'));
+
+  if (vrMap['RestrictTransitionToEmConversao'] && vrMap['RestrictTransitionToEmConversao'].Active)
+    results.push(ok('68-02', 'CRMB2B-68: VR restringe quem pode mover para Em conversao (RestrictTransitionToEmConversao)',
+      'Tooling API', `Active=true`, 'Setup > Lead > VRs'));
+  else results.push(fail('68-02', 'CRMB2B-68: VR RestrictTransitionToEmConversao nao encontrada ou inativa',
+    'Tooling API', '', 'Setup > Lead > VRs'));
+
+  if (vrMap['RestrictTransitionToCancelado'] && vrMap['RestrictTransitionToCancelado'].Active)
+    results.push(ok('68-03', 'CRMB2B-68: VR restringe quem pode cancelar (RestrictTransitionToCancelado)',
+      'Tooling API', `Active=true`, 'Setup > Lead > VRs'));
+  else results.push(fail('68-03', 'CRMB2B-68: VR RestrictTransitionToCancelado nao encontrada ou inativa',
+    'Tooling API', '', 'Setup > Lead > VRs'));
+
+  // ===========================
+  // CRMB2B-53: Blacklist
+  // ===========================
+  const blFields = ['TelefoneBlacklist__c','MobilePhoneBlacklist__c','Telefone3Blacklist__c',
+    'Telefone4Blacklist__c','Telefone5Blacklist__c','Telefone6Blacklist__c','Telefone7Blacklist__c'];
+  let bl53ok = 0;
+  for (const api of blFields) { if (hasField(api, '', 'picklist')) bl53ok++; }
+  if (bl53ok === blFields.length)
+    results.push(ok('53-01', `CRMB2B-53: Todos os ${blFields.length} campos blacklist de telefone existem`,
+      'Describe Lead', `${bl53ok}/${blFields.length} OK`, 'Setup > Lead > Fields'));
+  else results.push(fail('53-01', `CRMB2B-53: ${bl53ok}/${blFields.length} campos blacklist encontrados`,
+    'Describe Lead', `Esperado ${blFields.length}`, 'Setup > Lead > Fields'));
+
+  if (hasField('BlacklistValidationPending__c', '', 'boolean'))
+    results.push(ok('53-02', 'CRMB2B-53: Campo BlacklistValidationPending__c existe (flag controle)',
+      'Describe Lead', 'type=boolean', 'Setup > Lead > Fields'));
+  else results.push(fail('53-02', 'CRMB2B-53: Campo BlacklistValidationPending__c nao encontrado',
+    'Describe Lead', 'Campo ausente', 'Setup > Lead > Fields'));
+
+  if (vrMap['ValidatePhoneUpdate'] && vrMap['ValidatePhoneUpdate'].Active)
+    results.push(ok('53-03', 'CRMB2B-53: VR bloqueia save durante validacao blacklist (ValidatePhoneUpdate)',
+      'Tooling API', 'Active=true', 'Setup > Lead > VRs'));
+  else results.push(fail('53-03', 'CRMB2B-53: VR ValidatePhoneUpdate nao encontrada ou inativa',
+    'Tooling API', '', 'Setup > Lead > VRs'));
+
+  // ===========================
+  // CRMB2B-51: Enriquecimento
+  // ===========================
+  const enrichFields = ['BairroEnrichStatus__c','CityEnrichStatus__c','ComplementoEnrichStatus__c',
+    'FaixaFuncionariosEnrichStatus__c','NumeroEnrichStatus__c','PorteEmpresaEnrichStatus__c',
+    'PostalCodeEnrichStatus__c','SituacaoCadastralEnrichStatus__c','StateEnrichStatus__c',
+    'StreetEnrichStatus__c','TicketPotencialEnrichStatus__c'];
+  let en51ok = 0;
+  for (const api of enrichFields) { if (hasField(api, '', 'picklist')) en51ok++; }
+  if (en51ok === enrichFields.length)
+    results.push(ok('51-01', `CRMB2B-51: Todos os ${enrichFields.length} campos EnrichStatus existem`,
+      'Describe Lead', `${en51ok}/${enrichFields.length} OK`, 'Setup > Lead > Fields'));
+  else results.push(fail('51-01', `CRMB2B-51: ${en51ok}/${enrichFields.length} campos EnrichStatus encontrados`,
+    'Describe Lead', `Esperado ${enrichFields.length}`, 'Setup > Lead > Fields'));
+
+  if (hasField('SituacaoCadastral__c', '', 'picklist')) {
+    const sitVals = picklistValues('SituacaoCadastral__c');
+    if (sitVals.includes('Ativa') && sitVals.includes('Baixada') && sitVals.includes('Suspensa'))
+      results.push(ok('51-02', `CRMB2B-51: Situacao Cadastral com ${sitVals.length} valores incluindo Ativa/Baixada/Suspensa`,
+        'Describe Lead', `Valores: ${sitVals.join(', ')}`, 'Setup > Lead > Fields'));
+    else results.push(fail('51-02', 'CRMB2B-51: Situacao Cadastral com valores incompletos',
+      'Describe Lead', `Valores: ${sitVals.join(', ')}`, 'Setup > Lead > Fields'));
+  } else results.push(fail('51-02', 'CRMB2B-51: Campo SituacaoCadastral__c nao encontrado', 'Describe Lead', '', ''));
+
+  if (hasField('EnrichmentInProgress__c', '', 'boolean'))
+    results.push(ok('51-03', 'CRMB2B-51: Campo EnrichmentInProgress__c existe (controle de execucao)',
+      'Describe Lead', 'type=boolean', 'Setup > Lead > Fields'));
+  else results.push(fail('51-03', 'CRMB2B-51: Campo EnrichmentInProgress__c nao encontrado',
+    'Describe Lead', '', 'Setup > Lead > Fields'));
+
+  // ===========================
+  // CRMB2B-16/17: WhatsApp / Portal
+  // ===========================
+  if (hasField('HistoricoWhatsApp__c', '', 'textarea'))
+    results.push(ok('16-01', 'CRMB2B-16: Campo HistoricoWhatsApp__c existe para historico de conversa',
+      'Describe Lead', 'type=textarea', 'Setup > Lead > Fields'));
+  else results.push(fail('16-01', 'CRMB2B-16: Campo HistoricoWhatsApp__c nao encontrado',
+    'Describe Lead', '', 'Setup > Lead > Fields'));
+
+  // Origem midia values
+  const omVals = picklistValues('OrigemMidia__c');
+  if (omVals.includes('Carrinho Abandonado') && omVals.includes('Me Ligue'))
+    results.push(ok('17-01', 'CRMB2B-17: Origem midia com Carrinho Abandonado e Me Ligue',
+      'Describe Lead', `Valores: ${omVals.join(', ')}`, 'Setup > Lead > Fields'));
+  else results.push(fail('17-01', 'CRMB2B-17: Origem midia valores incompletos',
+    'Describe Lead', `Valores: ${omVals.join(', ')}`, 'Setup > Lead > Fields'));
+
+  // Portal VRs
+  if (vrMap['VR_Portal_Required_Contact'] && vrMap['VR_Portal_Required_Contact'].Active)
+    results.push(ok('17-02', 'CRMB2B-17: VR Portal exige Email ou Telefone (VR_Portal_Required_Contact)',
+      'Tooling API', 'Active=true', 'Setup > Lead > VRs'));
+  else results.push(fail('17-02', 'CRMB2B-17: VR VR_Portal_Required_Contact nao encontrada ou inativa',
+    'Tooling API', '', 'Setup > Lead > VRs'));
+
+  if (vrMap['VR_Portal_Request_Id_Unique_Format'] && vrMap['VR_Portal_Request_Id_Unique_Format'].Active)
+    results.push(ok('17-03', 'CRMB2B-17: VR Portal ID requisicao formato UUID (VR_Portal_Request_Id_Unique_Format)',
+      'Tooling API', 'Active=true', 'Setup > Lead > VRs'));
+  else results.push(fail('17-03', 'CRMB2B-17: VR VR_Portal_Request_Id_Unique_Format nao encontrada ou inativa',
+    'Tooling API', '', 'Setup > Lead > VRs'));
+
+  // ===========================
+  // CRMB2B-31: Atribuicao automatica
+  // ===========================
+  if (hasField('Regional__c') && hasField('Diretoria__c'))
+    results.push(ok('31-01', 'CRMB2B-31: Campos Regional__c e Diretoria__c existem para atribuicao',
+      'Describe Lead', 'Ambos presentes', 'Setup > Lead > Fields'));
+  else results.push(fail('31-01', 'CRMB2B-31: Campos Regional/Diretoria nao encontrados',
+    'Describe Lead', `Regional: ${!!fieldMap['Regional__c']}, Diretoria: ${!!fieldMap['Diretoria__c']}`, 'Setup > Lead > Fields'));
+
+  // ===========================
+  // Permission Sets
+  // ===========================
+  const psResp = await sfTooling(sf, "SELECT Id,Name,Label FROM PermissionSet WHERE Name LIKE '%Lead%' OR Name LIKE '%lead%'");
+  const psNames = (psResp.records || []).map(r => r.Name);
+
+  const expectedPS = [
+    'PS_Lead_Nacional_Record_Type','PS_Lead_Internacional_RecordType',
+    'PS_LeadQualificationSDR','PS_LeadQualificationConsultor','PS_LeadQualificationGovernance',
+    'LeadConversionAccess','PSLeadBaseOperacao','PSLeadIntegracaoBypass',
+    'PSGLeadGovernanca','PSGLeadSDR','PSGLeadMarketing','PSGLeadGestao'
+  ];
+  let psOk = 0, psMissing = [];
+  for (const ps of expectedPS) {
+    if (psNames.includes(ps)) psOk++;
+    else psMissing.push(ps);
+  }
+  if (psMissing.length === 0)
+    results.push(ok('PS-01', `Permission Sets Lead: todos os ${expectedPS.length} PSs criticos encontrados`,
+      'Tooling API', `${psOk}/${expectedPS.length} OK. Total PSs Lead: ${psNames.length}`, 'Setup > Permission Sets'));
+  else results.push(fail('PS-01', `Permission Sets Lead: ${psMissing.length} faltando: ${psMissing.join(', ')}`,
+    'Tooling API', `${psOk}/${expectedPS.length} OK`, 'Setup > Permission Sets'));
+
+  // PS Portal
+  if (psNames.includes('PS_Lead_Portal_Algar') && psNames.includes('PS_Lead_Portal_Algar_Admin'))
+    results.push(ok('PS-02', 'CRMB2B-17: Permission Sets Portal Algar e Admin existem',
+      'Tooling API', 'PS_Lead_Portal_Algar + PS_Lead_Portal_Algar_Admin', 'Setup > Permission Sets'));
+  else results.push(fail('PS-02', 'CRMB2B-17: PSs Portal Algar nao encontrados',
+    'Tooling API', `Encontrados: ${psNames.filter(n=>n.includes('Portal')).join(', ')}`, 'Setup > Permission Sets'));
+
+  // PS Integration
+  if (psNames.includes('PS_Lead_Integration_Read') && psNames.includes('PS_Lead_Integration_Edit'))
+    results.push(ok('PS-03', 'Permission Sets integracao Lead existem (Read + Edit)',
+      'Tooling API', 'PS_Lead_Integration_Read + PS_Lead_Integration_Edit', 'Setup > Permission Sets'));
+  else results.push(fail('PS-03', 'PSs integracao Lead nao encontrados',
+    'Tooling API', '', 'Setup > Permission Sets'));
+
+  // ===========================
+  // VR Internacional
+  // ===========================
+  if (vrMap['LeadBlockInternacionalNoAuth'] && vrMap['LeadBlockInternacionalNoAuth'].Active)
+    results.push(ok('02-08', 'CRMB2B-2: VR bloqueia criacao Lead Internacional sem permissao (LeadBlockInternacionalNoAuth)',
+      'Tooling API', 'Active=true', 'Setup > Lead > VRs'));
+  else results.push(fail('02-08', 'CRMB2B-2: VR LeadBlockInternacionalNoAuth nao encontrada ou inativa',
+    'Tooling API', '', 'Setup > Lead > VRs'));
+
+  // ===========================
+  // MANUAL TESTS
+  // ===========================
+  results.push(manual('M-02', 'CRMB2B-2: Layout criacao Lead Nacional exibe opcoes Nacional/Internacional no topo',
+    'UI: Leads > Novo Lead > verificar que Radio Button Nacionalidade aparece no topo'));
+  results.push(manual('M-03', 'CRMB2B-3: Import Wizard permite mapeamento de-para de campos do mailing',
+    'Setup > Data Import Wizard > verificar que Lead pode ser importado com mapeamento'));
+  results.push(manual('M-16', 'CRMB2B-16: Lead criado via WhatsApp registra historico de conversa',
+    'UI: Lead com OrigemCanal=WhatsApp > verificar campo HistoricoWhatsApp preenchido'));
+  results.push(manual('M-19', 'CRMB2B-19: Segmentacao automatica via API Neoway/conta existente',
+    'UI: Criar Lead Nacional com CNPJ de conta existente > verificar Segmento herdado'));
+  results.push(manual('M-22', 'CRMB2B-22: Lead duplicado inbound x inbound cancela o novo e relaciona ao existente',
+    'UI: Criar 2 leads inbound mesmo CNPJ > verificar que 2o fica Cancelado com motivo Duplicidade e Lead_Relacionado preenchido'));
+  results.push(manual('M-25', 'CRMB2B-25: Redistribuicao controlada conforme perfil (Gerente/Lider/Coordenador)',
+    'UI: Tentar trocar proprietario de Lead com diferentes perfis'));
+  results.push(manual('M-27', 'CRMB2B-27: Priorizacao automatica (inbound=Muito Quente, outbound=Fria) aplicada por Flow/Apex',
+    'UI: Criar Lead inbound > verificar Rating=VeryHot. Criar outbound > verificar Rating=Cold'));
+  results.push(manual('M-31', 'CRMB2B-31: Atribuicao automatica para filas SDR/Canal ON conforme regras de segmento/regional',
+    'UI: Criar Lead Cliente Novo, Corporativo > verificar que vai para fila SDR CORPORATIVO'));
+  results.push(manual('M-32', 'CRMB2B-32: Ordenacao de leads em fila por Rating > Score > Aging',
+    'UI: Verificar List View de fila com leads ordenados por prioridade'));
+  results.push(manual('M-33', 'CRMB2B-33: Notificacao enviada ao consultor quando lead inbound e atribuido',
+    'UI: Atribuir lead inbound a consultor > verificar notificacao in-app e push'));
+  results.push(manual('M-51', 'CRMB2B-51: Enriquecimento Neoway/Receita ao entrar em Qualificacao',
+    'UI: Criar Lead Nacional com CNPJ > mover para Qualificacao > verificar campos enriquecidos'));
+  results.push(manual('M-52', 'CRMB2B-52: Botao Cobertura de Rede visivel em Qualificacao com endereco completo',
+    'UI: Lead em Qualificacao com endereco > verificar botao Cobertura de Rede visivel e funcional'));
+  results.push(manual('M-66', 'CRMB2B-66: Registro de interacoes (ligacao, email, tarefa) na aba Atividades',
+    'UI: Lead > Atividades > Registrar chamada > verificar campos obrigatorios e resultado'));
+  results.push(manual('M-67', 'CRMB2B-67: Cadencia outbound cria tarefas automaticas (telefone, email, WhatsApp, LinkedIn)',
+    'UI: Lead outbound em Qualificacao > verificar criacao automatica de tarefas de cadencia'));
+  results.push(manual('M-68', 'CRMB2B-68: Botao Converter Lead visivel apenas em status Em conversao para perfis autorizados',
+    'UI: Lead Em conversao > verificar botao Converter visivel para consultor, invisivel para outros'));
+  results.push(manual('M-24', 'CRMB2B-24: Dashboards nativos (funil, backlog, cancelados, SLA) com filtros funcionais',
+    'UI: App Leads > Dashboards > verificar 4 dashboards com filtros por segmento/status/regional'));
+  results.push(manual('M-70', 'CRMB2B-70: Aba WhatsApp no Lead com envio via template aprovado',
+    'UI: Lead > aba WhatsApp > verificar lista de templates e envio'));
+
+  // ===========================
+  // SUMMARY: Total VRs ativas
+  // ===========================
+  const activeVRs = Object.values(vrMap).filter(v => v.Active);
+  results.push(ok('VR-SUM', `Resumo VRs Lead: ${activeVRs.length} ativas de ${Object.keys(vrMap).length} total`,
+    'Tooling API', `Ativas: ${activeVRs.map(v=>v.ValidationName).join(', ')}`,
+    'Setup > Lead > Validation Rules'));
+
+  return results;
+}
+
+
+const TESTS = { '83': test83, '84': test84, '85': test85, 'usbase': testUSBase, '50a': test50A, '90': test90, '91': test91, '107': test107, '108': test108, 'lead': testLead };
 
 router.get('/run/:historia', async (req, res) => {
   const historia = req.params.historia.toLowerCase();
