@@ -845,13 +845,13 @@ async function testLead(sf) {
     const validLead = await sfCreate('Lead', {
       FirstName: 'QA_Test', LastName: 'LeadNacional', Company: 'QA Empresa Teste Ltda',
       Email: 'qa.test@empresa.com.br', Phone: '1199999999',
-      CNPJ__c: '71208516000174', Nacionalidade__c: 'Nacional',
+      CNPJ__c: '71.208.516/0001-74', Nacionalidade__c: 'Nacional',
       RecordTypeId: nacionalRT, OrigemCanal__c: 'Manual',
       Status: 'Novo'
     });
     if (validLead.id)
       results.push(ok('VR-01', 'Lead Nacional com dados validos criado com sucesso',
-        'POST /sobjects/Lead com CNPJ valido, Email, Phone, FirstName, Company',
+        'POST /sobjects/Lead com CNPJ formatado (71.208.516/0001-74), Email, Phone, FirstName, Company',
         `Id=${validLead.id}`, 'Criar Lead via API com dados minimos'));
     else
       results.push(fail('VR-01', `Lead Nacional valido NAO criado: ${JSON.stringify(validLead).substring(0,200)}`,
@@ -863,16 +863,16 @@ async function testLead(sf) {
     const invalidCNPJ = await sfCreate('Lead', {
       FirstName: 'QA_Test', LastName: 'CNPJInvalido', Company: 'Teste',
       Email: 'qa@test.com', Phone: '1199999999',
-      CNPJ__c: '123456', Nacionalidade__c: 'Nacional',
+      CNPJ__c: '12345', Nacionalidade__c: 'Nacional',
       RecordTypeId: nacionalRT, OrigemCanal__c: 'Manual', Status: 'Novo'
     });
     if (invalidCNPJ.id)
       results.push(fail('VR-02', 'Lead com CNPJ invalido (6 digitos) foi ACEITO — VR nao bloqueou',
-        'POST /sobjects/Lead com CNPJ=123456', `Id=${invalidCNPJ.id} criado indevidamente`, 'VR VR_CNPJ_Format deveria bloquear'));
+        'POST /sobjects/Lead com CNPJ=12345 (5 chars)', `Id=${invalidCNPJ.id} criado indevidamente`, 'VR VR_CNPJ_Format deveria bloquear'));
     else {
       const msg = invalidCNPJ[0]?.message || JSON.stringify(invalidCNPJ).substring(0,150);
       results.push(ok('VR-02', 'VR bloqueou Lead com CNPJ invalido (6 digitos)',
-        'POST /sobjects/Lead com CNPJ=123456', `Erro: ${msg}`, 'VR_CNPJ_Format ativa'));
+        'POST /sobjects/Lead com CNPJ=12345 (5 chars)', `Erro: ${msg}`, 'VR_CNPJ_Format ativa'));
     }
   } catch(e) { results.push(fail('VR-02', `Erro inesperado: ${e.message}`, '', '', '')); }
 
@@ -881,7 +881,7 @@ async function testLead(sf) {
     const invalidEmail = await sfCreate('Lead', {
       FirstName: 'QA_Test', LastName: 'EmailInvalido', Company: 'Teste',
       Email: 'semdominio', Phone: '1199999999',
-      CNPJ__c: '71208516000174', Nacionalidade__c: 'Nacional',
+      CNPJ__c: '71.208.516/0001-74', Nacionalidade__c: 'Nacional',
       RecordTypeId: nacionalRT, OrigemCanal__c: 'Manual', Status: 'Novo'
     });
     if (invalidEmail.id)
@@ -897,7 +897,7 @@ async function testLead(sf) {
     const invalidPhone = await sfCreate('Lead', {
       FirstName: 'QA_Test', LastName: 'PhoneInvalido', Company: 'Teste',
       Email: 'qa@test.com.br', Phone: '123',
-      CNPJ__c: '71208516000174', Nacionalidade__c: 'Nacional',
+      CNPJ__c: '71.208.516/0001-74', Nacionalidade__c: 'Nacional',
       RecordTypeId: nacionalRT, OrigemCanal__c: 'Manual', Status: 'Novo'
     });
     if (invalidPhone.id)
@@ -1008,14 +1008,14 @@ async function testLead(sf) {
     const lead1 = await sfCreate('Lead', {
       FirstName: 'QA_Dup', LastName: 'Lead1', Company: 'Dup Empresa',
       Email: 'dup1@test.com.br', Phone: '1199998888',
-      CNPJ__c: '11222333000181', Nacionalidade__c: 'Nacional',
+      CNPJ__c: '11.222.333/0001-81', Nacionalidade__c: 'Nacional',
       RecordTypeId: nacionalRT, OrigemCanal__c: 'Landing page', Status: 'Novo'
     });
     if (lead1.id) {
       const lead2 = await sfCreate('Lead', {
         FirstName: 'QA_Dup', LastName: 'Lead2', Company: 'Dup Empresa 2',
         Email: 'dup2@test.com.br', Phone: '1199997777',
-        CNPJ__c: '11222333000181', Nacionalidade__c: 'Nacional',
+        CNPJ__c: '11.222.333/0001-81', Nacionalidade__c: 'Nacional',
         RecordTypeId: nacionalRT, OrigemCanal__c: 'Landing page', Status: 'Novo'
       });
       if (lead2.id) {
@@ -1026,7 +1026,7 @@ async function testLead(sf) {
             `Lead1=${lead1.id}, Lead2=${lead2.id}`, `Status=${dup2.Status}, Motivo=${dup2.Motivo_cancelamento__c}`, 'CRMB2B-22'));
         else
           results.push(fail('DUP-01', `Lead duplicado NAO auto-cancelado — Status=${dup2.Status}, Motivo=${dup2.Motivo_cancelamento__c || 'null'}. Automacao de duplicidade AUSENTE`,
-            `Criados 2 Leads com CNPJ=11222333000181`, `Lead2 Status=${dup2.Status}`, 'CRMB2B-22: Implementar Flow de duplicidade'));
+            `Criados 2 Leads com CNPJ=11.222.333/0001-81`, `Lead2 Status=${dup2.Status}`, 'CRMB2B-22: Implementar Flow de duplicidade'));
 
         if (dup2.Lead_Relacionado__c)
           results.push(ok('DUP-02', `Lead duplicado relacionado ao original via Lead_Relacionado__c=${dup2.Lead_Relacionado__c}`,
