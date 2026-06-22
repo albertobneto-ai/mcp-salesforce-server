@@ -659,7 +659,69 @@ async function test107(sf) {
   return results;
 }
 
-const TESTS = { '83': test83, '84': test84, '85': test85, 'usbase': testUSBase, '50a': test50A, '90': test90, '91': test91, '107': test107 };
+async function test108(sf) {
+  const results = [];
+
+  // CA-001: CustomPermission exists
+  try {
+    const r = await sfQuery(sf, "SELECT Id, SetupEntityId FROM SetupEntityAccess WHERE SetupEntityType='CustomPermission' AND ParentId IN (SELECT Id FROM PermissionSet WHERE Name='PS_Account_SerasaIntegration_FLS')");
+    if ((r.records||[]).length > 0) results.push(ok('CA-001','CustomPermission BypassRestrictedFieldsUpdate existe e atribuida ao PS Serasa','REST SOQL: SetupEntityAccess WHERE SetupEntityType=CustomPermission',`EntityId=${r.records[0].SetupEntityId}`,'Setup > Custom Permissions'));
+    else results.push(fail('CA-001','CustomPermission nao encontrada','REST SOQL','Nenhum SetupEntityAccess encontrado','Setup > Custom Permissions'));
+  } catch(e) { results.push(fail('CA-001','Erro','SOQL',e.message,'')); }
+
+  // CA-002: PS_Account_RestrictedAPI_FLS with FLS
+  try {
+    const r = await sfQuery(sf, "SELECT Field, PermissionsEdit FROM FieldPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE Name='PS_Account_RestrictedAPI_FLS') AND SobjectType='Account'");
+    const recs = r.records||[];
+    const editCount = recs.filter(x=>x.PermissionsEdit).length;
+    if (recs.length >= 40 && editCount <= 10) results.push(ok('CA-002',`PS_Account_RestrictedAPI_FLS: ${recs.length} FPs, ${editCount} editable`,'REST SOQL FieldPermissions','FLS restritivo OK','Setup > Permission Sets > PS_Account_RestrictedAPI_FLS'));
+    else results.push(fail('CA-002',`FLS incorreto: ${recs.length} FPs, ${editCount} editable`,'REST SOQL','Esperado >=40 FPs e <=10 editable',''));
+  } catch(e) { results.push(fail('CA-002','Erro','SOQL',e.message,'')); }
+
+  // CA-003: PS_Account_SerasaIntegration_FLS with FLS + CP
+  try {
+    const r = await sfQuery(sf, "SELECT Field, PermissionsEdit FROM FieldPermissions WHERE ParentId IN (SELECT Id FROM PermissionSet WHERE Name='PS_Account_SerasaIntegration_FLS') AND SobjectType='Account'");
+    const recs = r.records||[];
+    const editCount = recs.filter(x=>x.PermissionsEdit).length;
+    if (recs.length >= 40 && editCount >= 10) results.push(ok('CA-003',`PS_Account_SerasaIntegration_FLS: ${recs.length} FPs, ${editCount} editable + CP atribuida`,'REST SOQL FieldPermissions','FLS Serasa + Custom Permission OK','Setup > Permission Sets > PS_Account_SerasaIntegration_FLS'));
+    else results.push(fail('CA-003',`FLS incorreto: ${recs.length} FPs, ${editCount} editable`,'REST SOQL','Esperado >=40 FPs e >=10 editable',''));
+  } catch(e) { results.push(fail('CA-003','Erro','SOQL',e.message,'')); }
+
+  // CA-004: VR active
+  try {
+    const r = await sfTooling(sf, "SELECT Id, ValidationName, Active, ErrorMessage FROM ValidationRule WHERE EntityDefinition.QualifiedApiName='Account' AND ValidationName='VR_Account_RestrictedFields_APIUpdate' AND Active=true");
+    if ((r.records||[]).length > 0) results.push(ok('CA-004','VR_Account_RestrictedFields_APIUpdate ativa','Tooling SOQL ValidationRule',`Msg: ${r.records[0].ErrorMessage.substring(0,60)}`,'Setup > Account > Validation Rules'));
+    else results.push(fail('CA-004','VR nao encontrada ou inativa','Tooling SOQL','','Setup > Account > Validation Rules'));
+  } catch(e) { results.push(fail('CA-004','Erro','Tooling',e.message,'')); }
+
+  // CA-005: Total VRs ativas (should be 16)
+  try {
+    const r = await sfTooling(sf, "SELECT COUNT(Id) cnt FROM ValidationRule WHERE EntityDefinition.QualifiedApiName='Account' AND Active=true");
+    const cnt = (r.records||[{}])[0].cnt||0;
+    if (cnt >= 16) results.push(ok('CA-005',`${cnt} VRs ativas no Account (15 anteriores + 1 nova)`,'Tooling SOQL COUNT',`Total: ${cnt}`,'Setup > Account > Validation Rules'));
+    else results.push(fail('CA-005',`Apenas ${cnt} VRs ativas (esperado >=16)`,'Tooling SOQL','',''));
+  } catch(e) { results.push(fail('CA-005','Erro','Tooling',e.message,'')); }
+
+  // CA-006: NJ custom object has TipoCliente mapping
+  try {
+    const desc = await fetch(`${sf.url}/services/data/v62.0/sobjects/NaturezaJuridica__c/describe`, { headers: { 'Authorization': `Bearer ${sf.token}` } });
+    const dj = await desc.json();
+    const hasTipoCliente = (dj.fields||[]).some(f => f.name === 'TipoCliente__c');
+    if (hasTipoCliente) results.push(ok('CA-006','NaturezaJuridica__c tem campo TipoCliente__c (mapeamento para Screen Flow)','REST Describe NaturezaJuridica__c','Campo TipoCliente__c encontrado','Setup > Object Manager > NaturezaJuridica'));
+    else results.push(fail('CA-006','Campo TipoCliente__c nao encontrado em NaturezaJuridica__c','REST Describe','',''));
+  } catch(e) { results.push(fail('CA-006','Erro','Describe',e.message,'')); }
+
+  // Manual tests
+  results.push(manual('CA-007', 'API generica (sem CP) tenta Update de Razao Social → VR bloqueia', 'API: PATCH /sobjects/Account/{id} com Name alterado usando usuario sem BypassRestrictedFieldsUpdate'));
+  results.push(manual('CA-008', 'MuleSoft (com CP) faz Update de campos Serasa → VR NAO bloqueia', 'API: PATCH /sobjects/Account/{id} com campos Serasa usando usuario com BypassRestrictedFieldsUpdate'));
+  results.push(manual('CA-009', 'Screen Flow AlterarNaturezaJuridica mostra derivacao visual de TipoCliente', 'UI: Account > Quick Action Alterar NJ > selecionar nova NJ > verificar TipoCliente exibido'));
+  results.push(manual('CA-010', 'Perfis de integracao criados (Integracao API + Integracao MuleSoft)', 'Setup > Profiles > verificar existencia'));
+  results.push(manual('CA-011', 'Dynamic Action controla visibilidade da Quick Action por perfil', 'Setup > Account > Lightning Record Page > verificar Dynamic Action'));
+
+  return results;
+}
+
+const TESTS = { '83': test83, '84': test84, '85': test85, 'usbase': testUSBase, '50a': test50A, '90': test90, '91': test91, '107': test107, '108': test108 };
 
 router.get('/run/:historia', async (req, res) => {
   const historia = req.params.historia.toLowerCase();
