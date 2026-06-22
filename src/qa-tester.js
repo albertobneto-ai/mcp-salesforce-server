@@ -840,23 +840,38 @@ async function testLead(sf) {
   // BLOCO 2: TESTES COMPORTAMENTAIS — VRs (tentar operacoes invalidas)
   // ================================================================
 
-  // 2.1 Criar Lead Nacional valido
+  // 2.1 BUG DOCUMENTADO: VR_CNPJ_Format ([0-9]{14}) CONFLITA com CnpjFormatHelper.applyMask (LeadTrigger)
+  // Trigger formata CNPJ antes da VR avaliar, causando rejeicao. DESATIVAR VR_CNPJ_Format.
   try {
-    const validLead = await sfCreate('Lead', {
+    const nacLead = await sfCreate('Lead', {
       FirstName: 'QA_Test', LastName: 'LeadNacional', Company: 'QA Empresa Teste Ltda',
       Email: 'qa.test@empresa.com.br', Phone: '1199999999',
-      CNPJ__c: '71.208.516/0001-74', Nacionalidade__c: 'Nacional',
-      RecordTypeId: nacionalRT, OrigemCanal__c: 'Manual',
-      Status: 'Novo'
+      CNPJ__c: '71208516000174', Nacionalidade__c: 'Nacional',
+      RecordTypeId: nacionalRT, OrigemCanal__c: 'Manual', Status: 'Novo'
     });
-    if (validLead.id)
-      results.push(ok('VR-01', 'Lead Nacional com dados validos criado com sucesso',
-        'POST /sobjects/Lead com CNPJ formatado (71.208.516/0001-74), Email, Phone, FirstName, Company',
-        `Id=${validLead.id}`, 'Criar Lead via API com dados minimos'));
+    if (nacLead.id)
+      results.push(ok('BUG-01', 'Lead Nacional criado com sucesso — VR_CNPJ_Format nao conflita mais',
+        'POST /sobjects/Lead CNPJ=71208516000174', `Id=${nacLead.id}`, ''));
     else
-      results.push(fail('VR-01', `Lead Nacional valido NAO criado: ${JSON.stringify(validLead).substring(0,200)}`,
-        'POST /sobjects/Lead', JSON.stringify(validLead).substring(0,200), 'Verificar VRs e campos obrigatorios'));
-  } catch(e) { results.push(fail('VR-01', `Erro ao criar Lead: ${e.message}`, '', '', '')); }
+      results.push(fail('BUG-01', 'BUG CONFIRMADO: VR_CNPJ_Format conflita com CnpjFormatHelper.applyMask — Trigger formata CNPJ para XX.XXX.XXX/XXXX-XX ANTES da VR avaliar, VR exige [0-9]{14} e rejeita. ACAO: Desativar VR_CNPJ_Format (ValidateCNPJFormat ja cobre)',
+        'POST /sobjects/Lead CNPJ=71208516000174', `Trigger applyMask formata→VR rejeita`, 'Desativar VR_CNPJ_Format ou ajustar regex'));
+  } catch(e) { results.push(fail('BUG-01', `Erro: ${e.message}`, '', '', '')); }
+
+  // 2.1b Fallback: Criar Lead Internacional (sem CNPJ) para testar demais VRs
+  try {
+    const intLead = await sfCreate('Lead', {
+      FirstName: 'QA_Test', LastName: 'LeadIntl', Company: 'QA International Corp',
+      Email: 'qa.intl@empresa.com', Phone: '1199999999',
+      Nacionalidade__c: 'Internacional',
+      RecordTypeId: internacionalRT, OrigemCanal__c: 'Manual', Status: 'Novo'
+    });
+    if (intLead.id)
+      results.push(ok('VR-01', 'Lead Internacional criado com sucesso (bypass CNPJ para testar demais cenarios)',
+        'POST /sobjects/Lead Internacional sem CNPJ', `Id=${intLead.id}`, ''));
+    else
+      results.push(fail('VR-01', `Lead Internacional NAO criado: ${JSON.stringify(intLead).substring(0,200)}`,
+        'POST /sobjects/Lead', JSON.stringify(intLead).substring(0,200), 'Verificar VRs'));
+  } catch(e) { results.push(fail('VR-01', `Erro: ${e.message}`, '', '', '')); }
 
   // 2.2 Tentar criar Lead com CNPJ invalido (menos de 14 digitos)
   try {
