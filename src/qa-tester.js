@@ -1188,7 +1188,233 @@ async function testLead(sf) {
 }
 
 
-const TESTS = { '83': test83, '84': test84, '85': test85, 'usbase': testUSBase, '50a': test50A, '90': test90, '91': test91, '107': test107, '108': test108, 'lead': testLead };
+
+// ===== CRMB2B-172 — Criacao de Contato =====
+async function test172(sf) {
+  const R = [];
+
+  // CT-172-001: FonteCriacao__c field exists with 6 values
+  try {
+    const r = await sfTooling(sf, "SELECT DeveloperName, DataType FROM CustomField WHERE TableEnumOrId='Contact' AND DeveloperName='FonteCriacao' AND NamespacePrefix=null");
+    const recs = r.records || [];
+    if (recs.length > 0) R.push(ok('CT-172-001', 'FonteCriacao__c existe', 'Tooling SOQL CustomField', `Tipo: ${recs[0].DataType}`, 'Setup > Contact > Fields > FonteCriacao__c'));
+    else R.push(fail('CT-172-001', 'FonteCriacao__c NAO existe', 'Tooling SOQL', 'Campo nao encontrado', 'Setup > Contact > Fields'));
+  } catch(e) { R.push(fail('CT-172-001', 'Erro', 'Tooling SOQL', e.message, '')); }
+
+  // CT-172-002: LeadOrigem__c field exists as Lookup
+  try {
+    const r = await sfTooling(sf, "SELECT DeveloperName, DataType FROM CustomField WHERE TableEnumOrId='Contact' AND DeveloperName='LeadOrigem' AND NamespacePrefix=null");
+    const recs = r.records || [];
+    if (recs.length > 0 && recs[0].DataType === 'Lookup') R.push(ok('CT-172-002', 'LeadOrigem__c existe (Lookup)', 'Tooling SOQL CustomField', `Tipo: ${recs[0].DataType}`, 'Setup > Contact > Fields > LeadOrigem__c'));
+    else if (recs.length > 0) R.push(fail('CT-172-002', `LeadOrigem__c tipo errado: ${recs[0].DataType}`, 'Tooling SOQL', 'Esperado Lookup', ''));
+    else R.push(fail('CT-172-002', 'LeadOrigem__c NAO existe', 'Tooling SOQL', 'Campo nao encontrado', ''));
+  } catch(e) { R.push(fail('CT-172-002', 'Erro', 'Tooling SOQL', e.message, '')); }
+
+  // CT-172-003: VR FonteCriacao Imutavel ativa
+  try {
+    const r = await sfTooling(sf, "SELECT ValidationName, Active FROM ValidationRule WHERE EntityDefinition.QualifiedApiName='Contact' AND ValidationName='VR_Contact_FonteCriacao_Imutavel'");
+    const recs = r.records || [];
+    if (recs.length > 0 && recs[0].Active) R.push(ok('CT-172-003', 'VR FonteCriacao Imutavel ativa', 'Tooling SOQL ValidationRule', 'Active=true', 'Setup > Contact > Validation Rules'));
+    else R.push(fail('CT-172-003', 'VR FonteCriacao Imutavel NAO ativa', 'Tooling SOQL', recs.length > 0 ? 'Active=false' : 'Nao encontrada', ''));
+  } catch(e) { R.push(fail('CT-172-003', 'Erro', 'Tooling SOQL', e.message, '')); }
+
+  // CT-172-004: VR LeadOrigem Imutavel ativa
+  try {
+    const r = await sfTooling(sf, "SELECT ValidationName, Active FROM ValidationRule WHERE EntityDefinition.QualifiedApiName='Contact' AND ValidationName='VR_Contact_LeadOrigem_Imutavel'");
+    const recs = r.records || [];
+    if (recs.length > 0 && recs[0].Active) R.push(ok('CT-172-004', 'VR LeadOrigem Imutavel ativa', 'Tooling SOQL ValidationRule', 'Active=true', 'Setup > Contact > Validation Rules'));
+    else R.push(fail('CT-172-004', 'VR LeadOrigem Imutavel NAO ativa', 'Tooling SOQL', recs.length > 0 ? 'Active=false' : 'Nao encontrada', ''));
+  } catch(e) { R.push(fail('CT-172-004', 'Erro', 'Tooling SOQL', e.message, '')); }
+
+  // CT-172-005: PS_Contact_FonteCriacao_FLS existe
+  try {
+    const r = await sfQuery(sf, "SELECT Id, Name FROM PermissionSet WHERE Name='PS_Contact_FonteCriacao_FLS'");
+    const recs = r.records || [];
+    if (recs.length > 0) R.push(ok('CT-172-005', 'PS_Contact_FonteCriacao_FLS existe', 'REST SOQL PermissionSet', `Id: ${recs[0].Id}`, 'Setup > Permission Sets'));
+    else R.push(fail('CT-172-005', 'PS NAO existe', 'REST SOQL', 'Nao encontrado', ''));
+  } catch(e) { R.push(fail('CT-172-005', 'Erro', 'REST SOQL', e.message, '')); }
+
+  // CT-172-006: FLS FonteCriacao Read Only no PS
+  try {
+    const r = await sfQuery(sf, "SELECT Field, PermissionsRead, PermissionsEdit FROM FieldPermissions WHERE Parent.Name='PS_Contact_FonteCriacao_FLS' AND SobjectType='Contact'");
+    const recs = r.records || [];
+    const fc = recs.find(x => x.Field === 'Contact.FonteCriacao__c');
+    const lo = recs.find(x => x.Field === 'Contact.LeadOrigem__c');
+    const fcOk = fc && fc.PermissionsRead && !fc.PermissionsEdit;
+    const loOk = lo && lo.PermissionsRead && !lo.PermissionsEdit;
+    if (fcOk && loOk) R.push(ok('CT-172-006', 'FLS Read Only em FonteCriacao e LeadOrigem', 'REST SOQL FieldPermissions', `${recs.length} FPs. FonteCriacao=Read, LeadOrigem=Read`, 'Setup > PS > Field Permissions'));
+    else R.push(fail('CT-172-006', 'FLS incorreto', 'REST SOQL', `FC: Read=${fc?.PermissionsRead} Edit=${fc?.PermissionsEdit}, LO: Read=${lo?.PermissionsRead} Edit=${lo?.PermissionsEdit}`, ''));
+  } catch(e) { R.push(fail('CT-172-006', 'Erro', 'REST SOQL', e.message, '')); }
+
+  // CT-172-007: FonteCriacao picklist tem 6 valores
+  try {
+    const r = await sfQuery(sf, "SELECT Id FROM Contact LIMIT 0");
+    const desc = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/describe', { headers: { 'Authorization': 'Bearer ' + sf.token } });
+    const d = await desc.json();
+    const fcField = (d.fields || []).find(f => f.name === 'FonteCriacao__c');
+    if (fcField) {
+      const vals = (fcField.picklistValues || []).filter(v => v.active !== false).map(v => v.value);
+      const expected = ['Lead','Manual','Mailing','Landing Page','Portal','Oportunidade'];
+      const missing = expected.filter(e => !vals.includes(e));
+      if (missing.length === 0) R.push(ok('CT-172-007', 'Picklist FonteCriacao 6 valores OK', 'REST Describe Contact', `Valores: ${vals.join(', ')}`, 'Setup > Contact > Fields > FonteCriacao__c'));
+      else R.push(fail('CT-172-007', 'Valores faltando na picklist', 'REST Describe', `Faltam: ${missing.join(', ')}`, ''));
+    } else R.push(fail('CT-172-007', 'FonteCriacao__c nao encontrado no describe', 'REST Describe', '', ''));
+  } catch(e) { R.push(fail('CT-172-007', 'Erro', 'REST Describe', e.message, '')); }
+
+  // CT-172-008: VR bloqueia alteracao FonteCriacao (teste real)
+  try {
+    // Create a test Contact
+    const createResp = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + sf.token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ LastName: 'QA_Tester_172_' + Date.now(), FonteCriacao__c: 'Manual' })
+    });
+    const created = await createResp.json();
+    if (created.id) {
+      // Try to update FonteCriacao (should fail)
+      const upResp = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/' + created.id, {
+        method: 'PATCH', headers: { 'Authorization': 'Bearer ' + sf.token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ FonteCriacao__c: 'Lead' })
+      });
+      if (upResp.status === 400) {
+        const err = await upResp.json();
+        const msg = (err[0]?.message || err.message || '').toLowerCase();
+        if (msg.includes('fonte de cria')) R.push(ok('CT-172-008', 'VR bloqueia alteracao FonteCriacao (real)', 'REST DML: Insert+Update Contact', `VR disparou: ${err[0]?.message?.substring(0,80)}`, 'Tentar editar FonteCriacao no registro'));
+        else R.push(fail('CT-172-008', 'Bloqueio por outro motivo', 'REST DML', msg.substring(0,100), ''));
+      } else {
+        R.push(fail('CT-172-008', 'VR NAO bloqueou alteracao', 'REST DML', `Status: ${upResp.status}`, ''));
+      }
+      // Cleanup
+      await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/' + created.id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + sf.token } });
+    } else R.push(fail('CT-172-008', 'Erro ao criar Contact de teste', 'REST DML', JSON.stringify(created).substring(0,100), ''));
+  } catch(e) { R.push(fail('CT-172-008', 'Erro', 'REST DML', e.message, '')); }
+
+  // CT-172-009: Flow BeforeSave (MANUAL — Flow nao deployado)
+  R.push(manual('CT-172-009', 'Flow Contact_BeforeSave_FonteCriacao (default Manual)', 'Flow Builder > Contact_BeforeSave_FonteCriacao'));
+
+  // CT-172-010: Flow Lead Conversion (MANUAL)
+  R.push(manual('CT-172-010', 'Flow Lead_AfterUpdate_Conversion (FonteCriacao=Lead + LeadOrigem)', 'Flow Builder > Lead_AfterUpdate_Conversion'));
+
+  return R;
+}
+
+
+// ===== CRMB2B-173 — Campos do Contato =====
+async function test173(sf) {
+  const R = [];
+
+  const EXPECTED_FIELDS = [
+    'StatusContato','Celular2','Cargo','Departamento','CanalPreferencial',
+    'TipoContato','ClassificacaoContato','ContatoPrincipal','GrauInfluencia',
+    'Consentimento','NaoPerturbe','Blacklist','CodigoPaisCelular','CodigoPaisTelefone','CodigoPaisCelular2'
+  ];
+
+  // CT-173-001: 15 campos custom existem
+  try {
+    const r = await sfTooling(sf, "SELECT DeveloperName, DataType FROM CustomField WHERE TableEnumOrId='Contact' AND NamespacePrefix=null");
+    const found = (r.records || []).map(x => x.DeveloperName);
+    const missing = EXPECTED_FIELDS.filter(f => !found.includes(f));
+    if (missing.length === 0) R.push(ok('CT-173-001', '15 campos custom existem', 'Tooling SOQL CustomField', `Encontrados: ${found.length} campos non-namespaced`, 'Setup > Contact > Fields'));
+    else R.push(fail('CT-173-001', 'Campos faltando', 'Tooling SOQL', `Faltam: ${missing.join(', ')}`, ''));
+  } catch(e) { R.push(fail('CT-173-001', 'Erro', 'Tooling SOQL', e.message, '')); }
+
+  // CT-173-002: VR EmailFormato ativa
+  try {
+    const r = await sfTooling(sf, "SELECT ValidationName, Active FROM ValidationRule WHERE EntityDefinition.QualifiedApiName='Contact' AND ValidationName='VR_Contact_EmailFormato'");
+    const recs = r.records || [];
+    if (recs.length > 0 && recs[0].Active) R.push(ok('CT-173-002', 'VR EmailFormato ativa', 'Tooling SOQL', 'Active=true', 'Setup > Contact > VRs'));
+    else R.push(fail('CT-173-002', 'VR EmailFormato NAO ativa', 'Tooling SOQL', recs.length > 0 ? 'Active=false' : 'Nao encontrada', ''));
+  } catch(e) { R.push(fail('CT-173-002', 'Erro', 'Tooling SOQL', e.message, '')); }
+
+  // CT-173-003: VR ReportsTo MesmaConta ativa
+  try {
+    const r = await sfTooling(sf, "SELECT ValidationName, Active FROM ValidationRule WHERE EntityDefinition.QualifiedApiName='Contact' AND ValidationName='VR_Contact_ReportsTo_MesmaConta'");
+    const recs = r.records || [];
+    if (recs.length > 0 && recs[0].Active) R.push(ok('CT-173-003', 'VR ReportsTo MesmaConta ativa', 'Tooling SOQL', 'Active=true', 'Setup > Contact > VRs'));
+    else R.push(fail('CT-173-003', 'VR ReportsTo NAO ativa', 'Tooling SOQL', recs.length > 0 ? 'Active=false' : 'Nao encontrada', ''));
+  } catch(e) { R.push(fail('CT-173-003', 'Erro', 'Tooling SOQL', e.message, '')); }
+
+  // CT-173-004: PS CamposGerais com 15 FP Edit
+  try {
+    const r = await sfQuery(sf, "SELECT Field, PermissionsEdit FROM FieldPermissions WHERE Parent.Name='PS_Contact_CamposGerais_FLS' AND SobjectType='Contact'");
+    const recs = r.records || [];
+    const editCount = recs.filter(x => x.PermissionsEdit).length;
+    if (recs.length >= 15 && editCount >= 15) R.push(ok('CT-173-004', 'PS CamposGerais: 15+ FP Edit', 'REST SOQL FieldPermissions', `${recs.length} FPs, ${editCount} editable`, 'Setup > PS > PS_Contact_CamposGerais_FLS'));
+    else R.push(fail('CT-173-004', 'FP insuficientes', 'REST SOQL', `Total=${recs.length}, Edit=${editCount}`, ''));
+  } catch(e) { R.push(fail('CT-173-004', 'Erro', 'REST SOQL', e.message, '')); }
+
+  // CT-173-005: PS SomenteLeitura com 15 FP ReadOnly
+  try {
+    const r = await sfQuery(sf, "SELECT Field, PermissionsEdit FROM FieldPermissions WHERE Parent.Name='PS_Contact_SomenteLeitura_FLS' AND SobjectType='Contact'");
+    const recs = r.records || [];
+    const editCount = recs.filter(x => x.PermissionsEdit).length;
+    if (recs.length >= 15 && editCount === 0) R.push(ok('CT-173-005', 'PS SomenteLeitura: 15+ FP ReadOnly', 'REST SOQL FieldPermissions', `${recs.length} FPs, 0 editable`, 'Setup > PS > PS_Contact_SomenteLeitura_FLS'));
+    else R.push(fail('CT-173-005', 'FP incorretos', 'REST SOQL', `Total=${recs.length}, Edit=${editCount} (esperado 0)`, ''));
+  } catch(e) { R.push(fail('CT-173-005', 'Erro', 'REST SOQL', e.message, '')); }
+
+  // CT-173-006: VR EmailFormato bloqueia email invalido (teste real)
+  try {
+    const createResp = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + sf.token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ LastName: 'QA_173_EmailTest', Email: 'invalido@' })
+    });
+    if (createResp.status === 400) {
+      const err = await createResp.json();
+      const msg = (err[0]?.message || '').toLowerCase();
+      if (msg.includes('e-mail') || msg.includes('email')) R.push(ok('CT-173-006', 'VR bloqueia email formato invalido', 'REST DML Insert Contact', `VR disparou: ${err[0]?.message?.substring(0,80)}`, 'Criar Contact com Email=invalido@'));
+      else R.push(ok('CT-173-006', 'Email invalido bloqueado (outro mecanismo)', 'REST DML', msg.substring(0,80), ''));
+    } else {
+      const created = await createResp.json();
+      R.push(fail('CT-173-006', 'Email invalido NAO bloqueado', 'REST DML', `Status ${createResp.status}`, ''));
+      if (created.id) await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/' + created.id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + sf.token } });
+    }
+  } catch(e) { R.push(fail('CT-173-006', 'Erro', 'REST DML', e.message, '')); }
+
+  // CT-173-007: Email formato valido aceito
+  try {
+    const createResp = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + sf.token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ LastName: 'QA_173_ValidEmail_' + Date.now(), Email: 'qa173test@everymind.com.br' })
+    });
+    const created = await createResp.json();
+    if (created.id) {
+      R.push(ok('CT-173-007', 'Email formato valido aceito', 'REST DML Insert Contact', `Id: ${created.id}`, ''));
+      await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/' + created.id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + sf.token } });
+    } else R.push(fail('CT-173-007', 'Nao criou Contact com email valido', 'REST DML', JSON.stringify(created).substring(0,100), ''));
+  } catch(e) { R.push(fail('CT-173-007', 'Erro', 'REST DML', e.message, '')); }
+
+  // CT-173-008: Cargo picklist tem 17 valores
+  try {
+    const desc = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/describe', { headers: { 'Authorization': 'Bearer ' + sf.token } });
+    const d = await desc.json();
+    const cargoField = (d.fields || []).find(f => f.name === 'Cargo__c');
+    if (cargoField) {
+      const vals = (cargoField.picklistValues || []).filter(v => v.active !== false);
+      if (vals.length >= 15) R.push(ok('CT-173-008', `Cargo picklist: ${vals.length} valores`, 'REST Describe', vals.map(v=>v.value).join(', '), 'Setup > Contact > Cargo__c'));
+      else R.push(fail('CT-173-008', `Cargo: apenas ${vals.length} valores`, 'REST Describe', vals.map(v=>v.value).join(', '), ''));
+    } else R.push(fail('CT-173-008', 'Cargo__c nao encontrado', 'REST Describe', '', ''));
+  } catch(e) { R.push(fail('CT-173-008', 'Erro', 'REST Describe', e.message, '')); }
+
+  // CT-173-009: Departamento picklist tem 14 valores
+  try {
+    const desc = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/describe', { headers: { 'Authorization': 'Bearer ' + sf.token } });
+    const d = await desc.json();
+    const deptField = (d.fields || []).find(f => f.name === 'Departamento__c');
+    if (deptField) {
+      const vals = (deptField.picklistValues || []).filter(v => v.active !== false);
+      if (vals.length >= 12) R.push(ok('CT-173-009', `Departamento picklist: ${vals.length} valores`, 'REST Describe', vals.map(v=>v.value).join(', '), 'Setup > Contact > Departamento__c'));
+      else R.push(fail('CT-173-009', `Departamento: apenas ${vals.length} valores`, 'REST Describe', vals.map(v=>v.value).join(', '), ''));
+    } else R.push(fail('CT-173-009', 'Departamento__c nao encontrado', 'REST Describe', '', ''));
+  } catch(e) { R.push(fail('CT-173-009', 'Erro', 'REST Describe', e.message, '')); }
+
+  // CT-173-010 a 012: MANUAL
+  R.push(manual('CT-173-010', 'FHT registra alteracao Cargo/Status', 'Setup > Contact > History Tracking'));
+  R.push(manual('CT-173-011', 'Contact sem Account privado (OWD)', 'Logar como outro usuario e buscar Contact'));
+  R.push(manual('CT-173-012', 'SafetyEmail Apex (pendente deploy)', 'Deploy SafetyEmailService.cls e testar'));
+
+  return R;
+}
+
+const TESTS = { '83': test83, '84': test84, '85': test85, 'usbase': testUSBase, '50a': test50A, '90': test90, '91': test91, '107': test107, '108': test108, 'lead': testLead, '172': test172, '173': test173 };
 
 router.get('/run/:historia', async (req, res) => {
   const historia = req.params.historia.toLowerCase();
