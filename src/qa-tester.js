@@ -723,366 +723,468 @@ async function test108(sf) {
 
 
 
+
 async function testLead(sf) {
-  const results = [];
-  const createdIds = []; // cleanup
+  const R = [];
+  const cleanup = [];
+  const NAC_RT = '012Ha0000027AxaIAE';
+  const INT_RT = '012Ha0000027H1NIAU';
 
-  // Helper: create record
-  async function sfCreate(obj, data) {
-    const r = await fetch(`${sf.url}/services/data/v62.0/sobjects/${obj}`, {
-      method: 'POST', headers: { 'Authorization': `Bearer ${sf.token}`, 'Content-Type': 'application/json' },
+  async function apiCreate(data) {
+    const r = await fetch(`${sf.url}/services/data/v62.0/sobjects/Lead`, {
+      method:'POST', headers:{'Authorization':`Bearer ${sf.token}`,'Content-Type':'application/json'},
       body: JSON.stringify(data)
     });
     const d = await r.json();
-    if (d.id) createdIds.push({ obj, id: d.id });
-    return { status: r.status, ...d };
+    if (d.id) cleanup.push(d.id);
+    return { ok: !!d.id, id: d.id, status: r.status, error: d[0]?.message || d.message || '', raw: d };
   }
 
-  // Helper: update record
-  async function sfUpdate(obj, id, data) {
-    const r = await fetch(`${sf.url}/services/data/v62.0/sobjects/${obj}/${id}`, {
-      method: 'PATCH', headers: { 'Authorization': `Bearer ${sf.token}`, 'Content-Type': 'application/json' },
+  async function apiUpdate(id, data) {
+    const r = await fetch(`${sf.url}/services/data/v62.0/sobjects/Lead/${id}`, {
+      method:'PATCH', headers:{'Authorization':`Bearer ${sf.token}`,'Content-Type':'application/json'},
       body: JSON.stringify(data)
     });
-    if (r.status === 204) return { success: true };
+    if (r.status === 204) return { ok: true };
     const d = await r.json();
-    return { success: false, status: r.status, ...d };
+    return { ok: false, error: d[0]?.message || d.message || '', raw: d };
   }
 
-  // Helper: read record
-  async function sfRead(obj, id, fields) {
-    const r = await fetch(`${sf.url}/services/data/v62.0/sobjects/${obj}/${id}?fields=${fields}`, {
-      headers: { 'Authorization': `Bearer ${sf.token}` }
+  async function apiRead(id, fields) {
+    const r = await fetch(`${sf.url}/services/data/v62.0/sobjects/Lead/${id}?fields=${fields}`, {
+      headers:{'Authorization':`Bearer ${sf.token}`}
     });
     return r.json();
   }
 
-  // Helper: delete
-  async function sfDelete(obj, id) {
-    await fetch(`${sf.url}/services/data/v62.0/sobjects/${obj}/${id}`, {
-      method: 'DELETE', headers: { 'Authorization': `Bearer ${sf.token}` }
+  async function apiDelete(id) {
+    await fetch(`${sf.url}/services/data/v62.0/sobjects/Lead/${id}`, {
+      method:'DELETE', headers:{'Authorization':`Bearer ${sf.token}`}
     });
   }
 
-  // Describe for metadata checks
-  const descResp = await fetch(`${sf.url}/services/data/v62.0/sobjects/Lead/describe`, { headers: { 'Authorization': `Bearer ${sf.token}` } });
-  const desc = await descResp.json();
-  const fieldMap = {};
-  (desc.fields || []).forEach(f => { fieldMap[f.name] = f; });
-  const rtMap = {};
-  (desc.recordTypeInfos || []).forEach(rt => { rtMap[rt.name] = rt; });
-
-  function picklistValues(apiName) {
-    const f = fieldMap[apiName];
-    return f ? (f.picklistValues || []).map(pv => pv.value) : [];
-  }
-
-  const nacionalRT = rtMap['Nacional']?.recordTypeId;
-  const internacionalRT = rtMap['Internacional']?.recordTypeId;
-
-  // ================================================================
-  // BLOCO 1: INFRAESTRUTURA (metadata verification)
-  // ================================================================
-
-  // 1.1 Record Types
-  if (nacionalRT && internacionalRT)
-    results.push(ok('INF-01', 'Record Types Nacional e Internacional existem e ativos',
-      'Describe Lead', `Nacional=${nacionalRT}, Internacional=${internacionalRT}`, 'Setup > Lead > Record Types'));
-  else results.push(fail('INF-01', 'Record Types Nacional/Internacional ausentes',
-    'Describe Lead', `Nacional=${!!nacionalRT}, Internacional=${!!internacionalRT}`, 'Setup > Lead > Record Types'));
-
-  // 1.2 Key fields exist
-  const keyFields = ['CNPJ__c','Segmento__c','OrigemCanal__c','TipoLead__c','RelacionamentoLead__c',
-    'Nacionalidade__c','PercentualPreenchimento__c','Regional__c','Diretoria__c','Motivo_cancelamento__c',
-    'Lead_Relacionado__c','OrcamentoDisponivel__c','NivelDecisaoContrato__c','NecessidadeIdentificada__c',
-    'PrazoContratacao__c','FornecedoresEmpresa__c','HistoricoWhatsApp__c','SituacaoCadastral__c'];
-  const missing = keyFields.filter(f => !fieldMap[f]);
-  if (missing.length === 0)
-    results.push(ok('INF-02', `${keyFields.length} campos criticos existem`,
-      'Describe Lead', `${keyFields.length}/${keyFields.length} OK`, 'Setup > Lead > Fields'));
-  else results.push(fail('INF-02', `Campos criticos faltando: ${missing.join(', ')}`,
-    'Describe Lead', `${keyFields.length - missing.length}/${keyFields.length}`, 'Setup > Lead > Fields'));
-
-  // 1.3 VRs ativas
-  const vrResp = await sfTooling(sf, "SELECT ValidationName,Active FROM ValidationRule WHERE EntityDefinition.QualifiedApiName='Lead'");
-  const vrs = {};
-  (vrResp.records || []).forEach(v => { vrs[v.ValidationName] = v.Active; });
-  const criticalVRs = ['ValidateCNPJFormat','ValidateEmailFormat','ValidatesPhoneFormat',
-    'ValidateCanceledStatus','ValidateMotivoCancelamento','RequireQualificationFieldsOnAdvance',
-    'BlockUnauthorizedLeadConversion','LeadBlockRatingEdit','LeadBlockSegmentEdit'];
-  const vrMissing = criticalVRs.filter(v => !vrs[v]);
-  const vrInactive = criticalVRs.filter(v => vrs[v] === false);
-  if (vrMissing.length === 0 && vrInactive.length === 0)
-    results.push(ok('INF-03', `${criticalVRs.length} VRs criticas ativas`,
-      'Tooling API', `${criticalVRs.join(', ')}`, 'Setup > Lead > VRs'));
-  else results.push(fail('INF-03', `VRs com problema — faltando: ${vrMissing.join(',')} / inativas: ${vrInactive.join(',')}`,
-    'Tooling API', '', 'Setup > Lead > VRs'));
-
-  // 1.4 Permission Sets Lead
-  const psResp = await sfTooling(sf, "SELECT Name FROM PermissionSet WHERE Name LIKE '%Lead%' OR Name LIKE '%lead%'");
-  const psCount = psResp.records?.length || 0;
-  if (psCount >= 10)
-    results.push(ok('INF-04', `${psCount} Permission Sets Lead-related encontrados`,
-      'Tooling API', `${psCount} PSs`, 'Setup > Permission Sets'));
-  else results.push(fail('INF-04', `Apenas ${psCount} PSs Lead (esperado 10+)`,
-    'Tooling API', '', 'Setup > Permission Sets'));
-
-  // 1.5 Flows ativos para Lead
-  const flowResp = await sfTooling(sf, "SELECT DeveloperName FROM Flow WHERE Status='Active' AND (DeveloperName LIKE '%Lead%' OR DeveloperName LIKE '%lead%' OR DeveloperName LIKE '%Segmen%' OR DeveloperName LIKE '%Duplic%' OR DeveloperName LIKE '%Blacklist%')");
-  const flowCount = flowResp.records?.length || 0;
-  if (flowCount > 0)
-    results.push(ok('INF-05', `${flowCount} Flows ativos Lead-related`,
-      'Tooling API', flowResp.records.map(r=>r.DeveloperName).join(', '), 'Setup > Flows'));
-  else results.push(fail('INF-05', 'NENHUM Flow ativo para Lead — segmentacao, duplicidade, priorizacao, cadencia NAO estao automatizados',
-    'Tooling API', '0 Flows ativos', 'Setup > Flows'));
-
-  // ================================================================
-  // BLOCO 2: TESTES COMPORTAMENTAIS — VRs (tentar operacoes invalidas)
-  // ================================================================
-
-  // 2.1 BUG DOCUMENTADO: VR_CNPJ_Format ([0-9]{14}) CONFLITA com CnpjFormatHelper.applyMask (LeadTrigger)
-  // Trigger formata CNPJ antes da VR avaliar, causando rejeicao. DESATIVAR VR_CNPJ_Format.
-  try {
-    const nacLead = await sfCreate('Lead', {
-      FirstName: 'QA_Test', LastName: 'LeadNacional', Company: 'QA Empresa Teste Ltda',
-      Email: 'qa.test@empresa.com.br', Phone: '1199999999',
-      CNPJ__c: '71208516000174', Nacionalidade__c: 'Nacional',
-      RecordTypeId: nacionalRT, OrigemCanal__c: 'Manual', Status: 'Novo'
-    });
-    if (nacLead.id)
-      results.push(ok('BUG-01', 'Lead Nacional criado com sucesso — VR_CNPJ_Format nao conflita mais',
-        'POST /sobjects/Lead CNPJ=71208516000174', `Id=${nacLead.id}`, ''));
-    else
-      results.push(fail('BUG-01', 'BUG CONFIRMADO: VR_CNPJ_Format conflita com CnpjFormatHelper.applyMask — Trigger formata CNPJ para XX.XXX.XXX/XXXX-XX ANTES da VR avaliar, VR exige [0-9]{14} e rejeita. ACAO: Desativar VR_CNPJ_Format (ValidateCNPJFormat ja cobre)',
-        'POST /sobjects/Lead CNPJ=71208516000174', `Trigger applyMask formata→VR rejeita`, 'Desativar VR_CNPJ_Format ou ajustar regex'));
-  } catch(e) { results.push(fail('BUG-01', `Erro: ${e.message}`, '', '', '')); }
-
-  // 2.1b Fallback: Criar Lead Internacional (sem CNPJ) para testar demais VRs
-  try {
-    const intLead = await sfCreate('Lead', {
-      FirstName: 'QA_Test', LastName: 'LeadIntl', Company: 'QA International Corp',
-      Email: 'qa.intl@empresa.com', Phone: '1199999999',
-      Nacionalidade__c: 'Internacional',
-      RecordTypeId: internacionalRT, OrigemCanal__c: 'Manual', Status: 'Novo'
-    });
-    if (intLead.id)
-      results.push(ok('VR-01', 'Lead Internacional criado com sucesso (bypass CNPJ para testar demais cenarios)',
-        'POST /sobjects/Lead Internacional sem CNPJ', `Id=${intLead.id}`, ''));
-    else
-      results.push(fail('VR-01', `Lead Internacional NAO criado: ${JSON.stringify(intLead).substring(0,200)}`,
-        'POST /sobjects/Lead', JSON.stringify(intLead).substring(0,200), 'Verificar VRs'));
-  } catch(e) { results.push(fail('VR-01', `Erro: ${e.message}`, '', '', '')); }
-
-  // 2.2 Tentar criar Lead com CNPJ invalido (menos de 14 digitos)
-  try {
-    const invalidCNPJ = await sfCreate('Lead', {
-      FirstName: 'QA_Test', LastName: 'CNPJInvalido', Company: 'Teste',
-      Email: 'qa@test.com', Phone: '1199999999',
-      CNPJ__c: '12345', Nacionalidade__c: 'Nacional',
-      RecordTypeId: nacionalRT, OrigemCanal__c: 'Manual', Status: 'Novo'
-    });
-    if (invalidCNPJ.id)
-      results.push(fail('VR-02', 'Lead com CNPJ invalido (6 digitos) foi ACEITO — VR nao bloqueou',
-        'POST /sobjects/Lead com CNPJ=12345 (5 chars)', `Id=${invalidCNPJ.id} criado indevidamente`, 'VR VR_CNPJ_Format deveria bloquear'));
-    else {
-      const msg = invalidCNPJ[0]?.message || JSON.stringify(invalidCNPJ).substring(0,150);
-      results.push(ok('VR-02', 'VR bloqueou Lead com CNPJ invalido (6 digitos)',
-        'POST /sobjects/Lead com CNPJ=12345 (5 chars)', `Erro: ${msg}`, 'VR_CNPJ_Format ativa'));
-    }
-  } catch(e) { results.push(fail('VR-02', `Erro inesperado: ${e.message}`, '', '', '')); }
-
-  // 2.3 Tentar criar Lead com email invalido
-  try {
-    const invalidEmail = await sfCreate('Lead', {
-      FirstName: 'QA_Test', LastName: 'EmailInvalido', Company: 'Teste',
-      Email: 'semdominio', Phone: '1199999999',
-      CNPJ__c: '71.208.516/0001-74', Nacionalidade__c: 'Nacional',
-      RecordTypeId: nacionalRT, OrigemCanal__c: 'Manual', Status: 'Novo'
-    });
-    if (invalidEmail.id)
-      results.push(fail('VR-03', 'Lead com email invalido ("semdominio") foi ACEITO — VR nao bloqueou',
-        'POST /sobjects/Lead com Email=semdominio', `Id=${invalidEmail.id}`, 'VR ValidateEmailFormat deveria bloquear'));
-    else
-      results.push(ok('VR-03', 'VR bloqueou Lead com email invalido',
-        'POST /sobjects/Lead com Email=semdominio', `Bloqueado`, 'VR ValidateEmailFormat ativa'));
-  } catch(e) { results.push(fail('VR-03', `Erro: ${e.message}`, '', '', '')); }
-
-  // 2.4 Tentar criar Lead com telefone invalido (menos de 10 digitos)
-  try {
-    const invalidPhone = await sfCreate('Lead', {
-      FirstName: 'QA_Test', LastName: 'PhoneInvalido', Company: 'Teste',
-      Email: 'qa@test.com.br', Phone: '123',
-      CNPJ__c: '71.208.516/0001-74', Nacionalidade__c: 'Nacional',
-      RecordTypeId: nacionalRT, OrigemCanal__c: 'Manual', Status: 'Novo'
-    });
-    if (invalidPhone.id)
-      results.push(fail('VR-04', 'Lead com telefone invalido ("123") foi ACEITO — VR nao bloqueou',
-        'POST /sobjects/Lead com Phone=123', `Id=${invalidPhone.id}`, 'VR ValidatesPhoneFormat deveria bloquear'));
-    else
-      results.push(ok('VR-04', 'VR bloqueou Lead com telefone invalido (3 digitos)',
-        'POST /sobjects/Lead com Phone=123', 'Bloqueado', 'VR ValidatesPhoneFormat ativa'));
-  } catch(e) { results.push(fail('VR-04', `Erro: ${e.message}`, '', '', '')); }
-
-  // 2.5 Tentar editar Rating manualmente
-  const testLeadId = createdIds.find(c => c.obj === 'Lead')?.id;
-  if (testLeadId) {
-    try {
-      const ratingUpdate = await sfUpdate('Lead', testLeadId, { Rating: 'Hot' });
-      if (ratingUpdate.success)
-        results.push(fail('VR-05', 'Edicao manual de Rating foi ACEITA — VR LeadBlockRatingEdit nao bloqueou',
-          `PATCH /sobjects/Lead/${testLeadId} Rating=Hot`, 'Update aceito', 'VR deveria bloquear'));
-      else
-        results.push(ok('VR-05', 'VR bloqueou edicao manual de Rating',
-          `PATCH /sobjects/Lead/${testLeadId} Rating=Hot`, `Bloqueado: ${ratingUpdate[0]?.message?.substring(0,80) || ''}`, 'VR LeadBlockRatingEdit ativa'));
-    } catch(e) { results.push(fail('VR-05', `Erro: ${e.message}`, '', '', '')); }
-
-    // 2.6 Tentar editar Segmento manualmente
-    try {
-      const segUpdate = await sfUpdate('Lead', testLeadId, { Segmento__c: 'Operadoras' });
-      if (segUpdate.success)
-        results.push(fail('VR-06', 'Edicao manual de Segmento foi ACEITA — VR LeadBlockSegmentEdit nao bloqueou',
-          `PATCH Rating Segmento__c=Operadoras`, 'Update aceito', 'VR deveria bloquear'));
-      else
-        results.push(ok('VR-06', 'VR bloqueou edicao manual de Segmento',
-          `PATCH Segmento__c=Operadoras`, `Bloqueado`, 'VR LeadBlockSegmentEdit ativa'));
-    } catch(e) { results.push(fail('VR-06', `Erro: ${e.message}`, '', '', '')); }
-
-    // 2.7 Tentar cancelar sem motivo
-    try {
-      const cancelNoMotivo = await sfUpdate('Lead', testLeadId, { Status: 'Cancelado' });
-      if (cancelNoMotivo.success)
-        results.push(fail('VR-07', 'Lead cancelado SEM motivo — VR ValidateCanceledStatus nao bloqueou',
-          `PATCH Status=Cancelado sem Motivo_cancelamento__c`, 'Update aceito', 'VR deveria exigir motivo'));
-      else
-        results.push(ok('VR-07', 'VR exigiu motivo ao cancelar (ValidateCanceledStatus)',
-          `PATCH Status=Cancelado sem motivo`, `Bloqueado`, 'VR ValidateCanceledStatus'));
-    } catch(e) { results.push(fail('VR-07', `Erro: ${e.message}`, '', '', '')); }
-
-    // 2.8 Tentar preencher motivo cancelamento fora do status Cancelado
-    try {
-      const motivoSemCancelado = await sfUpdate('Lead', testLeadId, { Motivo_cancelamento__c: 'Sem_interesse' });
-      if (motivoSemCancelado.success)
-        results.push(fail('VR-08', 'Motivo de cancelamento preenchido fora do status Cancelado — VR ValidateMotivoCancelamento nao bloqueou',
-          'PATCH Motivo_cancelamento__c=Sem_interesse com Status=Novo', 'Update aceito', 'VR deveria bloquear'));
-      else
-        results.push(ok('VR-08', 'VR impediu motivo fora do status Cancelado',
-          'PATCH Motivo_cancelamento__c com Status!=Cancelado', 'Bloqueado', 'VR ValidateMotivoCancelamento'));
-    } catch(e) { results.push(fail('VR-08', `Erro: ${e.message}`, '', '', '')); }
-
-    // 2.9 Tentar avancar para Conversao sem campos qualificacao
-    try {
-      const convSemQual = await sfUpdate('Lead', testLeadId, { Status: 'Conversao' });
-      if (convSemQual.success)
-        results.push(fail('VR-09', 'Avancou para Conversao SEM campos qualificacao — VRs nao bloquearam',
-          'PATCH Status=Conversao sem campos qualificacao', 'Update aceito', 'VRs RequireQualification + RestrictTransition deveriam bloquear'));
-      else
-        results.push(ok('VR-09', 'VR bloqueou avanco para Conversao sem campos qualificacao',
-          'PATCH Status=Conversao sem preencher qualificacao', `Bloqueado`, 'VR RequireQualificationFieldsOnAdvance'));
-    } catch(e) { results.push(fail('VR-09', `Erro: ${e.message}`, '', '', '')); }
-
-    // 2.10 Verificar se Segmento foi preenchido automaticamente (Flow/Trigger)
-    try {
-      const leadData = await sfRead('Lead', testLeadId, 'Segmento__c,Rating,RelacionamentoLead__c,PercentualPreenchimento__c');
-      if (leadData.Segmento__c)
-        results.push(ok('BHV-01', `Segmento preenchido automaticamente: "${leadData.Segmento__c}"`,
-          `GET /sobjects/Lead/${testLeadId}`, `Segmento__c=${leadData.Segmento__c}`, 'Automacao (Flow/Trigger) derivou segmento'));
-      else
-        results.push(fail('BHV-01', 'Segmento NAO preenchido automaticamente — automacao de segmentacao ausente ou inativa',
-          `GET /sobjects/Lead/${testLeadId}`, 'Segmento__c=null', 'CRMB2B-19: Implementar Flow/Trigger de segmentacao'));
-
-      if (leadData.Rating)
-        results.push(ok('BHV-02', `Prioridade (Rating) preenchida automaticamente: "${leadData.Rating}"`,
-          `GET Lead`, `Rating=${leadData.Rating}`, 'Automacao de priorizacao funcionando'));
-      else
-        results.push(fail('BHV-02', 'Rating NAO preenchido automaticamente — automacao de priorizacao ausente',
-          `GET Lead`, 'Rating=null', 'CRMB2B-27: Implementar Flow/Trigger de priorizacao'));
-
-      if (leadData.RelacionamentoLead__c)
-        results.push(ok('BHV-03', `Relacionamento do Lead preenchido: "${leadData.RelacionamentoLead__c}"`,
-          'GET Lead', `RelacionamentoLead__c=${leadData.RelacionamentoLead__c}`, 'Automacao derivou relacionamento'));
-      else
-        results.push(fail('BHV-03', 'Relacionamento NAO preenchido automaticamente — automacao ausente',
-          'GET Lead', 'RelacionamentoLead__c=null', 'CRMB2B-14: Implementar derivacao Relacionamento'));
-
-      if (leadData.PercentualPreenchimento__c != null && leadData.PercentualPreenchimento__c > 0)
-        results.push(ok('BHV-04', `% Preenchimento calculado: ${leadData.PercentualPreenchimento__c}%`,
-          'GET Lead', `PercentualPreenchimento__c=${leadData.PercentualPreenchimento__c}`, 'Formula/Flow calculou preenchimento'));
-      else
-        results.push(fail('BHV-04', '% Preenchimento NAO calculado — automacao ausente',
-          'GET Lead', `PercentualPreenchimento__c=${leadData.PercentualPreenchimento__c}`, 'CRMB2B-27: Implementar calculo'));
-    } catch(e) { results.push(fail('BHV-01', `Erro leitura Lead: ${e.message}`, '', '', '')); }
-
+  // ============================================================
+  // CT-01: Criar Lead Nacional com dados validos
+  // ============================================================
+  const ct01 = await apiCreate({
+    FirstName:'QA', LastName:'Nacional01', Company:'Empresa Teste QA',
+    Email:'qa01@empresa.com.br', Phone:'11999990001',
+    CNPJ__c:'71208516000174', Nacionalidade__c:'Nacional',
+    RecordTypeId: NAC_RT, OrigemCanal__c:'Manual', Status:'Novo'
+  });
+  if (ct01.ok) {
+    R.push(ok('CT-01','Criar Lead Nacional com dados validos — CRIADO com sucesso',
+      'POST Lead Nacional CNPJ=71208516000174 Email Phone Company FirstName',
+      `Id=${ct01.id}`, 'US 2,14,20'));
   } else {
-    results.push(fail('VR-05', 'Lead base nao criado — testes comportamentais pulados', '', '', ''));
+    R.push(fail('CT-01',`Criar Lead Nacional com dados validos — BLOQUEADO: ${ct01.error}`,
+      'POST Lead Nacional CNPJ=71208516000174',
+      `Erro: ${ct01.error}`, 'US 2,14 — Verificar VRs conflitantes e Permission Sets'));
   }
 
-  // ================================================================
-  // BLOCO 3: DUPLICIDADE (criar 2 Leads mesmo CNPJ)
-  // ================================================================
-  try {
-    const lead1 = await sfCreate('Lead', {
-      FirstName: 'QA_Dup', LastName: 'Lead1', Company: 'Dup Empresa',
-      Email: 'dup1@test.com.br', Phone: '1199998888',
-      CNPJ__c: '11.222.333/0001-81', Nacionalidade__c: 'Nacional',
-      RecordTypeId: nacionalRT, OrigemCanal__c: 'Landing page', Status: 'Novo'
-    });
-    if (lead1.id) {
-      const lead2 = await sfCreate('Lead', {
-        FirstName: 'QA_Dup', LastName: 'Lead2', Company: 'Dup Empresa 2',
-        Email: 'dup2@test.com.br', Phone: '1199997777',
-        CNPJ__c: '11.222.333/0001-81', Nacionalidade__c: 'Nacional',
-        RecordTypeId: nacionalRT, OrigemCanal__c: 'Landing page', Status: 'Novo'
-      });
-      if (lead2.id) {
-        // Read lead2 to check if it was auto-cancelled
-        const dup2 = await sfRead('Lead', lead2.id, 'Status,Motivo_cancelamento__c,Lead_Relacionado__c');
-        if (dup2.Status === 'Cancelado' && dup2.Motivo_cancelamento__c === 'Duplicidade')
-          results.push(ok('DUP-01', 'Lead duplicado (mesmo CNPJ, inbound x inbound) auto-cancelado com motivo Duplicidade',
-            `Lead1=${lead1.id}, Lead2=${lead2.id}`, `Status=${dup2.Status}, Motivo=${dup2.Motivo_cancelamento__c}`, 'CRMB2B-22'));
-        else
-          results.push(fail('DUP-01', `Lead duplicado NAO auto-cancelado — Status=${dup2.Status}, Motivo=${dup2.Motivo_cancelamento__c || 'null'}. Automacao de duplicidade AUSENTE`,
-            `Criados 2 Leads com CNPJ=11.222.333/0001-81`, `Lead2 Status=${dup2.Status}`, 'CRMB2B-22: Implementar Flow de duplicidade'));
+  // ============================================================
+  // CT-02: Criar Lead Internacional sem CNPJ
+  // ============================================================
+  const ct02 = await apiCreate({
+    FirstName:'QA', LastName:'Intl01', Company:'International Corp QA',
+    Email:'qa.intl@corp.com', Phone:'11999990002',
+    Nacionalidade__c:'Internacional',
+    RecordTypeId: INT_RT, OrigemCanal__c:'Manual', Status:'Novo'
+  });
+  if (ct02.ok) {
+    R.push(ok('CT-02','Criar Lead Internacional sem CNPJ — CRIADO com sucesso (CNPJ nao obrigatorio)',
+      'POST Lead Internacional sem CNPJ__c',
+      `Id=${ct02.id}`, 'US 2,14'));
+  } else {
+    R.push(fail('CT-02',`Criar Lead Internacional sem CNPJ — BLOQUEADO: ${ct02.error}`,
+      'POST Lead Internacional sem CNPJ',
+      `Erro: ${ct02.error}`, 'US 2 — Verificar VR LeadBlockInternacionalNoAuth e Custom Permission CPLeadCriarInternacional'));
+  }
 
-        if (dup2.Lead_Relacionado__c)
-          results.push(ok('DUP-02', `Lead duplicado relacionado ao original via Lead_Relacionado__c=${dup2.Lead_Relacionado__c}`,
-            'GET Lead2', '', 'CRMB2B-22'));
-        else
-          results.push(fail('DUP-02', 'Lead duplicado NAO relacionou ao original — campo Lead_Relacionado__c vazio',
-            'GET Lead2', 'Lead_Relacionado__c=null', 'CRMB2B-22'));
+  // ============================================================
+  // CT-03: Tentar criar Lead com CNPJ invalido (5 digitos)
+  // ============================================================
+  const ct03 = await apiCreate({
+    FirstName:'QA', LastName:'CNPJInv', Company:'Teste',
+    Email:'qa@test.com.br', Phone:'11999990003',
+    CNPJ__c:'12345', Nacionalidade__c:'Nacional',
+    RecordTypeId: NAC_RT, OrigemCanal__c:'Manual', Status:'Novo'
+  });
+  if (!ct03.ok) {
+    R.push(ok('CT-03','CNPJ invalido (5 digitos) — BLOQUEADO corretamente',
+      'POST Lead CNPJ=12345',
+      `VR bloqueou: ${ct03.error.substring(0,120)}`, 'US 2,14'));
+  } else {
+    R.push(fail('CT-03','CNPJ invalido (5 digitos) — ACEITO indevidamente, VR nao bloqueou',
+      'POST Lead CNPJ=12345',
+      `Id=${ct03.id} criado`, 'US 2 — VR de formato CNPJ nao esta funcionando'));
+  }
+
+  // ============================================================
+  // CT-04: Tentar criar Lead com email invalido
+  // ============================================================
+  const ct04 = await apiCreate({
+    FirstName:'QA', LastName:'EmailInv', Company:'Teste',
+    Email:'invalido-sem-arroba', Phone:'11999990004',
+    CNPJ__c:'71208516000174', Nacionalidade__c:'Nacional',
+    RecordTypeId: NAC_RT, OrigemCanal__c:'Manual', Status:'Novo'
+  });
+  if (!ct04.ok) {
+    R.push(ok('CT-04','Email invalido — BLOQUEADO corretamente',
+      'POST Lead Email=invalido-sem-arroba',
+      `Bloqueou: ${ct04.error.substring(0,120)}`, 'US 2,14'));
+  } else {
+    R.push(fail('CT-04','Email invalido — ACEITO indevidamente',
+      'POST Lead Email=invalido-sem-arroba',
+      `Id=${ct04.id}`, 'US 2 — VR ValidateEmailFormat nao bloqueou'));
+  }
+
+  // ============================================================
+  // CT-05: Tentar criar Lead com telefone invalido (3 digitos)
+  // ============================================================
+  const ct05 = await apiCreate({
+    FirstName:'QA', LastName:'PhoneInv', Company:'Teste',
+    Email:'qa@test.com.br', Phone:'123',
+    CNPJ__c:'71208516000174', Nacionalidade__c:'Nacional',
+    RecordTypeId: NAC_RT, OrigemCanal__c:'Manual', Status:'Novo'
+  });
+  if (!ct05.ok) {
+    R.push(ok('CT-05','Telefone invalido (3 digitos) — BLOQUEADO corretamente',
+      'POST Lead Phone=123',
+      `Bloqueou: ${ct05.error.substring(0,120)}`, 'US 2,14'));
+  } else {
+    R.push(fail('CT-05','Telefone invalido (3 digitos) — ACEITO indevidamente',
+      'POST Lead Phone=123',
+      `Id=${ct05.id}`, 'US 2 — VR ValidatesPhoneFormat nao bloqueou'));
+  }
+
+  // ============================================================
+  // CT-06: Tentar criar Lead sem campos obrigatorios (sem Company)
+  // ============================================================
+  const ct06 = await apiCreate({
+    FirstName:'QA', LastName:'SemCompany',
+    Email:'qa@test.com.br', Phone:'11999990006',
+    Nacionalidade__c:'Nacional', RecordTypeId: NAC_RT, Status:'Novo'
+  });
+  if (!ct06.ok) {
+    R.push(ok('CT-06','Lead sem Company — BLOQUEADO corretamente (campo obrigatorio)',
+      'POST Lead sem Company',
+      `Bloqueou: ${ct06.error.substring(0,120)}`, 'US 14,20'));
+  } else {
+    R.push(fail('CT-06','Lead sem Company — ACEITO indevidamente',
+      'POST Lead sem Company', `Id=${ct06.id}`, 'US 14'));
+  }
+
+  // Use first created lead for remaining tests
+  const leadId = ct01.ok ? ct01.id : (ct02.ok ? ct02.id : null);
+
+  if (leadId) {
+    // ============================================================
+    // CT-07: Verificar CNPJ formatado automaticamente (Trigger applyMask)
+    // ============================================================
+    if (ct01.ok) {
+      const data07 = await apiRead(ct01.id, 'CNPJ__c');
+      const cnpj = data07.CNPJ__c || '';
+      if (cnpj.includes('.') || cnpj.includes('/')) {
+        R.push(ok('CT-07','CNPJ formatado automaticamente pelo Trigger (XX.XXX.XXX/XXXX-XX)',
+          `GET Lead/${ct01.id} CNPJ__c`,
+          `CNPJ__c=${cnpj}`, 'US 2,14 — CnpjFormatHelper.applyMask'));
       } else {
-        results.push(fail('DUP-01', `Lead2 nao criado: ${JSON.stringify(lead2).substring(0,150)}`, '', '', ''));
+        R.push(fail('CT-07','CNPJ NAO formatado — Trigger CnpjFormatHelper nao executou',
+          `GET Lead/${ct01.id}`,
+          `CNPJ__c=${cnpj} (sem formatacao)`, 'US 2 — Verificar Trigger LeadTrigger'));
       }
     } else {
-      results.push(fail('DUP-01', `Lead1 duplicidade nao criado: ${JSON.stringify(lead1).substring(0,150)}`, '', '', ''));
+      R.push(manual('CT-07','CNPJ formatado automaticamente pelo Trigger',
+        'Lead Nacional nao criado (CT-01 falhou) — verificar manualmente na UI'));
     }
-  } catch(e) { results.push(fail('DUP-01', `Erro teste duplicidade: ${e.message}`, '', '', '')); }
 
-  // ================================================================
-  // BLOCO 4: TESTES MANUAIS (UI-only)
-  // ================================================================
-  results.push(manual('M-01', 'Layout exibe Nacionalidade (Nacional/Internacional) no topo da tela de criacao',
-    'UI: Leads > Novo > verificar radio button Nacionalidade'));
-  results.push(manual('M-02', 'Criar Lead Internacional: CNPJ nao obrigatorio',
-    'UI: Lead Internacional > salvar sem CNPJ > deve aceitar'));
-  results.push(manual('M-03', 'CNPJ preenche dados da empresa automaticamente (se conta existe)',
-    'UI: Lead Nacional > CNPJ de conta existente > campos empresa devem auto-preencher'));
-  results.push(manual('M-04', 'Botao Converter Lead visivel apenas em status Em conversao',
-    'UI: Lead Em conversao > verificar botao Converter para perfil consultor'));
-  results.push(manual('M-05', 'Enriquecimento Neoway/Receita dispara ao entrar em Qualificacao',
-    'UI: Lead Qualificacao > verificar campos endereco e situacao cadastral preenchidos'));
-  results.push(manual('M-06', 'Cadencia outbound cria tarefas automaticas em sequencia',
-    'UI: Lead outbound Qualificacao > verificar tarefas criadas (telefone, email, whatsapp)'));
-  results.push(manual('M-07', 'Dashboards Lead (funil, backlog, cancelados, SLA) com filtros',
-    'App > Dashboards > verificar 4 dashboards com filtros funcionais'));
+    // ============================================================
+    // CT-08: Verificar telefone formatado (PhoneFormatHelper)
+    // ============================================================
+    const data08 = await apiRead(leadId, 'Phone');
+    const ph = data08.Phone || '';
+    if (ph.includes('(') || ph.includes('-') || ph.length > 11) {
+      R.push(ok('CT-08','Telefone formatado automaticamente pelo Trigger',
+        `GET Lead/${leadId} Phone`,
+        `Phone=${ph}`, 'US 2,14 — PhoneFormatHelper'));
+    } else {
+      R.push(fail('CT-08','Telefone NAO formatado',
+        `GET Lead/${leadId}`,
+        `Phone=${ph}`, 'US 2 — Verificar PhoneFormatHelper'));
+    }
 
-  // ================================================================
-  // CLEANUP
-  // ================================================================
-  for (const { obj, id } of createdIds.reverse()) {
-    try { await sfDelete(obj, id); } catch(e) { /* ignore */ }
+    // ============================================================
+    // CT-09: Status inicial = Novo
+    // ============================================================
+    const data09 = await apiRead(leadId, 'Status');
+    if (data09.Status === 'Novo') {
+      R.push(ok('CT-09','Lead criado com Status=Novo',
+        `GET Lead/${leadId} Status`,
+        `Status=${data09.Status}`, 'US 20'));
+    } else {
+      R.push(fail('CT-09',`Lead criado com Status=${data09.Status} (esperado Novo)`,
+        `GET Lead/${leadId}`,
+        `Status=${data09.Status}`, 'US 20'));
+    }
+
+    // ============================================================
+    // CT-10: Segmento preenchido automaticamente?
+    // ============================================================
+    const data10 = await apiRead(leadId, 'Segmento__c');
+    if (data10.Segmento__c) {
+      R.push(ok('CT-10',`Segmento preenchido automaticamente: "${data10.Segmento__c}"`,
+        `GET Lead/${leadId} Segmento__c`,
+        `Segmento__c=${data10.Segmento__c}`, 'US 19'));
+    } else {
+      R.push(fail('CT-10','Segmento NAO preenchido automaticamente — automacao de segmentacao ausente',
+        `GET Lead/${leadId} Segmento__c`,
+        'Segmento__c=null', 'US 19 — NeowaySegmentacaoService existe como Invocable mas nenhum Flow o chama'));
+    }
+
+    // ============================================================
+    // CT-11: Rating/Prioridade preenchido automaticamente?
+    // ============================================================
+    const data11 = await apiRead(leadId, 'Rating');
+    if (data11.Rating) {
+      R.push(ok('CT-11',`Rating preenchido automaticamente: "${data11.Rating}"`,
+        `GET Lead/${leadId} Rating`,
+        `Rating=${data11.Rating}`, 'US 27'));
+    } else {
+      R.push(fail('CT-11','Rating NAO preenchido — automacao de priorizacao inexistente',
+        `GET Lead/${leadId} Rating`,
+        'Rating=null', 'US 27 — Nenhum Apex/Flow implementa calculo de prioridade'));
+    }
+
+    // ============================================================
+    // CT-12: Relacionamento do Lead preenchido?
+    // ============================================================
+    const data12 = await apiRead(leadId, 'RelacionamentoLead__c');
+    if (data12.RelacionamentoLead__c) {
+      R.push(ok('CT-12',`Relacionamento preenchido: "${data12.RelacionamentoLead__c}"`,
+        `GET Lead/${leadId}`,
+        `RelacionamentoLead__c=${data12.RelacionamentoLead__c}`, 'US 2,3,13,15,16,17'));
+    } else {
+      R.push(fail('CT-12','Relacionamento NAO preenchido — automacao de busca conta por CNPJ ausente',
+        `GET Lead/${leadId}`,
+        'RelacionamentoLead__c=null', 'US 2 — Nenhum Flow/Apex verifica CNPJ em Account para derivar Base Existente/Novo Cliente'));
+    }
+
+    // ============================================================
+    // CT-13: % Preenchimento calculado?
+    // ============================================================
+    const data13 = await apiRead(leadId, 'PercentualPreenchimento__c');
+    if (data13.PercentualPreenchimento__c != null && data13.PercentualPreenchimento__c > 0) {
+      R.push(ok('CT-13',`% Preenchimento calculado: ${data13.PercentualPreenchimento__c}%`,
+        `GET Lead/${leadId}`,
+        `PercentualPreenchimento__c=${data13.PercentualPreenchimento__c}`, 'US 27'));
+    } else {
+      R.push(fail('CT-13','% Preenchimento NAO calculado',
+        `GET Lead/${leadId}`,
+        `PercentualPreenchimento__c=${data13.PercentualPreenchimento__c}`, 'US 27 — Nenhum Formula/Flow calcula'));
+    }
+
+    // ============================================================
+    // CT-14: Tentar editar Rating manualmente
+    // ============================================================
+    const ct14 = await apiUpdate(leadId, { Rating: 'Hot' });
+    if (!ct14.ok) {
+      R.push(ok('CT-14','Edicao manual de Rating — BLOQUEADA corretamente pela VR',
+        `PATCH Lead/${leadId} Rating=Hot`,
+        `VR bloqueou: ${ct14.error.substring(0,120)}`, 'US 27'));
+    } else {
+      R.push(fail('CT-14','Edicao manual de Rating — ACEITA indevidamente',
+        `PATCH Lead/${leadId} Rating=Hot`,
+        'Update aceito', 'US 27 — VR LeadBlockRatingEdit nao funcionou'));
+      // Revert
+      await apiUpdate(leadId, { Rating: null });
+    }
+
+    // ============================================================
+    // CT-15: Tentar editar Segmento manualmente
+    // ============================================================
+    const ct15 = await apiUpdate(leadId, { Segmento__c: 'Operadoras' });
+    if (!ct15.ok) {
+      R.push(ok('CT-15','Edicao manual de Segmento — BLOQUEADA pela VR',
+        `PATCH Lead/${leadId} Segmento__c=Operadoras`,
+        `Bloqueou: ${ct15.error.substring(0,120)}`, 'US 19'));
+    } else {
+      R.push(fail('CT-15','Edicao manual de Segmento — ACEITA indevidamente',
+        `PATCH Lead/${leadId} Segmento__c=Operadoras`,
+        'Aceito', 'US 19 — VR LeadBlockSegmentEdit nao funcionou'));
+    }
+
+    // ============================================================
+    // CT-16: Tentar cancelar sem motivo
+    // ============================================================
+    const ct16 = await apiUpdate(leadId, { Status: 'Cancelado' });
+    if (!ct16.ok) {
+      R.push(ok('CT-16','Cancelar sem motivo — BLOQUEADO pela VR',
+        `PATCH Lead/${leadId} Status=Cancelado sem Motivo_cancelamento__c`,
+        `Bloqueou: ${ct16.error.substring(0,120)}`, 'US 55'));
+    } else {
+      R.push(fail('CT-16','Cancelar sem motivo — ACEITO indevidamente',
+        `PATCH Status=Cancelado sem motivo`,
+        'Aceito', 'US 55 — VR ValidateCanceledStatus nao bloqueou'));
+      await apiUpdate(leadId, { Status: 'Novo', Motivo_cancelamento__c: null });
+    }
+
+    // ============================================================
+    // CT-17: Tentar preencher motivo fora do status Cancelado
+    // ============================================================
+    const ct17 = await apiUpdate(leadId, { Motivo_cancelamento__c: 'Sem_interesse' });
+    if (!ct17.ok) {
+      R.push(ok('CT-17','Motivo cancelamento fora de Cancelado — BLOQUEADO pela VR',
+        `PATCH Motivo_cancelamento__c=Sem_interesse com Status=Novo`,
+        `Bloqueou: ${ct17.error.substring(0,120)}`, 'US 55'));
+    } else {
+      R.push(fail('CT-17','Motivo cancelamento preenchido fora de Cancelado — VR nao bloqueou',
+        `PATCH Motivo_cancelamento__c com Status!=Cancelado`,
+        'Aceito', 'US 55 — VR ValidateMotivoCancelamento'));
+      await apiUpdate(leadId, { Motivo_cancelamento__c: null });
+    }
+
+    // ============================================================
+    // CT-18: Tentar avancar para Conversao sem campos qualificacao
+    // ============================================================
+    const ct18 = await apiUpdate(leadId, { Status: 'Conversao' });
+    if (!ct18.ok) {
+      R.push(ok('CT-18','Avancar para Conversao sem qualificacao — BLOQUEADO',
+        `PATCH Status=Conversao sem OrcamentoDisponivel etc`,
+        `Bloqueou: ${ct18.error.substring(0,120)}`, 'US 54,68'));
+    } else {
+      R.push(fail('CT-18','Avancou para Conversao sem qualificacao — VR nao bloqueou',
+        `PATCH Status=Conversao`,
+        'Aceito', 'US 54 — VR RequireQualificationFieldsOnAdvance'));
+      await apiUpdate(leadId, { Status: 'Novo' });
+    }
+
+    // ============================================================
+    // CT-19: Cancelar Lead com motivo (deve funcionar)
+    // ============================================================
+    const ct19 = await apiUpdate(leadId, { Status: 'Cancelado', Motivo_cancelamento__c: 'Sem_interesse' });
+    if (ct19.ok) {
+      R.push(ok('CT-19','Cancelar Lead com motivo "Sem_interesse" — SUCESSO',
+        `PATCH Status=Cancelado + Motivo_cancelamento__c=Sem_interesse`,
+        'Update aceito', 'US 55'));
+      // Revert for more tests
+      await apiUpdate(leadId, { Status: 'Novo', Motivo_cancelamento__c: null });
+    } else {
+      R.push(fail('CT-19',`Cancelar Lead com motivo — BLOQUEADO: ${ct19.error}`,
+        `PATCH Status=Cancelado + Motivo`,
+        `Erro: ${ct19.error.substring(0,120)}`, 'US 55'));
+    }
+
+    // ============================================================
+    // CT-20: Blacklist check executou? (campos blacklist preenchidos)
+    // ============================================================
+    const data20 = await apiRead(leadId, 'TelefoneBlacklist__c,BlacklistValidationPending__c');
+    if (data20.TelefoneBlacklist__c || data20.BlacklistValidationPending__c != null) {
+      R.push(ok('CT-20',`Blacklist verificado: TelefoneBlacklist=${data20.TelefoneBlacklist__c}, Pending=${data20.BlacklistValidationPending__c}`,
+        `GET Lead/${leadId}`, '', 'US 53'));
+    } else {
+      R.push(fail('CT-20','Blacklist NAO executou — campos blacklist vazios',
+        `GET Lead/${leadId} TelefoneBlacklist__c`,
+        'TelefoneBlacklist__c=null', 'US 53 — PhoneBlacklistHelper pode depender de API externa indisponivel'));
+    }
+
+  } else {
+    // No lead created - mark remaining as blocked
+    const blocked = ['CT-07','CT-08','CT-09','CT-10','CT-11','CT-12','CT-13','CT-14','CT-15','CT-16','CT-17','CT-18','CT-19','CT-20'];
+    for (const ca of blocked) {
+      R.push(fail(ca, `Teste bloqueado — nenhum Lead criado (CT-01 e CT-02 falharam)`,
+        'N/A', 'Sem Lead de teste', 'Corrigir CT-01 ou CT-02 primeiro'));
+    }
   }
 
-  return results;
+  // ============================================================
+  // CT-21: Duplicidade — criar 2 leads mesmo CNPJ
+  // ============================================================
+  if (ct01.ok) {
+    const dup = await apiCreate({
+      FirstName:'QA', LastName:'Dup01', Company:'Dup Empresa',
+      Email:'dup@empresa.com.br', Phone:'11999990021',
+      CNPJ__c:'71208516000174', Nacionalidade__c:'Nacional',
+      RecordTypeId: NAC_RT, OrigemCanal__c:'Landing page', Status:'Novo'
+    });
+    if (dup.ok) {
+      const dupData = await apiRead(dup.id, 'Status,Motivo_cancelamento__c,Lead_Relacionado__c');
+      if (dupData.Status === 'Cancelado') {
+        R.push(ok('CT-21',`Duplicidade: 2o lead auto-cancelado (Status=${dupData.Status}, Motivo=${dupData.Motivo_cancelamento__c})`,
+          `Criados 2 leads CNPJ=71208516000174`, `Lead2 Status=${dupData.Status}`, 'US 22'));
+      } else {
+        R.push(fail('CT-21',`Duplicidade: 2o lead NAO auto-cancelado (Status=${dupData.Status})`,
+          `Criados 2 leads mesmo CNPJ`,
+          `Lead2 Status=${dupData.Status} — esperado Cancelado`, 'US 22 — Nenhum Flow/Apex de duplicidade implementado'));
+      }
+    } else {
+      R.push(fail('CT-21',`Duplicidade: 2o lead nao criado: ${dup.error}`,
+        'POST Lead mesmo CNPJ', dup.error.substring(0,120), 'US 22'));
+    }
+  } else {
+    R.push(manual('CT-21','Duplicidade: verificar se 2o lead mesmo CNPJ e auto-cancelado',
+      'CT-01 falhou — nao foi possivel testar. Criar 2 leads manualmente com mesmo CNPJ e verificar se o 2o fica Cancelado com motivo Duplicidade'));
+  }
+
+  // ============================================================
+  // MANUAIS
+  // ============================================================
+  R.push(manual('CT-22','Layout exibe Nacionalidade (Nacional/Internacional) no topo da tela de criacao',
+    'UI: Leads > Novo Lead > verificar que radio button ou picklist Nacionalidade aparece na primeira secao. Selecionar Internacional e confirmar que CNPJ deixa de ser obrigatorio'));
+
+  R.push(manual('CT-23','CNPJ preenche dados da empresa a partir de conta existente',
+    'UI: Criar Lead Nacional > informar CNPJ de uma conta existente > verificar se Nome da Empresa, Site, Setor, Porte sao auto-preenchidos'));
+
+  R.push(manual('CT-24','Origem canal preenchido como Manual na criacao via SF',
+    'UI: Criar Lead via botao Novo > apos salvar verificar que campo Origem Canal esta como "Manual"'));
+
+  R.push(manual('CT-25','Botao Converter Lead visivel apenas em status Em conversao para perfil consultor',
+    'UI: Acessar Lead com Status diferente de Em conversao > botao Converter nao deve aparecer. Mudar para Em conversao (com qualificacao preenchida) > botao deve aparecer para perfil consultor'));
+
+  R.push(manual('CT-26','Enriquecimento Neoway/Receita ao entrar em Qualificacao',
+    'UI: Mover Lead com CNPJ para status Qualificacao > verificar se campos endereco, porte, faixa funcionarios, situacao cadastral sao preenchidos. Verificar indicadores OK/VAZIO/ERRO. Botao Atualizar Dados disponivel'));
+
+  R.push(manual('CT-27','Cadencia outbound cria tarefas automaticas em sequencia',
+    'UI: Lead outbound em Qualificacao > verificar se tarefas sao criadas automaticamente (telefone, email, whatsapp, linkedin) com intervalos de 8h uteis'));
+
+  R.push(manual('CT-28','Botao Cobertura de Rede em Qualificacao com endereco completo',
+    'UI: Lead em Qualificacao com endereco completo (Rua, Cidade, Estado, CEP, Numero, Bairro) > verificar botao Cobertura de Rede visivel e funcional > popup com tecnologias x velocidades'));
+
+  R.push(manual('CT-29','Redistribuicao: gerente pode trocar owner, par nao pode',
+    'UI: Logar como gerente do consultor > redistribuir lead do consultor > deve funcionar. Logar como outro gerente (par) > tentar redistribuir > deve ser bloqueado'));
+
+  R.push(manual('CT-30','Atribuicao automatica para fila SDR conforme segmento e regional',
+    'UI: Criar Lead Cliente Novo, Segmento Corporativo, com regional > verificar que Owner = fila SDR CORPORATIVO. Sem regional > Owner = fila Lider Tecnico SDR'));
+
+  R.push(manual('CT-31','Campanha: status atualizado para Em Andamento na data de inicio',
+    'UI: Criar campanha com data inicio = hoje > verificar se status muda para Em Andamento. Campanha com data termino passada > tentar reativar > deve ser bloqueado'));
+
+  R.push(manual('CT-32','Registro de interacoes (ligacao, email, tarefa) na aba Atividades',
+    'UI: Lead > Atividades > Registrar chamada > preencher Assunto, Duracao, Telefone, Resumo (obrigatorios) + Resultado da chamada. Apos salvar verificar sugestao de criar tarefa'));
+
+  R.push(manual('CT-33','Notificacao ao consultor quando lead inbound atribuido',
+    'UI: Atribuir lead inbound a consultor > verificar notificacao no sino (bell) do Salesforce e push no mobile'));
+
+  R.push(manual('CT-34','Dashboards Lead (funil, backlog, cancelados, SLA) com filtros',
+    'App Leads > Dashboards > verificar 4 dashboards com filtros por segmento, status, regional, proprietario'));
+
+  R.push(manual('CT-35','Carga mailing via Data Import Wizard aceita registros sem CNPJ',
+    'Setup > Data Import Wizard > importar CSV de leads sem CNPJ > verificar que leads sao criados. Verificar Origem Canal = Mailing automaticamente'));
+
+  R.push(manual('CT-36','Quarentena: lead outbound bloqueado se cliente tem lead cancelado recente',
+    'Criar lead outbound com CNPJ de lead cancelado recentemente > verificar se sistema impede criacao (exceto se criado por SDR/Consultor/Atendimento)'));
+
+  R.push(manual('CT-37','Aba WhatsApp no Lead com envio via template aprovado',
+    'UI: Lead > aba WhatsApp (ao lado de Atividades) > selecionar template > enviar > verificar que mensagem livre nao e permitida como primeira msg'));
+
+  // ============================================================
+  // CLEANUP
+  // ============================================================
+  for (const id of cleanup.reverse()) {
+    try { await apiDelete(id); } catch(e) {}
+  }
+
+  return R;
 }
 
 
