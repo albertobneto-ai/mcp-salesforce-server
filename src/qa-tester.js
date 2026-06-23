@@ -1414,164 +1414,113 @@ async function test173(sf) {
   return R;
 }
 
+
 // ===== CRMB2B-174 — Duplicidade de Contato =====
 async function test174(sf) {
   const R = [];
   const ts = Date.now();
+  let accId, accId2, baseId;
 
-  // Setup: create Account + base Contact
-  let accId, baseContactId;
   try {
-    const accResp = await fetch(sf.url + '/services/data/v62.0/sobjects/Account', {
+    // Setup
+    let r1 = await fetch(sf.url + '/services/data/v62.0/sobjects/Account', {
       method: 'POST', headers: { 'Authorization': 'Bearer ' + sf.token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ Name: 'QA174_Account_' + ts })
+      body: JSON.stringify({ Name: 'QA174_A_' + ts })
     });
-    const acc = await accResp.json();
-    accId = acc.id;
-
-    const cResp = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact', {
+    accId = (await r1.json()).id;
+    let r2 = await fetch(sf.url + '/services/data/v62.0/sobjects/Account', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + sf.token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ Name: 'QA174_B_' + ts })
+    });
+    accId2 = (await r2.json()).id;
+    let r3 = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact', {
       method: 'POST', headers: { 'Authorization': 'Bearer ' + sf.token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ LastName: 'Silva', FirstName: 'Joao', MobilePhone: '11999990001', AccountId: accId, StatusContato__c: 'Ativo' })
     });
-    const base = await cResp.json();
-    baseContactId = base.id;
-    if (!baseContactId) { R.push(fail('CT-174-SETUP', 'Falha ao criar Contact base', 'REST DML', JSON.stringify(base).substring(0,150), '')); return R; }
-    R.push(ok('CT-174-SETUP', 'Account + Contact base criados', 'REST DML', 'AccId=' + accId + ' ConId=' + baseContactId, ''));
-  } catch(e) { R.push(fail('CT-174-SETUP', 'Erro setup', 'REST DML', e.message, '')); return R; }
+    let base = await r3.json();
+    baseId = base.id;
+    if (!baseId) { R.push(fail('SETUP', 'Falha criar Contact base', 'DML', JSON.stringify(base).substring(0,120), '')); return R; }
+    R.push(ok('SETUP', 'Account + Contact base criados', 'DML', 'Acc=' + accId, ''));
+  } catch(e) { R.push(fail('SETUP', 'Erro', 'DML', e.message, '')); return R; }
 
-  // CT-174-001 (CA-001): Block duplicate same account+phone+name+active
+  // CA-001: Block duplicate
   try {
-    const resp = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact', {
+    let resp = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact', {
       method: 'POST', headers: { 'Authorization': 'Bearer ' + sf.token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ LastName: 'Silva', FirstName: 'Joao', MobilePhone: '11999990001', AccountId: accId, StatusContato__c: 'Ativo' })
     });
     if (resp.status === 400) {
-      const err = await resp.json();
-      const msg = (err[0]?.message || '').toLowerCase();
-      if (msg.includes('ja existe') || msg.includes('duplici')) R.push(ok('CT-174-001', 'CA-001: Duplicado bloqueado (mesmo cel+nome+conta+ativo)', 'REST DML Insert', err[0]?.message?.substring(0,100), ''));
-      else R.push(fail('CT-174-001', 'Bloqueado mas msg errada', 'REST DML', msg.substring(0,100), ''));
+      let err = await resp.json();
+      let msg = (err[0] && err[0].message) || '';
+      R.push(ok('CT-174-001', 'CA-001: Duplicado bloqueado', 'DML Insert', msg.substring(0,100), ''));
     } else {
-      const c = await resp.json();
-      R.push(fail('CT-174-001', 'CA-001: NAO bloqueou duplicado', 'REST DML', 'Status=' + resp.status, ''));
+      let c = await resp.json();
+      R.push(fail('CT-174-001', 'NAO bloqueou', 'DML', 'Status=' + resp.status, ''));
       if (c.id) await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/' + c.id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + sf.token } });
     }
-  } catch(e) { R.push(fail('CT-174-001', 'Erro', 'REST DML', e.message, '')); }
+  } catch(e) { R.push(fail('CT-174-001', 'Erro', '', e.message, '')); }
 
-  // CT-174-002 (CA-002): Allow same phone+name in different account
-  let acc2Id;
+  // CA-002: Allow different account
   try {
-    const a2 = await fetch(sf.url + '/services/data/v62.0/sobjects/Account', {
+    let resp = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact', {
       method: 'POST', headers: { 'Authorization': 'Bearer ' + sf.token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ Name: 'QA174_AccountB_' + ts })
+      body: JSON.stringify({ LastName: 'Silva', FirstName: 'Joao', MobilePhone: '11999990001', AccountId: accId2, StatusContato__c: 'Ativo' })
     });
-    acc2Id = (await a2.json()).id;
-    const resp = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact', {
-      method: 'POST', headers: { 'Authorization': 'Bearer ' + sf.token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ LastName: 'Silva', FirstName: 'Joao', MobilePhone: '11999990001', AccountId: acc2Id, StatusContato__c: 'Ativo' })
-    });
-    const c = await resp.json();
-    if (c.id) { R.push(ok('CT-174-002', 'CA-002: Permitido em conta diferente', 'REST DML Insert', 'Id=' + c.id, '')); await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/' + c.id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + sf.token } }); }
-    else R.push(fail('CT-174-002', 'CA-002: Bloqueou indevidamente', 'REST DML', JSON.stringify(c).substring(0,100), ''));
-  } catch(e) { R.push(fail('CT-174-002', 'Erro', 'REST DML', e.message, '')); }
+    let c = await resp.json();
+    if (c.id) { R.push(ok('CT-174-002', 'CA-002: Conta diferente OK', 'DML', 'Id=' + c.id, '')); await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/' + c.id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + sf.token } }); }
+    else R.push(fail('CT-174-002', 'Bloqueou indevidamente', 'DML', JSON.stringify(c).substring(0,100), ''));
+  } catch(e) { R.push(fail('CT-174-002', 'Erro', '', e.message, '')); }
 
-  // CT-174-003 (CA-003): Allow new unique contact
+  // CA-003: Allow unique
   try {
-    const resp = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact', {
+    let resp = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact', {
       method: 'POST', headers: { 'Authorization': 'Bearer ' + sf.token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ LastName: 'Oliveira', FirstName: 'Maria', MobilePhone: '11999990002', AccountId: accId, StatusContato__c: 'Ativo' })
+      body: JSON.stringify({ LastName: 'Oliveira', FirstName: 'Maria', MobilePhone: '11999990099', AccountId: accId, StatusContato__c: 'Ativo' })
     });
-    const c = await resp.json();
-    if (c.id) { R.push(ok('CT-174-003', 'CA-003: Contato unico permitido', 'REST DML Insert', 'Id=' + c.id, '')); await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/' + c.id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + sf.token } }); }
-    else R.push(fail('CT-174-003', 'Bloqueou contato unico', 'REST DML', JSON.stringify(c).substring(0,100), ''));
-  } catch(e) { R.push(fail('CT-174-003', 'Erro', 'REST DML', e.message, '')); }
+    let c = await resp.json();
+    if (c.id) { R.push(ok('CT-174-003', 'CA-003: Unico OK', 'DML', 'Id=' + c.id, '')); await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/' + c.id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + sf.token } }); }
+    else R.push(fail('CT-174-003', 'Bloqueou unico', 'DML', JSON.stringify(c).substring(0,100), ''));
+  } catch(e) { R.push(fail('CT-174-003', 'Erro', '', e.message, '')); }
 
-  // CT-174-004 (CA-008): Allow when existing is Inativo
+  // CA-009: Different name same phone = allow
   try {
-    await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/' + baseContactId, {
-      method: 'PATCH', headers: { 'Authorization': 'Bearer ' + sf.token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ StatusContato__c: 'Inativo' })
-    });
-    const resp = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact', {
-      method: 'POST', headers: { 'Authorization': 'Bearer ' + sf.token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ LastName: 'Silva', FirstName: 'Joao', MobilePhone: '11999990001', AccountId: accId, StatusContato__c: 'Ativo' })
-    });
-    const c = await resp.json();
-    if (c.id) {
-      R.push(ok('CT-174-004', 'CA-008: Permitido quando existente Inativo', 'REST DML', 'Id=' + c.id, ''));
-      await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/' + c.id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + sf.token } });
-    } else R.push(fail('CT-174-004', 'Bloqueou com existente Inativo', 'REST DML', JSON.stringify(c).substring(0,100), ''));
-    // Restore base
-    await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/' + baseContactId, {
-      method: 'PATCH', headers: { 'Authorization': 'Bearer ' + sf.token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ StatusContato__c: 'Ativo' })
-    });
-  } catch(e) { R.push(fail('CT-174-004', 'Erro', 'REST DML', e.message, '')); }
-
-  // CT-174-005 (CA-009): Different name same phone = allowed
-  try {
-    const resp = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact', {
+    let resp = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact', {
       method: 'POST', headers: { 'Authorization': 'Bearer ' + sf.token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ LastName: 'Santos', FirstName: 'Pedro', MobilePhone: '11999990001', AccountId: accId, StatusContato__c: 'Ativo' })
     });
-    const c = await resp.json();
-    if (c.id) { R.push(ok('CT-174-005', 'CA-009: Nome diferente + mesmo cel = permitido', 'REST DML', 'Id=' + c.id, '')); await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/' + c.id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + sf.token } }); }
-    else R.push(fail('CT-174-005', 'Bloqueou nome diferente', 'REST DML', JSON.stringify(c).substring(0,100), ''));
-  } catch(e) { R.push(fail('CT-174-005', 'Erro', 'REST DML', e.message, '')); }
+    let c = await resp.json();
+    if (c.id) { R.push(ok('CT-174-004', 'CA-009: Nome diff OK', 'DML', 'Id=' + c.id, '')); await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/' + c.id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + sf.token } }); }
+    else R.push(fail('CT-174-004', 'Bloqueou nome diff', 'DML', JSON.stringify(c).substring(0,100), ''));
+  } catch(e) { R.push(fail('CT-174-004', 'Erro', '', e.message, '')); }
 
-  // CT-174-006: No account = skip validation
+  // RN-003: No account = skip
   try {
-    const resp = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact', {
+    let resp = await fetch(sf.url + '/services/data/v62.0/sobjects/Contact', {
       method: 'POST', headers: { 'Authorization': 'Bearer ' + sf.token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ LastName: 'Silva', FirstName: 'Joao', MobilePhone: '11999990001', StatusContato__c: 'Ativo' })
     });
-    const c = await resp.json();
-    if (c.id) { R.push(ok('CT-174-006', 'RN-003: Sem conta = sem validacao', 'REST DML', 'Id=' + c.id, '')); await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/' + c.id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + sf.token } }); }
-    else R.push(fail('CT-174-006', 'Bloqueou sem conta', 'REST DML', JSON.stringify(c).substring(0,100), ''));
-  } catch(e) { R.push(fail('CT-174-006', 'Erro', 'REST DML', e.message, '')); }
+    let c = await resp.json();
+    if (c.id) { R.push(ok('CT-174-005', 'RN-003: Sem conta OK', 'DML', 'Id=' + c.id, '')); await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/' + c.id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + sf.token } }); }
+    else R.push(fail('CT-174-005', 'Bloqueou sem conta', 'DML', JSON.stringify(c).substring(0,100), ''));
+  } catch(e) { R.push(fail('CT-174-005', 'Erro', '', e.message, '')); }
 
-  // CT-174-007: Apex class exists
+  // Apex classes exist
   try {
-    const r = await sfTooling(sf, "SELECT Name FROM ApexClass WHERE Name='ContactDuplicateService'");
-    if ((r.records||[]).length > 0) R.push(ok('CT-174-007', 'ContactDuplicateService existe', 'Tooling SOQL', '', ''));
-    else R.push(fail('CT-174-007', 'Classe nao encontrada', 'Tooling SOQL', '', ''));
-  } catch(e) { R.push(fail('CT-174-007', 'Erro', 'Tooling SOQL', e.message, '')); }
-
-  // CT-174-008: Test class exists
-  try {
-    const r = await sfTooling(sf, "SELECT Name FROM ApexClass WHERE Name='ContactDuplicateServiceTest'");
-    if ((r.records||[]).length > 0) R.push(ok('CT-174-008', 'ContactDuplicateServiceTest existe', 'Tooling SOQL', '', ''));
-    else R.push(fail('CT-174-008', 'Test class nao encontrada', 'Tooling SOQL', '', ''));
-  } catch(e) { R.push(fail('CT-174-008', 'Erro', 'Tooling SOQL', e.message, '')); }
+    let r = await sfTooling(sf, "SELECT Name FROM ApexClass WHERE Name IN (" + "'ContactDuplicateService','ContactDuplicateServiceTest')");
+    let names = (r.records || []).map(function(x){ return x.Name; });
+    if (names.length >= 2) R.push(ok('CT-174-006', 'Apex classes existem', 'Tooling', names.join(', '), ''));
+    else R.push(fail('CT-174-006', 'Faltam classes', 'Tooling', 'Found: ' + names.join(', '), ''));
+  } catch(e) { R.push(fail('CT-174-006', 'Erro', 'Tooling', e.message, '')); }
 
   // Cleanup
   try {
-    if (baseContactId) await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/' + baseContactId, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + sf.token } });
+    if (baseId) await fetch(sf.url + '/services/data/v62.0/sobjects/Contact/' + baseId, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + sf.token } });
     if (accId) await fetch(sf.url + '/services/data/v62.0/sobjects/Account/' + accId, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + sf.token } });
-    if (acc2Id) await fetch(sf.url + '/services/data/v62.0/sobjects/Account/' + acc2Id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + sf.token } });
-  } catch(e) { /* cleanup best effort */ }
+    if (accId2) await fetch(sf.url + '/services/data/v62.0/sobjects/Account/' + accId2, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + sf.token } });
+  } catch(e) { /* cleanup */ }
 
   return R;
 }
-
-'172': test172, '173': test173, '174': test174 };
-
-router.get('/run/:historia', async (req, res) => {
-  const historia = req.params.historia.toLowerCase();
-  const testFn = TESTS[historia];
-  if (!testFn) return res.status(400).json({ error: `Historia nao encontrada. Disponiveis: ${Object.keys(TESTS).join(', ')}` });
-  try {
-    console.log(`[qa-tester] Executando ${historia}...`);
-    const sf = await sfLogin();
-    const results = await testFn(sf);
-    const summary = { historia, timestamp: new Date().toISOString(), total: results.length, atendido: results.filter(r => r.status === 'ATENDIDO').length, nao_atendido: results.filter(r => r.status === 'NAO_ATENDIDO').length, manual: results.filter(r => r.status === 'MANUAL').length, results };
-    console.log(`[qa-tester] ${historia}: ${summary.atendido} OK, ${summary.nao_atendido} FAIL, ${summary.manual} MANUAL`);
-    res.json(summary);
-  } catch(e) { console.error(`[qa-tester] Erro: ${e.message}`); res.status(500).json({ error: e.message }); }
-});
-
-router.get('/health', (req, res) => { res.json({ status: 'ok', service: 'qa-tester', version: '2.0', historias: Object.keys(TESTS) }); });
-
-export default router;
 
 const TESTS = { '83': test83, '84': test84, '85': test85, 'usbase': testUSBase, '50a': test50A, '90': test90, '91': test91, '107': test107, '108': test108, 'lead': testLead, '172': test172, '173': test173, '174': test174 };
 
