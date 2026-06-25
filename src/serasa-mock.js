@@ -54,6 +54,37 @@ router.get('/consulta/:cnpj', (req, res) => {
   });
 });
 
+
+// Catch-all for formatted CNPJs (with slashes/dots)
+// Apex sends callout:NC/api/serasa/consulta/33.333.333/0001-33
+// Express splits at "/" so we need to catch everything after /consulta/
+router.get('/consulta/*', (req, res) => {
+  // Reconstruct CNPJ from all path segments after /consulta/
+  const rawPath = req.params[0] || '';
+  const cnpj = rawPath.replace(/[^0-9]/g, '');
+  console.log(`[serasa-mock] Catch-all CNPJ: ${rawPath} -> ${cnpj}`);
+  
+  if (!cnpj || cnpj.length < 11) {
+    return res.status(400).json({ error: 'CNPJ invalido', raw: rawPath });
+  }
+  
+  if (cnpj === '00000000000000') return res.status(404).json({ error: 'CNPJ nao encontrado', cnpj });
+  if (cnpj === '88888888000188') return setTimeout(() => res.status(504).json({ error: 'Gateway Timeout' }), 12000);
+  
+  const raw = MOCK_DB[cnpj] || {
+    razaoSocial: 'EMPRESA ' + cnpj.substring(0, 8) + ' LTDA',
+    nomeFantasia: 'COMERCIO ' + cnpj.substring(0, 4),
+    dataFundacao: '2015-01-01',
+    cnaePrincipal: { codigo: '4751201' }, naturezaJuridica: { codigo: '2062' },
+    inscricaoEstadual: cnpj.substring(0, 9), ufIe: 'SP', situacaoIe: 'ATIVO',
+    situacaoCnpj: 'ATIVA', porte: 'MEDIO',
+    endereco: { logradouro: 'Rua Gerada', numero: '100', bairro: 'Centro', complemento: '', cep: '01000-000', cidade: 'Sao Paulo', uf: 'SP', pais: 'BR' }
+  };
+  
+  console.log(`[serasa-mock] Hit: ${raw.razaoSocial}`);
+  return res.json(raw);
+});
+
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'serasa-mock', version: '1.0', cnpjs_mock: Object.keys(MOCK_DB).length });
 });
