@@ -58,4 +58,73 @@ router.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'serasa-mock', version: '1.0', cnpjs_mock: Object.keys(MOCK_DB).length });
 });
 
+
+// ============================================================
+// V1 API — contrato padronizado para Named Credential Salesforce
+// GET /api/serasa/v1/consulta/:cnpj
+// Response: contrato normalizado que o SerasaCalloutService espera
+// Para produção: substituir a lógica interna por chamada real Serasa
+// ============================================================
+router.get('/v1/consulta/:cnpj', (req, res) => {
+  const cnpj = req.params.cnpj.replace(/[^0-9]/g, '');
+  console.log(`[serasa-api-v1] Consulta CNPJ: ${cnpj}`);
+
+  // Timeout simulado
+  if (cnpj === '88888888000188') {
+    return setTimeout(() => res.status(504).json({
+      error: 'Timeout na consulta Serasa', cnpj, status: 504
+    }), 12000);
+  }
+
+  // CNPJ não encontrado
+  if (cnpj === '00000000000000') {
+    return res.status(404).json({
+      error: 'CNPJ nao encontrado', cnpj, status: 404
+    });
+  }
+
+  // Busca no mock DB (reutiliza dados existentes)
+  const raw = MOCK_DB[cnpj] || {
+    razaoSocial: 'EMPRESA ' + cnpj.substring(0, 8) + ' LTDA',
+    nomeFantasia: 'COMERCIO ' + cnpj.substring(0, 4),
+    dataFundacao: '2015-01-01',
+    cnaePrincipal: { codigo: '4751201' },
+    naturezaJuridica: { codigo: '2062' },
+    inscricaoEstadual: cnpj.substring(0, 9),
+    ufIe: 'SP', situacaoIe: 'ATIVO',
+    situacaoCnpj: 'ATIVA', porte: 'MEDIO',
+    endereco: { logradouro: 'Rua Gerada', numero: '100', bairro: 'Centro', complemento: '', cep: '01000-000', cidade: 'Sao Paulo', uf: 'SP', pais: 'BR' }
+  };
+
+  // Normaliza para o contrato que o SerasaCalloutService.cls espera
+  const response = {
+    razaoSocial:            raw.razaoSocial || '',
+    nomeFantasia:           raw.nomeFantasia || '',
+    situacaoCnpj:           raw.situacaoCnpj || '',
+    dataFundacao:           raw.dataFundacao || '',
+    codigoCnaeFiscal:       raw.cnaePrincipal?.codigo || '',
+    codigoNaturezaJuridica: raw.naturezaJuridica?.codigo || '',
+    inscricaoEstadual:      raw.inscricaoEstadual || '',
+    ufRegistroIe:           raw.ufIe || '',
+    situacaoRegistroIe:     raw.situacaoIe || '',
+    porte:                  raw.porte || '',
+    endereco: {
+      logradouro:  raw.endereco?.logradouro || '',
+      numero:      raw.endereco?.numero || '',
+      bairro:      raw.endereco?.bairro || '',
+      cidade:      raw.endereco?.cidade || '',
+      uf:          raw.endereco?.uf || '',
+      cep:         raw.endereco?.cep || ''
+    }
+  };
+
+  console.log(`[serasa-api-v1] OK: ${response.razaoSocial} | ${response.situacaoCnpj}`);
+  return res.json(response);
+});
+
+// Health check v1
+router.get('/v1/health', (req, res) => {
+  res.json({ status: 'ok', service: 'algar-serasa-api', version: '1.0', env: 'mock' });
+});
+
 export default router;
