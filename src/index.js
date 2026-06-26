@@ -20,6 +20,7 @@ import { registerRcWorkerRoutes } from "./rc-worker.js";
 import { registerWorkerEngineRoutes } from "./worker-engine.js";
 import i9ConnectRouter from "./routes/i9-connect.js";
 import serasaMockRouter from "./serasa-mock.js";
+import emailValidation from "./email-validation.js";
 import qaTesterRouter from "./qa-tester.js";
 
 const app = express();
@@ -2238,6 +2239,8 @@ registerWorkerEngineRoutes(app);
 
   // CRMB2B-95 Mock Serasa API
   app.use('/api/serasa', serasaMockRouter);
+  app.use('/api/email', emailValidation);
+  console.log('[email-validation] Mounted at /api/email');
   console.log('[serasa-mock] Mounted at /api/serasa');
 
   // QA Tester - automated functional testing
