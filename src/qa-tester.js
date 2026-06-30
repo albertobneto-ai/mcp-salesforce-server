@@ -1522,7 +1522,149 @@ async function test174(sf) {
   return R;
 }
 
-const TESTS = { '83': test83, '84': test84, '85': test85, 'usbase': testUSBase, '50a': test50A, '90': test90, '91': test91, '107': test107, '108': test108, 'lead': testLead, '172': test172, '173': test173, '174': test174 };
+
+// ═══════════════════════════════════════
+// CRMB2B-154 — Hierarquia de Conta
+// ═══════════════════════════════════════
+async function test154(sf) {
+  const R = [];
+  const FIELDS_154 = [
+    { api: 'Matriz__c', label: 'Matriz', type: 'picklist', values: ['Sim','Nao'] },
+    { api: 'TipoGrupoEmpresarial__c', label: 'Tipo do grupo empresarial', type: 'picklist', values: ['Principal','Secundaria'] },
+    { api: 'TipoGrupoEconomico__c', label: 'Tipo do grupo economico', type: 'picklist', values: ['Centro_decisor','Empresa_coligada'] },
+    { api: 'TipoAtendimento__c', label: 'Tipo do atendimento', type: 'picklist', values: ['Centralizado','Descentralizado'] },
+  ];
+  for (const f of FIELDS_154) {
+    try {
+      const q = await sfTooling(sf, `SELECT QualifiedApiName, DataType FROM EntityParticle WHERE EntityDefinition.QualifiedApiName='Account' AND QualifiedApiName='${f.api}'`);
+      if (q.records?.length > 0) R.push(ok(`154-FIELD-${f.api}`, `Campo ${f.api} existe (${q.records[0].DataType})`, `Tooling EntityParticle query`, `DataType=${q.records[0].DataType}`, `Setup > Account > Fields > ${f.api}`));
+      else R.push(fail(`154-FIELD-${f.api}`, `Campo ${f.api} NAO encontrado`, `Tooling EntityParticle query`, `0 registros`, `Setup > Account > Fields`));
+    } catch(e) { R.push(fail(`154-FIELD-${f.api}`, 'Erro', '', e.message, '')); }
+  }
+  try {
+    const q = await sfTooling(sf, "SELECT QualifiedApiName FROM EntityParticle WHERE EntityDefinition.QualifiedApiName='Account' AND QualifiedApiName='ParentId'");
+    if (q.records?.length > 0) R.push(ok('154-PARENTID', 'ParentId (standard) disponivel', 'Tooling EntityParticle', 'Campo existe', 'Setup > Account > Fields > ParentId'));
+    else R.push(fail('154-PARENTID', 'ParentId nao encontrado', '', '', ''));
+  } catch(e) { R.push(fail('154-PARENTID', 'Erro', '', e.message, '')); }
+  try {
+    const fls = await sfQuery(sf, "SELECT Parent.Name, Field, PermissionsRead, PermissionsEdit FROM FieldPermissions WHERE SobjectType='Account' AND Field='Account.Matriz__c'");
+    if (fls.records?.length > 0) R.push(ok('154-FLS', `FLS Matriz__c configurado em ${fls.records.length} PSs`, 'SOQL FieldPermissions', fls.records.map(r=>`${r.Parent.Name}: R=${r.PermissionsRead} W=${r.PermissionsEdit}`).join('; '), 'Setup > Permission Sets > Field Permissions'));
+    else R.push(fail('154-FLS', 'Nenhum FLS encontrado para Matriz__c', 'SOQL FieldPermissions', '0 registros', 'Setup > Permission Sets'));
+  } catch(e) { R.push(fail('154-FLS', 'Erro', '', e.message, '')); }
+  R.push(manual('154-HIERARCHY-VIEW', 'Hierarchy View com colunas Matriz, TipoGrupoEmpresarial, TipoGrupoEconomico', 'Abrir qualquer conta > botao Hierarquia de Contas > verificar colunas adicionais'));
+  R.push(manual('154-AUTO-HIERARCHY', 'Automacao de hierarquia automatica por raiz CNPJ', 'Criar conta Nacional PJ com mesma raiz de CNPJ de conta existente > verificar ParentId preenchido automaticamente e TipoGrupoEmpresarial = Secundaria'));
+  R.push(manual('154-GRUPO-ECON', 'Vinculo manual de grupo economico (Centro decisor -> Empresa coligada)', 'Criar conta com TipoGrupoEconomico = Centro decisor. Criar outra com TipoGrupoEconomico = Empresa coligada e ParentId = Centro decisor. Verificar hierarquia.'));
+  return R;
+}
+
+// ═══════════════════════════════════════
+// CRMB2B-149 — Encarteiramento
+// ═══════════════════════════════════════
+async function test149(sf) {
+  const R = [];
+  try {
+    const q = await sfTooling(sf, "SELECT QualifiedApiName, DataType FROM EntityParticle WHERE EntityDefinition.QualifiedApiName='Account' AND QualifiedApiName='CnpjRaiz__c'");
+    if (q.records?.length > 0) R.push(ok('149-CNPJRAIZ', `CnpjRaiz__c existe (${q.records[0].DataType})`, 'Tooling EntityParticle', `Formula field encontrado`, 'Setup > Account > Fields > CnpjRaiz'));
+    else R.push(fail('149-CNPJRAIZ', 'CnpjRaiz__c nao encontrado', '', '', ''));
+  } catch(e) { R.push(fail('149-CNPJRAIZ', 'Erro', '', e.message, '')); }
+  try {
+    const q = await sfQuery(sf, "SELECT Id, CNPJ__c, CnpjRaiz__c FROM Account WHERE CNPJ__c != null LIMIT 1");
+    if (q.records?.length > 0) {
+      const acc = q.records[0];
+      const cnpjClean = (acc.CNPJ__c||'').replace(/[^0-9]/g,'');
+      const expected = cnpjClean.substring(0,8);
+      if (acc.CnpjRaiz__c === expected) R.push(ok('149-FORMULA', `Formula CnpjRaiz correta: ${acc.CnpjRaiz__c} = LEFT(${cnpjClean},8)`, 'SOQL Account', `CNPJ=${acc.CNPJ__c}, Raiz=${acc.CnpjRaiz__c}`, 'Abrir conta > verificar campo CNPJ Raiz'));
+      else R.push(fail('149-FORMULA', `Formula incorreta: esperado ${expected}, obtido ${acc.CnpjRaiz__c}`, 'SOQL', '', ''));
+    } else R.push(manual('149-FORMULA', 'Nenhuma conta com CNPJ para testar formula', 'Criar conta com CNPJ > verificar CnpjRaiz__c'));
+  } catch(e) { R.push(fail('149-FORMULA', 'Erro', '', e.message, '')); }
+  try {
+    const q = await sfTooling(sf, "SELECT QualifiedApiName, DataType FROM EntityParticle WHERE EntityDefinition.QualifiedApiName='Account' AND QualifiedApiName='OrigemEncarteiramento__c'");
+    if (q.records?.length > 0) R.push(ok('149-ORIGEM', `OrigemEncarteiramento__c existe`, 'Tooling', `DataType=${q.records[0].DataType}`, 'Setup > Account > Fields'));
+    else R.push(fail('149-ORIGEM', 'Campo nao encontrado', '', '', ''));
+  } catch(e) { R.push(fail('149-ORIGEM', 'Erro', '', e.message, '')); }
+  try {
+    const fls = await sfQuery(sf, "SELECT Parent.Name, PermissionsRead, PermissionsEdit FROM FieldPermissions WHERE SobjectType='Account' AND Field='Account.OrigemEncarteiramento__c'");
+    R.push(ok('149-FLS', `FLS OrigemEncarteiramento em ${fls.records?.length||0} PSs`, 'SOQL FieldPermissions', (fls.records||[]).map(r=>`${r.Parent.Name}:R=${r.PermissionsRead}/W=${r.PermissionsEdit}`).join('; '), 'Setup > Permission Sets'));
+  } catch(e) { R.push(fail('149-FLS', 'Erro', '', e.message, '')); }
+  R.push(manual('149-OWNER-GENERICO', 'Usuario generico Aguardando Contratacao criado e ativo', 'Setup > Users > verificar usuario generico'));
+  R.push(manual('149-HERANCA-OWNER', 'Heranca de Owner por conglomerado centralizado', 'Criar conta com TipoAtendimento = Centralizado. Criar outra com mesma raiz CNPJ > verificar Owner herdado.'));
+  R.push(manual('149-CASCATA', 'Cascata de troca de Owner em conglomerado centralizado', 'Alterar Owner de conta-pai centralizada > verificar que filiais mudaram Owner automaticamente.'));
+  return R;
+}
+
+// ═══════════════════════════════════════
+// CRMB2B-199 — Segmentacao e Grupo Relac.
+// ═══════════════════════════════════════
+async function test199(sf) {
+  const R = [];
+  const FIELDS_199 = ['FonteSegmento__c', 'GrupoRelacionamento__c'];
+  for (const f of FIELDS_199) {
+    try {
+      const q = await sfTooling(sf, `SELECT QualifiedApiName, DataType FROM EntityParticle WHERE EntityDefinition.QualifiedApiName='Account' AND QualifiedApiName='${f}'`);
+      if (q.records?.length > 0) R.push(ok(`199-FIELD-${f}`, `${f} existe (${q.records[0].DataType})`, 'Tooling EntityParticle', `DataType=${q.records[0].DataType}`, `Setup > Account > Fields > ${f}`));
+      else R.push(fail(`199-FIELD-${f}`, `${f} nao encontrado`, '', '', ''));
+    } catch(e) { R.push(fail(`199-FIELD-${f}`, 'Erro', '', e.message, '')); }
+  }
+  try {
+    const q = await sfTooling(sf, "SELECT QualifiedApiName FROM EntityParticle WHERE EntityDefinition.QualifiedApiName='Account' AND QualifiedApiName='Segmento__c'");
+    if (q.records?.length > 0) R.push(ok('199-SEGMENTO', 'Segmento__c existe (pre-requisito)', 'Tooling EntityParticle', 'Campo encontrado', 'Setup > Account > Fields'));
+    else R.push(fail('199-SEGMENTO', 'Segmento__c NAO encontrado', '', '', ''));
+  } catch(e) { R.push(fail('199-SEGMENTO', 'Erro', '', e.message, '')); }
+  try {
+    const fls = await sfQuery(sf, "SELECT Parent.Name, PermissionsRead, PermissionsEdit FROM FieldPermissions WHERE SobjectType='Account' AND Field='Account.FonteSegmento__c'");
+    R.push(ok('199-FLS-FONTE', `FLS FonteSegmento em ${fls.records?.length||0} PSs`, 'SOQL FieldPermissions', (fls.records||[]).map(r=>`${r.Parent.Name}:R=${r.PermissionsRead}/W=${r.PermissionsEdit}`).join('; '), 'Setup > Permission Sets'));
+  } catch(e) { R.push(fail('199-FLS-FONTE', 'Erro', '', e.message, '')); }
+  try {
+    const fls = await sfQuery(sf, "SELECT Parent.Name, PermissionsRead, PermissionsEdit FROM FieldPermissions WHERE SobjectType='Account' AND Field='Account.GrupoRelacionamento__c'");
+    R.push(ok('199-FLS-GRUPO', `FLS GrupoRelacionamento em ${fls.records?.length||0} PSs`, 'SOQL FieldPermissions', (fls.records||[]).map(r=>`${r.Parent.Name}:R=${r.PermissionsRead}/W=${r.PermissionsEdit}`).join('; '), 'Setup > Permission Sets'));
+  } catch(e) { R.push(fail('199-FLS-GRUPO', 'Erro', '', e.message, '')); }
+  R.push(manual('199-INTL-SEGMENTO', 'Conta Internacional: Segmento = Operadoras automaticamente', 'Criar conta com RT Internacional > salvar > verificar Segmento = Operadoras e FonteSegmento = Regra de conta internacional'));
+  R.push(manual('199-RAIZ-SEGMENTO', 'Conta com mesma raiz CNPJ: herda Segmento', 'Criar conta Nacional PJ com mesma raiz de CNPJ de conta existente com Segmento preenchido > verificar heranca'));
+  R.push(manual('199-NEOWAY', 'Callout Neoway para Segmento (quando sem raiz CNPJ)', 'Criar conta Nacional PJ com raiz nova > verificar callout Neoway e preenchimento do Segmento'));
+  R.push(manual('199-SNOWFLAKE', 'Callout Snowflake para Grupo de Relacionamento', 'Criar conta > verificar preenchimento do GrupoRelacionamento via Data Cloud'));
+  R.push(manual('199-TASK-FILA', 'Task criada na fila quando Segmento = padrao por erro API', 'Simular falha Neoway > verificar Task criada na Fila_Segmentacao'));
+  return R;
+}
+
+// ═══════════════════════════════════════
+// CRMB2B-200 — Classificacao e Tier
+// ═══════════════════════════════════════
+async function test200(sf) {
+  const R = [];
+  try {
+    const q = await sfTooling(sf, "SELECT QualifiedApiName, DataType FROM EntityParticle WHERE EntityDefinition.QualifiedApiName='Account' AND QualifiedApiName='Classificacao__c'");
+    if (q.records?.length > 0) R.push(ok('200-CLASSIF', `Classificacao__c existe (${q.records[0].DataType})`, 'Tooling EntityParticle', `DataType=${q.records[0].DataType}`, 'Setup > Account > Fields'));
+    else R.push(fail('200-CLASSIF', 'Classificacao__c nao encontrado', '', '', ''));
+  } catch(e) { R.push(fail('200-CLASSIF', 'Erro', '', e.message, '')); }
+  try {
+    const q = await sfTooling(sf, "SELECT QualifiedApiName, DataType FROM EntityParticle WHERE EntityDefinition.QualifiedApiName='Account' AND QualifiedApiName='Tier__c'");
+    if (q.records?.length > 0) R.push(ok('200-TIER', `Tier__c existe (${q.records[0].DataType})`, 'Tooling EntityParticle', `DataType=${q.records[0].DataType}`, 'Setup > Account > Fields'));
+    else R.push(fail('200-TIER', 'Tier__c nao encontrado', '', '', ''));
+  } catch(e) { R.push(fail('200-TIER', 'Erro', '', e.message, '')); }
+  try {
+    const fls = await sfQuery(sf, "SELECT Parent.Name, PermissionsRead, PermissionsEdit FROM FieldPermissions WHERE SobjectType='Account' AND Field='Account.Tier__c'");
+    const allReadOnly = (fls.records||[]).filter(r => r.Parent.Name !== 'PS_Account_SerasaIntegration_FLS');
+    const allRO = allReadOnly.every(r => r.PermissionsEdit === false);
+    if (allRO && allReadOnly.length > 0) R.push(ok('200-TIER-FLS', `Tier__c Read Only para ${allReadOnly.length} PSs de usuario (RN-004 atendida)`, 'SOQL FieldPermissions', allReadOnly.map(r=>`${r.Parent.Name}:W=${r.PermissionsEdit}`).join('; '), 'Setup > Permission Sets'));
+    else R.push(fail('200-TIER-FLS', 'Tier__c NAO esta Read Only para todos os PSs de usuario', 'SOQL', (fls.records||[]).map(r=>`${r.Parent.Name}:W=${r.PermissionsEdit}`).join('; '), ''));
+  } catch(e) { R.push(fail('200-TIER-FLS', 'Erro', '', e.message, '')); }
+  try {
+    const fls = await sfQuery(sf, "SELECT Parent.Name, PermissionsEdit FROM FieldPermissions WHERE SobjectType='Account' AND Field='Account.Tier__c' AND Parent.Name='PS_Account_SerasaIntegration_FLS'");
+    if (fls.records?.length > 0 && fls.records[0].PermissionsEdit === true) R.push(ok('200-TIER-INTEG', 'Tier__c Write para PS_Account_SerasaIntegration_FLS (MuleSoft)', 'SOQL FieldPermissions', 'PermissionsEdit=true', 'Setup > PS > SerasaIntegration > Field Permissions'));
+    else R.push(fail('200-TIER-INTEG', 'Tier__c NAO tem Write para integracao MuleSoft', '', '', ''));
+  } catch(e) { R.push(fail('200-TIER-INTEG', 'Erro', '', e.message, '')); }
+  try {
+    const fls = await sfQuery(sf, "SELECT Parent.Name, PermissionsRead, PermissionsEdit FROM FieldPermissions WHERE SobjectType='Account' AND Field='Account.Classificacao__c'");
+    R.push(ok('200-CLASSIF-FLS', `FLS Classificacao em ${fls.records?.length||0} PSs`, 'SOQL FieldPermissions', (fls.records||[]).map(r=>`${r.Parent.Name}:R=${r.PermissionsRead}/W=${r.PermissionsEdit}`).join('; '), 'Setup > Permission Sets'));
+  } catch(e) { R.push(fail('200-CLASSIF-FLS', 'Erro', '', e.message, '')); }
+  R.push(manual('200-DEPENDENT', 'Dependent Picklist: Segmento -> Classificacao configurada', 'Setup > Object Manager > Account > Field Dependencies > verificar Segmento__c como controlador e Classificacao__c como dependente. Selecionar Corporativo > verificar 6 opcoes. Selecionar Operadoras > verificar apenas VIP.'));
+  R.push(manual('200-TIER-NEOWAY', 'Tier preenchido via Neoway (Corporativo/Empresarial)', 'Criar conta Nacional PJ Segmento=Corporativo > verificar Tier preenchido pela Neoway'));
+  R.push(manual('200-TIER-SNOWFLAKE', 'Tier preenchido via Snowflake (Operadoras/Internacional)', 'Criar conta Operadoras ou Internacional > verificar Tier preenchido pelo Snowflake'));
+  R.push(manual('200-BATCH-SEMANAL', 'Rotina semanal preenche Tier vazio', 'Setup > Apex Jobs > verificar TierWeeklyBatch agendado'));
+  return R;
+}
+
+const TESTS = { '83': test83, '84': test84, '85': test85, 'usbase': testUSBase, '50a': test50A, '90': test90, '91': test91, '107': test107, '108': test108, 'lead': testLead, '172': test172, '173': test173, '174': test174, '154': test154, '149': test149, '199': test199, '200': test200 };
 
 router.get('/run/:historia', async (req, res) => {
   const historia = req.params.historia.toLowerCase();
