@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ever i9 — Portal DevOps</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --rail-bg:#141518; --rail-line:#2a2b30; --rail-fog:#8b8d96; --rail-ice:#f7f8fa;
+  --paper:#e7e8ec; --ice:#f7f8fa; --white:#ffffff; --line:#d3d5da;
+  --steel:#8b8d96; --fog:#6b6d75; --ink:#1a1b1e;
+  --accent:#3b82f6; --accent-dim:#2563eb; --ok:#16a34a; --warn:#d97706; --err:#dc2626;
+  --radius:3px; --radius-lg:6px;
+  --rail-w:64px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;font-size:13px;line-height:1.5}
+h1,h2,h3,.display{font-family:'Space Grotesk',sans-serif;letter-spacing:-0.01em;margin:0}
+.mono{font-family:'IBM Plex Mono',monospace}
+button{font-family:'Inter',sans-serif}
+a{color:var(--accent);text-decoration:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* ── LOGIN GATE ── */
+#gateOverlay{position:fixed;inset:0;background:var(--rail-bg);z-index:1000;display:flex;align-items:center;justify-content:center}
+#gateOverlay.hidden{display:none}
+.gate-box{width:340px;padding:40px 36px;border:1px solid var(--rail-line);border-radius:var(--radius-lg);background:#191a1e;text-align:left}
+.gate-logo{width:34px;height:34px;border:1px solid var(--rail-fog);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk';font-weight:700;font-size:13px;color:var(--rail-ice);margin-bottom:20px}
+.gate-box h2{color:var(--rail-ice);font-size:17px;font-weight:600}
+.gate-sub{color:var(--rail-fog);font-size:11.5px;margin:4px 0 22px}
+.gate-box input{width:100%;background:#101114;border:1px solid var(--rail-line);border-radius:var(--radius);color:var(--rail-ice);padding:10px 12px;font-size:13px;margin-bottom:10px;font-family:'Inter'}
+.gate-box input:focus{outline:none;border-color:var(--accent)}
+.gate-btn{width:100%;background:var(--accent);border:none;color:#fff;padding:10px;border-radius:var(--radius);font-weight:600;font-size:12.5px;cursor:pointer;letter-spacing:.04em;margin-top:4px}
+.gate-btn:hover{background:var(--accent-dim)}
+.gate-err{color:#f87171;font-size:11.5px;min-height:16px;margin-top:10px}
+
+/* ── RAIL ── */
+.rail{position:fixed;left:0;top:0;bottom:0;width:var(--rail-w);background:var(--rail-bg);display:flex;flex-direction:column;align-items:center;padding:16px 0;z-index:100}
+.rail-logo{width:28px;height:28px;border:1px solid var(--rail-fog);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk';font-weight:700;font-size:12px;margin-bottom:26px;color:var(--rail-ice)}
+.rail-nav{display:flex;flex-direction:column;gap:6px;flex:1}
+.rail-btn{width:40px;height:40px;border:1px solid transparent;border-radius:var(--radius);background:none;color:var(--rail-fog);cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative}
+.rail-btn:hover{color:var(--rail-ice);border-color:var(--rail-line)}
+.rail-btn.active{color:var(--rail-ice);border-color:var(--rail-fog);background:#1c1d21}
+.rail-btn svg{width:18px;height:18px}
+.rail-tip{position:absolute;left:52px;top:50%;transform:translateY(-50%);background:var(--ink);color:var(--ice);font-size:10.5px;padding:4px 8px;border-radius:var(--radius);white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s}
+.rail-btn:hover .rail-tip{opacity:1}
+
+/* ── LAYOUT ── */
+.main{margin-left:var(--rail-w);min-height:100vh;display:flex;flex-direction:column}
+.topbar{height:54px;background:var(--ice);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 22px;position:sticky;top:0;z-index:90}
+.topbar h1{font-size:15px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:var(--radius);background:var(--white);padding:6px 10px;color:var(--fog);font-size:12px;cursor:pointer;min-width:170px}
+.top-search kbd{font-family:'IBM Plex Mono';font-size:10px;border:1px solid var(--line);border-radius:3px;padding:1px 5px;background:var(--ice);margin-left:auto}
+.icon-btn{width:34px;height:34px;border:1px solid var(--line);border-radius:var(--radius);background:var(--white);color:var(--fog);cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative}
+.icon-btn:hover{color:var(--ink);border-color:var(--steel)}
+.icon-btn svg{width:16px;height:16px}
+.badge{position:absolute;top:-5px;right:-5px;background:var(--accent);color:#fff;font-size:9.5px;font-weight:600;min-width:15px;height:15px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono';padding:0 3px}
+.avatar{width:34px;height:34px;border-radius:var(--radius);background:var(--ink);color:var(--ice);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk';font-weight:600;font-size:12px;cursor:pointer;border:1px solid var(--ink)}
+.content{flex:1;padding:26px 30px;max-width:1180px;width:100%;margin:0 auto}
+.view{display:none}
+.view.active{display:block}
+
+/* ── COMPONENTES ── */
+.btn{border:1px solid var(--line);background:var(--white);color:var(--ink);padding:8px 14px;border-radius:var(--radius);font-size:12px;cursor:pointer;font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:7px}
+.btn:hover{border-color:var(--steel)}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:var(--ice)}
+.btn.primary:hover{background:#000}
+.btn.blue{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.blue:hover{background:var(--accent-dim)}
+.btn.danger{color:var(--err);border-color:#f3c1c1}
+.btn.danger:hover{background:#fdf0f0}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--ice);border:1px solid var(--line);border-radius:var(--radius-lg);padding:18px}
+.eyebrow{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--fog)}
+.chip{display:inline-flex;align-items:center;gap:5px;font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);border-radius:10px;padding:2px 8px;color:var(--fog);background:var(--white)}
+.chip.blue{color:var(--accent);border-color:#bcd4fb}
+.chip.ok{color:var(--ok);border-color:#bfe3cd}
+.chip.warn{color:var(--warn);border-color:#ecd3ab}
+
+/* HOME */
+.hero{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap}
+.hero h2{font-size:24px;font-weight:600}
+.hero p{margin:5px 0 0;color:var(--fog);font-size:12.5px}
+.quick{display:flex;gap:8px;flex-wrap:wrap}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:22px}
+.kpi .n{font-family:'IBM Plex Mono';font-size:26px;font-weight:600;margin:8px 0 2px}
+.kpi .l{font-size:11.5px;color:var(--fog)}
+.grid-2{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;align-items:start}
+.feed-item{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.feed-item:last-child{border-bottom:none}
+.feed-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.feed-item .t{font-size:12.5px}
+.feed-item .m{font-family:'IBM Plex Mono';font-size:10px;color:var(--steel);margin-top:2px}
+.orglist{display:flex;flex-direction:column;gap:9px}
+.orgrow{display:flex;align-items:center;gap:10px;font-size:12px}
+.orgrow .mono{font-size:11px;color:var(--fog);margin-left:auto}
+
+/* APPS */
+.apps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.app-card{background:var(--ice);border:1px solid var(--line);border-radius:var(--radius-lg);padding:18px;display:flex;flex-direction:column;gap:10px;transition:border-color .15s, transform .15s;cursor:pointer;position:relative}
+.app-card:hover{border-color:var(--steel);transform:translateY(-2px)}
+.app-card.disabled{opacity:.55;cursor:default}
+.app-card.disabled:hover{transform:none;border-color:var(--line)}
+.app-ico{width:38px;height:38px;border:1px solid var(--line);border-radius:var(--radius);background:var(--white);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk';font-weight:700;font-size:13px;color:var(--ink)}
+.app-card h3{font-size:14px;font-weight:600}
+.app-card p{margin:0;color:var(--fog);font-size:11.5px;flex:1}
+.app-foot{display:flex;align-items:center;justify-content:space-between}
+.app-host{font-family:'IBM Plex Mono';font-size:9.5px;color:var(--steel)}
+
+/* COFRE */
+.cofre-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.usage{flex:1;min-width:200px}
+.usage-bar{height:6px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:5px}
+.usage-fill{height:100%;background:var(--accent);width:0%;transition:width .3s}
+.dropzone{border:1.5px dashed var(--steel);border-radius:var(--radius-lg);background:var(--ice);padding:34px 20px;text-align:center;color:var(--fog);cursor:pointer;transition:all .15s;margin-bottom:16px}
+.dropzone.drag{border-color:var(--accent);background:#eef4fe;color:var(--accent)}
+.dropzone .big{font-family:'Space Grotesk';font-size:14px;font-weight:600;color:var(--ink);margin-bottom:4px}
+.filelist{display:flex;flex-direction:column;gap:8px}
+.file-row{display:flex;align-items:center;gap:12px;background:var(--ice);border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px}
+.file-row input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px;cursor:pointer}
+.f-ico{width:32px;height:32px;border:1px solid var(--line);border-radius:var(--radius);background:var(--white);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono';font-size:9px;font-weight:600;color:var(--fog);text-transform:uppercase;flex-shrink:0}
+.f-name{flex:1;min-width:0}
+.f-name .n{font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f-name .m{font-family:'IBM Plex Mono';font-size:10px;color:var(--steel)}
+.f-actions{display:flex;gap:6px}
+.mini-btn{width:28px;height:28px;border:1px solid var(--line);border-radius:var(--radius);background:var(--white);color:var(--fog);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.mini-btn:hover{color:var(--ink);border-color:var(--steel)}
+.mini-btn svg{width:13px;height:13px}
+.empty{padding:28px;text-align:center;color:var(--steel);font-size:12px}
+
+/* CONFIG */
+.set-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
+.set-row:last-child{border-bottom:none}
+.set-row .tx{flex:1}
+.set-row .tx b{font-size:13px;font-weight:600;display:block}
+.set-row .tx span{color:var(--fog);font-size:11.5px}
+.toggle{width:38px;height:21px;border-radius:12px;background:var(--line);border:none;cursor:pointer;position:relative;transition:background .15s;flex-shrink:0}
+.toggle::after{content:'';position:absolute;top:2.5px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.toggle.on{background:var(--accent)}
+.toggle.on::after{left:19px}
+
+/* DRAWER / MENUS / MODAIS */
+.drawer{position:fixed;top:0;right:-330px;bottom:0;width:320px;background:var(--ice);border-left:1px solid var(--line);z-index:200;transition:right .2s;display:flex;flex-direction:column}
+.drawer.open{right:0}
+.drawer-head{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.drawer-body{flex:1;overflow-y:auto;padding:6px 18px}
+.notif{padding:12px 0;border-bottom:1px solid var(--line);font-size:12px}
+.notif .m{font-family:'IBM Plex Mono';font-size:10px;color:var(--steel);margin-top:3px}
+.usermenu{position:fixed;top:58px;right:22px;width:230px;background:var(--white);border:1px solid var(--line);border-radius:var(--radius-lg);z-index:210;display:none;overflow:hidden;box-shadow:0 8px 24px rgba(20,21,24,.12)}
+.usermenu.open{display:block}
+.usermenu .uh{padding:14px 16px;border-bottom:1px solid var(--line)}
+.usermenu .uh b{display:block;font-size:13px}
+.usermenu .uh span{font-size:11px;color:var(--fog)}
+.usermenu button{width:100%;text-align:left;background:none;border:none;padding:11px 16px;font-size:12.5px;cursor:pointer;color:var(--ink)}
+.usermenu button:hover{background:var(--ice)}
+.scrim{position:fixed;inset:0;background:rgba(20,21,24,.45);z-index:300;display:none;align-items:center;justify-content:center;padding:20px}
+.scrim.open{display:flex}
+.modal{background:var(--white);border:1px solid var(--line);border-radius:var(--radius-lg);width:100%;max-width:460px;max-height:88vh;overflow-y:auto}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.modal-head h3{font-size:14.5px}
+.modal-body{padding:18px 20px}
+.modal-foot{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+.formrow{margin-bottom:13px}
+.formrow label{display:block;font-size:11px;font-weight:600;color:var(--fog);margin-bottom:5px;letter-spacing:.02em}
+.formrow input,.formrow select,.formrow textarea{width:100%;border:1px solid var(--line);border-radius:var(--radius);padding:9px 11px;font-size:12.5px;font-family:'Inter';background:var(--white);color:var(--ink)}
+.formrow input:focus,.formrow select:focus,.formrow textarea:focus{outline:none;border-color:var(--accent)}
+.form-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.req{color:var(--err)}
+.hint{font-size:10.5px;color:var(--steel);margin-top:4px}
+
+/* CMD+K */
+.palette{position:fixed;inset:0;background:rgba(20,21,24,.45);z-index:400;display:none;align-items:flex-start;justify-content:center;padding:12vh 20px 20px}
+.palette.open{display:flex}
+.palette-box{width:100%;max-width:520px;background:var(--white);border:1px solid var(--line);border-radius:var(--radius-lg);overflow:hidden}
+.palette-box input{width:100%;border:none;border-bottom:1px solid var(--line);padding:15px 18px;font-size:14px;font-family:'Inter'}
+.palette-box input:focus{outline:none}
+.palette-list{max-height:320px;overflow-y:auto}
+.pal-item{display:flex;align-items:center;gap:12px;padding:11px 18px;cursor:pointer;font-size:12.5px}
+.pal-item:hover,.pal-item.sel{background:var(--ice)}
+.pal-item .k{font-family:'IBM Plex Mono';font-size:9.5px;color:var(--steel);margin-left:auto;text-transform:uppercase;letter-spacing:.06em}
+
+/* TOAST */
+.toasts{position:fixed;bottom:22px;right:22px;z-index:500;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--ink);color:var(--ice);padding:11px 16px;border-radius:var(--radius);font-size:12.5px;max-width:340px;animation:tin .18s ease}
+.toast.ok{border-left:3px solid var(--ok)}
+.toast.err{border-left:3px solid var(--err)}
+@keyframes tin{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+
+/* PREVIEW */
+.preview-box{background:var(--white);border:1px solid var(--line);border-radius:var(--radius-lg);width:100%;max-width:760px;max-height:88vh;display:flex;flex-direction:column}
+.preview-body{flex:1;overflow:auto;padding:16px;display:flex;align-items:center;justify-content:center;background:var(--paper)}
+.preview-body img{max-width:100%;max-height:64vh;border-radius:var(--radius)}
+.preview-body iframe{width:100%;height:64vh;border:1px solid var(--line);border-radius:var(--radius);background:#fff}
+.preview-body pre{width:100%;max-height:64vh;overflow:auto;background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:14px;font-family:'IBM Plex Mono';font-size:11px;white-space:pre-wrap;word-break:break-word;margin:0;align-self:flex-start}
+
+/* COMPACTO */
+body.compact .content{padding:16px 20px}
+body.compact .card{padding:13px}
+body.compact .kpi .n{font-size:21px}
+
+/* MOBILE */
+@media(max-width:860px){
+  .rail{top:auto;bottom:0;left:0;right:0;width:100%;height:56px;flex-direction:row;justify-content:center;padding:0;border-top:1px solid var(--rail-line)}
+  .rail-logo{display:none}
+  .rail-nav{flex-direction:row;gap:14px;flex:0;align-items:center}
+  .rail-tip{display:none}
+  .main{margin-left:0;padding-bottom:64px}
+  .grid-2{grid-template-columns:1fr}
+  .topbar{padding:0 14px}
+  .top-search{min-width:0}
+  .top-search span{display:none}
+  .content{padding:18px 14px}
+  .scrim{align-items:flex-end;padding:0}
+  .modal{max-width:none;border-radius:12px 12px 0 0}
+  .drawer{width:100%;right:-100%}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN GATE (padrão bugs/revenue-catalog: SHA-256 client-side + bypass everi9_token) -->
+<div id="gateOverlay">
+  <div class="gate-box">
+    <div class="gate-logo">i9</div>
+    <h2>Ever i9 — Portal DevOps</h2>
+    <div class="gate-sub">Acesso restrito · Everymind / Algar Telecom</div>
+    <input type="text" id="gUser" placeholder="Usuário" autocomplete="off" autofocus>
+    <input type="password" id="gPass" placeholder="Senha" autocomplete="off">
+    <button class="gate-btn" onclick="gateLogin()">ENTRAR</button>
+    <div class="gate-err" id="gErr"></div>
+  </div>
+</div>
+
+<!-- RAIL -->
+<nav class="rail" aria-label="Navegação principal">
+  <div class="rail-logo">i9</div>
+  <div class="rail-nav">
+    <button class="rail-btn active" data-view="home" aria-label="Home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+      <span class="rail-tip">Home</span>
+    </button>
+    <button class="rail-btn" data-view="apps" aria-label="Aplicações">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      <span class="rail-tip">Aplicações</span>
+    </button>
+    <button class="rail-btn" data-view="cofre" aria-label="Cofre">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="15" rx="1"/><circle cx="12" cy="12.5" r="3.4"/><path d="M12 10.6v1.9l1.4 1"/></svg>
+      <span class="rail-tip">Cofre</span>
+    </button>
+    <button class="rail-btn" data-view="config" aria-label="Configurações">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.07-.4.1-.8.1-1.2Z"/></svg>
+      <span class="rail-tip">Configurações</span>
+    </button>
+  </div>
+</nav>
+
+<div class="main">
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <h1 id="viewTitle">Home</h1>
+    <button class="top-search" onclick="openPalette()" aria-label="Buscar">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <span>Buscar apps e ações</span><kbd>Ctrl K</kbd>
+    </button>
+    <button class="icon-btn" id="btnNotif" aria-label="Notificações" onclick="toggleDrawer()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 9a6 6 0 1 0-12 0c0 6-2.5 7-2.5 7h17S18 15 18 9"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/></svg>
+      <span class="badge" id="notifBadge">3</span>
+    </button>
+    <button class="avatar" id="btnUser" onclick="toggleUserMenu()" aria-label="Menu do usuário">AB</button>
+  </header>
+
+  <div class="content">
+
+    <!-- ═══ HOME ═══ -->
+    <section class="view active" id="view-home">
+      <div class="hero">
+        <div>
+          <span class="eyebrow">Everymind · Algar Telecom CRM B2B</span>
+          <h2 id="greet">Bom dia, Alberto</h2>
+          <p>Hub das operações DevOps Salesforce — specs, deploys, bugs e equalização em um só lugar.</p>
+        </div>
+        <div class="quick">
+          <button class="btn blue" onclick="openModal('mNewUS')">+ Nova US</button>
+          <button class="btn" onclick="openModal('mSync')">Sync Org</button>
+          <button class="btn" onclick="openModal('mBug')">Reportar Bug</button>
+        </div>
+      </div>
+
+      <div class="kpis">
+        <div class="card kpi"><span class="eyebrow">USs no Explorer</span><div class="n">18</div><div class="l">board ativo <span class="chip" style="margin-left:4px">estático · Fase B</span></div></div>
+        <div class="card kpi"><span class="eyebrow">Bugs em aberto</span><div class="n">32</div><div class="l">aguardando deploy HOMOL</div></div>
+        <div class="card kpi"><span class="eyebrow">Componentes ARQ</span><div class="n">46.699</div><div class="l">último sync completo</div></div>
+        <div class="card kpi"><span class="eyebrow">Orgs conectadas</span><div class="n">4</div><div class="l">ARQ · HOMOL · DEVEVERY · FARM</div></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <h3 style="font-size:14px">Atividade recente</h3>
+            <span class="chip">demo · Fase B liga dados reais</span>
+          </div>
+          <div id="feed"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="card">
+            <h3 style="font-size:14px;margin-bottom:12px">Orgs Salesforce</h3>
+            <div class="orglist">
+              <div class="orgrow"><span class="feed-dot" style="background:var(--ok)"></span>ARQ — arqevery <span class="chip ok">escrita</span><span class="mono">id 36</span></div>
+              <div class="orgrow"><span class="feed-dot" style="background:var(--warn)"></span>HOMOL <span class="chip warn">read-only</span><span class="mono">id 100</span></div>
+              <div class="orgrow"><span class="feed-dot" style="background:var(--warn)"></span>DEVEVERY <span class="chip warn">read-only</span><span class="mono">id 133</span></div>
+              <div class="orgrow"><span class="feed-dot" style="background:var(--steel)"></span>FARM <span class="chip">token pendente</span><span class="mono">id 67</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <h3 style="font-size:14px;margin-bottom:10px">Pipeline do board</h3>
+            <p style="margin:0;color:var(--fog);font-size:12px;line-height:1.7">
+              <b style="color:var(--ink)">Preparação</b> — BACKLOG → DISCOVERY → HF → SPEC → POC → READY<br>
+              <b style="color:var(--ink)">Execução</b> — DEV → QA → UAT → DONE
+            </p>
+            <a href="https://i9-mcp-da48589780b2.herokuapp.com/explorer/" target="_blank" rel="noopener" style="font-size:11.5px;display:inline-block;margin-top:10px">Abrir Org Explorer →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ APPS ═══ -->
+    <section class="view" id="view-apps">
+      <div class="apps-grid" id="appsGrid"></div>
+    </section>
+
+    <!-- ═══ COFRE ═══ -->
+    <section class="view" id="view-cofre">
+      <div class="cofre-head">
+        <div class="usage">
+          <span class="eyebrow">Armazenamento local <span id="usageTx" class="mono" style="text-transform:none;letter-spacing:0;color:var(--ink)">0 KB / 5 MB</span></span>
+          <div class="usage-bar"><div class="usage-fill" id="usageFill"></div></div>
+        </div>
+        <button class="btn" id="btnDlSel" onclick="downloadSelected()" disabled>Baixar seleção</button>
+        <button class="btn danger" id="btnRmSel" onclick="removeSelected()" disabled>Excluir seleção</button>
+      </div>
+      <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+        <div class="big">Arraste arquivos aqui</div>
+        <div>ou clique para selecionar · máx. 500 KB por arquivo · 5 MB no total · fica salvo neste navegador</div>
+        <input type="file" id="fileInput" multiple style="display:none">
+      </div>
+      <div class="filelist" id="fileList"></div>
+    </section>
+
+    <!-- ═══ CONFIG ═══ -->
+    <section class="view" id="view-config">
+      <div class="card" style="max-width:640px">
+        <h3 style="font-size:15px;margin-bottom:4px">Preferências</h3>
+        <p style="margin:0 0 8px;color:var(--fog);font-size:11.5px">Salvas neste navegador.</p>
+        <div class="set-row">
+          <div class="tx"><b>Modo compacto</b><span>Reduz espaçamentos para telas menores.</span></div>
+          <button class="toggle" data-pref="compact" aria-label="Modo compacto"></button>
+        </div>
+        <div class="set-row">
+          <div class="tx"><b>Abrir apps em nova aba</b><span>Mantém o portal aberto ao navegar para um app.</span></div>
+          <button class="toggle on" data-pref="newtab" aria-label="Abrir em nova aba"></button>
+        </div>
+        <div class="set-row">
+          <div class="tx"><b>Confirmar exclusões no Cofre</b><span>Pede confirmação antes de excluir arquivos.</span></div>
+          <button class="toggle on" data-pref="confirmDel" aria-label="Confirmar exclusões"></button>
+        </div>
+      </div>
+      <div class="card" style="max-width:640px;margin-top:14px">
+        <h3 style="font-size:15px;margin-bottom:10px">Sobre</h3>
+        <p style="margin:0;color:var(--fog);font-size:12px;line-height:1.8">
+          Portal Ever i9 DevOps · v5 — Fase A<br>
+          Funcional: navegação, links dos apps, Cofre (localStorage), Nova US → Org Explorer (backend real).<br>
+          Mockado até a Fase B: KPIs, feed de atividade e notificações.
+        </p>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- DRAWER NOTIFICAÇÕES -->
+<aside class="drawer" id="drawer" aria-label="Notificações">
+  <div class="drawer-head">
+    <h3 style="font-size:14px">Notificações</h3>
+    <button class="btn" onclick="markAllRead()" style="padding:5px 10px;font-size:11px">Marcar lidas</button>
+  </div>
+  <div class="drawer-body">
+    <div class="notif">Deploy CRMB2B-164 concluído em HOMOL — validação do stakeholder pendente.<div class="m">demo · hoje</div></div>
+    <div class="notif">Mock Serasa ativo na NC MuleSoftPartyManagementProcessAPIv1 — lembrar restore da URL real.<div class="m">demo · ontem</div></div>
+    <div class="notif">32 bugs em "Aguardando Deploy" no Bug Tracker.<div class="m">demo · esta semana</div></div>
+  </div>
+</aside>
+
+<!-- USER MENU -->
+<div class="usermenu" id="userMenu">
+  <div class="uh"><b>Alberto Bottaro</b><span>Everymind · Arquiteto Salesforce</span></div>
+  <button onclick="switchView('config');toggleUserMenu()">Configurações</button>
+  <button onclick="gateLogout()">Sair</button>
+</div>
+
+<!-- MODAL: NOVA US (backend real do Explorer) -->
+<div class="scrim" id="mNewUS">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mNewUSt">
+    <div class="modal-head"><h3 id="mNewUSt">Nova User Story</h3><button class="mini-btn" onclick="closeModal('mNewUS')" aria-label="Fechar">✕</button></div>
+    <div class="modal-body">
+      <div class="formrow"><label>Jira Key <span class="req">*</span></label><input id="usJira" placeholder="CRMB2B-XXX" autocomplete="off"></div>
+      <div class="formrow"><label>Título <span class="req">*</span></label><input id="usTitle" placeholder="Descreva a US" autocomplete="off"></div>
+      <div class="form-2">
+        <div class="formrow"><label>Tipo</label>
+          <select id="usType"><option value="RELEASE">RELEASE</option><option value="BUGFIX">BUGFIX</option><option value="CONFIG">CONFIG</option><option value="HOTFIX">HOTFIX</option></select>
+        </div>
+        <div class="formrow"><label>Prioridade</label>
+          <select id="usPriority"><option value="media">Média</option><option value="alta">Alta</option><option value="baixa">Baixa</option></select>
+        </div>
+      </div>
+      <div class="formrow"><label>Sprint (opcional)</label><input id="usSprint" autocomplete="off"><div class="hint">A US é criada no board real do Org Explorer (coluna Backlog). Componentes você vincula lá.</div></div>
+      <div class="gate-err" id="usErr" style="color:var(--err)"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('mNewUS')">Cancelar</button>
+      <button class="btn blue" id="usSubmit" onclick="createUS()">Criar US</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: SYNC ORG (simulado — Fase B) -->
+<div class="scrim" id="mSync">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head"><h3>Sincronizar Org</h3><button class="mini-btn" onclick="closeModal('mSync')" aria-label="Fechar">✕</button></div>
+    <div class="modal-body">
+      <div class="formrow"><label>Org</label>
+        <select id="syncOrg"><option>ARQ — arqevery (id 36)</option><option>HOMOL (id 100)</option><option>DEVEVERY (id 133)</option></select>
+      </div>
+      <p style="margin:0;color:var(--fog);font-size:11.5px">Nesta Fase A o disparo é simulado. O sync real de metadados roda pelo Org Explorer (assíncrono, com timestamps por org).</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('mSync')">Cancelar</button>
+      <a class="btn" href="https://i9-mcp-da48589780b2.herokuapp.com/explorer/" target="_blank" rel="noopener">Abrir Explorer</a>
+      <button class="btn blue" onclick="fakeSync()">Simular</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: BUG (encaminha ao Bug Tracker) -->
+<div class="scrim" id="mBug">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head"><h3>Reportar Bug</h3><button class="mini-btn" onclick="closeModal('mBug')" aria-label="Fechar">✕</button></div>
+    <div class="modal-body">
+      <p style="margin:0 0 10px;color:var(--fog);font-size:12px">Os cards de bug vivem no <b style="color:var(--ink)">Bug Tracker</b> (board de 11 colunas do i9-mcp) — vidas paralelas ao Explorer, como combinado.</p>
+      <p style="margin:0;color:var(--fog);font-size:11.5px">Abra o board para criar o card com código CRMB2B, horas e status.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('mBug')">Fechar</button>
+      <a class="btn blue" href="https://i9-mcp-da48589780b2.herokuapp.com/bugs.html" target="_blank" rel="noopener" onclick="closeModal('mBug')">Abrir Bug Tracker</a>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: PREVIEW COFRE -->
+<div class="scrim" id="mPreview">
+  <div class="preview-box">
+    <div class="modal-head"><h3 id="pvName" style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">arquivo</h3><button class="mini-btn" onclick="closeModal('mPreview')" aria-label="Fechar">✕</button></div>
+    <div class="preview-body" id="pvBody"></div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal('mPreview')">Fechar</button><button class="btn blue" id="pvDl">Baixar</button></div>
+  </div>
+</div>
+
+<!-- CMD+K -->
+<div class="palette" id="palette">
+  <div class="palette-box">
+    <input id="palInput" placeholder="Buscar apps e ações…" autocomplete="off">
+    <div class="palette-list" id="palList"></div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+<script>
+/* ══════════ LOGIN GATE (SHA-256, padrão bugs/revenue-catalog) ══════════ */
+(function(){
+  var H='b67b3139fdd59fac9d9c728ea87bd26df7301a66dccdb6e7076618122549b743';
+  function checkAuth(){
+    if(localStorage.getItem('everi9_token')||sessionStorage.getItem('portal_auth')==='1'){
+      document.getElementById('gateOverlay').classList.add('hidden');
+      return true;
+    }
+    return false;
+  }
+  checkAuth();
+  async function sha256(s){
+    var d=new TextEncoder().encode(s);
+    var h=await crypto.subtle.digest('SHA-256',d);
+    return Array.from(new Uint8Array(h)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
+  }
+  window.gateLogin=async function(){
+    var u=document.getElementById('gUser').value.trim();
+    var p=document.getElementById('gPass').value;
+    if(!u||!p){document.getElementById('gErr').textContent='Preencha usuário e senha';return;}
+    var hash=await sha256(u+':'+p);
+    if(hash===H){
+      sessionStorage.setItem('portal_auth','1');
+      document.getElementById('gateOverlay').classList.add('hidden');
+    }else{
+      document.getElementById('gErr').textContent='Credenciais inválidas';
+      document.getElementById('gPass').value='';
+    }
+  };
+  window.gateLogout=function(){
+    sessionStorage.removeItem('portal_auth');
+    location.reload();
+  };
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Enter'&&!document.getElementById('gateOverlay').classList.contains('hidden')){gateLogin();}
+  });
+})();
+
+/* ══════════ ESTADO / PREFS ══════════ */
+const I9='https://i9-mcp-da48589780b2.herokuapp.com';
+const prefs=Object.assign({compact:false,newtab:true,confirmDel:true},JSON.parse(localStorage.getItem('portal_prefs')||'{}'));
+function savePrefs(){localStorage.setItem('portal_prefs',JSON.stringify(prefs));}
+function applyPrefs(){
+  document.body.classList.toggle('compact',!!prefs.compact);
+  document.querySelectorAll('.toggle').forEach(t=>{t.classList.toggle('on',!!prefs[t.dataset.pref]);});
+}
+document.querySelectorAll('.toggle').forEach(t=>{
+  t.addEventListener('click',()=>{prefs[t.dataset.pref]=!prefs[t.dataset.pref];savePrefs();applyPrefs();});
+});
+
+/* ══════════ NAVEGAÇÃO ══════════ */
+const titles={home:'Home',apps:'Aplicações',cofre:'Cofre',config:'Configurações'};
+function switchView(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.querySelectorAll('.rail-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
+  document.getElementById('viewTitle').textContent=titles[v]||'Home';
+  if(v==='cofre')renderFiles();
+}
+document.querySelectorAll('.rail-btn').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)));
+(function(){
+  const h=new Date().getHours();
+  const g=h<12?'Bom dia':h<18?'Boa tarde':'Boa noite';
+  document.getElementById('greet').textContent=g+', Alberto';
+})();
+
+/* ══════════ FEED (mock — Fase B) ══════════ */
+const FEED=[
+  {c:'var(--ok)',t:'novoLeadModal v20 deployado em HOMOL — CRMB2B-164 pronto para validação funcional.',m:'deploy · HOMOL'},
+  {c:'var(--accent)',t:'Sync de metadados da ARQ concluído: 46.699 componentes indexados no Explorer.',m:'explorer · arqevery'},
+  {c:'var(--warn)',t:'Serasa em mock na arqevery — restore da URL CloudHub pendente do time MuleSoft.',m:'integração · CRMB2B-254'},
+  {c:'var(--ok)',t:'Agentforce "AI Algar" ativado em HOMOL com 22 standard actions.',m:'agentforce · HOMOL'},
+  {c:'var(--steel)',t:'17 bugs movidos para Correção Aplicada na revisão retroativa.',m:'bug tracker'}
+];
+document.getElementById('feed').innerHTML=FEED.map(f=>
+  `<div class="feed-item"><span class="feed-dot" style="background:${f.c}"></span><div><div class="t">${f.t}</div><div class="m">${f.m}</div></div></div>`
+).join('');
+
+/* ══════════ APPS ══════════ */
+const APPS=[
+  {id:'bugs',   n:'Bug Tracker',   ico:'BT', d:'Board de bugs CRMB2B com dashboard, equalização e sync de planilha GP.', url:I9+'/bugs.html', host:'i9-mcp', chip:'ativo'},
+  {id:'explorer',n:'Org Explorer', ico:'OE', d:'Board de USs, componentes por org, sync de metadados, deploy e rollback.', url:I9+'/explorer/', host:'i9-mcp', chip:'novo'},
+  {id:'devtools',n:'DevTools AI',  ico:'DT', d:'Planos de mudança com IA, criação de campos e injeção em layouts.', url:'/devtools.html', host:'mcp-sf', chip:'ativo'},
+  {id:'partner', n:'Partner Users',ico:'PU', d:'Criação de Contact + User da Partner Community nas sandboxes.', url:'/partner-users.html', host:'mcp-sf', chip:'ativo'},
+  {id:'aichat',  n:'Spec AI (aichat)',ico:'SA', d:'Chat com IA para /hf, /spec, /ata e operação da org.', url:'/', host:'mcp-sf', chip:'ativo'},
+  {id:'cofre',   n:'Cofre',        ico:'CF', d:'Arquivos do projeto neste navegador: upload, preview e download em lote.', url:null, view:'cofre', host:'local', chip:'ativo'},
+  {id:'governor',n:'Release Governor',ico:'RG', d:'Governança de releases entre orgs — planejado.', url:null, host:'—', chip:'em breve', disabled:true}
+];
+document.getElementById('appsGrid').innerHTML=APPS.map(a=>`
+  <div class="app-card${a.disabled?' disabled':''}" data-app="${a.id}" role="link" tabindex="${a.disabled?-1:0}">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div class="app-ico">${a.ico}</div>
+      <span class="chip ${a.chip==='novo'?'blue':a.chip==='em breve'?'':'ok'}">${a.chip}</span>
+    </div>
+    <h3>${a.n}</h3><p>${a.d}</p>
+    <div class="app-foot"><span class="app-host">${a.host}</span>${a.disabled?'':'<span style="font-size:11px;color:var(--accent)">abrir →</span>'}</div>
+  </div>`).join('');
+function openApp(a){
+  if(a.disabled)return;
+  if(a.view){switchView(a.view);return;}
+  if(prefs.newtab)window.open(a.url,'_blank','noopener');else location.href=a.url;
+}
+document.querySelectorAll('.app-card').forEach(c=>{
+  const a=APPS.find(x=>x.id===c.dataset.app);
+  c.addEventListener('click',()=>openApp(a));
+  c.addEventListener('keydown',e=>{if(e.key==='Enter')openApp(a);});
+});
+
+/* ══════════ DRAWER / USER MENU ══════════ */
+function toggleDrawer(){document.getElementById('drawer').classList.toggle('open');document.getElementById('userMenu').classList.remove('open');}
+function toggleUserMenu(){document.getElementById('userMenu').classList.toggle('open');document.getElementById('drawer').classList.remove('open');}
+function markAllRead(){localStorage.setItem('portal_notif_read','1');updateBadge();toast('Notificações marcadas como lidas');}
+function updateBadge(){document.getElementById('notifBadge').style.display=localStorage.getItem('portal_notif_read')==='1'?'none':'flex';}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#userMenu')&&!e.target.closest('#btnUser'))document.getElementById('userMenu').classList.remove('open');
+  if(!e.target.closest('#drawer')&&!e.target.closest('#btnNotif'))document.getElementById('drawer').classList.remove('open');
+});
+
+/* ══════════ MODAIS ══════════ */
+function openModal(id){
+  document.getElementById(id).classList.add('open');
+  if(id==='mNewUS'){
+    document.getElementById('usErr').textContent='';
+    document.getElementById('usSprint').placeholder='ex: '+new Date().toISOString().slice(0,7).replace('-','.');
+    setTimeout(()=>document.getElementById('usJira').focus(),50);
+  }
+}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.scrim').forEach(s=>s.addEventListener('click',e=>{if(e.target===s)s.classList.remove('open');}));
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){document.querySelectorAll('.scrim.open,.palette.open').forEach(x=>x.classList.remove('open'));document.getElementById('drawer').classList.remove('open');document.getElementById('userMenu').classList.remove('open');}
+});
+
+/* ══════════ NOVA US → BACKEND REAL DO EXPLORER (i9-mcp) ══════════ */
+let i9Token=localStorage.getItem('portal_i9_token')||'';
+async function i9Login(){
+  const r=await fetch(I9+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'admin@everi9.com',password:'admin2026'})});
+  const d=await r.json();
+  i9Token=d.token||'';
+  if(i9Token)localStorage.setItem('portal_i9_token',i9Token);
+  return !!i9Token;
+}
+async function i9Api(path,opts={},retry=true){
+  if(!i9Token){const ok=await i9Login();if(!ok)throw new Error('Falha no login do i9-mcp');}
+  const r=await fetch(I9+'/api'+path,Object.assign({},opts,{headers:Object.assign({'Authorization':'Bearer '+i9Token,'Content-Type':'application/json'},opts.headers||{})}));
+  if(r.status===401&&retry){i9Token='';localStorage.removeItem('portal_i9_token');return i9Api(path,opts,false);}
+  return r.json();
+}
+async function createUS(){
+  const jira=document.getElementById('usJira').value.trim();
+  const title=document.getElementById('usTitle').value.trim();
+  const err=document.getElementById('usErr');
+  err.textContent='';
+  if(!jira){err.textContent='Jira Key é obrigatório';return;}
+  if(!title){err.textContent='Título é obrigatório';return;}
+  const btn=document.getElementById('usSubmit');
+  btn.disabled=true;btn.textContent='Criando…';
+  try{
+    const d=await i9Api('/explorer/stories',{method:'POST',body:JSON.stringify({
+      jira_key:jira,title:title,
+      type:document.getElementById('usType').value,
+      priority:document.getElementById('usPriority').value,
+      sprint:document.getElementById('usSprint').value.trim()||null,
+      board_status:'todo'
+    })});
+    if(!d.ok){
+      err.textContent=(d.error&&d.error.includes('exists'))?'Já existe uma US com esta Jira Key':'Erro: '+(d.error||'falha');
+      btn.disabled=false;btn.textContent='Criar US';return;
+    }
+    closeModal('mNewUS');
+    toast('US '+jira+' criada no Org Explorer','ok');
+    document.getElementById('usJira').value='';document.getElementById('usTitle').value='';document.getElementById('usSprint').value='';
+  }catch(e){
+    err.textContent='Erro: '+e.message;
+  }
+  btn.disabled=false;btn.textContent='Criar US';
+}
+function fakeSync(){
+  const org=document.getElementById('syncOrg').value;
+  closeModal('mSync');
+  toast('Sync simulado para '+org.split(' (')[0]+' — o real roda no Explorer (Fase B integra aqui)');
+}
+
+/* ══════════ COFRE (localStorage) ══════════ */
+const VAULT_KEY='cofre_files';
+const MAX_FILE=500*1024, MAX_TOTAL=5*1024*1024;
+function vault(){try{return JSON.parse(localStorage.getItem(VAULT_KEY)||'[]');}catch(e){return[];}}
+function saveVault(v){localStorage.setItem(VAULT_KEY,JSON.stringify(v));}
+function vaultBytes(v){return v.reduce((s,f)=>s+(f.data?f.data.length:0),0);}
+function fmtB(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(2)+' MB';}
+function extOf(n){const i=n.lastIndexOf('.');return i>0?n.slice(i+1).toLowerCase():'?';}
+
+const dz=document.getElementById('dropzone');
+['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('drag');}));
+['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('drag');}));
+dz.addEventListener('drop',e=>addFiles(e.dataTransfer.files));
+document.getElementById('fileInput').addEventListener('change',e=>{addFiles(e.target.files);e.target.value='';});
+
+function addFiles(list){
+  const files=Array.from(list||[]);
+  if(!files.length)return;
+  let v=vault();
+  let queue=files.slice();
+  (function next(){
+    const f=queue.shift();
+    if(!f){saveVault(v);renderFiles();return;}
+    if(f.size>MAX_FILE){toast('"'+f.name+'" excede 500 KB — ignorado','err');return next();}
+    const rd=new FileReader();
+    rd.onload=()=>{
+      const data=rd.result;
+      if(vaultBytes(v)+data.length>MAX_TOTAL){toast('Cofre cheio (5 MB) — "'+f.name+'" não foi salvo','err');return next();}
+      v.push({id:Date.now()+'_'+Math.random().toString(36).slice(2,7),name:f.name,type:f.type||'application/octet-stream',size:f.size,data:data,date:new Date().toISOString()});
+      try{saveVault(v);}catch(e){v.pop();toast('Limite do navegador atingido — "'+f.name+'" não foi salvo','err');}
+      next();
+    };
+    rd.onerror=()=>{toast('Falha ao ler "'+f.name+'"','err');next();};
+    rd.readAsDataURL(f);
+  })();
+}
+function renderFiles(){
+  const v=vault();
+  const used=vaultBytes(v);
+  document.getElementById('usageTx').textContent=fmtB(used)+' / 5 MB';
+  document.getElementById('usageFill').style.width=Math.min(100,used/MAX_TOTAL*100)+'%';
+  const el=document.getElementById('fileList');
+  if(!v.length){el.innerHTML='<div class="empty">Nenhum arquivo no Cofre ainda. Specs, evidências de QA e prints ficam guardados aqui.</div>';updateSelBtns();return;}
+  el.innerHTML=v.map(f=>`
+    <div class="file-row" data-id="${f.id}">
+      <input type="checkbox" class="fsel" aria-label="Selecionar ${f.name}">
+      <div class="f-ico">${extOf(f.name)}</div>
+      <div class="f-name"><div class="n">${f.name}</div><div class="m">${fmtB(f.size)} · ${new Date(f.date).toLocaleDateString('pt-BR')}</div></div>
+      <div class="f-actions">
+        <button class="mini-btn" title="Visualizar" onclick="previewFile('${f.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        <button class="mini-btn" title="Baixar" onclick="downloadFile('${f.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 19h16"/></svg></button>
+        <button class="mini-btn" title="Excluir" onclick="removeFile('${f.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13"/></svg></button>
+      </div>
+    </div>`).join('');
+  el.querySelectorAll('.fsel').forEach(c=>c.addEventListener('change',updateSelBtns));
+  updateSelBtns();
+}
+function selectedIds(){return Array.from(document.querySelectorAll('.fsel:checked')).map(c=>c.closest('.file-row').dataset.id);}
+function updateSelBtns(){
+  const n=selectedIds().length;
+  document.getElementById('btnDlSel').disabled=!n;
+  document.getElementById('btnRmSel').disabled=!n;
+  document.getElementById('btnDlSel').textContent=n?('Baixar seleção ('+n+')'):'Baixar seleção';
+  document.getElementById('btnRmSel').textContent=n?('Excluir seleção ('+n+')'):'Excluir seleção';
+}
+function triggerDl(f){const a=document.createElement('a');a.href=f.data;a.download=f.name;document.body.appendChild(a);a.click();a.remove();}
+function downloadFile(id){const f=vault().find(x=>x.id===id);if(f)triggerDl(f);}
+function downloadSelected(){
+  const ids=selectedIds();const v=vault();
+  ids.forEach((id,i)=>{const f=v.find(x=>x.id===id);if(f)setTimeout(()=>triggerDl(f),i*350);});
+  toast(ids.length+' download(s) iniciados');
+}
+function removeFile(id){
+  if(prefs.confirmDel&&!confirm('Excluir este arquivo do Cofre?'))return;
+  saveVault(vault().filter(f=>f.id!==id));renderFiles();toast('Arquivo excluído');
+}
+function removeSelected(){
+  const ids=selectedIds();
+  if(prefs.confirmDel&&!confirm('Excluir '+ids.length+' arquivo(s) do Cofre?'))return;
+  saveVault(vault().filter(f=>!ids.includes(f.id)));renderFiles();toast(ids.length+' arquivo(s) excluídos');
+}
+function previewFile(id){
+  const f=vault().find(x=>x.id===id);if(!f)return;
+  const body=document.getElementById('pvBody');
+  document.getElementById('pvName').textContent=f.name;
+  document.getElementById('pvDl').onclick=()=>triggerDl(f);
+  const t=f.type||'';const ext=extOf(f.name);
+  if(t.startsWith('image/')){body.innerHTML='<img src="'+f.data+'" alt="">';}
+  else if(t==='application/pdf'||ext==='pdf'){body.innerHTML='<iframe src="'+f.data+'" title="PDF"></iframe>';}
+  else if(t.startsWith('text/')||['txt','md','json','csv','log','xml','js','html','sql','yaml','yml'].includes(ext)){
+    try{
+      const b64=f.data.split(',')[1];
+      const bin=atob(b64);const bytes=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+      const txt=new TextDecoder('utf-8').decode(bytes);
+      const pre=document.createElement('pre');pre.textContent=txt.slice(0,120000);
+      body.innerHTML='';body.appendChild(pre);
+    }catch(e){body.innerHTML='<div class="empty">Não foi possível decodificar o texto.</div>';}
+  }
+  else{body.innerHTML='<div class="empty">Sem preview para este formato — use Baixar.</div>';}
+  openModal('mPreview');
+}
+
+/* ══════════ CMD+K ══════════ */
+const PAL=[
+  ...APPS.filter(a=>!a.disabled).map(a=>({label:(a.view?'Ir para ':'Abrir ')+a.n,k:'app',run:()=>openApp(a)})),
+  {label:'Nova User Story',k:'ação',run:()=>openModal('mNewUS')},
+  {label:'Sincronizar Org',k:'ação',run:()=>openModal('mSync')},
+  {label:'Reportar Bug',k:'ação',run:()=>openModal('mBug')},
+  {label:'Ir para Home',k:'nav',run:()=>switchView('home')},
+  {label:'Ir para Configurações',k:'nav',run:()=>switchView('config')}
+];
+let palSel=0;
+function openPalette(){document.getElementById('palette').classList.add('open');const i=document.getElementById('palInput');i.value='';renderPal('');setTimeout(()=>i.focus(),40);}
+function renderPal(q){
+  const items=PAL.filter(p=>p.label.toLowerCase().includes(q.toLowerCase()));
+  palSel=0;
+  document.getElementById('palList').innerHTML=items.map((p,i)=>
+    `<div class="pal-item${i===0?' sel':''}" data-i="${i}">${p.label}<span class="k">${p.k}</span></div>`).join('')||'<div class="empty">Nada encontrado</div>';
+  document.querySelectorAll('.pal-item').forEach(el=>{
+    el.addEventListener('click',()=>{items[+el.dataset.i].run();document.getElementById('palette').classList.remove('open');});
+  });
+  return items;
+}
+let palItems=PAL;
+document.getElementById('palInput').addEventListener('input',e=>{palItems=renderPal(e.target.value);});
+document.getElementById('palInput').addEventListener('keydown',e=>{
+  const els=document.querySelectorAll('.pal-item');
+  if(e.key==='ArrowDown'){palSel=Math.min(palSel+1,els.length-1);}
+  else if(e.key==='ArrowUp'){palSel=Math.max(palSel-1,0);}
+  else if(e.key==='Enter'){if(palItems[palSel]){palItems[palSel].run();document.getElementById('palette').classList.remove('open');}return;}
+  else return;
+  e.preventDefault();
+  els.forEach((el,i)=>el.classList.toggle('sel',i===palSel));
+  if(els[palSel])els[palSel].scrollIntoView({block:'nearest'});
+});
+document.getElementById('palette').addEventListener('click',e=>{if(e.target.id==='palette')e.target.classList.remove('open');});
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openPalette();}
+});
+
+/* ══════════ TOAST ══════════ */
+function toast(msg,kind){
+  const t=document.createElement('div');
+  t.className='toast'+(kind?' '+kind:'');
+  t.textContent=msg;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .25s';setTimeout(()=>t.remove(),260);},3400);
+}
+
+/* ══════════ INIT ══════════ */
+applyPrefs();
+updateBadge();
+renderFiles();
+</script>
+</body>
+</html>
