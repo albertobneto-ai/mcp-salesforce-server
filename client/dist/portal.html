@@ -26,17 +26,6 @@ a{color:var(--accent);text-decoration:none}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 
 /* ── LOGIN GATE ── */
-#gateOverlay{position:fixed;inset:0;background:var(--rail-bg);z-index:1000;display:flex;align-items:center;justify-content:center}
-#gateOverlay.hidden{display:none}
-.gate-box{width:340px;padding:40px 36px;border:1px solid var(--rail-line);border-radius:var(--radius-lg);background:#191a1e;text-align:left}
-.gate-logo{width:34px;height:34px;border:1px solid var(--rail-fog);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk';font-weight:700;font-size:13px;color:var(--rail-ice);margin-bottom:20px}
-.gate-box h2{color:var(--rail-ice);font-size:17px;font-weight:600}
-.gate-sub{color:var(--rail-fog);font-size:11.5px;margin:4px 0 22px}
-.gate-box input{width:100%;background:#101114;border:1px solid var(--rail-line);border-radius:var(--radius);color:var(--rail-ice);padding:10px 12px;font-size:13px;margin-bottom:10px;font-family:'Inter'}
-.gate-box input:focus{outline:none;border-color:var(--accent)}
-.gate-btn{width:100%;background:var(--accent);border:none;color:#fff;padding:10px;border-radius:var(--radius);font-weight:600;font-size:12.5px;cursor:pointer;letter-spacing:.04em;margin-top:4px}
-.gate-btn:hover{background:var(--accent-dim)}
-.gate-err{color:#f87171;font-size:11.5px;min-height:16px;margin-top:10px}
 
 /* ── RAIL ── */
 .rail{position:fixed;left:0;top:0;bottom:0;width:var(--rail-w);background:var(--rail-bg);display:flex;flex-direction:column;align-items:center;padding:16px 0;z-index:100}
@@ -223,17 +212,6 @@ body.compact .kpi .n{font-size:21px}
 <body>
 
 <!-- LOGIN GATE (padrão bugs/revenue-catalog: SHA-256 client-side + bypass everi9_token) -->
-<div id="gateOverlay">
-  <div class="gate-box">
-    <div class="gate-logo">i9</div>
-    <h2>Ever i9 — Portal DevOps</h2>
-    <div class="gate-sub">Acesso restrito · Everymind / Algar Telecom</div>
-    <input type="text" id="gUser" placeholder="Usuário" autocomplete="off" autofocus>
-    <input type="password" id="gPass" placeholder="Senha" autocomplete="off">
-    <button class="gate-btn" onclick="gateLogin()">ENTRAR</button>
-    <div class="gate-err" id="gErr"></div>
-  </div>
-</div>
 
 <!-- RAIL -->
 <nav class="rail" aria-label="Navegação principal">
@@ -285,7 +263,6 @@ body.compact .kpi .n{font-size:21px}
         </div>
         <div class="quick">
           <button class="btn blue" onclick="openModal('mNewUS')">+ Nova US</button>
-          <button class="btn" onclick="openModal('mSync')">Sync Org</button>
           <button class="btn" onclick="openModal('mBug')">Reportar Bug</button>
         </div>
       </div>
@@ -293,7 +270,7 @@ body.compact .kpi .n{font-size:21px}
       <div class="kpis">
         <div class="card kpi"><span class="eyebrow">USs no Explorer</span><div class="n">18</div><div class="l">board ativo <span class="chip" style="margin-left:4px">estático · Fase B</span></div></div>
         <div class="card kpi"><span class="eyebrow">Bugs em aberto</span><div class="n">32</div><div class="l">aguardando deploy HOMOL</div></div>
-        <div class="card kpi"><span class="eyebrow">Componentes ARQ</span><div class="n">46.699</div><div class="l">último sync completo</div></div>
+        <div class="card kpi"><span class="eyebrow">Componentes em US</span><div class="n">5</div><div class="l">vinculados às histórias <span class="chip" style="margin-left:4px">estático · Fase B</span></div></div>
         <div class="card kpi"><span class="eyebrow">Orgs conectadas</span><div class="n">4</div><div class="l">ARQ · HOMOL · DEVEVERY · FARM</div></div>
       </div>
 
@@ -398,7 +375,6 @@ body.compact .kpi .n{font-size:21px}
 <div class="usermenu" id="userMenu">
   <div class="uh"><b>Alberto Bottaro</b><span>Everymind · Arquiteto Salesforce</span></div>
   <button onclick="switchView('config');toggleUserMenu()">Configurações</button>
-  <button onclick="gateLogout()">Sair</button>
 </div>
 
 <!-- MODAL: NOVA US (backend real do Explorer) -->
@@ -426,23 +402,6 @@ body.compact .kpi .n{font-size:21px}
   </div>
 </div>
 
-<!-- MODAL: SYNC ORG (simulado — Fase B) -->
-<div class="scrim" id="mSync">
-  <div class="modal" role="dialog" aria-modal="true">
-    <div class="modal-head"><h3>Sincronizar Org</h3><button class="mini-btn" onclick="closeModal('mSync')" aria-label="Fechar">✕</button></div>
-    <div class="modal-body">
-      <div class="formrow"><label>Org</label>
-        <select id="syncOrg"><option>ARQ — arqevery (id 36)</option><option>HOMOL (id 100)</option><option>DEVEVERY (id 133)</option></select>
-      </div>
-      <p style="margin:0;color:var(--fog);font-size:11.5px">Nesta Fase A o disparo é simulado. O sync real de metadados roda pelo Org Explorer (assíncrono, com timestamps por org).</p>
-    </div>
-    <div class="modal-foot">
-      <button class="btn" onclick="closeModal('mSync')">Cancelar</button>
-      <a class="btn" href="https://i9-mcp-da48589780b2.herokuapp.com/explorer/" target="_blank" rel="noopener">Abrir Explorer</a>
-      <button class="btn blue" onclick="fakeSync()">Simular</button>
-    </div>
-  </div>
-</div>
 
 <!-- MODAL: BUG (encaminha ao Bug Tracker) -->
 <div class="scrim" id="mBug">
@@ -478,43 +437,6 @@ body.compact .kpi .n{font-size:21px}
 
 <div class="toasts" id="toasts"></div>
 <script>
-/* ══════════ LOGIN GATE (SHA-256, padrão bugs/revenue-catalog) ══════════ */
-(function(){
-  var H='6246d9fad4ed2d1a20df5bf0aefc643b1ee349be86a157b48dbcd10dea106a92';
-  function checkAuth(){
-    if(localStorage.getItem('everi9_token')||sessionStorage.getItem('portal_auth')==='1'){
-      document.getElementById('gateOverlay').classList.add('hidden');
-      return true;
-    }
-    return false;
-  }
-  checkAuth();
-  async function sha256(s){
-    var d=new TextEncoder().encode(s);
-    var h=await crypto.subtle.digest('SHA-256',d);
-    return Array.from(new Uint8Array(h)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
-  }
-  window.gateLogin=async function(){
-    var u=document.getElementById('gUser').value.trim();
-    var p=document.getElementById('gPass').value;
-    if(!u||!p){document.getElementById('gErr').textContent='Preencha usuário e senha';return;}
-    var hash=await sha256(u+':'+p);
-    if(hash===H){
-      sessionStorage.setItem('portal_auth','1');
-      document.getElementById('gateOverlay').classList.add('hidden');
-    }else{
-      document.getElementById('gErr').textContent='Credenciais inválidas';
-      document.getElementById('gPass').value='';
-    }
-  };
-  window.gateLogout=function(){
-    sessionStorage.removeItem('portal_auth');
-    location.reload();
-  };
-  document.addEventListener('keydown',function(e){
-    if(e.key==='Enter'&&!document.getElementById('gateOverlay').classList.contains('hidden')){gateLogin();}
-  });
-})();
 
 /* ══════════ ESTADO / PREFS ══════════ */
 const I9='https://i9-mcp-da48589780b2.herokuapp.com';
@@ -547,7 +469,7 @@ document.querySelectorAll('.rail-btn').forEach(b=>b.addEventListener('click',()=
 /* ══════════ FEED (mock — Fase B) ══════════ */
 const FEED=[
   {c:'var(--ok)',t:'novoLeadModal v20 deployado em HOMOL — CRMB2B-164 pronto para validação funcional.',m:'deploy · HOMOL'},
-  {c:'var(--accent)',t:'Sync de metadados da ARQ concluído: 46.699 componentes indexados no Explorer.',m:'explorer · arqevery'},
+  {c:'var(--accent)',t:'Arquitetura US-centric no ar: listagem live por tipo e comparação de componentes entre orgs, direto da US.',m:'explorer · release'},
   {c:'var(--warn)',t:'Serasa em mock na arqevery — restore da URL CloudHub pendente do time MuleSoft.',m:'integração · CRMB2B-254'},
   {c:'var(--ok)',t:'Agentforce "AI Algar" ativado em HOMOL com 22 standard actions.',m:'agentforce · HOMOL'},
   {c:'var(--steel)',t:'17 bugs movidos para Correção Aplicada na revisão retroativa.',m:'bug tracker'}
@@ -559,7 +481,7 @@ document.getElementById('feed').innerHTML=FEED.map(f=>
 /* ══════════ APPS ══════════ */
 const APPS=[
   {id:'bugs',   n:'Bug Tracker',   ico:'BT', d:'Board de bugs CRMB2B com dashboard, equalização e sync de planilha GP.', url:I9+'/bugs.html', host:'i9-mcp', chip:'ativo'},
-  {id:'explorer',n:'Org Explorer', ico:'OE', d:'Board de USs, componentes por org, sync de metadados, deploy e rollback.', url:I9+'/explorer/', host:'i9-mcp', chip:'novo'},
+  {id:'explorer',n:'Org Explorer', ico:'OE', d:'Board de USs, componentes live por tipo, comparação entre orgs, deploy e rollback.', url:I9+'/explorer/', host:'i9-mcp', chip:'novo'},
   {id:'devtools',n:'DevTools AI',  ico:'DT', d:'Planos de mudança com IA, criação de campos e injeção em layouts.', url:'/devtools.html', host:'mcp-sf', chip:'ativo'},
   {id:'partner', n:'Partner Users',ico:'PU', d:'Criação de Contact + User da Partner Community nas sandboxes.', url:'/partner-users.html', host:'mcp-sf', chip:'ativo'},
   {id:'aichat',  n:'Spec AI (aichat)',ico:'SA', d:'Chat com IA para /hf, /spec, /ata e operação da org.', url:'/', host:'mcp-sf', chip:'ativo'},
@@ -654,11 +576,6 @@ async function createUS(){
     err.textContent='Erro: '+e.message;
   }
   btn.disabled=false;btn.textContent='Criar US';
-}
-function fakeSync(){
-  const org=document.getElementById('syncOrg').value;
-  closeModal('mSync');
-  toast('Sync simulado para '+org.split(' (')[0]+' — o real roda no Explorer (Fase B integra aqui)');
 }
 
 /* ══════════ COFRE (localStorage) ══════════ */
@@ -768,7 +685,6 @@ function previewFile(id){
 const PAL=[
   ...APPS.filter(a=>!a.disabled).map(a=>({label:(a.view?'Ir para ':'Abrir ')+a.n,k:'app',run:()=>openApp(a)})),
   {label:'Nova User Story',k:'ação',run:()=>openModal('mNewUS')},
-  {label:'Sincronizar Org',k:'ação',run:()=>openModal('mSync')},
   {label:'Reportar Bug',k:'ação',run:()=>openModal('mBug')},
   {label:'Ir para Home',k:'nav',run:()=>switchView('home')},
   {label:'Ir para Configurações',k:'nav',run:()=>switchView('config')}
