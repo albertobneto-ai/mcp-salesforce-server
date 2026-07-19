@@ -1,0 +1,139 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Evidências — Ever i9</title><style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+:root{--bg:#f5f5f8;--card:#fff;--ink:#1a1a2e;--ink2:#334155;--muted:#64748b;--faint:#94a3b8;
+ --purple:#334155;--purple2:#475569;--purple3:#475569;--blue:#3b82f6;--green:#22c55e;--amber:#f59e0b;--red:#ef4444;
+ --line:#e8e8ee;--line2:#e2e8f0;--dark:#1a1a2e;--r:12px;--rs:8px;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:'Outfit',sans-serif;font-size:13.5px;line-height:1.55;}
+a{color:inherit;text-decoration:none}
+.topbar{background:var(--dark);color:#fff;padding:12px 30px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:30;}
+.topbar .logo{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--purple),var(--purple2));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;}
+.topbar b{font-size:15px;} .topbar .crumb{color:#a5a5c0;font-size:13px;} .topbar .sp{flex:1}
+.topbar .env{font-size:11.5px;color:#8f8fb0;font-family:ui-monospace,monospace;}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 30px 60px;}
+.phead h1{font-size:25px;font-weight:700;} .phead p{color:var(--muted);margin-top:6px;font-size:13.5px;}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:22px 0 6px;}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:15px 18px;box-shadow:0 1px 2px rgba(26,26,46,.04);}
+.kpi .n{font-size:25px;font-weight:700;} .kpi .k{color:var(--muted);font-size:11px;margin-top:5px;text-transform:uppercase;letter-spacing:.03em;}
+.kpi.ok .n{color:var(--green)} .kpi.warn .n{color:var(--amber)} .kpi.neutral .n{color:var(--purple3)} .kpi.faint .n{color:var(--faint)}
+.toolbar{display:flex;gap:10px;align-items:center;margin:20px 0 16px;flex-wrap:wrap;}
+.search{flex:1;min-width:220px;position:relative;}
+.search input{width:100%;background:var(--card);border:1px solid var(--line);border-radius:var(--rs);padding:9px 12px 9px 34px;font-family:'Outfit';font-size:13px;color:var(--ink);outline:none;}
+.search input:focus{border-color:var(--purple3);box-shadow:0 0 0 3px rgba(51,65,85,.12);}
+.search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--faint);}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:6px 14px;font-size:12px;color:var(--muted);cursor:pointer;font-weight:500;}
+.chip:hover{border-color:var(--line2);color:var(--ink);} .chip.on{background:#eef1f5;border-color:#cbd5e1;color:var(--purple);}
+.lane{background:var(--card);border:1px solid var(--line);border-radius:var(--r);margin-bottom:16px;overflow:hidden;box-shadow:0 1px 3px rgba(26,26,46,.05);}
+.lane-head{background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;padding:13px 20px;display:flex;justify-content:space-between;align-items:center;}
+.lane-title{font-weight:600;font-size:15px;} .lane-kpi{font-size:12px;color:#cbd5e1;font-family:ui-monospace,monospace;}
+.lane-body{display:flex;gap:12px;overflow-x:auto;padding:16px 20px;scroll-snap-type:x proximity;}
+.ecard{flex:0 0 220px;scroll-snap-align:start;background:#fbfbfd;border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:9px;min-height:132px;transition:.15s;position:relative;}
+.ecard.on{cursor:pointer;background:#fff;border-color:#cbd5e1;}
+.ecard.on:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(51,65,85,.14);border-color:var(--purple3);}
+.ecard.on::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:3px;background:linear-gradient(var(--purple),var(--purple2));}
+.ecard.off{opacity:.72;}
+.ec-top{display:flex;justify-content:space-between;align-items:center;}
+.ec-code{font-family:ui-monospace,monospace;font-size:11.5px;color:var(--purple3);font-weight:600;}
+.pill{font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;font-family:ui-monospace,monospace;letter-spacing:.02em;}
+.p-ok{color:#15803d;background:#dcfce7;} .p-neutral{color:#64748b;background:#eef0f4;}
+.p-warn{color:#b45309;background:#fef3c7;} .p-faint{color:#94a3b8;background:#f1f2f5;}
+.ec-title{font-weight:600;font-size:13.5px;line-height:1.3;flex:1;color:var(--ink);}
+.cstat{font-size:11px;color:var(--muted);font-family:ui-monospace,monospace;} .cstat.faint{color:var(--faint);}
+.cfoot{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding-top:9px;margin-top:2px;}
+.cta{font-size:12px;color:var(--purple);font-weight:600;}
+.mini-pdf{font-size:10.5px;color:var(--purple3);font-weight:600;background:#eef1f5;border:1px solid #cbd5e1;padding:2px 8px;border-radius:6px;}
+.mini-pdf:hover{background:#cbd5e1;}
+
+.mpipe{display:flex;gap:4px;align-items:center;margin-top:2px;}
+.mdot{width:8px;height:8px;border-radius:50%;background:#cbd5e1;}
+.mdot.done{background:#22c55e;} .mdot.now{background:#334155;box-shadow:0 0 0 2px rgba(51,65,85,.2);}
+.mphase{font-size:9.5px;color:#64748b;font-family:ui-monospace,monospace;margin-left:4px;}
+.empty{display:none;text-align:center;color:var(--muted);padding:50px;}
+</style></head><body>
+<div class="topbar"><div class="logo">i9</div><b>Ever i9</b><span class="crumb">/ Evidências</span><span class="sp"></span><span class="env">Sandbox · arqevery</span></div>
+<div class="wrap">
+ <div class="phead"><h1>Evidências de Validação</h1><p>Desenvolvimento validado por história — testes executados na org e prints de navegação. Agrupado por épico. Clique numa história validada para abrir o dossiê ou baixar o PDF.</p></div>
+ <div class="kpis">
+  <div class="kpi"><div class="n">28</div><div class="k">Histórias</div></div>
+  <div class="kpi ok"><div class="n">1</div><div class="k">Validadas</div></div>
+  <div class="kpi warn"><div class="n">2</div><div class="k">Dep. externa</div></div>
+  <div class="kpi faint"><div class="n">2</div><div class="k">Canceladas</div></div>
+  <div class="kpi neutral"><div class="n">23</div><div class="k">A validar</div></div>
+ </div>
+ <div class="toolbar">
+  <div class="search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg><input id="q" placeholder="Buscar história por código ou título..."></div>
+  <span class="chip on" data-f="all">Todas</span><span class="chip" data-f="validada">Validadas</span>
+  <span class="chip" data-f="pendente">A validar</span><span class="chip" data-f="externa">Dep. externa</span><span class="chip" data-f="cancelada">Canceladas</span>
+ </div>
+ <div class="lane">
+      <div class="lane-head"><div class="lane-title">Épico Lead — Entrada &amp; Ciclo de Vida</div><div class="lane-kpi">28 histórias · 1 validada · 2 gaps</div></div>
+      <div class="lane-body"><div class="ecard on" data-status="validada" data-q="CRMB2B-2 Entrada de leads via Manual" onclick="location.href='evidencias-lead-CRMB2B-2.html'">
+          <div class="ec-top"><span class="ec-code">CRMB2B-2</span><span class="pill p-ok">VALIDADA</span></div>
+          <div class="ec-title">Entrada de leads via Manual</div><div class="cstat">6/8 OK · 2 gaps</div><div class="mpipe"><span class="mdot done" title="HF"></span><span class="mdot done" title="Spec"></span><span class="mdot done" title="Dev"></span><span class="mdot done" title="Validação"></span><span class="mdot now" title="Aprovação"></span><span class="mphase">aguarda aprovação</span></div><div class="cfoot"><span class="cta">Ver evidências →</span><a class="mini-pdf" href="CRMB2B-2_Evidencias.pdf" download onclick="event.stopPropagation()">⬇ PDF</a></div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-3 Carga de Mailing" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-3</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Carga de Mailing</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-13 Landing page / Mkt Cloud" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-13</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Landing page / Mkt Cloud</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-14 Dados p/ criação (campos e regras)" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-14</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Dados p/ criação (campos e regras)</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="externa" data-q="CRMB2B-15 Entrada via Wifeed" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-15</span><span class="pill p-warn">DEP. EXTERNA</span></div>
+          <div class="ec-title">Entrada via Wifeed</div><div class="cstat">dep. Data Cloud</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-16 Entrada via WhatsApp" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-16</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Entrada via WhatsApp</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-17 Entrada via Portal Algar" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-17</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Entrada via Portal Algar</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-18 Campanha" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-18</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Campanha</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-19 Segmentação da lead" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-19</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Segmentação da lead</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-20 Fluxo do lead" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-20</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Fluxo do lead</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-22 Duplicidade" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-22</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Duplicidade</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="cancelada" data-q="CRMB2B-23 SLA e notificações" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-23</span><span class="pill p-faint">CANCELADA</span></div>
+          <div class="ec-title">SLA e notificações</div><div class="cstat faint">história cancelada</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-24 Relatórios de lead" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-24</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Relatórios de lead</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-25 Redistribuição controlada" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-25</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Redistribuição controlada</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-27 Priorização e repriorização" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-27</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Priorização e repriorização</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="cancelada" data-q="CRMB2B-30 Quarentena" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-30</span><span class="pill p-faint">CANCELADA</span></div>
+          <div class="ec-title">Quarentena</div><div class="cstat faint">história cancelada</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-31 Atribuição automática" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-31</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Atribuição automática</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-32 Balanceamento em fila" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-32</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Balanceamento em fila</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-33 Notificações e alertas" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-33</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Notificações e alertas</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-51 Regras de enriquecimento" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-51</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Regras de enriquecimento</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-52 Viabilidade de cobertura" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-52</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Viabilidade de cobertura</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-53 Regras de Blacklist" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-53</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Regras de Blacklist</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-54 Regras de qualificação" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-54</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Regras de qualificação</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-55 Status cancelamento" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-55</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Status cancelamento</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="externa" data-q="CRMB2B-66 Interações (e-mail/Teams)" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-66</span><span class="pill p-warn">DEP. EXTERNA</span></div>
+          <div class="ec-title">Interações (e-mail/Teams)</div><div class="cstat">dep. OAuth</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-67 Cadência do lead" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-67</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Cadência do lead</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-68 Conversão" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-68</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Conversão</div><div class="cstat faint">sem evidência</div></div><div class="ecard off" data-status="pendente" data-q="CRMB2B-70 Interações (WhatsApp)" >
+          <div class="ec-top"><span class="ec-code">CRMB2B-70</span><span class="pill p-neutral">A VALIDAR</span></div>
+          <div class="ec-title">Interações (WhatsApp)</div><div class="cstat faint">sem evidência</div></div></div>
+    </div>
+ <div class="empty" id="empty">Nenhuma história encontrada.</div>
+</div>
+<script>
+const q=document.getElementById('q'),empty=document.getElementById('empty');let flt='all';
+function apply(){const t=q.value.toLowerCase();let vis=0;
+ document.querySelectorAll('.ecard').forEach(c=>{const okF=flt==='all'||c.dataset.status===flt;const okQ=c.dataset.q.toLowerCase().includes(t);const s=okF&&okQ;c.style.display=s?'flex':'none';if(s)vis++;});
+ document.querySelectorAll('.lane').forEach(l=>{const any=[...l.querySelectorAll('.ecard')].some(c=>c.style.display!=='none');l.style.display=any?'block':'none';});
+ empty.style.display=vis?'none':'block';}
+q.addEventListener('input',apply);
+document.querySelectorAll('.chip').forEach(ch=>ch.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));ch.classList.add('on');flt=ch.dataset.f;apply();}));
+</script>
+</body></html>
