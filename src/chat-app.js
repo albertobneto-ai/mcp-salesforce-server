@@ -65,6 +65,15 @@ export async function mountChatApp(app) {
 
   // React SPA (serve build estatico)
   const clientDist = path.join(__dirname, '..', 'client', 'dist');
+
+  // Roteamento por host: portal.albertobottaro.info abre o Portal DevOps na raiz
+  app.get('/', (req, res, next) => {
+    if (req.hostname === 'portal.albertobottaro.info') {
+      return res.sendFile(path.join(clientDist, 'portal.html'), err => { if (err) next(); });
+    }
+    next();
+  });
+
   app.use(express.static(clientDist));
 
   // SPA fallback (exclui /api/ e /prototipos/)
