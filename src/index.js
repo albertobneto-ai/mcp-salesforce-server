@@ -22,6 +22,7 @@ import i9ConnectRouter from "./routes/i9-connect.js";
 import serasaMockRouter from "./serasa-mock.js";
 import emailValidation from "./email-validation.js";
 import qaTesterRouter from "./qa-tester.js";
+import { registerCofreRoutes } from "./cofre-db.js";
 
 const app = express();
 app.use(express.json({ limit: "50mb" }));
@@ -2224,6 +2225,7 @@ registerPartnerUserRoutes(app, sfClient);
 registerRevenueCatalogRoutes(app);
 registerRcWorkerRoutes(app);
 registerWorkerEngineRoutes(app);
+registerCofreRoutes(app);
   
   // TechEnglish
   app.use('/english', englishRouter);
