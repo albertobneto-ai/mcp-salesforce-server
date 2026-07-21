@@ -349,7 +349,7 @@ body.compact .kpi .n{font-size:21px}
         <h3 style="font-size:15px;margin-bottom:10px">Sobre</h3>
         <p style="margin:0;color:var(--fog);font-size:12px;line-height:1.8">
           Portal Ever i9 DevOps · v5 — Fase A<br>
-          Funcional: navegação, links dos apps, Cofre (localStorage), Nova US → Org Explorer (backend real).<br>
+          Funcional: navegação, links dos apps, Cofre (Postgres/servidor), Nova US → Org Explorer (backend real).<br>
           Mockado até a Fase B: KPIs, feed de atividade e notificações.
         </p>
       </div>
@@ -486,7 +486,7 @@ const APPS=[
   {id:'devtools',n:'DevTools AI',  ico:'DT', d:'Planos de mudança com IA, criação de campos e injeção em layouts.', url:'/devtools.html', host:'mcp-sf', chip:'ativo'},
   {id:'partner', n:'Partner Users',ico:'PU', d:'Criação de Contact + User da Partner Community nas sandboxes.', url:'/partner-users.html', host:'mcp-sf', chip:'ativo'},
   {id:'aichat',  n:'Spec AI (aichat)',ico:'SA', d:'Chat com IA para /hf, /spec, /ata e operação da org.', url:'/', host:'mcp-sf', chip:'ativo'},
-  {id:'cofre',   n:'Cofre',        ico:'CF', d:'Arquivos do projeto neste navegador: upload, preview e download em lote.', url:null, view:'cofre', host:'local', chip:'ativo'},
+  {id:'cofre',   n:'Cofre',        ico:'CF', d:'Documentações e arquivos .md do projeto, guardados no servidor: upload, preview e download.', url:null, view:'cofre', host:'local', chip:'ativo'},
   {id:'governor',n:'Release Governor',ico:'RG', d:'Governança de releases entre orgs — planejado.', url:null, host:'—', chip:'em breve', disabled:true}
 ];
 document.getElementById('appsGrid').innerHTML=APPS.map(a=>`
@@ -579,12 +579,10 @@ async function createUS(){
   btn.disabled=false;btn.textContent='Criar US';
 }
 
-/* ══════════ COFRE (localStorage) ══════════ */
-const VAULT_KEY='cofre_files';
-const MAX_FILE=500*1024, MAX_TOTAL=5*1024*1024;
-function vault(){try{return JSON.parse(localStorage.getItem(VAULT_KEY)||'[]');}catch(e){return[];}}
-function saveVault(v){localStorage.setItem(VAULT_KEY,JSON.stringify(v));}
-function vaultBytes(v){return v.reduce((s,f)=>s+(f.data?f.data.length:0),0);}
+/* ══════════ COFRE (Postgres via API) ══════════ */
+const MAX_FILE=8*1024*1024;               // 8 MB por arquivo
+const COFRE_API='/api/cofre';
+let cofreCache=[];                         // metadados carregados da API
 function fmtB(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(2)+' MB';}
 function extOf(n){const i=n.lastIndexOf('.');return i>0?n.slice(i+1).toLowerCase():'?';}
 
@@ -597,44 +595,51 @@ document.getElementById('fileInput').addEventListener('change',e=>{addFiles(e.ta
 function addFiles(list){
   const files=Array.from(list||[]);
   if(!files.length)return;
-  let v=vault();
   let queue=files.slice();
   (function next(){
     const f=queue.shift();
-    if(!f){saveVault(v);renderFiles();return;}
-    if(f.size>MAX_FILE){toast('"'+f.name+'" excede 500 KB — ignorado','err');return next();}
+    if(!f){renderFiles();return;}
+    if(f.size>MAX_FILE){toast('"'+f.name+'" excede 8 MB — ignorado','err');return next();}
     const rd=new FileReader();
-    rd.onload=()=>{
-      const data=rd.result;
-      if(vaultBytes(v)+data.length>MAX_TOTAL){toast('Cofre cheio (5 MB) — "'+f.name+'" não foi salvo','err');return next();}
-      v.push({id:Date.now()+'_'+Math.random().toString(36).slice(2,7),name:f.name,type:f.type||'application/octet-stream',size:f.size,data:data,date:new Date().toISOString()});
-      try{saveVault(v);}catch(e){v.pop();toast('Limite do navegador atingido — "'+f.name+'" não foi salvo','err');}
+    rd.onload=async()=>{
+      try{
+        const r=await fetch(COFRE_API+'/upload',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({name:f.name,mime:f.type||'application/octet-stream',size:f.size,content:rd.result,created_by:'portal'})});
+        if(!r.ok){const e=await r.json().catch(()=>({}));toast('Falha ao enviar "'+f.name+'"'+(e.error?': '+e.error:''),'err');}
+        else{toast('"'+f.name+'" enviado ao Cofre');}
+      }catch(err){toast('Erro de rede ao enviar "'+f.name+'"','err');}
       next();
     };
     rd.onerror=()=>{toast('Falha ao ler "'+f.name+'"','err');next();};
     rd.readAsDataURL(f);
   })();
 }
-function renderFiles(){
-  const v=vault();
-  const used=vaultBytes(v);
-  document.getElementById('usageTx').textContent=fmtB(used)+' / 5 MB';
-  document.getElementById('usageFill').style.width=Math.min(100,used/MAX_TOTAL*100)+'%';
+
+async function renderFiles(){
   const el=document.getElementById('fileList');
-  if(!v.length){el.innerHTML='<div class="empty">Nenhum arquivo no Cofre ainda. Specs, evidências de QA e prints ficam guardados aqui.</div>';updateSelBtns();return;}
-  el.innerHTML=v.map(f=>`
-    <div class="file-row" data-id="${f.id}">
-      <input type="checkbox" class="fsel" aria-label="Selecionar ${f.name}">
-      <div class="f-ico">${extOf(f.name)}</div>
-      <div class="f-name"><div class="n">${f.name}</div><div class="m">${fmtB(f.size)} · ${new Date(f.date).toLocaleDateString('pt-BR')}</div></div>
-      <div class="f-actions">
-        <button class="mini-btn" title="Visualizar" onclick="previewFile('${f.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
-        <button class="mini-btn" title="Baixar" onclick="downloadFile('${f.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 19h16"/></svg></button>
-        <button class="mini-btn" title="Excluir" onclick="removeFile('${f.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13"/></svg></button>
-      </div>
-    </div>`).join('');
-  el.querySelectorAll('.fsel').forEach(c=>c.addEventListener('change',updateSelBtns));
-  updateSelBtns();
+  el.innerHTML='<div class="empty">Carregando…</div>';
+  try{
+    const r=await fetch(COFRE_API+'/list');
+    const d=await r.json();
+    cofreCache=d.files||[];
+    const used=d.totalBytes||0;
+    document.getElementById('usageTx').textContent=fmtB(used)+' · '+cofreCache.length+' arquivo(s)';
+    document.getElementById('usageFill').style.width=Math.min(100,cofreCache.length?100:0)+'%';
+    if(!cofreCache.length){el.innerHTML='<div class="empty">Nenhum arquivo no Cofre ainda. Documentações e arquivos .md do projeto ficam guardados aqui.</div>';updateSelBtns();return;}
+    el.innerHTML=cofreCache.map(f=>`
+      <div class="file-row" data-id="${f.id}">
+        <input type="checkbox" class="fsel" aria-label="Selecionar ${f.name}">
+        <div class="f-ico">${extOf(f.name)}</div>
+        <div class="f-name"><div class="n">${f.name}</div><div class="m">${fmtB(f.size)} · ${new Date(f.created_at).toLocaleDateString('pt-BR')}</div></div>
+        <div class="f-actions">
+          <button class="mini-btn" title="Visualizar" onclick="previewFile(${f.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <button class="mini-btn" title="Baixar" onclick="downloadFile(${f.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 19h16"/></svg></button>
+          <button class="mini-btn" title="Excluir" onclick="removeFile(${f.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13"/></svg></button>
+        </div>
+      </div>`).join('');
+    el.querySelectorAll('.fsel').forEach(c=>c.addEventListener('change',updateSelBtns));
+    updateSelBtns();
+  }catch(e){el.innerHTML='<div class="empty">Falha ao carregar o Cofre: '+e.message+'</div>';}
 }
 function selectedIds(){return Array.from(document.querySelectorAll('.fsel:checked')).map(c=>c.closest('.file-row').dataset.id);}
 function updateSelBtns(){
@@ -644,33 +649,39 @@ function updateSelBtns(){
   document.getElementById('btnDlSel').textContent=n?('Baixar seleção ('+n+')'):'Baixar seleção';
   document.getElementById('btnRmSel').textContent=n?('Excluir seleção ('+n+')'):'Excluir seleção';
 }
-function triggerDl(f){const a=document.createElement('a');a.href=f.data;a.download=f.name;document.body.appendChild(a);a.click();a.remove();}
-function downloadFile(id){const f=vault().find(x=>x.id===id);if(f)triggerDl(f);}
-function downloadSelected(){
-  const ids=selectedIds();const v=vault();
-  ids.forEach((id,i)=>{const f=v.find(x=>x.id===id);if(f)setTimeout(()=>triggerDl(f),i*350);});
+async function fetchContent(id){
+  const r=await fetch(COFRE_API+'/file/'+id);
+  if(!r.ok)throw new Error('não encontrado');
+  const d=await r.json();return d.file;
+}
+function triggerDl(name,dataUrl){const a=document.createElement('a');a.href=dataUrl;a.download=name;document.body.appendChild(a);a.click();a.remove();}
+async function downloadFile(id){try{const f=await fetchContent(id);triggerDl(f.name,f.content);}catch(e){toast('Falha ao baixar','err');}}
+async function downloadSelected(){
+  const ids=selectedIds();
+  for(let i=0;i<ids.length;i++){try{const f=await fetchContent(ids[i]);setTimeout(()=>triggerDl(f.name,f.content),i*350);}catch(e){}}
   toast(ids.length+' download(s) iniciados');
 }
-function removeFile(id){
+async function removeFile(id){
   if(prefs.confirmDel&&!confirm('Excluir este arquivo do Cofre?'))return;
-  saveVault(vault().filter(f=>f.id!==id));renderFiles();toast('Arquivo excluído');
+  try{await fetch(COFRE_API+'/file/'+id,{method:'DELETE'});renderFiles();toast('Arquivo excluído');}catch(e){toast('Falha ao excluir','err');}
 }
-function removeSelected(){
+async function removeSelected(){
   const ids=selectedIds();
   if(prefs.confirmDel&&!confirm('Excluir '+ids.length+' arquivo(s) do Cofre?'))return;
-  saveVault(vault().filter(f=>!ids.includes(f.id)));renderFiles();toast(ids.length+' arquivo(s) excluídos');
+  for(const id of ids){try{await fetch(COFRE_API+'/file/'+id,{method:'DELETE'});}catch(e){}}
+  renderFiles();toast(ids.length+' arquivo(s) excluídos');
 }
-function previewFile(id){
-  const f=vault().find(x=>x.id===id);if(!f)return;
+async function previewFile(id){
+  let f;try{f=await fetchContent(id);}catch(e){toast('Falha ao abrir','err');return;}
   const body=document.getElementById('pvBody');
   document.getElementById('pvName').textContent=f.name;
-  document.getElementById('pvDl').onclick=()=>triggerDl(f);
-  const t=f.type||'';const ext=extOf(f.name);
-  if(t.startsWith('image/')){body.innerHTML='<img src="'+f.data+'" alt="">';}
-  else if(t==='application/pdf'||ext==='pdf'){body.innerHTML='<iframe src="'+f.data+'" title="PDF"></iframe>';}
+  document.getElementById('pvDl').onclick=()=>triggerDl(f.name,f.content);
+  const t=f.mime||'';const ext=extOf(f.name);
+  if(t.startsWith('image/')){body.innerHTML='<img src="'+f.content+'" alt="">';}
+  else if(t==='application/pdf'||ext==='pdf'){body.innerHTML='<iframe src="'+f.content+'" title="PDF"></iframe>';}
   else if(t.startsWith('text/')||['txt','md','json','csv','log','xml','js','html','sql','yaml','yml'].includes(ext)){
     try{
-      const b64=f.data.split(',')[1];
+      const b64=f.content.split(',')[1];
       const bin=atob(b64);const bytes=new Uint8Array(bin.length);
       for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
       const txt=new TextDecoder('utf-8').decode(bytes);
