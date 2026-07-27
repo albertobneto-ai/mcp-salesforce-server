@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elsy Ross · Plano de Instagram — Confeitaria Artística</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prata&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --acucar:#FDF4F3;      /* fundo — glacê */
+  --creme:#FFFFFF;       /* cards */
+  --choco:#2E1F1C;       /* texto */
+  --choco-suave:#6B5450;
+  --framboesa:#A6395B;   /* acento principal */
+  --framboesa-clara:#F3DDE3;
+  --pistache:#7FA37A;    /* acento secundário */
+  --ouro:#C1962C;
+  --borda:#EBD9D3;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--acucar); color:var(--choco);
+  font-family:'Jost',"Segoe UI",Helvetica,Arial,sans-serif;
+  font-weight:300; font-size:15px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+.container{max-width:1000px;margin:0 auto;padding:0 28px 60px}
+h1,h2,h3{font-family:'Prata',Georgia,serif;font-weight:400;letter-spacing:.2px}
+
+/* ---------- borda de bico pitanga (assinatura) ---------- */
+.pipe{
+  height:22px;
+  background:
+    radial-gradient(circle at 11px 0, var(--framboesa) 10px, transparent 10.5px) repeat-x 0 0/22px 22px;
+  opacity:.9;
+}
+.pipe.gold{background:radial-gradient(circle at 11px 22px, var(--ouro) 10px, transparent 10.5px) repeat-x 0 0/22px 22px}
+
+/* ---------- capa ---------- */
+header.capa{
+  background:linear-gradient(160deg,#7C1F3D 0%, #A6395B 55%, #C8607E 100%);
+  color:#fff;padding:78px 28px 62px;text-align:center;position:relative;overflow:hidden;
+}
+header.capa::after{
+  content:"";position:absolute;inset:auto 0 -1px 0;height:22px;
+  background:radial-gradient(circle at 11px 22px,var(--acucar) 10px,transparent 10.5px) repeat-x 0 0/22px 22px;
+}
+.eyebrow{font-size:11px;letter-spacing:.36em;text-transform:uppercase;opacity:.85;font-weight:400}
+header.capa h1{font-size:52px;line-height:1.08;margin:18px auto 10px;max-width:14ch}
+.sub{font-size:17px;opacity:.92;max-width:52ch;margin:0 auto;font-weight:300}
+.meta{margin-top:34px;display:flex;justify-content:center;gap:34px;flex-wrap:wrap;font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.9}
+
+/* ---------- sumário ---------- */
+.sumario{background:var(--creme);border:1px solid var(--borda);border-radius:14px;padding:26px 30px;margin:40px 0}
+.sumario h2{font-size:19px;margin:0 0 14px}
+.sumario ol{margin:0;padding-left:0;list-style:none;counter-reset:s}
+.sumario li{counter-increment:s;padding:7px 0;border-bottom:1px dotted var(--borda);display:flex;gap:14px;align-items:baseline}
+.sumario li:last-child{border-bottom:none}
+.sumario li::before{content:"0" counter(s);font-size:11px;letter-spacing:.16em;color:var(--framboesa);font-weight:500}
+.sumario a{color:var(--choco);text-decoration:none}
+
+/* ---------- seções ---------- */
+section{margin:48px 0}
+.section-head{display:flex;align-items:center;gap:18px;margin-bottom:22px;border-bottom:2px solid var(--framboesa);padding-bottom:14px}
+.camada{
+  flex:none;width:52px;height:52px;border-radius:50%;
+  background:var(--framboesa);color:#fff;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;line-height:1;
+}
+.camada small{font-size:7px;letter-spacing:.14em;opacity:.8;margin-bottom:2px}
+.camada b{font-family:'Prata',serif;font-size:19px;font-weight:400}
+.section-head h2{font-size:27px;margin:0}
+.section-head p{margin:2px 0 0;font-size:13px;color:var(--choco-suave)}
+
+.card{background:var(--creme);border:1px solid var(--borda);border-radius:14px;padding:24px 26px;margin:16px 0}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+
+/* ---------- números ---------- */
+.stat{text-align:center;background:var(--creme);border:1px solid var(--borda);border-radius:14px;padding:20px 12px}
+.stat b{display:block;font-family:'Prata',serif;font-size:34px;color:var(--framboesa);line-height:1}
+.stat span{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--choco-suave)}
+
+/* ---------- callouts ---------- */
+.nota{border-left:4px solid var(--pistache);background:#F2F7F1;padding:16px 20px;border-radius:0 10px 10px 0;margin:16px 0}
+.alerta{border-left:4px solid var(--framboesa);background:var(--framboesa-clara);padding:16px 20px;border-radius:0 10px 10px 0;margin:16px 0}
+.nota b,.alerta b{display:block;font-size:11px;letter-spacing:.18em;text-transform:uppercase;margin-bottom:5px}
+.nota b{color:var(--pistache)} .alerta b{color:var(--framboesa)}
+
+/* ---------- tabela ---------- */
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;background:var(--creme);border-radius:12px;overflow:hidden}
+thead th{background:var(--choco);color:#fff;text-align:left;padding:11px 14px;font-weight:500;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+td{padding:11px 14px;border-bottom:1px solid var(--borda);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:nth-child(even){background:#FEFAF9}
+
+/* ---------- mockup instagram ---------- */
+.fones{display:grid;grid-template-columns:1fr 1fr;gap:26px;justify-items:center}
+.fone{width:302px;background:#000;border-radius:30px;padding:9px;box-shadow:0 14px 34px rgba(46,31,28,.18)}
+.tela{background:#0D0D0F;border-radius:23px;overflow:hidden;color:#fff;font-size:11px;font-weight:300}
+.ig-top{display:flex;align-items:center;gap:8px;padding:11px 13px 6px;font-size:13px;font-weight:500}
+.ig-perfil{display:flex;gap:14px;padding:6px 13px 0;align-items:center}
+.avatar{width:62px;height:62px;border-radius:50%;flex:none;background:conic-gradient(from 210deg,#A6395B,#C8607E,#C1962C,#A6395B);padding:2px}
+.avatar i{display:block;width:100%;height:100%;border-radius:50%;background:linear-gradient(150deg,#8E2B44,#3A2320);}
+.nums{display:flex;flex:1;justify-content:space-around;text-align:center;font-size:10px;color:#cfc9c9}
+.nums b{display:block;font-size:14px;color:#fff;font-weight:500}
+.ig-bio{padding:9px 13px 0;line-height:1.45;font-size:10.5px}
+.ig-bio .nome{font-weight:600;font-size:11px}
+.ig-bio .link{color:#6BA8FF}
+.ig-btns{display:flex;gap:6px;padding:10px 13px}
+.ig-btns span{flex:1;text-align:center;background:#262629;border-radius:7px;padding:6px 0;font-size:10px}
+.ig-btns span.pri{background:#4B58E8;font-weight:500}
+.destaques{display:flex;gap:10px;padding:8px 13px 12px;overflow:hidden}
+.dq{text-align:center;font-size:8px;color:#d8d2d2;width:50px}
+.dq i{display:block;width:50px;height:50px;border-radius:50%;margin-bottom:4px;border:1.5px solid #47414a}
+.grade{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.tile{aspect-ratio:1;position:relative;display:flex;align-items:flex-end;padding:5px;font-size:7.5px;line-height:1.25;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.65)}
+.tile.reel::after{content:"▶";position:absolute;top:4px;right:5px;font-size:8px;opacity:.9}
+.legenda-mock{text-align:center;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--choco-suave);margin:0 0 10px}
+
+/* paletas dos tiles */
+.t-rosa{background:linear-gradient(140deg,#E7A9BC,#C1607F)}
+.t-marfim{background:linear-gradient(140deg,#FBF3E7,#E4CFAE);color:#4A3A2C;text-shadow:none}
+.t-verde{background:linear-gradient(140deg,#A7C7A0,#6E9268)}
+.t-choco{background:linear-gradient(140deg,#7C5A46,#42291F)}
+.t-ouro{background:linear-gradient(140deg,#E9CE8C,#BC9227);color:#3A2C0C;text-shadow:none}
+.t-vinho{background:linear-gradient(140deg,#A6395B,#651F36)}
+.t-azul{background:linear-gradient(140deg,#8FA3C9,#4C6193)}
+.t-neve{background:linear-gradient(140deg,#FFFFFF,#E6E1E4);color:#4A3A3A;text-shadow:none}
+.t-lilas{background:linear-gradient(140deg,#C9AFD4,#8A6BA0)}
+.t-amarelo{background:linear-gradient(140deg,#F2D75C,#D9A520);color:#4A3A0C;text-shadow:none}
+.t-cinza{background:linear-gradient(140deg,#D9D4D2,#B0A6A2);color:#3A2E2C;text-shadow:none}
+
+/* bio copiável */
+.biobox{font-family:'Jost',sans-serif;background:#2E1F1C;color:#FBEFEA;border-radius:12px;padding:20px 22px;font-size:14px;line-height:1.75;white-space:pre-line}
+.biobox .campo{display:block;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ouro);margin:14px 0 4px}
+.biobox .campo:first-child{margin-top:0}
+
+/* legendas */
+.post-modelo{background:var(--creme);border:1px solid var(--borda);border-left:4px solid var(--ouro);border-radius:0 12px 12px 0;padding:18px 22px;margin:14px 0}
+.post-modelo h4{margin:0 0 4px;font-family:'Prata',serif;font-size:17px;font-weight:400}
+.post-modelo .fmt{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--framboesa);margin-bottom:10px}
+.post-modelo p{margin:0 0 8px;white-space:pre-line}
+.hash{font-size:12px;color:var(--choco-suave)}
+
+footer{background:var(--choco);color:#EDE2DE;text-align:center;padding:30px 20px;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+footer b{display:block;font-family:'Prata',serif;font-size:15px;letter-spacing:.06em;text-transform:none;color:#fff;margin-bottom:6px}
+
+@media(max-width:820px){
+  .grid-2,.grid-3,.fones{grid-template-columns:1fr}
+  header.capa h1{font-size:36px}
+}
+@page{size:A4;margin:1.6cm 1.3cm}
+@media print{
+  body{background:#fff;font-size:11.5px}
+  header.capa{page-break-after:always;padding:120px 28px}
+  .container{padding:0}
+  .card,.callout,table,.post-modelo,.fone,.nota,.alerta,.biobox{page-break-inside:avoid}
+  section{page-break-inside:auto}
+  .section-head{page-break-after:avoid}
+  a{color:inherit;text-decoration:none}
+}
+</style>
+</head>
+<body>
+
+<header class="capa">
+  <div class="eyebrow">Diagnóstico &amp; Plano de Crescimento</div>
+  <h1>Da bancada para a vitrine</h1>
+  <p class="sub">Como transformar o perfil de uma cake designer premiada na FIPAN 2026 em um canal que gera aula, encomenda e reputação — sem mudar o que ela já faz bem.</p>
+  <div class="meta">
+    <span>@elsy__ross</span><span>São Caetano do Sul · ABC</span><span>Julho 2026 · v1</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="sumario">
+    <h2>O que tem aqui dentro</h2>
+    <ol>
+      <li><a href="#s1">O retrato de hoje — e o gargalo real</a></li>
+      <li><a href="#s2">A bio nova, pronta para colar</a></li>
+      <li><a href="#s3">Como o perfil fica: antes e depois</a></li>
+      <li><a href="#s4">Os três pilares de conteúdo</a></li>
+      <li><a href="#s5">Plano de 30 dias, dia a dia</a></li>
+      <li><a href="#s6">Cinco legendas prontas</a></li>
+      <li><a href="#s7">O produto que falta: o workshop</a></li>
+      <li><a href="#s8">O que medir daqui a 90 dias</a></li>
+    </ol>
+  </div>
+
+  <!-- 01 -->
+  <section id="s1">
+    <div class="section-head">
+      <div class="camada"><small>CAMADA</small><b>01</b></div>
+      <div><h2>O retrato de hoje</h2><p>Qualidade de confeitaria internacional, distribuição de perfil pessoal.</p></div>
+    </div>
+
+    <div class="grid-3">
+      <div class="stat"><b>60</b><span>Publicações</span></div>
+      <div class="stat"><b>103</b><span>Seguidores</span></div>
+      <div class="stat"><b>30</b><span>Seguindo</span></div>
+    </div>
+
+    <div class="card">
+      <p><b>A leitura desses três números:</b> 60 publicações para 103 seguidores significa que o conteúdo está sendo produzido, mas não está sendo encontrado. O perfil funciona hoje como álbum de registro, não como canal. E seguir apenas 30 contas é o dado mais grave: em confeitaria artística, o crescimento vem de rede — cake designers, fornecedores, escolas, jurados, organizadores de campeonato. Sem rede, não há para onde o conteúdo circular.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3 style="margin-top:0;font-size:18px">O que já é forte</h3>
+        <ul style="padding-left:18px;margin:0">
+          <li>Peça artística de nível de campeonato, fotografada com fundo escuro e luz controlada.</li>
+          <li>Prêmio recente e verificável: 3º lugar no Júri Popular da FIPAN 2026.</li>
+          <li>Formação internacional em flores em açúcar — Reino Unido, Coreia e Estados Unidos.</li>
+          <li>Vínculo com um negócio real e ativo, a Vó Coruja.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0;font-size:18px">O que trava</h3>
+        <ul style="padding-left:18px;margin:0">
+          <li>Campo "Nome" traz só "Elsy Ross" — nenhuma palavra-chave para a busca do Instagram.</li>
+          <li>Nenhuma cidade escrita no perfil, num negócio que é local.</li>
+          <li>O link da bio leva a outro Instagram, não a um canal de contato.</li>
+          <li>Sem Destaques, sem Reels, sem nada que vender ligado a "Professora".</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="alerta">
+      <b>O gargalo</b>
+      A bio diz "Professora em Confeitaria Artística" e não existe uma única aula à venda. É a maior margem do negócio, é o que melhor aproveita a credencial internacional, e é o que o prêmio da FIPAN torna vendável agora — enquanto a conquista ainda é notícia.
+    </div>
+  </section>
+
+  <!-- 02 -->
+  <section id="s2">
+    <div class="section-head">
+      <div class="camada"><small>CAMADA</small><b>02</b></div>
+      <div><h2>A bio nova</h2><p>Copiar, colar, publicar. Leva quatro minutos.</p></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <p class="legenda-mock">Como está</p>
+        <div class="biobox" style="background:#4A3A38">
+<span class="campo">Nome</span>Elsy Ross
+<span class="campo">Bio</span>Cake Designer
+| Professora em Confeitaria Artística
+| Especialista em flores 🇧🇷🏴󠁧󠁢󠁥󠁮󠁧󠁿🇰🇷🇺🇸
+| Co owner @voccoruja
+<span class="campo">Link</span>instagram.com/voccoruja
+        </div>
+      </div>
+      <div class="card">
+        <p class="legenda-mock">Como fica</p>
+        <div class="biobox">
+<span class="campo">Nome</span>Elsy Ross | Cake Designer · Flores em Açúcar
+<span class="campo">Bio</span>Flores em açúcar que enganam o olho
+🏆 3º lugar Júri Popular · FIPAN 2026
+Formação Reino Unido · Coreia · EUA
+Aulas presenciais em São Caetano do Sul
+Sócia da @voccoruja
+👇 Encomendas e turmas
+<span class="campo">Link</span>wa.me/55119XXXXXXXX
+        </div>
+      </div>
+    </div>
+
+    <div class="nota">
+      <b>Por que cada linha muda</b>
+      O campo <b>Nome</b> é o único indexado na busca do Instagram — sem as palavras "cake designer" e "flores em açúcar" ali, ninguém que procura o serviço chega ao perfil. A <b>cidade</b> entra porque confeitaria é compra local. O <b>prêmio</b> entra porque é prova social que não precisa de explicação. E o <b>link</b> deixa de mandar a visita para outro Instagram e passa a mandar para uma conversa.
+    </div>
+
+    <div class="card">
+      <p style="margin:0"><b>Enquanto isso, na rede:</b> passar de 30 para 300 contas seguidas em duas semanas, escolhidas a dedo — cake designers brasileiras e estrangeiras de flores em açúcar, fornecedores como Rich's e Mavalério, escolas de confeitaria, organizadores da FIPAN, jurados do campeonato e páginas de noivas do ABC. Comentar de verdade em cinco delas por dia. É esse tráfego que sustenta tudo o que vem depois.</p>
+    </div>
+  </section>
+
+  <!-- 03 -->
+  <section id="s3">
+    <div class="section-head">
+      <div class="camada"><small>CAMADA</small><b>03</b></div>
+      <div><h2>Antes e depois</h2><p>O mesmo acervo, reorganizado para trabalhar.</p></div>
+    </div>
+
+    <div class="fones">
+      <!-- ANTES -->
+      <div>
+        <p class="legenda-mock">Hoje</p>
+        <div class="fone"><div class="tela">
+          <div class="ig-top">← elsy__ross</div>
+          <div class="ig-perfil">
+            <div class="avatar"><i></i></div>
+            <div class="nums"><div><b>60</b>posts</div><div><b>103</b>seguidores</div><div><b>30</b>seguindo</div></div>
+          </div>
+          <div class="ig-bio">
+            <span class="nome">Elsy Ross</span><br>
+            Cake Designer<br>| Professora em Confeitaria Artística<br>| Especialista em flores 🇧🇷🇰🇷🇺🇸<br>| Co owner @voccoruja<br>
+            <span class="link">instagram.com/voccoruja</span>
+          </div>
+          <div class="ig-btns"><span class="pri">Seguir</span><span>Mensagem</span></div>
+          <div style="padding:0 13px 10px;font-size:8.5px;color:#6E6669">sem destaques</div>
+          <div class="grade">
+            <div class="tile t-vinho">Prêmio FIPAN</div>
+            <div class="tile t-choco">Bancada na feira</div>
+            <div class="tile t-rosa">Peça de flores</div>
+            <div class="tile t-rosa">Card "entre os melhores"</div>
+            <div class="tile t-neve">Bolo de coco</div>
+            <div class="tile t-amarelo">Cardápio Copa</div>
+            <div class="tile t-azul">Bolo azul</div>
+            <div class="tile t-verde">Bolo floral</div>
+            <div class="tile t-marfim">Brigadeiro</div>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- DEPOIS -->
+      <div>
+        <p class="legenda-mock">Proposta</p>
+        <div class="fone"><div class="tela">
+          <div class="ig-top">← elsy__ross</div>
+          <div class="ig-perfil">
+            <div class="avatar"><i></i></div>
+            <div class="nums"><div><b>68</b>posts</div><div><b>103</b>seguidores</div><div><b>312</b>seguindo</div></div>
+          </div>
+          <div class="ig-bio">
+            <span class="nome">Elsy Ross | Cake Designer · Flores em Açúcar</span><br>
+            Flores em açúcar que enganam o olho<br>
+            🏆 3º lugar Júri Popular · FIPAN 2026<br>
+            Reino Unido · Coreia · EUA<br>
+            Aulas presenciais em São Caetano do Sul<br>
+            Sócia da @voccoruja<br>
+            <span class="link">wa.me/5511900000000</span>
+          </div>
+          <div class="ig-btns"><span class="pri">Seguir</span><span>Mensagem</span></div>
+          <div class="destaques">
+            <div class="dq"><i class="t-ouro"></i>FIPAN</div>
+            <div class="dq"><i class="t-rosa"></i>Flores</div>
+            <div class="dq"><i class="t-verde"></i>Aulas</div>
+            <div class="dq"><i class="t-choco"></i>Encomendas</div>
+            <div class="dq"><i class="t-marfim"></i>Alunas</div>
+          </div>
+          <div class="grade">
+            <div class="tile t-vinho reel">Reel · rosa em açúcar em 30s</div>
+            <div class="tile t-choco">Retrato com o troféu</div>
+            <div class="tile t-marfim">Detalhe macro da pétala</div>
+            <div class="tile t-rosa reel">Reel · erro comum na pétala</div>
+            <div class="tile t-ouro">Turma de agosto — vagas</div>
+            <div class="tile t-verde">Peça inteira, fundo escuro</div>
+            <div class="tile t-neve reel">Reel · da massa à flor</div>
+            <div class="tile t-lilas">Bolo de noiva entregue</div>
+            <div class="tile t-cinza">Ferramentas que uso</div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="nota" style="margin-top:24px">
+      <b>Leia o grid como uma vitrine</b>
+      No "hoje", três linguagens brigam no mesmo espaço: peça artística, registro de feira e cardápio comercial da Vó Coruja. Isso confunde quem chega e confunde o algoritmo. Na proposta, cada linha do grid tem uma leitura: <b>processo</b>, <b>prova</b>, <b>produto</b>. As imagens são maquete — o acervo real dela substitui uma a uma.
+    </div>
+
+    <div class="alerta">
+      <b>Separação de canais</b>
+      Este perfil passa a ser autoral, técnico e de ensino. A @voccoruja fica com produto, preço e venda de doce. Cardápio de Copa não pertence ao perfil de uma cake designer premiada — pertence à confeitaria.
+    </div>
+  </section>
+
+  <!-- 04 -->
+  <section id="s4">
+    <div class="section-head">
+      <div class="camada"><small>CAMADA</small><b>04</b></div>
+      <div><h2>Três pilares</h2><p>Toda publicação precisa caber em um deles.</p></div>
+    </div>
+
+    <table>
+      <thead><tr><th style="width:20%">Pilar</th><th style="width:34%">O que é</th><th style="width:23%">Formato</th><th>Para que serve</th></tr></thead>
+      <tbody>
+        <tr><td><b>Processo</b></td><td>A flor nascendo: modelagem, cortador, boleador, secagem, montagem. O que quase ninguém mostra.</td><td>Reel de 15 a 30 segundos, som ambiente, sem trilha genérica</td><td>Alcance. É o que sai do perfil e alcança quem não segue.</td></tr>
+        <tr><td><b>Prova</b></td><td>Peça pronta, troféu, formação internacional, aluna que fez a primeira rosa, bolo entregue.</td><td>Carrossel de 3 a 5 fotos, fundo escuro, foco na textura</td><td>Confiança. É o que faz o visitante acreditar no preço.</td></tr>
+        <tr><td><b>Convite</b></td><td>Turma abrindo, encomenda de temporada, agenda do mês, orçamento aberto.</td><td>Foto única com chamada clara e direta</td><td>Conversão. É o que vira mensagem no WhatsApp.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="nota">
+      <b>A proporção que funciona</b>
+      A cada dez publicações: seis de Processo, três de Prova, uma de Convite. Perfil que só convida cansa e perde alcance; perfil que nunca convida vira portfólio bonito que não fatura.
+    </div>
+  </section>
+
+  <!-- 05 -->
+  <section id="s5">
+    <div class="section-head">
+      <div class="camada"><small>CAMADA</small><b>05</b></div>
+      <div><h2>Trinta dias</h2><p>Quatro semanas, uma tarefa por dia útil. Nada aqui exige equipe.</p></div>
+    </div>
+
+    <table>
+      <thead><tr><th style="width:14%">Semana</th><th style="width:24%">Foco</th><th>O que fazer</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>1</b></td><td>Arrumar a casa</td>
+          <td>Trocar nome e bio · trocar o link por WhatsApp · criar os cinco Destaques com o que já existe no acervo · pedir ao @grandeabcnews que edite a legenda marcando @elsy__ross e @voccoruja · pedir as fotos em alta ao fotógrafo da FIPAN · seguir 100 contas selecionadas.</td>
+        </tr>
+        <tr>
+          <td><b>2</b></td><td>Estrear o Processo</td>
+          <td>Publicar os três primeiros Reels de modelagem (um a cada dois dias) · um carrossel com a peça premiada em detalhe macro · Stories diários de bancada · seguir mais 100 contas e comentar em cinco por dia.</td>
+        </tr>
+        <tr>
+          <td><b>3</b></td><td>Aquecer a aula</td>
+          <td>Reel "o erro que faz a pétala quebrar" · carrossel da formação internacional · caixinha de perguntas nos Stories: "o que você quer aprender primeiro?" · anunciar que a turma abre na semana seguinte.</td>
+        </tr>
+        <tr>
+          <td><b>4</b></td><td>Abrir a turma</td>
+          <td>Post de Convite com data, vagas, valor e local · Reel curto respondendo às três dúvidas mais repetidas · Stories com contagem de vagas · encerrar com o depoimento de quem já fez aula com ela.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="alerta">
+      <b>Janela do prêmio</b>
+      A conquista da FIPAN 2026 tem prazo de validade curto como notícia. Tudo na Semana 1 e 2 deve amarrar o prêmio ao que ela ensina — depois de sessenta dias, ele vira só uma linha de currículo.
+    </div>
+  </section>
+
+  <!-- 06 -->
+  <section id="s6">
+    <div class="section-head">
+      <div class="camada"><small>CAMADA</small><b>06</b></div>
+      <div><h2>Cinco legendas</h2><p>Escritas para copiar e ajustar o que for dela.</p></div>
+    </div>
+
+    <div class="post-modelo">
+      <h4>A rosa em trinta segundos</h4>
+      <div class="fmt">Reel · Processo</div>
+      <p>Uma rosa em açúcar leva sete camadas de pétala. Cada uma seca antes da próxima entrar.
+
+Este vídeo tem 30 segundos. A flor levou dois dias.
+
+É por isso que flor em açúcar não se compara com flor de pasta comum — e é isso que eu ensino nas aulas em São Caetano.</p>
+      <p class="hash">#floresemacucar #cakedesignerbrasil #confeitariaartistica #sugarflowers #saocaetanodosul #abcpaulista</p>
+    </div>
+
+    <div class="post-modelo">
+      <h4>O troféu que veio do Júri Popular</h4>
+      <div class="fmt">Carrossel · Prova</div>
+      <p>3º lugar no Júri Popular da FIPAN 2026, na categoria Flores em Açúcar.
+
+O Júri Popular é decidido por voto de quem passa pela feira. Não é técnico — é o olho de quem vê. E foi por isso que esse me pegou de jeito: a peça convenceu quem não sabia que era açúcar.
+
+Obrigada a cada pessoa que parou na bancada. 🤍</p>
+      <p class="hash">#fipan2026 #campeonatodebolos #floresemacucar #confeitariaartistica</p>
+    </div>
+
+    <div class="post-modelo">
+      <h4>O erro que quebra a pétala</h4>
+      <div class="fmt">Reel · Processo</div>
+      <p>Quase toda aluna quebra a primeira pétala no mesmo ponto: afina demais a borda antes de dar forma.
+
+A ordem certa é o contrário. Forma primeiro, borda depois.
+
+Salva esse aqui para a próxima vez que você for tentar.</p>
+      <p class="hash">#dicasdeconfeitaria #floresemacucar #sugarflowers #cakedesigner</p>
+    </div>
+
+    <div class="post-modelo">
+      <h4>Três países, uma flor</h4>
+      <div class="fmt">Carrossel · Prova</div>
+      <p>Estudei flores em açúcar no Reino Unido, na Coreia e nos Estados Unidos. Cada escola resolve a mesma flor de um jeito.
+
+O inglês é preciso. O coreano é delicado, quase transparente. O americano é volume e presença.
+
+O que eu ensino aqui é o encontro dos três — adaptado ao nosso clima, que é o verdadeiro inimigo do açúcar.</p>
+      <p class="hash">#confeitariaartistica #sugarflowers #cakedesignerbrasil #floresemacucar</p>
+    </div>
+
+    <div class="post-modelo">
+      <h4>Turma de agosto</h4>
+      <div class="fmt">Foto única · Convite</div>
+      <p>Abri seis vagas para o workshop presencial de Flores em Açúcar, em São Caetano do Sul.
+
+Um dia inteiro. Você sai com três flores prontas, feitas pela sua mão, e com o material para continuar em casa.
+
+Não precisa ter experiência. Precisa ter paciência — eu ensino o resto.
+
+Data, valor e inscrição no link da bio.</p>
+      <p class="hash">#workshopconfeitaria #saocaetanodosul #abcpaulista #floresemacucar</p>
+    </div>
+  </section>
+
+  <!-- 07 -->
+  <section id="s7">
+    <div class="section-head">
+      <div class="camada"><small>CAMADA</small><b>07</b></div>
+      <div><h2>O workshop</h2><p>O produto que a bio já promete e o perfil ainda não vende.</p></div>
+    </div>
+
+    <div class="card">
+      <p>É o movimento de maior retorno disponível agora, por três motivos que se somam: a credencial internacional já está na bio, o prêmio da FIPAN acabou de acontecer, e o custo de operação de uma turma pequena é baixo perto da margem. Não depende de vitrine, entrega ou sazonalidade de doce.</p>
+    </div>
+
+    <table>
+      <thead><tr><th style="width:26%">Definição</th><th>Proposta de partida</th></tr></thead>
+      <tbody>
+        <tr><td>Formato</td><td>Presencial, um dia, seis a oito alunas — turma pequena mantém a qualidade e a foto boa para divulgar a próxima.</td></tr>
+        <tr><td>Entrega</td><td>Três flores prontas feitas pela aluna, mais o kit básico de material para continuar em casa.</td></tr>
+        <tr><td>Local</td><td>O próprio espaço da Vó Coruja, em São Caetano — reforça a marca e zera custo de sala.</td></tr>
+        <tr><td>Prova social</td><td>Fotografar as mãos das alunas e a flor pronta de cada uma. Esse é o conteúdo que enche a turma seguinte.</td></tr>
+        <tr><td>Próximo degrau</td><td>Turma avançada de peça de campeonato, e depois a versão on-line gravada — que escala sem limite de bancada.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="nota">
+      <b>Ordem importa</b>
+      Primeiro a turma presencial pequena, que é fácil de encher e gera prova. O curso gravado só depois de duas ou três turmas — com depoimento, foto de aluna e uma lista de espera já formada.
+    </div>
+  </section>
+
+  <!-- 08 -->
+  <section id="s8">
+    <div class="section-head">
+      <div class="camada"><small>CAMADA</small><b>08</b></div>
+      <div><h2>Noventa dias</h2><p>Metas que dizem se o plano está funcionando.</p></div>
+    </div>
+
+    <table>
+      <thead><tr><th style="width:34%">Indicador</th><th style="width:20%">Hoje</th><th style="width:22%">Meta em 90 dias</th><th>Onde conferir</th></tr></thead>
+      <tbody>
+        <tr><td>Seguidores</td><td>103</td><td>800 a 1.200</td><td>Perfil</td></tr>
+        <tr><td>Contas alcançadas por mês</td><td>não medido</td><td>15.000</td><td>Painel profissional</td></tr>
+        <tr><td>Alcance vindo de não seguidores</td><td>não medido</td><td>acima de 60%</td><td>Painel profissional</td></tr>
+        <tr><td>Reels publicados por semana</td><td>0</td><td>2</td><td>Grid</td></tr>
+        <tr><td>Conversas iniciadas no WhatsApp</td><td>não medido</td><td>40 por mês</td><td>WhatsApp Business</td></tr>
+        <tr><td>Turmas realizadas</td><td>0</td><td>3</td><td>Agenda</td></tr>
+      </tbody>
+    </table>
+
+    <div class="alerta">
+      <b>O único número que não vale nada sozinho</b>
+      Seguidor. Um perfil de 800 seguidores certos no ABC vale mais que 5.000 espalhados pelo país que nunca vão pegar um bolo na loja nem sentar numa aula. Medir alcance local e conversa iniciada é o que conta.
+    </div>
+  </section>
+
+</div>
+
+<div class="pipe gold"></div>
+<footer>
+  <b>Elsy Ross · Confeitaria Artística</b>
+  Plano de Instagram — Julho 2026 · Uso interno
+</footer>
+
+</body>
+</html>
