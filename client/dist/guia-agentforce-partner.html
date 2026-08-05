@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Algar Partner AI — Guia de Implementação F2→F5</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root {
+    --black: #0d0d0d;
+    --grey-dark: #4a4a4a;
+    --grey-mid: #6b6b6b;
+    --grey-light: #d9d9d9;
+    --grey-lighter: #ececec;
+    --ice: #f2f3f5;
+    --ice-warm: #fafbfc;
+    --white: #ffffff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--ice);
+    color: var(--black);
+    line-height: 1.6;
+    font-size: 15px;
+  }
+
+  /* === HEADER === */
+  .header {
+    background: linear-gradient(135deg, var(--black) 0%, var(--grey-dark) 100%);
+    color: var(--white);
+    padding: 48px 40px 40px;
+    border-radius: 0 0 12px 12px;
+    margin-bottom: 32px;
+  }
+  .header .kicker {
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--grey-light); margin-bottom: 12px; font-weight: 500;
+  }
+  .header h1 {
+    font-size: 32px; font-weight: 700; line-height: 1.2; margin-bottom: 8px;
+  }
+  .header .subtitle {
+    font-size: 14px; color: var(--grey-lighter); margin-bottom: 16px;
+  }
+  .header .meta {
+    display: flex; gap: 24px; font-size: 12px; color: var(--grey-light);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* === CONTAINER === */
+  .container { max-width: 960px; margin: 0 auto; padding: 0 24px 60px; }
+
+  /* === TOC === */
+  .toc {
+    background: var(--white); border: 1px solid var(--grey-light);
+    border-radius: 8px; padding: 24px 28px; margin-bottom: 32px;
+  }
+  .toc h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--grey-mid); margin-bottom: 14px;
+  }
+  .toc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 32px; }
+  .toc a {
+    color: var(--black); text-decoration: none; font-size: 14px;
+    padding: 4px 0; display: block; border-bottom: 1px dotted var(--grey-light);
+  }
+  .toc a:hover { color: var(--grey-mid); }
+  .toc a .num { font-family: 'IBM Plex Mono', monospace; font-weight: 600; margin-right: 8px; }
+
+  /* === SECTIONS === */
+  .section { margin-bottom: 36px; }
+  .section-header {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 20px; padding-bottom: 10px;
+    border-bottom: 2px solid var(--black);
+  }
+  .section-number {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--black); color: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 14px;
+    flex-shrink: 0;
+  }
+  .section-header h2 { font-size: 20px; font-weight: 700; }
+
+  .section-content { padding-left: 52px; }
+
+  /* === PHASE BANNER === */
+  .phase-banner {
+    background: var(--black); color: var(--white);
+    padding: 14px 20px; border-radius: 8px; margin-bottom: 24px;
+    font-size: 13px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+  }
+
+  /* === STEPS === */
+  .step {
+    position: relative; padding-left: 36px; margin-bottom: 22px;
+    padding-bottom: 22px; border-left: 2px solid var(--grey-light);
+  }
+  .step:last-child { border-left-color: transparent; padding-bottom: 0; }
+  .step-num {
+    position: absolute; left: -13px; top: 0;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--grey-mid); color: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .step h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .step p { font-size: 14px; color: var(--grey-dark); }
+  .step code, .inline-code {
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+    background: var(--grey-lighter); padding: 2px 6px; border-radius: 3px;
+  }
+
+  /* === PATH === */
+  .path {
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+    color: var(--grey-mid); background: var(--ice);
+    padding: 3px 8px; border-radius: 4px; display: inline;
+  }
+
+  /* === CALLOUTS === */
+  .callout {
+    padding: 14px 18px; border-radius: 6px; margin: 14px 0;
+    border-left: 4px solid; font-size: 14px;
+  }
+  .callout-label {
+    font-weight: 700; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 1.5px; margin-bottom: 4px;
+  }
+  .callout-atencao {
+    border-color: var(--black); background: var(--ice);
+  }
+  .callout-atencao .callout-label { color: var(--black); }
+  .callout-dica {
+    border-color: var(--grey-mid); background: var(--ice-warm);
+  }
+  .callout-dica .callout-label { color: var(--grey-mid); }
+  .callout-nota {
+    border-color: var(--grey-light); background: var(--white);
+  }
+  .callout-nota .callout-label { color: var(--grey-mid); }
+
+  /* === TABLES === */
+  table {
+    width: 100%; border-collapse: collapse; margin: 14px 0;
+    font-size: 13px;
+  }
+  thead th {
+    background: var(--black); color: var(--white);
+    padding: 10px 14px; text-align: left; font-size: 12px;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  tbody td {
+    padding: 10px 14px; border-bottom: 1px solid var(--grey-light);
+    vertical-align: top;
+  }
+  tbody tr:nth-child(odd) { background: var(--ice-warm); }
+
+  /* === CODE BLOCK === */
+  .code-block {
+    background: var(--black); color: var(--grey-lighter);
+    padding: 16px 20px; border-radius: 6px; margin: 12px 0;
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+    line-height: 1.5; overflow-x: auto; white-space: pre-wrap;
+  }
+
+  /* === CHECKLIST === */
+  .checklist { list-style: none; padding: 0; }
+  .checklist li {
+    padding: 8px 0 8px 28px; position: relative;
+    border-bottom: 1px solid var(--grey-lighter); font-size: 14px;
+  }
+  .checklist li::before {
+    content: '☐'; position: absolute; left: 0; top: 8px;
+    font-size: 16px; color: var(--grey-mid);
+  }
+
+  /* === BADGE === */
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 8px;
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge-dark { background: var(--black); color: var(--white); }
+  .badge-mid { background: var(--grey-mid); color: var(--white); }
+  .badge-outline { border: 1px solid var(--grey-mid); color: var(--grey-mid); }
+
+  /* === FOOTER === */
+  .footer {
+    border-top: 2px solid var(--black); padding-top: 14px;
+    margin-top: 40px; display: flex; justify-content: space-between;
+    font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--grey-mid);
+  }
+
+  /* === PRINT === */
+  @media print {
+    @page { size: A4; margin: 15mm 12mm; }
+    body { font-size: 11px; background: white; }
+    .header { page-break-after: always; }
+    .step, .callout, table { page-break-inside: avoid; }
+    .toc a { color: var(--black); }
+  }
+
+  /* === MOBILE === */
+  @media (max-width: 640px) {
+    .header { padding: 28px 20px; }
+    .header h1 { font-size: 24px; }
+    .header .meta { flex-direction: column; gap: 4px; }
+    .container { padding: 0 16px 40px; }
+    .toc-grid { grid-template-columns: 1fr; }
+    .section-content { padding-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="kicker">Ever i9 · CRM B2B Algar Telecom</div>
+  <h1>Algar Partner AI</h1>
+  <div class="subtitle">Guia de Implementação — Fases F2 a F5 · HOMOL</div>
+  <div class="meta">
+    <span>Agosto 2026</span>
+    <span>Org: HOMOL (org_id=100)</span>
+    <span>Agente: Algar Partner AI (NOVO)</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- TOC -->
+  <div class="toc">
+    <h2>Sumário</h2>
+    <div class="toc-grid">
+      <a href="#s01"><span class="num">01</span> O que é</a>
+      <a href="#s05"><span class="num">05</span> F3 — Canal e Deployment</a>
+      <a href="#s02"><span class="num">02</span> Estado atual (F1 concluída)</a>
+      <a href="#s06"><span class="num">06</span> F4 — Widget no Portal</a>
+      <a href="#s03"><span class="num">03</span> F2 — Criar o Agente</a>
+      <a href="#s07"><span class="num">07</span> F5 — Piloto e QA</a>
+      <a href="#s04"><span class="num">04</span> F2 — Topics e Ações</a>
+      <a href="#s08"><span class="num">08</span> Checklist final</a>
+    </div>
+  </div>
+
+  <!-- 01 O QUE É -->
+  <div class="section" id="s01">
+    <div class="section-header">
+      <div class="section-number">01</div>
+      <h2>O que é</h2>
+    </div>
+    <div class="section-content">
+      <p>Assistente de IA conversacional embarcado no portal do parceiro Algar Telecom. O vendedor da revenda abre o chat no portal, consulta seus leads por linguagem natural, atualiza status, registra lead novo e aciona seu executivo de canal — tudo sem sair da conversa e sem navegar telas.</p>
+
+      <div class="callout callout-nota">
+        <div class="callout-label">Escopo V1</div>
+        <p>3 topics (Meus Leads, Registrar Lead, Falar com Executivo de Canal) · 7 flows · Sem billing · Sem Oportunidade/Conta (evolução futura).</p>
+      </div>
+
+      <table>
+        <thead><tr><th>Componente</th><th>Tipo</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Agentforce Service Agent (ExternalCopilot)</td><td>Agente NOVO dedicado</td><td><span class="badge badge-mid">F2</span></td></tr>
+          <tr><td>Canal MIAW EmbeddedMessaging</td><td>Novo ou revinculado</td><td><span class="badge badge-mid">F3</span></td></tr>
+          <tr><td>Verificação credential-based</td><td>Identidade automática</td><td><span class="badge badge-mid">F3</span></td></tr>
+          <tr><td>Widget de chat no portal</td><td>Experience Builder</td><td><span class="badge badge-mid">F4</span></td></tr>
+          <tr><td>7 flows AlgarPartnerAI_*</td><td>AutoLaunched</td><td><span class="badge badge-dark">F1 OK</span></td></tr>
+          <tr><td>PS_AlgarPartnerAI_Agent</td><td>Permission Set</td><td><span class="badge badge-dark">F1 OK</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 02 ESTADO ATUAL -->
+  <div class="section" id="s02">
+    <div class="section-header">
+      <div class="section-number">02</div>
+      <h2>Estado atual — F1 concluída</h2>
+    </div>
+    <div class="section-content">
+      <p>7 flows ativos na HOMOL com prefixo <code>AlgarPartnerAI_</code>. PS criada, zero assignments. Smoke tests passaram. Cerca de Owner validada.</p>
+
+      <table>
+        <thead><tr><th>Flow</th><th>Topic</th><th>Função</th></tr></thead>
+        <tbody>
+          <tr><td>GetMyLeads</td><td>Meus Leads</td><td>Lista leads do parceiro com filtro por status</td></tr>
+          <tr><td>FindMyLeadByName</td><td>Meus Leads</td><td>Busca lead por nome de empresa</td></tr>
+          <tr><td>GetLeadDetails</td><td>Meus Leads</td><td>Detalhes de um lead específico</td></tr>
+          <tr><td>CountMyLeadsByStatus</td><td>Meus Leads</td><td>Contagem agrupada por status</td></tr>
+          <tr><td>UpdateMyLeadStatus</td><td>Meus Leads</td><td>Atualiza status do lead</td></tr>
+          <tr><td>CreateLeadForPartner</td><td>Registrar Lead</td><td>Cria lead Nacional via chat</td></tr>
+          <tr><td>NotifyChannelManager</td><td>Executivo de Canal</td><td>Cria Task + notificação ao gerente</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-atencao">
+        <div class="callout-label">Atenção</div>
+        <p>O agente Algar AI existente (<code>Algar_Agentforce_Service_Agent</code>) NÃO será tocado. Vamos criar um agente NOVO dedicado.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 03 F2 CRIAR AGENTE -->
+  <div class="section" id="s03">
+    <div class="phase-banner">Fase F2 — Criar o Agente</div>
+    <div class="section-header">
+      <div class="section-number">03</div>
+      <h2>Criar o agente e o agent user</h2>
+    </div>
+    <div class="section-content">
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Verificar pré-requisitos</h3>
+        <p><span class="path">Setup → Einstein Setup</span> — confirmar toggle Einstein = On.</p>
+        <p><span class="path">Setup → Agentforce Agents</span> — confirmar toggle Agentforce = On.</p>
+        <p>Ambos já estão habilitados na HOMOL (sessão 05/ago). Apenas confirmar.</p>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Configurar o Agent User</h3>
+        <p><span class="path">Setup → Users</span> — localizar o user <code>EinsteinServiceAgent User</code> (criado automaticamente pela plataforma).</p>
+        <p>Clicar Edit. Confirmar que o Profile é <code>Einstein Agent User</code>. Se não for, alterar.</p>
+        <div class="callout callout-dica">
+          <div class="callout-label">Dica</div>
+          <p>O agent user é o contexto de execução dos flows. A PS_AlgarPartnerAI_Agent será atribuída a ele na etapa 7 — é ela que define o teto de permissão do agente (Lead R/C/E, Account R, Contact R/E, Task C/R).</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Criar o novo agente</h3>
+        <p><span class="path">Setup → Agentforce Agents → + New Agent</span></p>
+        <p>Selecionar template: <strong>Agentforce Service Agent</strong>. Clicar Next.</p>
+        <p>Na tela de topics pré-configurados: <strong>remover TODOS</strong> (clicar "Added" em cada um para deselecionar). Nossos topics são customizados.</p>
+        <p>Clicar Next.</p>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <h3>Nomear e configurar</h3>
+        <table>
+          <thead><tr><th>Campo</th><th>Valor</th></tr></thead>
+          <tbody>
+            <tr><td>Agent Name</td><td><code>Algar Partner AI</code></td></tr>
+            <tr><td>Description</td><td>Assistente IA do portal parceiro Algar Telecom. Consulta leads, registra novos e aciona o executivo de canal.</td></tr>
+            <tr><td>Agent User</td><td>Selecionar <code>EinsteinServiceAgent User</code></td></tr>
+            <tr><td>Enhanced event logs</td><td>Marcar (para rastreamento de sessões)</td></tr>
+          </tbody>
+        </table>
+        <p>Clicar <strong>Create</strong>.</p>
+      </div>
+
+      <div class="step">
+        <div class="step-num">5</div>
+        <h3>Configurar instruções gerais do agente</h3>
+        <p>No Agent Builder, acessar as instruções gerais (System Instructions / Role).</p>
+        <div class="code-block">Você é o assistente de IA do portal de parceiros da Algar Telecom.
+Seu nome é Algar Partner AI.
+Você atende vendedores de revendas parceiras.
+Responda sempre em português do Brasil, de forma direta e objetiva.
+Você trabalha APENAS com os leads do próprio vendedor que está conversando.
+Nunca invente dados — se não encontrar, diga que não encontrou.
+Se o vendedor pedir algo fora do seu escopo, oriente-o a entrar em contato com seu executivo de canal usando o topic "Falar com meu Executivo de Canal".</div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">6</div>
+        <h3>Configurar mensagens do sistema</h3>
+        <p><span class="path">Setup → Agentforce Agents → clicar no nome do agente → aba System Messages</span></p>
+        <table>
+          <thead><tr><th>Mensagem</th><th>Texto</th></tr></thead>
+          <tbody>
+            <tr><td>Welcome Message</td><td>Olá! Sou o assistente de IA da Algar Telecom. Posso ajudar com seus leads, registrar novos ou acionar seu executivo de canal. Como posso ajudar?</td></tr>
+            <tr><td>Error Message</td><td>Desculpe, tive um problema ao processar sua solicitação. Tente novamente ou acione seu executivo de canal.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="step">
+        <div class="step-num">7</div>
+        <h3>Atribuir a PS ao Agent User</h3>
+        <p><span class="path">Setup → Permission Sets → PS_AlgarPartnerAI_Agent → Manage Assignments → Add → selecionar EinsteinServiceAgent User</span></p>
+        <div class="callout callout-atencao">
+          <div class="callout-label">Atenção</div>
+          <p>A PS <code>0PSHZ000001nXLd4AM</code> já existe (F1). Só precisa atribuir ao agent user. ZERO assignments hoje.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 04 F2 TOPICS -->
+  <div class="section" id="s04">
+    <div class="section-header">
+      <div class="section-number">04</div>
+      <h2>Configurar Topics e Ações</h2>
+    </div>
+    <div class="section-content">
+
+      <p>No Agent Builder do agente recém-criado. O agente precisa estar <strong>desativado</strong> para editar topics.</p>
+
+      <div class="callout callout-atencao">
+        <div class="callout-label">Atenção</div>
+        <p>Agent Builder só aceita edição com o agente DESATIVADO. Desativar antes de criar topics. Reativar ao final.</p>
+      </div>
+
+      <!-- TOPIC 1 -->
+      <h3 style="margin: 24px 0 12px; font-size: 16px;">Topic 1 — Meus Leads</h3>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Criar o topic</h3>
+        <p>No Agent Builder → clicar <strong>New → New Topic</strong>.</p>
+        <table>
+          <thead><tr><th>Campo</th><th>Valor</th></tr></thead>
+          <tbody>
+            <tr><td>Topic Label</td><td><code>Meus Leads</code></td></tr>
+            <tr><td>Classification Description</td><td>O vendedor quer ver, buscar, contar ou atualizar o status dos seus leads. Inclui perguntas como "quantos leads tenho?", "mostra meus leads em qualificação", "qual o telefone do lead X?", "muda o status do lead Y para conversão".</td></tr>
+            <tr><td>Scope</td><td>Lead</td></tr>
+            <tr><td>Instructions</td><td>Sempre filtrar pelos leads do próprio vendedor (OwnerId). Use GetMyLeads para listar, FindMyLeadByName para buscar por nome, GetLeadDetails para ver detalhes, CountMyLeadsByStatus para contar, UpdateMyLeadStatus para mudar status. Nunca mostre leads de outros vendedores.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Adicionar 5 ações ao topic</h3>
+        <p>Aba <strong>This Topic's Actions</strong> → New → <strong>Add from Flow</strong> (ou Add from Asset Library).</p>
+        <table>
+          <thead><tr><th>Ação</th><th>Flow</th><th>Instruções da ação</th></tr></thead>
+          <tbody>
+            <tr><td>Listar meus leads</td><td><code>AlgarPartnerAI_GetMyLeads</code></td><td>Use quando o vendedor pedir para ver seus leads. Aceita filtro de status opcional (Novo, Qualificacao, Conversao, Cancelado, Convertido).</td></tr>
+            <tr><td>Buscar lead por nome</td><td><code>AlgarPartnerAI_FindMyLeadByName</code></td><td>Use quando o vendedor perguntar sobre um lead específico pelo nome da empresa.</td></tr>
+            <tr><td>Ver detalhes do lead</td><td><code>AlgarPartnerAI_GetLeadDetails</code></td><td>Use quando o vendedor quiser ver informações detalhadas de um lead específico (telefone, email, endereço, CNPJ, status).</td></tr>
+            <tr><td>Contar leads por status</td><td><code>AlgarPartnerAI_CountMyLeadsByStatus</code></td><td>Use quando o vendedor perguntar quantos leads tem, ou quantos estão em cada status.</td></tr>
+            <tr><td>Atualizar status do lead</td><td><code>AlgarPartnerAI_UpdateMyLeadStatus</code></td><td>Use quando o vendedor pedir para mudar o status de um lead. Status válidos: Novo, Qualificacao, Conversao, Cancelado. Convertido é bloqueado pela plataforma.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TOPIC 2 -->
+      <h3 style="margin: 28px 0 12px; font-size: 16px;">Topic 2 — Registrar Lead</h3>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Criar o topic</h3>
+        <table>
+          <thead><tr><th>Campo</th><th>Valor</th></tr></thead>
+          <tbody>
+            <tr><td>Topic Label</td><td><code>Registrar Lead</code></td></tr>
+            <tr><td>Classification Description</td><td>O vendedor quer cadastrar um novo lead. Inclui frases como "quero registrar um lead", "cadastrar prospect", "tenho um novo contato", "registrar empresa".</td></tr>
+            <tr><td>Scope</td><td>Lead</td></tr>
+            <tr><td>Instructions</td><td>Colete os dados obrigatórios: nome, sobrenome, empresa, email, telefone, CNPJ. O lead será criado como Nacional com origem Portal. As validações do Salesforce (VRs) serão aplicadas automaticamente — se o Salesforce rejeitar, repasse a mensagem de erro ao vendedor de forma amigável.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <h3>Adicionar 1 ação</h3>
+        <table>
+          <thead><tr><th>Ação</th><th>Flow</th><th>Instruções</th></tr></thead>
+          <tbody>
+            <tr><td>Criar lead</td><td><code>AlgarPartnerAI_CreateLeadForPartner</code></td><td>Use após coletar todos os dados obrigatórios do vendedor. O RT será Nacional automaticamente e a origem será Portal.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TOPIC 3 -->
+      <h3 style="margin: 28px 0 12px; font-size: 16px;">Topic 3 — Falar com meu Executivo de Canal</h3>
+
+      <div class="step">
+        <div class="step-num">5</div>
+        <h3>Criar o topic</h3>
+        <table>
+          <thead><tr><th>Campo</th><th>Valor</th></tr></thead>
+          <tbody>
+            <tr><td>Topic Label</td><td><code>Falar com meu Executivo de Canal</code></td></tr>
+            <tr><td>Classification Description</td><td>O vendedor quer falar com alguém da Algar, precisa de ajuda humana, quer escalar um problema, ou quer contato com seu gerente de canal. Inclui frases como "quero falar com alguém", "preciso de ajuda", "chamar meu executivo", "escalar".</td></tr>
+            <tr><td>Scope</td><td>Account, Task</td></tr>
+            <tr><td>Instructions</td><td>Pergunte ao vendedor o motivo da solicitação e se está relacionada a algum lead específico. Crie uma Task para o executivo de canal (Owner da conta parceira) com o resumo da conversa. Confirme ao vendedor que o executivo foi acionado e informará o nome dele.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="step">
+        <div class="step-num">6</div>
+        <h3>Adicionar 1 ação</h3>
+        <table>
+          <thead><tr><th>Ação</th><th>Flow</th><th>Instruções</th></tr></thead>
+          <tbody>
+            <tr><td>Notificar executivo</td><td><code>AlgarPartnerAI_NotifyChannelManager</code></td><td>Use para acionar o gerente de canal da revenda. Cria uma Task com o resumo da conversa. Se o vendedor mencionou um lead específico, vincule o lead à Task.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="step">
+        <div class="step-num">7</div>
+        <h3>Ativar o agente</h3>
+        <p>Após criar os 3 topics e vincular os 7 flows, clicar <strong>Activate</strong> no Agent Builder.</p>
+        <p>Testar no painel de preview do Builder: digitar "quantos leads eu tenho?" e validar que o agente chama o flow correto.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 05 F3 CANAL -->
+  <div class="section" id="s05">
+    <div class="phase-banner">Fase F3 — Canal e Deployment</div>
+    <div class="section-header">
+      <div class="section-number">05</div>
+      <h2>Canal MIAW e Embedded Service Deployment</h2>
+    </div>
+    <div class="section-content">
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Criar Messaging Channel</h3>
+        <p><span class="path">Setup → Messaging Settings → New Channel</span></p>
+        <table>
+          <thead><tr><th>Campo</th><th>Valor</th></tr></thead>
+          <tbody>
+            <tr><td>Channel Type</td><td>Messaging for Web</td></tr>
+            <tr><td>Channel Name</td><td><code>AlgarPartnerAI_Channel</code></td></tr>
+            <tr><td>Routing Type</td><td>Omni-Channel (para rotear ao agente via flow)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Habilitar User Verification no canal</h3>
+        <p><span class="path">Messaging Settings → dropdown do canal → Edit</span></p>
+        <p>Marcar <strong>Add User Verification</strong>. Salvar.</p>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Criar Omni-Channel Flow de roteamento</h3>
+        <p><span class="path">Setup → Flows → New Flow → Omni-Channel Flow</span></p>
+        <p>Configurar para rotear mensagens recebidas ao agente Algar Partner AI. O flow precisa ter um nó <strong>Route Work</strong> apontando para o agente (Session Handler = Algar Partner AI).</p>
+        <p>Definir como fallback a fila <code>Algar_AI_Library</code> (<code>00GHZ000007ehYT2AY</code>).</p>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <h3>Criar Embedded Service Deployment</h3>
+        <p><span class="path">Setup → Embedded Service Deployments → New Deployment</span></p>
+        <table>
+          <thead><tr><th>Campo</th><th>Valor</th></tr></thead>
+          <tbody>
+            <tr><td>Deployment Name</td><td><code>AlgarPartnerAI_Deployment</code></td></tr>
+            <tr><td>Channel</td><td><code>AlgarPartnerAI_Channel</code></td></tr>
+            <tr><td>Site</td><td>Selecionar o site do portal AlgarPartner</td></tr>
+            <tr><td>Auth Method</td><td>Credential-based (automático para site Salesforce autenticado)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="step">
+        <div class="step-num">5</div>
+        <h3>Ativar credential-based verification no site</h3>
+        <p>Abrir Experience Builder do portal AlgarPartner.</p>
+        <p>No componente Embedded Messaging, na property editor, selecionar <strong>Add credential-based user verification</strong>.</p>
+        <p>Publicar as alterações.</p>
+      </div>
+
+      <div class="callout callout-dica">
+        <div class="callout-label">Dica</div>
+        <p>Credential-based verification funciona automaticamente em sites Salesforce autenticados (Aura). O usuário do portal já está logado — a plataforma usa a sessão dele para identificar quem é. Não precisa de JWT/OpenSSL como no token-based.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 06 F4 WIDGET -->
+  <div class="section" id="s06">
+    <div class="phase-banner">Fase F4 — Widget no Portal</div>
+    <div class="section-header">
+      <div class="section-number">06</div>
+      <h2>Experience Builder e CSP</h2>
+    </div>
+    <div class="section-content">
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Adicionar componente ao portal</h3>
+        <p>Abrir <span class="path">Experience Builder → portal AlgarPartner</span>.</p>
+        <p>Arrastar o componente <strong>Embedded Messaging</strong> para a página (geralmente no footer ou como floating widget).</p>
+        <p>Selecionar o deployment <code>AlgarPartnerAI_Deployment</code>.</p>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Configurar CSP Trusted Sites</h3>
+        <p><span class="path">Setup → CSP Trusted Sites</span></p>
+        <p>Adicionar URLs necessários se o widget fizer chamadas externas. Para deployment interno no site Salesforce, geralmente não é necessário adicionar nada.</p>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Publicar o site</h3>
+        <p><span class="path">Experience Builder → Publish</span></p>
+
+        <div class="callout callout-atencao">
+          <div class="callout-label">Atenção</div>
+          <p>Publicar o site é ação do Alberto na UI. O widget do chat só aparece após publicação.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 07 F5 PILOTO -->
+  <div class="section" id="s07">
+    <div class="phase-banner">Fase F5 — Piloto e QA</div>
+    <div class="section-header">
+      <div class="section-number">07</div>
+      <h2>Teste piloto e QA</h2>
+    </div>
+    <div class="section-content">
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Acessar o portal como parceiro de teste</h3>
+        <p>Login: <code>algarpartner@ig.com.algar.hml</code> / <code>PartnerTest2026!</code></p>
+        <p>URL: <code>algartelecommartech005--hml.sandbox.my.site.com/algarpartner</code></p>
+        <p>O widget de chat deve aparecer no canto inferior direito.</p>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Cenários de teste</h3>
+        <table>
+          <thead><tr><th>#</th><th>Cenário</th><th>Frase de teste</th><th>Esperado</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Listar leads</td><td>"Quais são meus leads?"</td><td>Lista apenas leads do parceiro teste (Owner = 005HZ00000MUYFhYAP)</td></tr>
+            <tr><td>2</td><td>Filtrar por status</td><td>"Mostra meus leads em qualificação"</td><td>Apenas leads com Status=Qualificacao</td></tr>
+            <tr><td>3</td><td>Buscar por nome</td><td>"Tem algum lead da empresa X?"</td><td>Busca na Company do Lead</td></tr>
+            <tr><td>4</td><td>Ver detalhes</td><td>"Me mostra o telefone e email do lead Y"</td><td>Retorna dados do lead específico</td></tr>
+            <tr><td>5</td><td>Contar</td><td>"Quantos leads eu tenho por status?"</td><td>Contagem agrupada</td></tr>
+            <tr><td>6</td><td>Atualizar status</td><td>"Muda o lead Z para conversão"</td><td>Status atualizado, confirmação ao vendedor</td></tr>
+            <tr><td>7</td><td>Criar lead</td><td>"Quero registrar um novo lead"</td><td>Agente coleta dados e cria o lead</td></tr>
+            <tr><td>8</td><td>Escalar</td><td>"Quero falar com meu executivo"</td><td>Task criada para o Owner da conta parceira</td></tr>
+            <tr><td>9</td><td>Cerca de dados</td><td>"Mostra todos os leads da org"</td><td>Mostra APENAS os do vendedor, nunca de outros</td></tr>
+            <tr><td>10</td><td>Fora de escopo</td><td>"Qual o faturamento da Algar?"</td><td>Agente informa que está fora do escopo e orienta a acionar o executivo</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Gerar dossiê de evidências</h3>
+        <p>Molde: dossiê Partner (azul/globo). Prints de cada cenário + resultado.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 08 CHECKLIST -->
+  <div class="section" id="s08">
+    <div class="section-header">
+      <div class="section-number">08</div>
+      <h2>Checklist final</h2>
+    </div>
+    <div class="section-content">
+      <ul class="checklist">
+        <li>Einstein e Agentforce habilitados na HOMOL</li>
+        <li>Agent User (EinsteinServiceAgent) com Profile Einstein Agent User</li>
+        <li>Agente "Algar Partner AI" criado (ASA, ExternalCopilot)</li>
+        <li>System Instructions configuradas (português, escopo)</li>
+        <li>Welcome e Error Messages configuradas</li>
+        <li>PS_AlgarPartnerAI_Agent atribuída ao Agent User</li>
+        <li>Topic "Meus Leads" com 5 ações vinculadas</li>
+        <li>Topic "Registrar Lead" com 1 ação vinculada</li>
+        <li>Topic "Falar com meu Executivo de Canal" com 1 ação vinculada</li>
+        <li>Agente ativado no Builder</li>
+        <li>Messaging Channel criado (Messaging for Web)</li>
+        <li>User Verification habilitado no canal</li>
+        <li>Omni-Channel Flow de roteamento apontando para o agente</li>
+        <li>Embedded Service Deployment criado e vinculado ao canal</li>
+        <li>Credential-based verification ativado no Experience Builder</li>
+        <li>Componente Embedded Messaging no portal</li>
+        <li>Site publicado</li>
+        <li>10 cenários de teste executados com parceiro de teste</li>
+        <li>Dossiê de evidências gerado</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <span>EVER I9 · ALGAR PARTNER AI</span>
+    <span>Confidencial — Uso Interno</span>
+  </div>
+
+</div>
+
+</body>
+</html>
