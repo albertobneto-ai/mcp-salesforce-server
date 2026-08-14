@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Ever i9 · Transcrição de Reunião</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sf-blue:#0176D3; --sf-blue-deep:#032D60;
+    --sf-sky:#EAF5FE; --sf-sky-2:#D8EDFF;
+    --sf-mint:#06C4B3; --sf-red:#E5430E; --sf-red-deep:#BA0517;
+    --ink:#0B2545; --ink-soft:#4A6486; --line:#CFE4F7;
+    --shadow:0 10px 30px rgba(3,45,96,.12);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Inter',-apple-system,Segoe UI,sans-serif;color:var(--ink);min-height:100vh;
+    background:
+      radial-gradient(1000px 460px at 12% -10%, #fff 0%, transparent 55%),
+      radial-gradient(820px 460px at 112% 0%, var(--sf-sky-2) 0%, transparent 50%),
+      linear-gradient(180deg, var(--sf-sky) 0%, #F7FBFF 100%);
+    display:flex;flex-direction:column;align-items:center;padding:22px 16px 40px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .wrap{width:100%;max-width:520px}
+
+  header.top{display:flex;align-items:center;gap:11px;margin:4px 2px 18px}
+  .logo{width:40px;height:40px;border-radius:12px;flex:none;
+    background:linear-gradient(135deg,var(--sf-blue),#0FA3E0);display:grid;place-items:center;
+    box-shadow:0 6px 14px rgba(1,118,211,.35)}
+  .brand{font-family:'Nunito';font-weight:900;font-size:18px;line-height:1;color:var(--sf-blue-deep)}
+  .brand span{color:var(--sf-blue)}
+  .brand small{display:block;font-family:'Inter';font-weight:500;font-size:11.5px;color:var(--ink-soft);margin-top:3px}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:20px 18px}
+
+  /* barra de controle */
+  .bar{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+  .recBtn{position:relative;width:66px;height:66px;border-radius:50%;border:none;cursor:pointer;flex:none;
+    background:linear-gradient(135deg,var(--sf-blue),#0FA3E0);box-shadow:0 8px 18px rgba(1,118,211,.4);
+    display:grid;place-items:center;color:#fff;transition:transform .15s,background .3s,box-shadow .2s}
+  .recBtn:active{transform:scale(.95)}
+  .recBtn:disabled{background:linear-gradient(135deg,#B9CBDD,#CAD8E6);box-shadow:none;cursor:not-allowed}
+  .recBtn.rec{background:linear-gradient(135deg,var(--sf-red),var(--sf-red-deep));box-shadow:0 8px 18px rgba(186,5,23,.4)}
+  .ring{position:absolute;inset:-5px;border-radius:50%;border:3px solid var(--sf-red);opacity:0;pointer-events:none}
+  .recBtn.rec .ring{animation:pulse 1.8s ease-out infinite}
+  @keyframes pulse{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.4);opacity:0}}
+  .bar-txt{flex:1;min-width:0}
+  .status{font-family:'Nunito';font-weight:800;font-size:15px;color:var(--sf-blue-deep);line-height:1.2}
+  .timer{font-family:'Nunito';font-weight:900;font-size:22px;color:var(--sf-red-deep);font-variant-numeric:tabular-nums;display:none}
+  .timer.on{display:block}
+  .count{font-size:12px;color:var(--ink-soft);margin-top:2px}
+
+  /* consentimento compacto */
+  .consent{display:flex;gap:9px;align-items:center;background:var(--sf-sky);border:1px solid var(--line);
+    border-radius:12px;padding:9px 12px;margin-bottom:16px;cursor:pointer;font-size:12.5px;color:var(--ink);transition:.2s}
+  .consent.on{background:#E7F8F1;border-color:#8fe0d3}
+  .check{width:20px;height:20px;border-radius:6px;flex:none;border:2px solid var(--sf-blue);background:#fff;display:grid;place-items:center;transition:.18s}
+  .consent.on .check{background:var(--sf-mint);border-color:var(--sf-mint)}
+  .check svg{opacity:0;transform:scale(.5);transition:.18s}
+  .consent.on .check svg{opacity:1;transform:scale(1)}
+
+  /* transcrição — protagonista */
+  .tr-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .tr-head span{font-family:'Nunito';font-weight:800;font-size:13px;color:var(--sf-blue-deep)}
+  .tr{background:#F8FBFF;border:1px solid var(--line);border-radius:14px;padding:16px;min-height:220px;max-height:52vh;
+    overflow-y:auto;font-size:15px;line-height:1.7;color:var(--ink);white-space:pre-wrap;word-break:break-word}
+  .tr .interim{color:var(--ink-soft)}
+  .tr .empty{color:var(--ink-soft);font-size:13.5px;font-style:italic}
+
+  .actions{display:flex;gap:9px;margin-top:14px}
+  .btn{flex:1;font-family:'Nunito';font-weight:800;font-size:13.5px;border-radius:11px;padding:11px 14px;cursor:pointer;
+    border:1px solid transparent;display:flex;align-items:center;justify-content:center;gap:7px;transition:.15s}
+  .btn.primary{background:var(--sf-blue);color:#fff;box-shadow:0 5px 12px rgba(1,118,211,.28)}
+  .btn.primary:active{transform:translateY(1px)}
+  .btn.ghost{background:#fff;color:var(--sf-blue);border-color:var(--sf-blue)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+
+  .banner{display:none;gap:9px;align-items:flex-start;background:#FFF6E9;border:1px solid #FBE2BA;color:#6B3B01;
+    border-radius:12px;padding:11px 13px;margin-bottom:16px;font-size:12.5px;line-height:1.5}
+  .banner.show{display:flex}
+  .banner b{color:#8C4B02}
+
+  /* aviso de contexto da permissão */
+  .permhint{font-size:12px;color:var(--ink-soft);line-height:1.45;margin:-6px 2px 14px;min-height:0;transition:.2s}
+  .permhint:empty{margin:0}
+  .permhint.ok{color:var(--sf-mint);font-weight:600}
+
+  /* ajuda: microfone bloqueado */
+  .help{display:none;background:#FFF6E9;border:1px solid #FBE2BA;border-radius:14px;padding:14px 15px;margin-bottom:16px}
+  .help.show{display:block;animation:rise .25s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .help-t{font-family:'Nunito';font-weight:800;font-size:13.5px;color:#8C4B02;display:flex;align-items:center;gap:7px;margin-bottom:9px}
+  .help ol{margin:0;padding-left:20px;color:#6B3B01;font-size:12.5px;line-height:1.7}
+  .help ol b{color:#8C4B02}
+
+  footer{margin:18px 4px 0;text-align:center;font-size:11.5px;color:var(--ink-soft);line-height:1.5}
+  footer b{color:var(--sf-blue-deep);font-weight:700}
+  @media (prefers-reduced-motion:reduce){.recBtn.rec .ring{display:none}.help.show{animation:none}}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div class="logo" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M17 10a5 5 0 0 0-9.6-1.9A4 4 0 0 0 7 16h9.5a3.5 3.5 0 0 0 .5-6z" fill="#fff"/><circle cx="12" cy="12" r="2.4" fill="#0176D3"/></svg></div>
+      <div class="brand">Ever <span>i9</span><small>Transcrição de reunião · ao vivo</small></div>
+    </header>
+
+    <div class="card">
+      <div class="banner" id="banner" role="alert">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2 1 21h22L12 2z" stroke="#8C4B02" stroke-width="2" stroke-linejoin="round"/><path d="M12 9v5M12 17.5v.5" stroke="#8C4B02" stroke-width="2" stroke-linecap="round"/></svg>
+        <span id="bannerTxt"></span>
+      </div>
+
+      <div class="consent" id="consent" role="checkbox" aria-checked="false" tabindex="0">
+        <div class="check" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        Avisei os participantes que vou gravar.
+      </div>
+
+      <div class="bar">
+        <button class="recBtn" id="recBtn" disabled aria-label="Iniciar transcrição">
+          <span class="ring" aria-hidden="true"></span>
+          <span id="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="12" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </button>
+        <div class="bar-txt">
+          <div class="status" id="status">Marque o aviso para começar</div>
+          <div class="timer" id="timer">00:00</div>
+          <div class="count" id="count"></div>
+        </div>
+      </div>
+
+      <div class="permhint" id="permhint"></div>
+
+      <div class="help" id="help" role="alert">
+        <div class="help-t">🔒 Microfone bloqueado</div>
+        <ol>
+          <li>Toque no <b>cadeado</b> (ou no ícone ⓘ / ⋮ → “Info do site”) ao lado do endereço.</li>
+          <li>Abra <b>Permissões</b> e depois <b>Microfone</b>.</li>
+          <li>Mude para <b>Permitir</b>.</li>
+          <li>Recarregue a página e toque em gravar de novo.</li>
+        </ol>
+      </div>
+
+      <div class="tr-head"><span>📄 Transcrição</span></div>
+      <div class="tr" id="tr"><span class="empty">O texto da reunião aparece aqui, em tempo real.</span></div>
+
+      <div class="actions">
+        <button class="btn primary" id="copy" disabled>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          Copiar
+        </button>
+        <button class="btn ghost" id="clear" disabled>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-9 0v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Limpar
+        </button>
+      </div>
+    </div>
+
+    <footer><b>Ever i9</b> · transcrição nativa do navegador, em português.</footer>
+  </div>
+
+<script>
+(function(){
+  const consent=document.getElementById('consent');
+  const recBtn=document.getElementById('recBtn');
+  const ico=document.getElementById('ico');
+  const status=document.getElementById('status');
+  const timerEl=document.getElementById('timer');
+  const countEl=document.getElementById('count');
+  const tr=document.getElementById('tr');
+  const copyBtn=document.getElementById('copy');
+  const clearBtn=document.getElementById('clear');
+  const banner=document.getElementById('banner');
+  const bannerTxt=document.getElementById('bannerTxt');
+  const permhint=document.getElementById('permhint');
+  const help=document.getElementById('help');
+
+  const ICON_MIC='<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="12" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const ICON_STOP='<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="6" y="6" width="12" height="12" rx="3" fill="currentColor"/></svg>';
+
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  let ok=false, running=false, rec=null, finalText='', t0=null, timerId=null, permState='unknown';
+
+  // --- permissão de microfone: avisa antes e detecta bloqueio ---
+  function setPermHint(state){
+    if(state==='granted'){ permhint.className='permhint ok'; permhint.textContent='Microfone liberado ✓'; }
+    else if(state==='denied'){ permhint.className='permhint'; permhint.textContent=''; }
+    else { permhint.className='permhint'; permhint.textContent='Ao tocar em gravar, o Chrome vai pedir o microfone — toque em Permitir.'; }
+  }
+  function applyPerm(){ if(permState==='denied'){ help.classList.add('show'); setPermHint('denied'); } else { help.classList.remove('show'); setPermHint(permState); } }
+  async function initPerm(){
+    if(!navigator.permissions||!navigator.permissions.query){ setPermHint('prompt'); return; }
+    try{
+      const st=await navigator.permissions.query({name:'microphone'});
+      permState=st.state; applyPerm();
+      st.onchange=()=>{ permState=st.state; applyPerm(); };
+    }catch(_){ setPermHint('prompt'); }
+  }
+  if(SR && window.isSecureContext) initPerm();
+
+  // ambiente
+  if(!SR){
+    show('Este navegador não tem transcrição nativa. Use <b>Chrome ou Edge no computador</b>.');
+    recBtn.disabled=true; consent.style.pointerEvents='none'; consent.style.opacity=.6;
+  } else if(!window.isSecureContext){
+    show('Abra por <b>https</b> ou <b>localhost</b> — o navegador só libera o áudio em contexto seguro.');
+    recBtn.disabled=true; consent.style.pointerEvents='none'; consent.style.opacity=.6;
+  }
+  function show(h){bannerTxt.innerHTML=h;banner.classList.add('show');}
+
+  // consentimento
+  function toggle(){
+    ok=!ok; consent.classList.toggle('on',ok); consent.setAttribute('aria-checked',ok);
+    if(!running){ recBtn.disabled=!ok||!SR||!window.isSecureContext;
+      status.textContent=ok?'Tudo pronto — toque para transcrever':'Marque o aviso para começar'; }
+  }
+  consent.addEventListener('click',toggle);
+  consent.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();toggle();}});
+
+  // gravar/parar
+  recBtn.addEventListener('click',()=>running?stop():start());
+
+  function start(){
+    if(permState==='denied'){ help.classList.add('show'); return; }
+    help.classList.remove('show');
+    finalText = finalText || '';
+    rec=new SR();
+    rec.lang='pt-BR';
+    rec.continuous=true;
+    rec.interimResults=true;
+
+    rec.onresult=e=>{
+      let interim='';
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        const t=e.results[i][0].transcript;
+        if(e.results[i].isFinal){ finalText += (finalText && !/\s$/.test(finalText)?' ':'') + t.trim(); }
+        else interim += t;
+      }
+      render(interim);
+    };
+    // reinício automático — sessões longas de reunião expiram sozinhas
+    rec.onend=()=>{ if(running){ try{rec.start();}catch(_){} } };
+    rec.onerror=ev=>{
+      if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){
+        permState='denied'; applyPerm(); stop();
+      } else if(ev.error==='no-speech'){ /* silêncio: o onend reinicia */ }
+    };
+
+    try{ rec.start(); }
+    catch(_){ show('Não consegui iniciar a captura de áudio.'); return; }
+
+    running=true;
+    recBtn.classList.add('rec'); ico.innerHTML=ICON_STOP; recBtn.setAttribute('aria-label','Parar transcrição');
+    status.style.display='none'; timerEl.classList.add('on');
+    t0=Date.now(); tick(); timerId=setInterval(tick,1000);
+    if(tr.querySelector('.empty')) tr.innerHTML='';
+  }
+
+  function stop(){
+    running=false;
+    if(rec){ try{rec.stop();}catch(_){} rec=null; }
+    clearInterval(timerId);
+    recBtn.classList.remove('rec'); ico.innerHTML=ICON_MIC; recBtn.setAttribute('aria-label','Iniciar transcrição');
+    timerEl.classList.remove('on'); status.style.display='block';
+    status.textContent='Transcrição pausada'; render('');
+  }
+
+  function render(interim){
+    const has = finalText.trim().length>0 || interim.trim().length>0;
+    copyBtn.disabled = !finalText.trim(); clearBtn.disabled = !finalText.trim();
+    if(!has){ tr.innerHTML='<span class="empty">O texto da reunião aparece aqui, em tempo real.</span>'; countEl.textContent=''; return; }
+    tr.innerHTML = escapeHtml(finalText) + (interim?'<span class="interim"> '+escapeHtml(interim)+'</span>':'');
+    tr.scrollTop=tr.scrollHeight;
+    const words=finalText.trim()?finalText.trim().split(/\s+/).length:0;
+    countEl.textContent=words+' palavra'+(words===1?'':'s');
+  }
+
+  function tick(){
+    const s=Math.round((Date.now()-t0)/1000), m=Math.floor(s/60);
+    timerEl.textContent=String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+  }
+
+  copyBtn.addEventListener('click',async()=>{
+    try{ await navigator.clipboard.writeText(finalText.trim());
+      const o=copyBtn.innerHTML; copyBtn.innerHTML='✓ Copiado'; setTimeout(()=>copyBtn.innerHTML=o,1400);
+    }catch(_){ /* fallback silencioso */ }
+  });
+  clearBtn.addEventListener('click',()=>{
+    finalText=''; render(''); status.textContent = running?'':(ok?'Tudo pronto — toque para transcrever':'');
+  });
+
+  function escapeHtml(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+})();
+</script>
+</body>
+</html>
