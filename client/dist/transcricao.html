@@ -183,7 +183,8 @@
   const ICON_STOP='<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="6" y="6" width="12" height="12" rx="3" fill="currentColor"/></svg>';
 
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  let ok=false, running=false, rec=null, finalText='', t0=null, timerId=null, permState='unknown';
+  let ok=false, running=false, rec=null, committed='', sessionText='', t0=null, timerId=null, permState='unknown';
+  function fullText(){ return committed + (sessionText? ((committed && !/\s$/.test(committed))?' ':'')+sessionText : ''); }
 
   // --- permissão de microfone: avisa antes e detecta bloqueio ---
   function setPermHint(state){
@@ -227,23 +228,28 @@
   function start(){
     if(permState==='denied'){ help.classList.add('show'); return; }
     help.classList.remove('show');
-    finalText = finalText || '';
+    sessionText='';
     rec=new SR();
     rec.lang='pt-BR';
     rec.continuous=true;
     rec.interimResults=true;
 
+    // reconstrói o texto da sessão a cada evento (evita duplicação no Android)
     rec.onresult=e=>{
-      let interim='';
-      for(let i=e.resultIndex;i<e.results.length;i++){
-        const t=e.results[i][0].transcript;
-        if(e.results[i].isFinal){ finalText += (finalText && !/\s$/.test(finalText)?' ':'') + t.trim(); }
-        else interim += t;
+      let s='', interim='';
+      for(let i=0;i<e.results.length;i++){
+        const r=e.results[i];
+        if(r.isFinal){ const t=r[0].transcript.trim(); if(t) s += (s?' ':'')+t; }
+        else interim += r[0].transcript;
       }
+      sessionText=s;
       render(interim);
     };
-    // reinício automático — sessões longas de reunião expiram sozinhas
-    rec.onend=()=>{ if(running){ try{rec.start();}catch(_){} } };
+    // ao encerrar a sessão, incorpora o texto e reinicia (segura reunião longa)
+    rec.onend=()=>{
+      if(sessionText.trim()){ committed=fullText(); sessionText=''; }
+      if(running){ try{rec.start();}catch(_){} }
+    };
     rec.onerror=ev=>{
       if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){
         permState='denied'; applyPerm(); stop();
@@ -270,12 +276,13 @@
   }
 
   function render(interim){
-    const has = finalText.trim().length>0 || interim.trim().length>0;
-    copyBtn.disabled = !finalText.trim(); clearBtn.disabled = !finalText.trim();
+    const full=fullText();
+    const has = full.trim().length>0 || interim.trim().length>0;
+    copyBtn.disabled = !full.trim(); clearBtn.disabled = !full.trim();
     if(!has){ tr.innerHTML='<span class="empty">O texto da reunião aparece aqui, em tempo real.</span>'; countEl.textContent=''; return; }
-    tr.innerHTML = escapeHtml(finalText) + (interim?'<span class="interim"> '+escapeHtml(interim)+'</span>':'');
+    tr.innerHTML = escapeHtml(full) + (interim?'<span class="interim"> '+escapeHtml(interim)+'</span>':'');
     tr.scrollTop=tr.scrollHeight;
-    const words=finalText.trim()?finalText.trim().split(/\s+/).length:0;
+    const words=full.trim()?full.trim().split(/\s+/).length:0;
     countEl.textContent=words+' palavra'+(words===1?'':'s');
   }
 
@@ -285,12 +292,12 @@
   }
 
   copyBtn.addEventListener('click',async()=>{
-    try{ await navigator.clipboard.writeText(finalText.trim());
+    try{ await navigator.clipboard.writeText(fullText().trim());
       const o=copyBtn.innerHTML; copyBtn.innerHTML='✓ Copiado'; setTimeout(()=>copyBtn.innerHTML=o,1400);
     }catch(_){ /* fallback silencioso */ }
   });
   clearBtn.addEventListener('click',()=>{
-    finalText=''; render(''); status.textContent = running?'':(ok?'Tudo pronto — toque para transcrever':'');
+    committed=''; sessionText=''; render(''); status.textContent = running?'':(ok?'Tudo pronto — toque para transcrever':'');
   });
 
   function escapeHtml(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
