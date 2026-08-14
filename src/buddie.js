@@ -1,27 +1,26 @@
 // src/buddie.js — Copilot "Buddie" para a transcrição de reunião (Ever i9)
-// Reaproveita OPENROUTER_KEY já configurada no ambiente. Sem chave no navegador.
+// Usa Claude via ANTHROPIC_KEY (já no ambiente). Chave nunca vai ao navegador.
 import express from 'express';
 const router = express.Router();
 
-async function callOpenRouter(system, userContent, model, maxTk) {
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+async function callClaude(system, userContent, model, maxTk) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.OPENROUTER_KEY}`
+      'x-api-key': process.env.ANTHROPIC_KEY,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json'
     },
     body: JSON.stringify({
-      model: model || 'deepseek/deepseek-chat-v3-0324',
+      model: model || 'claude-sonnet-5',
       max_tokens: maxTk || 1200,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: userContent }
-      ]
+      system,
+      messages: [{ role: 'user', content: userContent }]
     })
   });
-  if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${await res.text()}`);
+  if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
   const data = await res.json();
-  return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+  return (data.content && data.content[0] && data.content[0].text) || '';
 }
 
 const ACTIONS = {
@@ -46,7 +45,7 @@ router.post('/api/buddie', async (req, res) => {
     const system = 'Você é o Buddie, um copilot de reuniões da Ever i9. Responda em português do Brasil, direto e útil, em Markdown enxuto (sem enrolação). Baseie-se apenas no trecho fornecido; se faltar contexto, diga objetivamente o que falta.';
     const userContent = `TRECHO DA TRANSCRIÇÃO:\n"""\n${context || '(nenhum trecho selecionado)'}\n"""\n\nPEDIDO: ${instruction}`;
 
-    const answer = await callOpenRouter(system, userContent, body.model, 1200);
+    const answer = await callClaude(system, userContent, body.model, 1200);
     res.json({ answer });
   } catch (e) {
     res.status(500).json({ error: e.message });
