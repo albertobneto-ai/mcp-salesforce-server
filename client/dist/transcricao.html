@@ -160,7 +160,7 @@
       </div>
     </div>
 
-    <footer><b>Ever i9</b> · transcrição nativa do navegador, em português.</footer>
+    <footer><b>Ever i9</b> · transcrição nativa do navegador, em português. <b>v3</b></footer>
   </div>
 
 <script>
@@ -184,7 +184,19 @@
 
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   let ok=false, running=false, rec=null, committed='', sessionText='', t0=null, timerId=null, permState='unknown';
-  function fullText(){ return committed + (sessionText? ((committed && !/\s$/.test(committed))?' ':'')+sessionText : ''); }
+  // funde b em a removendo a sobreposição (blinda contra replay/duplicação do Android)
+  function mergeAppend(a,b){
+    a=(a||'').trim(); b=(b||'').trim();
+    if(!b) return a; if(!a) return b;
+    const aw=a.split(/\s+/), bw=b.split(/\s+/), max=Math.min(aw.length,bw.length);
+    let ov=0;
+    for(let k=max;k>=2;k--){
+      if(aw.slice(aw.length-k).join(' ').toLowerCase()===bw.slice(0,k).join(' ').toLowerCase()){ ov=k; break; }
+    }
+    const tail=bw.slice(ov).join(' ');
+    return tail? a+' '+tail : a;
+  }
+  function fullText(){ return mergeAppend(committed, sessionText); }
 
   // --- permissão de microfone: avisa antes e detecta bloqueio ---
   function setPermHint(state){
