@@ -23,6 +23,7 @@ import serasaMockRouter from "./serasa-mock.js";
 import emailValidation from "./email-validation.js";
 import qaTesterRouter from "./qa-tester.js";
 import { registerCofreRoutes } from "./cofre-db.js";
+import { buddieRouter } from "./buddie.js";
 
 const app = express();
 app.use(express.json({ limit: "50mb" }));
@@ -2248,6 +2249,10 @@ registerCofreRoutes(app);
   // QA Tester - automated functional testing
   app.use('/api/qa', qaTesterRouter);
   console.log('[qa-tester] Mounted at /api/qa');
+
+  // Buddie - copilot da transcricao
+  app.use(buddieRouter);
+  console.log('[buddie] Mounted at /api/buddie');
 
 // --- Everi9 Chat App ---
 mountChatApp(app);
