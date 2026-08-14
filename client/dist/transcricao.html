@@ -100,7 +100,54 @@
 
   footer{margin:18px 4px 0;text-align:center;font-size:11.5px;color:var(--ink-soft);line-height:1.5}
   footer b{color:var(--sf-blue-deep);font-weight:700}
-  @media (prefers-reduced-motion:reduce){.recBtn.rec .ring{display:none}.help.show{animation:none}}
+
+  /* Buddie — copilot */
+  .fab{position:fixed;right:18px;bottom:22px;z-index:40;width:58px;height:58px;border-radius:50%;border:none;cursor:pointer;
+    background:linear-gradient(135deg,#0176D3,#8E44FF);color:#fff;box-shadow:0 10px 24px rgba(1,118,211,.42);
+    display:grid;place-items:center;transition:transform .15s}
+  .fab:active{transform:scale(.94)}
+  .fab .spark{position:absolute;top:-2px;right:-2px;font-size:15px}
+  .modal-bg{position:fixed;inset:0;z-index:50;background:rgba(3,45,96,.45);backdrop-filter:blur(2px);
+    display:none;align-items:flex-end;justify-content:center}
+  .modal-bg.show{display:flex;animation:fade .2s ease}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .modal{background:#fff;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;
+    border-radius:22px 22px 0 0;box-shadow:0 -8px 40px rgba(3,45,96,.25);padding:18px 18px 22px;animation:up .25s ease}
+  @media(min-width:560px){.modal-bg{align-items:center}.modal{border-radius:22px;max-height:86vh}}
+  @keyframes up{from{transform:translateY(24px)}to{transform:none}}
+  .m-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .m-ava{width:38px;height:38px;border-radius:11px;flex:none;background:linear-gradient(135deg,#0176D3,#8E44FF);display:grid;place-items:center;color:#fff}
+  .m-tt{font-family:'Nunito';font-weight:900;font-size:17px;color:var(--sf-blue-deep);line-height:1}
+  .m-tt small{display:block;font-family:'Inter';font-weight:500;font-size:11.5px;color:var(--ink-soft);margin-top:3px}
+  .m-x{margin-left:auto;background:none;border:none;cursor:pointer;color:var(--ink-soft);padding:6px;border-radius:8px}
+  .m-x:hover{background:var(--sf-sky)}
+  .m-lbl{font-family:'Nunito';font-weight:800;font-size:12px;color:var(--sf-blue-deep);margin:0 0 6px}
+  .m-ctx{width:100%;min-height:70px;max-height:130px;border:1px solid var(--line);border-radius:12px;padding:11px 12px;
+    font-family:'Inter';font-size:13px;color:var(--ink);resize:vertical;background:#F8FBFF}
+  .m-ctx:focus{outline:none;border-color:var(--sf-blue)}
+  .m-ctxbtns{display:flex;gap:7px;margin:7px 0 14px;flex-wrap:wrap}
+  .m-mini{font-size:11.5px;font-weight:600;color:var(--sf-blue);background:#fff;border:1px solid var(--sf-blue);border-radius:999px;padding:5px 11px;cursor:pointer}
+  .m-chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+  .m-chip{font-family:'Nunito';font-weight:700;font-size:12.5px;color:var(--sf-blue-deep);background:var(--sf-sky);border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer;transition:.15s}
+  .m-chip:hover{background:var(--sf-sky-2)}
+  .m-chip:disabled{opacity:.5;cursor:not-allowed}
+  .m-ask{display:flex;gap:8px;margin-bottom:14px}
+  .m-ask input{flex:1;border:1px solid var(--line);border-radius:11px;padding:11px 12px;font-family:'Inter';font-size:13px}
+  .m-ask input:focus{outline:none;border-color:var(--sf-blue)}
+  .m-send{border:none;background:var(--sf-blue);color:#fff;border-radius:11px;padding:0 15px;cursor:pointer;font-weight:800}
+  .m-send:disabled{opacity:.5;cursor:not-allowed}
+  .m-out{border-top:1px dashed var(--line);padding-top:14px;font-size:13.5px;line-height:1.6;color:var(--ink);min-height:24px}
+  .m-out .empty{color:var(--ink-soft);font-style:italic}
+  .m-out h4{font-family:'Nunito';font-weight:800;font-size:14px;color:var(--sf-blue-deep);margin:10px 0 6px}
+  .m-out ul{margin:6px 0;padding-left:20px}
+  .m-out li{margin:3px 0}
+  .m-out strong{color:var(--sf-blue-deep)}
+  .m-load{display:inline-flex;gap:5px;align-items:center;color:var(--sf-blue);font-weight:600;font-size:13px}
+  .m-load .dot{width:7px;height:7px;border-radius:50%;background:var(--sf-blue);animation:blink 1s infinite}
+  .m-load .dot:nth-child(2){animation-delay:.2s}.m-load .dot:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,100%{opacity:.3}50%{opacity:1}}
+
+  @media (prefers-reduced-motion:reduce){.recBtn.rec .ring{display:none}.help.show{animation:none}.modal,.modal-bg{animation:none}.m-load .dot{animation:none}}
 </style>
 </head>
 <body>
@@ -160,7 +207,45 @@
       </div>
     </div>
 
-    <footer><b>Ever i9</b> · transcrição nativa do navegador, em português. <b>v3</b></footer>
+    <footer><b>Ever i9</b> · transcrição nativa do navegador, em português. <b>v4</b></footer>
+  </div>
+
+  <!-- Buddie: botão flutuante + modal -->
+  <button class="fab" id="fab" aria-label="Abrir o Buddie">
+    <span class="spark">✨</span>
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="4" y="7" width="16" height="12" rx="4" fill="#fff"/><circle cx="9" cy="13" r="1.6" fill="#0176D3"/><circle cx="15" cy="13" r="1.6" fill="#0176D3"/><path d="M12 3v4M9 19v2M15 19v2" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+
+  <div class="modal-bg" id="modalBg">
+    <div class="modal" role="dialog" aria-label="Buddie">
+      <div class="m-head">
+        <div class="m-ava"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="4" y="7" width="16" height="12" rx="4" fill="#fff"/><circle cx="9" cy="13" r="1.6" fill="#8E44FF"/><circle cx="15" cy="13" r="1.6" fill="#8E44FF"/><path d="M12 3v4" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
+        <div class="m-tt">Buddie<small>copilot da reunião</small></div>
+        <button class="m-x" id="mX" aria-label="Fechar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      </div>
+
+      <p class="m-lbl">Trecho para o Buddie analisar</p>
+      <textarea class="m-ctx" id="mCtx" placeholder="Selecione um trecho na transcrição e toque em Buddie, ou cole/escreva aqui."></textarea>
+      <div class="m-ctxbtns">
+        <button class="m-mini" id="mSel">Usar seleção</button>
+        <button class="m-mini" id="mAll">Transcrição toda</button>
+      </div>
+
+      <p class="m-lbl">Ações rápidas</p>
+      <div class="m-chips" id="mChips">
+        <button class="m-chip" data-action="resumo">Resumir</button>
+        <button class="m-chip" data-action="acoes">Itens de ação</button>
+        <button class="m-chip" data-action="salesforce">Análise Salesforce</button>
+        <button class="m-chip" data-action="recomendacao">Recomendação</button>
+      </div>
+
+      <div class="m-ask">
+        <input id="mPrompt" placeholder="Ou pergunte algo…" />
+        <button class="m-send" id="mSend">Enviar</button>
+      </div>
+
+      <div class="m-out" id="mOut"><span class="empty">A resposta do Buddie aparece aqui.</span></div>
+    </div>
   </div>
 
 <script>
@@ -313,6 +398,78 @@
   });
 
   function escapeHtml(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+})();
+</script>
+
+<script>
+// Buddie — copilot da transcrição
+(function(){
+  const fab=document.getElementById('fab');
+  const bg=document.getElementById('modalBg');
+  const mX=document.getElementById('mX');
+  const mCtx=document.getElementById('mCtx');
+  const mSel=document.getElementById('mSel');
+  const mAll=document.getElementById('mAll');
+  const mChips=document.getElementById('mChips');
+  const mPrompt=document.getElementById('mPrompt');
+  const mSend=document.getElementById('mSend');
+  const mOut=document.getElementById('mOut');
+  const trEl=document.getElementById('tr');
+
+  let lastSelection='';
+  // captura a seleção ANTES do toque no FAB tirar o foco
+  function grabSel(){ const s=(window.getSelection&&window.getSelection().toString())||''; if(s.trim()) lastSelection=s.trim(); }
+  document.addEventListener('selectionchange',grabSel);
+  fab.addEventListener('pointerdown',grabSel);
+
+  function openModal(){
+    if(lastSelection && !mCtx.value.trim()) mCtx.value=lastSelection;
+    bg.classList.add('show');
+  }
+  function closeModal(){ bg.classList.remove('show'); }
+  fab.addEventListener('click',openModal);
+  mX.addEventListener('click',closeModal);
+  bg.addEventListener('click',e=>{ if(e.target===bg) closeModal(); });
+
+  mSel.addEventListener('click',()=>{ if(lastSelection) mCtx.value=lastSelection; else flash(mSel,'Selecione um trecho'); });
+  mAll.addEventListener('click',()=>{ const t=(trEl.textContent||'').trim(); mCtx.value = t.startsWith('O texto da')? '' : t; });
+
+  function flash(btn,txt){ const o=btn.textContent; btn.textContent=txt; setTimeout(()=>btn.textContent=o,1200); }
+
+  async function ask(action){
+    const context=mCtx.value.trim();
+    const prompt=mPrompt.value.trim();
+    if(!context && !prompt){ mOut.innerHTML='<span class="empty">Cole um trecho ou escreva uma pergunta primeiro.</span>'; return; }
+    setBusy(true);
+    mOut.innerHTML='<span class="m-load"><span class="dot"></span><span class="dot"></span><span class="dot"></span> Buddie pensando…</span>';
+    try{
+      const r=await fetch('/api/buddie',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({context,prompt,action})});
+      const d=await r.json();
+      if(!r.ok||d.error){ mOut.innerHTML='<span class="empty">Ops: '+esc(d.error||('erro '+r.status))+'</span>'; }
+      else mOut.innerHTML=md(d.answer||'(sem resposta)');
+    }catch(e){ mOut.innerHTML='<span class="empty">Falha de conexão. Tente de novo.</span>'; }
+    setBusy(false);
+  }
+  function setBusy(b){ mSend.disabled=b; mChips.querySelectorAll('.m-chip').forEach(c=>c.disabled=b); }
+
+  mChips.querySelectorAll('.m-chip').forEach(c=>c.addEventListener('click',()=>ask(c.dataset.action)));
+  mSend.addEventListener('click',()=>ask(''));
+  mPrompt.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); ask(''); } });
+
+  // markdown mínimo e seguro
+  function esc(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+  function md(s){
+    let h=esc(s);
+    h=h.replace(/^### (.*)$/gm,'<h4>$1</h4>').replace(/^## (.*)$/gm,'<h4>$1</h4>');
+    h=h.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+    // bullets
+    h=h.replace(/(?:^|\n)[-*] (.*)/g,(m,x)=>'\n<li>'+x+'</li>');
+    h=h.replace(/(<li>[\s\S]*?<\/li>)/g,'<ul>$1</ul>').replace(/<\/ul>\s*<ul>/g,'');
+    h=h.replace(/\n{2,}/g,'<br><br>').replace(/\n/g,'<br>');
+    h=h.replace(/<br>\s*(<ul>|<h4>)/g,'$1').replace(/(<\/ul>|<\/h4>)\s*<br>/g,'$1');
+    return h;
+  }
 })();
 </script>
 </body>
