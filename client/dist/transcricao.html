@@ -70,6 +70,23 @@
   .lang-btn.on{background:var(--sf-blue);border-color:var(--sf-blue);color:#fff}
   .lang-btn:disabled{opacity:.55;cursor:not-allowed}
 
+  .lang .sep{flex:1}
+  .tog{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font:600 12px Inter,system-ui,sans-serif;color:var(--ink);user-select:none}
+  .tog .sw{width:34px;height:20px;border-radius:999px;background:#cfd8e3;position:relative;transition:.18s;flex:none}
+  .tog .sw::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.18s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  .tog.on .sw{background:var(--sf-mint)}
+  .tog.on .sw::after{left:16px}
+  .tog.busy .sw{background:var(--sf-blue)}
+  .split{display:none;gap:10px;margin-bottom:0}
+  .split.on{display:grid;grid-template-columns:1fr}
+  @media(min-width:760px){.split.on{grid-template-columns:1fr 1fr}}
+  .split.on + .tr{display:none}
+  .split .col .lbl{font-family:'Nunito';font-weight:800;font-size:11.5px;color:var(--ink-soft);margin:0 2px 5px;text-transform:uppercase;letter-spacing:.4px}
+  .split .col .lbl .pend{color:var(--sf-blue);font-weight:600;text-transform:none;letter-spacing:0;margin-left:6px}
+  .split .tr{min-height:160px;max-height:32vh}
+  @media(min-width:760px){.split .tr{max-height:48vh;min-height:220px}}
+  .tr .pending{color:var(--ink-soft);font-style:italic}
+
   /* transcrição — protagonista */
   .tr-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
   .tr-head span{font-family:'Nunito';font-weight:800;font-size:13px;color:var(--sf-blue-deep)}
@@ -201,6 +218,8 @@
         Idioma:
         <button class="lang-btn on" data-lang="pt-BR" role="radio" aria-checked="true">Português</button>
         <button class="lang-btn" data-lang="en-US" role="radio" aria-checked="false">English</button>
+        <span class="sep"></span>
+        <span class="tog" id="tradTog" role="switch" aria-checked="false" tabindex="0"><span class="sw"></span><span id="tradLbl">Traduzir → EN</span></span>
       </div>
 
       <div class="bar">
@@ -228,6 +247,10 @@
       </div>
 
       <div class="tr-head"><span>📄 Transcrição</span></div>
+      <div class="split" id="split">
+        <div class="col"><div class="lbl"><span id="lblOrig">Original (PT)</span></div><div class="tr" id="trOrig"></div></div>
+        <div class="col"><div class="lbl"><span id="lblTrad">Tradução (EN)</span><span class="pend" id="tradPend"></span></div><div class="tr" id="trTrad"><span class="empty">A tradução aparece aqui, frase a frase.</span></div></div>
+      </div>
       <div class="tr" id="tr"><span class="empty">O texto da reunião aparece aqui, em tempo real.</span></div>
 
       <div class="actions">
@@ -252,7 +275,7 @@
     </div>
     <div class="toast" id="toast"></div>
 
-    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v6</b></footer>
+    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v7</b></footer>
   </div>
 
   <!-- Buddie: botão flutuante + modal -->
@@ -314,7 +337,7 @@
   const ICON_STOP='<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="6" y="6" width="12" height="12" rx="3" fill="currentColor"/></svg>';
 
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  let lang='pt-BR'; let startedAt=null; let ok=false, running=false, rec=null, committed='', sessionText='', t0=null, timerId=null, permState='unknown';
+  let lang='pt-BR'; let startedAt=null; let trad=false; let ok=false, running=false, rec=null, committed='', sessionText='', t0=null, timerId=null, permState='unknown';
   // funde b em a removendo a sobreposição (blinda contra replay/duplicação do Android)
   function mergeAppend(a,b){
     a=(a||'').trim(); b=(b||'').trim();
@@ -367,7 +390,49 @@
     if(running) return;
     lang=b.dataset.lang;
     langBtns.forEach(x=>{const on=x===b; x.classList.toggle('on',on); x.setAttribute('aria-checked',on);});
+    updTradLabels();
   }));
+  // ---- tradução ao vivo ----
+  const tradTog=document.getElementById('tradTog'), tradLbl=document.getElementById('tradLbl'), split=document.getElementById('split');
+  const trOrig=document.getElementById('trOrig'), trTrad=document.getElementById('trTrad'), tradPend=document.getElementById('tradPend');
+  const lblOrig=document.getElementById('lblOrig'), lblTrad=document.getElementById('lblTrad');
+  let tradText='', tradDoneWords=0, tradQueue='', tradBusy=false, tradTimer=null, tradSrcSnapshot='';
+  function updTradLabels(){ const en=lang==='en-US'; tradLbl.textContent='Traduzir → '+(en?'PT':'EN'); lblOrig.textContent='Original ('+(en?'EN':'PT')+')'; lblTrad.textContent='Tradução ('+(en?'PT':'EN')+')'; }
+  function setTrad(on){ trad=on; tradTog.classList.toggle('on',on); tradTog.setAttribute('aria-checked',on); split.classList.toggle('on',on); render(''); if(on) scheduleTrad(0); }
+  tradTog.addEventListener('click',()=>setTrad(!trad));
+  tradTog.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();setTrad(!trad);}});
+  // frases finais ainda não traduzidas = fullText() menos as palavras já enviadas
+  function pendingSource(){ const w=fullText().trim().split(/\s+/).filter(Boolean); return w.slice(tradDoneWords); }
+  function scheduleTrad(ms){ clearTimeout(tradTimer); tradTimer=setTimeout(runTrad, ms==null?1800:ms); }
+  async function runTrad(){
+    if(!trad||tradBusy) return;
+    const w=pendingSource(); if(!w.length){ tradPend.textContent=''; return; }
+    // só traduz quando há frase completa ou já acumulou ≥12 palavras ou gravação parada
+    const chunk=w.join(' ');
+    const complete=/[.!?…]$/.test(chunk)||w.length>=12||!running;
+    if(!complete){ tradPend.textContent='…'; scheduleTrad(1500); return; }
+    tradBusy=true; tradTog.classList.add('busy'); tradPend.textContent='traduzindo…';
+    try{
+      const r=await fetch('/api/traduzir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({texto:chunk,de:lang})});
+      const d=await r.json();
+      if(r.ok&&d.traducao){ tradText=(tradText?tradText+' ':'')+d.traducao; tradDoneWords+=w.length; }
+      else tradPend.textContent='falha, tentando…';
+    }catch(_){ tradPend.textContent='sem conexão…'; }
+    tradBusy=false; tradTog.classList.remove('busy'); render('');
+    if(pendingSource().length) scheduleTrad(800); else tradPend.textContent='';
+  }
+  function renderTrad(interim){
+    if(!trad) return;
+    const full=fullText(); const has=full.trim()||interim.trim();
+    trOrig.innerHTML= has? escapeHtml(full)+(interim?'<span class="interim"> '+escapeHtml(interim)+'</span>':'') : '<span class="empty">O texto da reunião aparece aqui, em tempo real.</span>';
+    trOrig.scrollTop=trOrig.scrollHeight;
+    const pend=pendingSource().join(' ');
+    trTrad.innerHTML= (tradText||pend)? escapeHtml(tradText)+(pend?'<span class="pending"> ['+escapeHtml(pend.slice(0,80))+(pend.length>80?'…':'')+']</span>':'') : '<span class="empty">A tradução aparece aqui, frase a frase.</span>';
+    trTrad.scrollTop=trTrad.scrollHeight;
+    if(!tradBusy && pend) scheduleTrad();
+  }
+  function tradReset(){ tradText=''; tradDoneWords=0; tradPend.textContent=''; }
+  function tradTextFor(){ return tradText.trim(); }
   function lockLang(l){ langBtns.forEach(x=>x.disabled=l); }
   consent.addEventListener('click',toggle);
   consent.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();toggle();}});
@@ -422,16 +487,16 @@
     clearInterval(timerId);
     recBtn.classList.remove('rec'); ico.innerHTML=ICON_MIC; recBtn.setAttribute('aria-label','Iniciar transcrição');
     timerEl.classList.remove('on'); status.style.display='block';
-    status.textContent='Transcrição pausada'; render('');
+    status.textContent='Transcrição pausada'; render(''); if(trad) scheduleTrad(300);
   }
 
   function render(interim){
     const full=fullText();
     const has = full.trim().length>0 || interim.trim().length>0;
     copyBtn.disabled = !full.trim(); clearBtn.disabled = !full.trim(); saveBtn.disabled = !full.trim();
-    if(!has){ tr.innerHTML='<span class="empty">O texto da reunião aparece aqui, em tempo real.</span>'; countEl.textContent=''; return; }
+    if(!has){ tr.innerHTML='<span class="empty">O texto da reunião aparece aqui, em tempo real.</span>'; countEl.textContent=''; renderTrad(''); return; }
     tr.innerHTML = escapeHtml(full) + (interim?'<span class="interim"> '+escapeHtml(interim)+'</span>':'');
-    tr.scrollTop=tr.scrollHeight;
+    tr.scrollTop=tr.scrollHeight; renderTrad(interim);
     const words=full.trim()?full.trim().split(/\s+/).length:0;
     countEl.textContent=words+' palavra'+(words===1?'':'s');
   }
@@ -442,12 +507,12 @@
   }
 
   copyBtn.addEventListener('click',async()=>{
-    try{ await navigator.clipboard.writeText(fullText().trim());
+    try{ const t=tradTextFor(); await navigator.clipboard.writeText(fullText().trim()+(trad&&t?'\n\n--- Tradução ---\n'+t:''));
       const o=copyBtn.innerHTML; copyBtn.innerHTML='✓ Copiado'; setTimeout(()=>copyBtn.innerHTML=o,1400);
     }catch(_){ /* fallback silencioso */ }
   });
   clearBtn.addEventListener('click',()=>{
-    committed=''; sessionText=''; startedAt=null; render(''); status.textContent = running?'':(ok?'Tudo pronto — toque para transcrever':'');
+    committed=''; sessionText=''; startedAt=null; tradReset(); render(''); status.textContent = running?'':(ok?'Tudo pronto — toque para transcrever':'');
   });
 
   function escapeHtml(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
@@ -463,7 +528,7 @@
     saveBtn.disabled=true;
     try{
       const r=await fetch('/api/transcricoes',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({titulo,idioma:lang,iniciado_em:ini.toISOString(),duracao_s:dur,palavras:texto.split(/\s+/).length,texto})});
+        body:JSON.stringify({titulo,idioma:lang,iniciado_em:ini.toISOString(),duracao_s:dur,palavras:texto.split(/\s+/).length,texto,traducao:trad?tradTextFor():''})});
       const d=await r.json();
       if(!r.ok||!d.ok) throw new Error(d.error||('erro '+r.status));
       showToast('✓ Salva #'+d.id); window.loadSaved&&window.loadSaved();
@@ -490,7 +555,7 @@
       if(!d.data.length){ list.innerHTML='<span class="empty">Nenhuma transcrição salva ainda.</span>'; return; }
       list.innerHTML=d.data.map(t=>`<div class="saved-item" data-id="${t.id}">
         <div class="si-top"><span class="si-title">${esc(t.titulo||('Reunião '+fmt(t.iniciado_em)))}</span>
-        <span class="si-meta">${fmt(t.iniciado_em)} · ${dur(t.duracao_s)} · ${t.palavras}p · ${t.idioma==='en-US'?'EN':'PT'}</span></div>
+        <span class="si-meta">${fmt(t.iniciado_em)} · ${dur(t.duracao_s)} · ${t.palavras}p · ${t.idioma==='en-US'?'EN':'PT'}${t.tem_traducao?' · 🌐':''}</span></div>
         <div class="si-prev">${esc(t.preview)}${(t.preview||'').length>=160?'…':''}</div>
         <div class="si-acts">
           <button class="si-btn" data-act="copy">Copiar</button>
@@ -512,18 +577,19 @@
     if(!act){
       const wasOpen=item.classList.contains('open');
       list.querySelectorAll('.saved-item.open').forEach(x=>x.classList.remove('open'));
-      if(!wasOpen){ item.classList.add('open'); try{ const t=await full(id); item.querySelector('.si-prev').textContent=t.texto; }catch(_){ } }
+      if(!wasOpen){ item.classList.add('open'); try{ const t=await full(id); item.querySelector('.si-prev').textContent=t.texto+(t.traducao?'\n\n--- Tradução ---\n'+t.traducao:''); }catch(_){ } }
       return;
     }
     e.stopPropagation();
     try{
       const t=await full(id);
       const head=`# ${t.titulo||'Reunião'}\nData/hora: ${fmt(t.iniciado_em)}\nDuração: ${dur(t.duracao_s)} · Palavras: ${t.palavras} · Idioma: ${t.idioma}\n\n`;
-      if(act==='copy'){ await navigator.clipboard.writeText(head+t.texto); flash(e.target,'✓ Copiado'); }
+      const body=t.texto+(t.traducao?'\n\n--- Tradução ---\n'+t.traducao:'');
+      if(act==='copy'){ await navigator.clipboard.writeText(head+body); flash(e.target,'✓ Copiado'); }
       else if(act==='down'){
         const d=new Date(t.iniciado_em), p=n=>String(n).padStart(2,'0');
         const name=`transcricao_${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}.txt`;
-        const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([head+t.texto],{type:'text/plain;charset=utf-8'})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+        const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([head+body],{type:'text/plain;charset=utf-8'})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
       }
       else if(act==='buddie'){ const ctx=document.getElementById('mCtx'); ctx.value=t.texto; document.getElementById('fab').click(); }
       else if(act==='rename'){

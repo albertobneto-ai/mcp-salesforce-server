@@ -14,9 +14,11 @@ async function ensureTable() {
       duracao_s   INTEGER DEFAULT 0,
       palavras    INTEGER DEFAULT 0,
       texto       TEXT NOT NULL,
+      traducao    TEXT DEFAULT '',
       created_at  TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  await pool.query(`ALTER TABLE transcricoes ADD COLUMN IF NOT EXISTS traducao TEXT DEFAULT ''`);
 }
 ensureTable().catch(e => console.log('[transcricoes] init:', e.message));
 
@@ -26,7 +28,7 @@ export function registerTranscricoesRoutes(app) {
     try {
       await ensureTable();
       const r = await pool.query(
-        `SELECT id, titulo, idioma, iniciado_em, duracao_s, palavras, LEFT(texto, 160) AS preview, created_at
+        `SELECT id, titulo, idioma, iniciado_em, duracao_s, palavras, LEFT(texto, 160) AS preview, (traducao<>'') AS tem_traducao, created_at
            FROM transcricoes ORDER BY iniciado_em DESC LIMIT 200`);
       res.json({ ok: true, data: r.rows });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -51,11 +53,11 @@ export function registerTranscricoesRoutes(app) {
       if (!texto) return res.status(400).json({ ok: false, error: 'texto vazio' });
       const iniciado = b.iniciado_em ? new Date(b.iniciado_em) : new Date();
       const r = await pool.query(
-        `INSERT INTO transcricoes (titulo, idioma, iniciado_em, duracao_s, palavras, texto)
-         VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, iniciado_em, created_at`,
+        `INSERT INTO transcricoes (titulo, idioma, iniciado_em, duracao_s, palavras, texto, traducao)
+         VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, iniciado_em, created_at`,
         [(b.titulo || '').toString().slice(0, 200), (b.idioma || 'pt-BR').toString().slice(0, 10),
          isNaN(iniciado) ? new Date() : iniciado, parseInt(b.duracao_s) || 0,
-         parseInt(b.palavras) || texto.split(/\s+/).length, texto]);
+         parseInt(b.palavras) || texto.split(/\s+/).length, texto, (b.traducao || '').toString()]);
       res.json({ ok: true, ...r.rows[0] });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
   });

@@ -52,4 +52,20 @@ router.post('/api/buddie', async (req, res) => {
   }
 });
 
+// Tradução ao vivo da transcrição (PT<->EN) — Haiku, rápido e barato
+router.post('/api/traduzir', async (req, res) => {
+  try {
+    const b = req.body || {};
+    const texto = (b.texto || '').toString().slice(0, 6000);
+    const de = (b.de || 'pt-BR').toString();
+    const para = de === 'en-US' ? 'português do Brasil' : 'inglês';
+    if (!texto.trim()) return res.status(400).json({ error: 'texto vazio' });
+    const system = `Você é um tradutor simultâneo de reuniões corporativas. Traduza o texto para ${para}, preservando sentido, nomes próprios, siglas e termos técnicos (Salesforce, CRM etc.). Responda SOMENTE com a tradução, sem comentários, sem aspas, sem prefixos.`;
+    const answer = await callClaude(system, texto, b.model || 'claude-haiku-4-5', 1500);
+    res.json({ traducao: answer.trim() });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export { router as buddieRouter };
