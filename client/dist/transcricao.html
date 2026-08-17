@@ -86,6 +86,29 @@
   .btn.ghost{background:#fff;color:var(--sf-blue);border-color:var(--sf-blue)}
   .btn:disabled{opacity:.45;cursor:not-allowed}
 
+  .btn.save{background:var(--sf-mint);color:#fff;box-shadow:0 5px 12px rgba(6,196,179,.28)}
+  .toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%) translateY(20px);z-index:60;background:var(--sf-blue-deep);color:#fff;
+    font-size:12.5px;padding:9px 14px;border-radius:999px;opacity:0;pointer-events:none;transition:.25s;white-space:nowrap}
+  .toast.show{opacity:1;transform:translateX(-50%)}
+  /* histórico de transcrições salvas */
+  .saved{margin-top:20px}
+  .saved-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .saved-head span{font-family:'Nunito';font-weight:800;font-size:13px;color:var(--sf-blue-deep)}
+  .saved-head button{background:none;border:none;color:var(--sf-blue);font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
+  .saved-list{display:flex;flex-direction:column;gap:8px}
+  .saved-item{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;transition:.15s}
+  .saved-item:hover{border-color:var(--sf-blue)}
+  .saved-item .si-top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .saved-item .si-title{font-weight:700;font-size:13px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .saved-item .si-meta{font-size:11.5px;color:var(--ink-soft);flex:none}
+  .saved-item .si-prev{font-size:12px;color:var(--ink-soft);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .saved-item .si-acts{display:none;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .saved-item.open .si-acts{display:flex}
+  .saved-item.open .si-prev{white-space:pre-wrap;max-height:40vh;overflow-y:auto;color:var(--ink);line-height:1.6;font-size:13px}
+  .si-btn{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 10px;font:600 11.5px Inter,system-ui,sans-serif;color:var(--sf-blue);cursor:pointer}
+  .si-btn.danger{color:var(--sf-red)}
+  .saved .empty{color:var(--ink-soft);font-size:12.5px;font-style:italic}
+
   .banner{display:none;gap:9px;align-items:flex-start;background:#FFF6E9;border:1px solid #FBE2BA;color:#6B3B01;
     border-radius:12px;padding:11px 13px;margin-bottom:16px;font-size:12.5px;line-height:1.5}
   .banner.show{display:flex}
@@ -216,10 +239,20 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-9 0v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Limpar
         </button>
+        <button class="btn save" id="save" disabled>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 4h11l3 3v13H5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 4v5h7V4M8 20v-6h8v6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          Salvar
+        </button>
+      </div>
+
+      <div class="saved" id="saved">
+        <div class="saved-head"><span>🗂 Transcrições salvas</span><button id="savedReload">Atualizar</button></div>
+        <div class="saved-list" id="savedList"><span class="empty">Carregando…</span></div>
       </div>
     </div>
+    <div class="toast" id="toast"></div>
 
-    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v5</b></footer>
+    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v6</b></footer>
   </div>
 
   <!-- Buddie: botão flutuante + modal -->
@@ -271,6 +304,7 @@
   const tr=document.getElementById('tr');
   const copyBtn=document.getElementById('copy');
   const clearBtn=document.getElementById('clear');
+  const saveBtn=document.getElementById('save');
   const banner=document.getElementById('banner');
   const bannerTxt=document.getElementById('bannerTxt');
   const permhint=document.getElementById('permhint');
@@ -280,7 +314,7 @@
   const ICON_STOP='<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="6" y="6" width="12" height="12" rx="3" fill="currentColor"/></svg>';
 
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  let lang='pt-BR'; let ok=false, running=false, rec=null, committed='', sessionText='', t0=null, timerId=null, permState='unknown';
+  let lang='pt-BR'; let startedAt=null; let ok=false, running=false, rec=null, committed='', sessionText='', t0=null, timerId=null, permState='unknown';
   // funde b em a removendo a sobreposição (blinda contra replay/duplicação do Android)
   function mergeAppend(a,b){
     a=(a||'').trim(); b=(b||'').trim();
@@ -378,7 +412,7 @@
     running=true; lockLang(true);
     recBtn.classList.add('rec'); ico.innerHTML=ICON_STOP; recBtn.setAttribute('aria-label','Parar transcrição');
     status.style.display='none'; timerEl.classList.add('on');
-    t0=Date.now(); tick(); timerId=setInterval(tick,1000);
+    t0=Date.now(); if(!fullText().trim()) startedAt=new Date(); tick(); timerId=setInterval(tick,1000);
     if(tr.querySelector('.empty')) tr.innerHTML='';
   }
 
@@ -394,7 +428,7 @@
   function render(interim){
     const full=fullText();
     const has = full.trim().length>0 || interim.trim().length>0;
-    copyBtn.disabled = !full.trim(); clearBtn.disabled = !full.trim();
+    copyBtn.disabled = !full.trim(); clearBtn.disabled = !full.trim(); saveBtn.disabled = !full.trim();
     if(!has){ tr.innerHTML='<span class="empty">O texto da reunião aparece aqui, em tempo real.</span>'; countEl.textContent=''; return; }
     tr.innerHTML = escapeHtml(full) + (interim?'<span class="interim"> '+escapeHtml(interim)+'</span>':'');
     tr.scrollTop=tr.scrollHeight;
@@ -413,13 +447,102 @@
     }catch(_){ /* fallback silencioso */ }
   });
   clearBtn.addEventListener('click',()=>{
-    committed=''; sessionText=''; render(''); status.textContent = running?'':(ok?'Tudo pronto — toque para transcrever':'');
+    committed=''; sessionText=''; startedAt=null; render(''); status.textContent = running?'':(ok?'Tudo pronto — toque para transcrever':'');
   });
 
   function escapeHtml(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+  // ---- salvar no servidor ----
+  const toast=document.getElementById('toast');
+  function showToast(m){ toast.textContent=m; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),1800); }
+  saveBtn.addEventListener('click',async()=>{
+    const texto=fullText().trim(); if(!texto) return;
+    const ini=startedAt||new Date();
+    const dur=running&&t0? Math.round((Date.now()-t0)/1000) : (timerEl.textContent&&timerEl.textContent!=='00:00'? (m=>m? +m[1]*60+ +m[2]:0)(timerEl.textContent.match(/(\d+):(\d+)/)) : 0);
+    const raw=prompt('Título da reunião (opcional):', 'Reunião '+ini.toLocaleDateString('pt-BR')+' '+ini.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+    if(raw===null) return; const titulo=raw.trim();
+    saveBtn.disabled=true;
+    try{
+      const r=await fetch('/api/transcricoes',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({titulo,idioma:lang,iniciado_em:ini.toISOString(),duracao_s:dur,palavras:texto.split(/\s+/).length,texto})});
+      const d=await r.json();
+      if(!r.ok||!d.ok) throw new Error(d.error||('erro '+r.status));
+      showToast('✓ Salva #'+d.id); window.loadSaved&&window.loadSaved();
+    }catch(e){ showToast('Falha ao salvar: '+e.message); }
+    saveBtn.disabled=false;
+  });
 })();
 </script>
 
+<script>
+// Histórico de transcrições salvas
+(function(){
+  const list=document.getElementById('savedList');
+  const reload=document.getElementById('savedReload');
+  const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const fmt=iso=>{const d=new Date(iso);return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});};
+  const dur=s=>{s=+s||0;const m=Math.floor(s/60);return String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0');};
+  const cache={};
+  async function load(){
+    list.innerHTML='<span class="empty">Carregando…</span>';
+    try{
+      const r=await fetch('/api/transcricoes'); const d=await r.json();
+      if(!d.ok) throw new Error(d.error);
+      if(!d.data.length){ list.innerHTML='<span class="empty">Nenhuma transcrição salva ainda.</span>'; return; }
+      list.innerHTML=d.data.map(t=>`<div class="saved-item" data-id="${t.id}">
+        <div class="si-top"><span class="si-title">${esc(t.titulo||('Reunião '+fmt(t.iniciado_em)))}</span>
+        <span class="si-meta">${fmt(t.iniciado_em)} · ${dur(t.duracao_s)} · ${t.palavras}p · ${t.idioma==='en-US'?'EN':'PT'}</span></div>
+        <div class="si-prev">${esc(t.preview)}${(t.preview||'').length>=160?'…':''}</div>
+        <div class="si-acts">
+          <button class="si-btn" data-act="copy">Copiar</button>
+          <button class="si-btn" data-act="down">Baixar .txt</button>
+          <button class="si-btn" data-act="buddie">Enviar ao Buddie</button>
+          <button class="si-btn" data-act="rename">Renomear</button>
+          <button class="si-btn danger" data-act="del">Excluir</button>
+        </div></div>`).join('');
+    }catch(e){ list.innerHTML='<span class="empty">Erro ao carregar: '+esc(e.message)+'</span>'; }
+  }
+  async function full(id){
+    if(cache[id]) return cache[id];
+    const r=await fetch('/api/transcricoes/'+id); const d=await r.json();
+    if(!d.ok) throw new Error(d.error); cache[id]=d.data; return d.data;
+  }
+  list.addEventListener('click',async e=>{
+    const item=e.target.closest('.saved-item'); if(!item) return;
+    const id=item.dataset.id; const act=e.target.dataset.act;
+    if(!act){
+      const wasOpen=item.classList.contains('open');
+      list.querySelectorAll('.saved-item.open').forEach(x=>x.classList.remove('open'));
+      if(!wasOpen){ item.classList.add('open'); try{ const t=await full(id); item.querySelector('.si-prev').textContent=t.texto; }catch(_){ } }
+      return;
+    }
+    e.stopPropagation();
+    try{
+      const t=await full(id);
+      const head=`# ${t.titulo||'Reunião'}\nData/hora: ${fmt(t.iniciado_em)}\nDuração: ${dur(t.duracao_s)} · Palavras: ${t.palavras} · Idioma: ${t.idioma}\n\n`;
+      if(act==='copy'){ await navigator.clipboard.writeText(head+t.texto); flash(e.target,'✓ Copiado'); }
+      else if(act==='down'){
+        const d=new Date(t.iniciado_em), p=n=>String(n).padStart(2,'0');
+        const name=`transcricao_${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}.txt`;
+        const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([head+t.texto],{type:'text/plain;charset=utf-8'})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+      }
+      else if(act==='buddie'){ const ctx=document.getElementById('mCtx'); ctx.value=t.texto; document.getElementById('fab').click(); }
+      else if(act==='rename'){
+        const n=prompt('Novo título:', t.titulo||''); if(n===null) return;
+        await fetch('/api/transcricoes/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({titulo:n.trim()})});
+        delete cache[id]; load();
+      }
+      else if(act==='del'){
+        if(!confirm('Excluir esta transcrição? Não dá para desfazer.')) return;
+        await fetch('/api/transcricoes/'+id,{method:'DELETE'}); delete cache[id]; load();
+      }
+    }catch(err){ alert('Erro: '+err.message); }
+  });
+  function flash(btn,txt){ const o=btn.textContent; btn.textContent=txt; setTimeout(()=>btn.textContent=o,1200); }
+  reload.addEventListener('click',load);
+  window.loadSaved=load;
+  load();
+})();
+</script>
 <script>
 // Buddie — copilot da transcrição
 (function(){

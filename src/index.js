@@ -25,6 +25,7 @@ import qaTesterRouter from "./qa-tester.js";
 import { registerCofreRoutes } from "./cofre-db.js";
 import { buddieRouter } from "./buddie.js";
 import { registerTriagemRoutes } from "./triagem-db.js";
+import { registerTranscricoesRoutes } from "./transcricoes-db.js";
 
 const app = express();
 app.use(express.json({ limit: "50mb" }));
@@ -2229,6 +2230,7 @@ registerRcWorkerRoutes(app);
 registerWorkerEngineRoutes(app);
 registerCofreRoutes(app);
 registerTriagemRoutes(app);
+registerTranscricoesRoutes(app);
   
   // TechEnglish
   app.use('/english', englishRouter);
@@ -2266,3 +2268,4 @@ app.listen(PORT, () => {
   console.log(`Features: ScratchOrgs=true, MultiOrg=true, MockData=true, GitHub=${!!ghClient}, DeployViaUrl=true`);
 });
 // DC-RESTART 2026-05-31T22:19:43.731459
+
