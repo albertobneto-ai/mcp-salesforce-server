@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Triagem de Bugs Partner - CRM B2B Algar</title>
+<style>
+:root{--preto:#0d0d0d;--cinza-med:#6b6b6b;--cinza:#8f8f8f;--cinza-cl:#d9d9d9;--linha:#c9c9c9;--gelo:#f2f3f5;--gelo2:#fafbfc;}
+*{box-sizing:border-box;}html,body{margin:0;padding:0;}
+body{font-family:Arial,Helvetica,sans-serif;color:var(--preto);background:var(--gelo);line-height:1.5;font-size:13px;}
+.wrap{max-width:1000px;margin:0 auto;padding:0 24px 60px;}
+.capa{background:linear-gradient(135deg,#0d0d0d 0%,#4a4a4a 100%);color:#fff;padding:64px 60px;}
+.capa .kicker{letter-spacing:.32em;text-transform:uppercase;font-size:11px;color:#d9d9d9;margin-bottom:20px;}
+.capa h1{font-size:36px;line-height:1.1;margin:0 0 12px;font-weight:800;letter-spacing:-.5px;}
+.capa .sub{font-size:15px;color:#e6e6e6;max-width:640px;}
+.capa .meta{margin-top:30px;font-size:12px;color:#cfcfcf;border-top:1px solid rgba(255,255,255,.25);padding-top:14px;display:flex;gap:26px;flex-wrap:wrap;}
+.capa .meta b{color:#fff;}
+.toolbar{position:sticky;top:0;z-index:50;background:var(--preto);color:#fff;display:flex;gap:8px;align-items:center;padding:9px 24px;flex-wrap:wrap;}
+.toolbar .t-title{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#bdbdbd;margin-right:auto;}
+.toolbar button{background:#fff;color:#0d0d0d;border:0;padding:7px 13px;font-size:12px;font-weight:700;border-radius:4px;cursor:pointer;font-family:inherit;}
+.toolbar button.ghost{background:transparent;color:#fff;border:1px solid #666;}
+.toolbar .saveflag{font-size:11px;color:#9ad19a;min-width:70px;text-align:right;}
+.filtros{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:24px 0 6px;}
+.filtros .fl-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--cinza-med);font-weight:700;margin-right:4px;}
+.filtros button{background:#fff;border:1px solid var(--preto);color:var(--preto);padding:6px 12px;font-size:12px;font-weight:700;border-radius:3px;cursor:pointer;font-family:inherit;}
+.filtros button.active{background:var(--preto);color:#fff;}
+.filtros button .n{opacity:.6;font-weight:400;margin-left:4px;}
+.sumario{background:#fff;border:1px solid var(--linha);padding:18px 22px;margin:16px 0 28px;}
+.sumario h3{margin:0 0 12px;font-size:12px;text-transform:uppercase;letter-spacing:.16em;color:var(--cinza-med);}
+.sumario ul{list-style:none;margin:0;padding:0;columns:2;column-gap:32px;}
+.sumario li{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed var(--cinza-cl);font-size:13px;break-inside:avoid;}
+.sumario a{color:var(--preto);text-decoration:none;font-weight:700;}
+.sumario a:hover{text-decoration:underline;}
+.sumario .cnt{color:var(--cinza-med);font-size:11px;}
+.grupo{margin:30px 0;}
+.grupo-h{display:flex;align-items:center;gap:14px;background:var(--preto);color:#fff;padding:13px 18px;}
+.grupo-n{font-size:18px;font-weight:800;background:#fff;color:#0d0d0d;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:3px;}
+.grupo-h h2{margin:0;font-size:16px;font-weight:700;}
+.bug{background:#fff;border:1px solid var(--linha);border-top:none;}
+.bug-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 18px;background:var(--gelo2);border-bottom:1px solid var(--cinza-cl);flex-wrap:wrap;}
+.bug-key{font-size:15px;font-weight:800;}
+.bug-badges{display:flex;gap:7px;flex-wrap:wrap;align-items:center;}
+.badge{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:4px 9px;border-radius:3px;border:1px solid var(--preto);}
+.b-prio{background:#fff;}.b-sit{background:var(--cinza-cl);border-color:var(--cinza-med);}
+.an-ok{background:var(--preto);color:#fff;}.an-proc{background:var(--cinza-med);color:#fff;border-color:var(--cinza-med);}
+.an-req{background:repeating-linear-gradient(45deg,#fff,#fff 5px,#ececec 5px,#ececec 10px);}
+.status-sel{font-family:inherit;font-size:11px;font-weight:700;padding:4px 8px;border:2px solid var(--preto);border-radius:3px;cursor:pointer;background:#fff;text-transform:uppercase;letter-spacing:.05em;}
+.bug[data-status="corrigido"] .status-sel{background:var(--preto);color:#fff;}
+.bug[data-status="analise"] .status-sel{background:repeating-linear-gradient(45deg,#fff,#fff 4px,#dcdcdc 4px,#dcdcdc 8px);}
+.bug[data-status="corrigido"]{opacity:.82;}
+.bug[data-status="corrigido"] .bug-key:after{content:" checado";font-size:10px;font-weight:400;color:var(--cinza-med);text-transform:uppercase;letter-spacing:.1em;}
+.bug-body{padding:13px 18px;}
+.row{display:flex;gap:14px;padding:4px 0;}
+.row .lbl{flex:0 0 116px;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--cinza-med);font-weight:700;padding-top:2px;}
+.row .val{flex:1;font-size:13px;}
+.annot,.evid{padding:0 18px 15px;}
+.annot-h,.evid-h{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--cinza-med);font-weight:700;margin:6px 0;display:flex;justify-content:space-between;align-items:center;}
+.btn-img{background:var(--preto);color:#fff;border:0;font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:3px;cursor:pointer;font-family:inherit;text-transform:uppercase;letter-spacing:.06em;}
+.editable{min-height:44px;border:1px solid var(--cinza-cl);background:var(--gelo2);padding:10px 12px;font-size:13px;outline:none;border-radius:2px;}
+.editable:focus{border-color:var(--preto);background:#fff;box-shadow:inset 0 0 0 1px var(--preto);}
+.editable:empty:before{content:attr(data-ph);color:var(--cinza);font-style:italic;}
+.dropzone{min-height:80px;border:1.5px dashed var(--cinza-med);}
+.dropzone.dragover{border-color:var(--preto);background:#eee;}
+.editable img{max-width:100%;height:auto;display:block;margin:8px 0;border:1px solid var(--cinza-cl);}
+.rodape{margin-top:40px;border-top:2px solid var(--preto);padding-top:14px;font-size:11px;color:var(--cinza-med);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.rodape b{color:var(--preto);}
+#banner{display:none;padding:10px 18px;background:#0d0d0d;color:#fff;font-size:12px;text-align:center;}
+@media print{
+  @page{size:A4;margin:1.4cm 1.2cm;}
+  body{background:#fff;font-size:11px;}.wrap{max-width:none;padding:0;}
+  .no-print,.toolbar,.btn-img,.filtros,#banner{display:none !important;}
+  .capa{page-break-after:always;}.grupo,.bug{page-break-inside:avoid;}
+  .editable{background:#fff;border:1px solid #999;}.dropzone{border:1px solid #999;}
+  .editable:empty:before{content:"";}.status-sel{border:1px solid #000;}
+  a{color:#000;text-decoration:none;}
+}
+</style></head><body>
+
+<div class="toolbar no-print">
+  <span class="t-title">Triagem Bugs Partner &middot; Algar</span>
+  <span class="saveflag" id="saveflag">carregando...</span>
+  <button class="ghost" onclick="reloadState()">Recarregar</button>
+  <button class="ghost" onclick="window.print()">Exportar PDF</button>
+</div>
+<div id="banner"></div>
+
+<div class="capa">
+  <div class="kicker">Everymind &middot; CRM B2B Algar Telecom</div>
+  <h1>Triagem de Bugs &mdash; Portal AlgarPartner</h1>
+  <div class="sub">Analise de 34 ocorrencias do SGD/Jira. Anotacoes, imagens e status persistem no servidor. Marque cada bug como Aberto, Em Analise ou Corrigido conforme for tratando.</div>
+  <div class="meta"><span><b>Org:</b> HOMOL (org_id=100)</span><span><b>Data:</b> 17/08/2026</span><span><b>Fonte:</b> Algar_-_SGD 17/08/2026 + leitura da org</span><span><b>Confidencial</b> &mdash; Uso Interno</span></div>
+</div>
+
+<div class="wrap">
+  <div class="filtros no-print">
+    <span class="fl-lbl">Filtrar status:</span>
+    <button class="active" data-f="todos" onclick="setFiltro('todos',this)">Todos <span class="n" id="c-todos">0</span></button>
+    <button data-f="aberto" onclick="setFiltro('aberto',this)">Aberto <span class="n" id="c-aberto">0</span></button>
+    <button data-f="analise" onclick="setFiltro('analise',this)">Em Analise <span class="n" id="c-analise">0</span></button>
+    <button data-f="corrigido" onclick="setFiltro('corrigido',this)">Corrigido <span class="n" id="c-corrigido">0</span></button>
+  </div>
+
+  <div class="sumario">
+    <h3>Sumario</h3><ul><li><a href="#grp1">01 &middot; Maps / Check-in</a><span class="cnt">2</span></li>
+<li><a href="#grp2">02 &middot; Enriquecimento / Data Cloud</a><span class="cnt">1</span></li>
+<li><a href="#grp3">03 &middot; Frente Atividades no portal</a><span class="cnt">13</span></li>
+<li><a href="#grp4">04 &middot; Permissoes / funcionalidades ausentes</a><span class="cnt">9</span></li>
+<li><a href="#grp5">05 &middot; Conversao / Lead internacional</a><span class="cnt">2</span></li>
+<li><a href="#grp6">06 &middot; UX / menores</a><span class="cnt">7</span></li></ul>
+  </div>
+
+  <section class="grupo" id="grp1"><div class="grupo-h"><span class="grupo-n">01</span><h2>Maps / Check-in</h2></div>
+
+<article class="bug" data-key="CRMB2B-529" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-529</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Muito Alta</span>
+      <span class="badge b-sit">Em Dev</span>
+      <span class="badge an-req">REQUER DETALHES</span>
+      <select class="status-sel" data-key="CRMB2B-529">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Erro na atividade de check-in no Sales Maps</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">FLS dos 5 campos (CreatedLatitude/Longitude/LocationAccuracy/LocationVerified/DistanceFromRecord) JA concedido ao La Forge com Edit=True via PS_Task_RelatorioVisita_FLS (atribuicao ativa, verificado na HOMOL). O erro do print vem de OUTRO usuario sem esse PS, ou de contexto de insert que nao carrega o PS. Chave: identificar QUEM estava logado no print.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-529" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-529">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-529" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-422" data-default="corrigido">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-422</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Muito Alta</span>
+      <span class="badge b-sit">Ref Tec</span>
+      <span class="badge an-ok">CORRIGIDO</span>
+      <select class="status-sel" data-key="CRMB2B-422">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Nenhuma camada aparece p/ partner e sem permissao para criar</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">OWD External -&gt; Public Read Only em 13 objetos (maps__*, CTO__c, Metro_Station__c, Lead_Explorer_DC__c) + kit PS + PS_LeadExplorerDC_FLS (sem ViewAll). Camadas Leads/GPON/Metro/Prospects carregaram na HOMOL. &#x27;Sem criar&#x27; = comportamento esperado.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-422" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-422">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-422" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+</section>
+<section class="grupo" id="grp2"><div class="grupo-h"><span class="grupo-n">02</span><h2>Enriquecimento / Data Cloud</h2></div>
+
+<article class="bug" data-key="CRMB2B-490" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-490</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Muito Alta</span>
+      <span class="badge b-sit">Em Dev</span>
+      <span class="badge an-proc">PROCEDENTE</span>
+      <select class="status-sel" data-key="CRMB2B-490">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Leads nao enriquecidas pelo Partner</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Enrichment ja dispara via fallback ReceitaWS. Resta a associacao PS &lt;-&gt; Data Space &#x27;Controlled by Parent&#x27; (Setup UI). Teste valido = UI do portal como La Forge (API /ssot/query da 403 esperado).</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-490" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-490">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-490" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+</section>
+<section class="grupo" id="grp3"><div class="grupo-h"><span class="grupo-n">03</span><h2>Frente Atividades no portal</h2></div>
+
+<article class="bug" data-key="CRMB2B-539" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-539</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Muito Alta</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-req">REQUER DETALHES</span>
+      <select class="status-sel" data-key="CRMB2B-539">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Tela de criar compromisso no lead</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Ajuste de Event no partnerLeadDetail. Precisa do corpo do card.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-539" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-539">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-539" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-541" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-541</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Muito Alta</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-req">REQUER DETALHES</span>
+      <select class="status-sel" data-key="CRMB2B-541">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Tela de criar compromisso pelo calendario</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Ajuste no partnerCalendar. Precisa do corpo do card.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-541" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-541">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-541" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-540" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-540</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Alta</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-req">REQUER DETALHES</span>
+      <select class="status-sel" data-key="CRMB2B-540">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Tela de detalhamento de compromisso</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Detalhe do Event. Precisa do corpo do card.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-540" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-540">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-540" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-534" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-534</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Media</span>
+      <span class="badge b-sit">Em Dev</span>
+      <span class="badge an-req">REQUER DETALHES</span>
+      <select class="status-sel" data-key="CRMB2B-534">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Tela de detalhamento da tarefa</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">partnerTaskDetail existe; qual ajuste especifico?</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-534" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-534">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-534" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-537" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-537</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Media</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-req">REQUER DETALHES</span>
+      <select class="status-sel" data-key="CRMB2B-537">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Tela de detalhamento da Chamada</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Log-a-Call detail. Precisa do corpo do card.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-537" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-537">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-537" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-532" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-532</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Media</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-req">REQUER DETALHES</span>
+      <select class="status-sel" data-key="CRMB2B-532">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Tela de criar Chamada na Lead</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Log-a-Call create. Precisa do corpo do card.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-532" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-532">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-532" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-530" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-530</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Media</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-req">REQUER DETALHES</span>
+      <select class="status-sel" data-key="CRMB2B-530">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Tela de criar tarefa na Lead</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Task create. Precisa do corpo do card.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-530" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-530">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-530" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-531" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-531</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Media</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-req">REQUER DETALHES</span>
+      <select class="status-sel" data-key="CRMB2B-531">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Area das atividades relacionadas no lead</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Painel de atividades. Precisa do corpo do card.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-531" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-531">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-531" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-538" data-default="corrigido">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-538</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Media</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-ok">CORRIGIDO</span>
+      <select class="status-sel" data-key="CRMB2B-538">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Enviar e-mail na parte de atividades do lead</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">E-mail parceiro resolvido via OrgWideEmailAddress na HOMOL (aguarda plano de deploy PROD).</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-538" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-538">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-538" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-543" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-543</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Media</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-req">REQUER DETALHES</span>
+      <select class="status-sel" data-key="CRMB2B-543">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Menus de Notas e Tarefas</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">UI de menu. Precisa do corpo do card.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-543" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-543">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-543" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-521" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-521</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Baixa</span>
+      <span class="badge b-sit">Em Dev</span>
+      <span class="badge an-req">REQUER DETALHES</span>
+      <select class="status-sel" data-key="CRMB2B-521">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Cadastro de eventos sem campos obrigatorios / comportamento estranho</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Validacao faltando no create de Event.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-521" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-521">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-521" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-520" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-520</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Baixa</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-req">REQUER DETALHES</span>
+      <select class="status-sel" data-key="CRMB2B-520">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Campos obrigatorios ao registrar chamada pelo Partner</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Validacao Log-a-Call.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-520" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-520">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-520" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-519" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-519</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Baixa</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-proc">PROCEDENTE</span>
+      <select class="status-sel" data-key="CRMB2B-519">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Permite criar tarefa sem assunto</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Falta obrigatoriedade de Subject. Bug simples e real.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-519" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-519">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-519" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+</section>
+<section class="grupo" id="grp4"><div class="grupo-h"><span class="grupo-n">04</span><h2>Permissoes / funcionalidades ausentes</h2></div>
+
+<article class="bug" data-key="CRMB2B-494" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-494</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Muito Alta</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-proc">PROCEDENTE</span>
+      <select class="status-sel" data-key="CRMB2B-494">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Lead atribuida a fila visivel para o usuario Partner</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Bloqueado por hierarquia partner (PortalAccountId/role). Resolve com provisionamento nativo de partner roles.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-494" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-494">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-494" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-411" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-411</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Muito Alta</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-proc">PROCEDENTE</span>
+      <select class="status-sel" data-key="CRMB2B-411">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Sem acesso a relatorios e dashboards</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Partner Dealer com zero ObjectPerms de Report/Dashboard. Decisao de escopo/config.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-411" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-411">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-411" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-489" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-489</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Media</span>
+      <span class="badge b-sit">Em Dev</span>
+      <span class="badge an-proc">PROCEDENTE</span>
+      <select class="status-sel" data-key="CRMB2B-489">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Usuario Algar Partner sem permissao para blacklist</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Falta ObjectPerm/FLS de blacklist no kit partner.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-489" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-489">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-489" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-476" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-476</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Alta</span>
+      <span class="badge b-sit">Em testes</span>
+      <span class="badge an-req">REQUER DETALHES</span>
+      <select class="status-sel" data-key="CRMB2B-476">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Agentforce indisponivel para utilizacao</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Depende do PS/agente Agentforce no contexto partner. Verificar estado atual.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-476" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-476">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-476" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-486" data-default="corrigido">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-486</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Media</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-ok">CORRIGIDO</span>
+      <select class="status-sel" data-key="CRMB2B-486">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Consulta de lead sem filtro / colunas / ordenacao</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">partnerLeadList (KPIs + filtro avancado + redistribuir) implementado. Aguarda reteste.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-486" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-486">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-486" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-536" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-536</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Media</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-proc">PROCEDENTE</span>
+      <select class="status-sel" data-key="CRMB2B-536">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Nao tem a funcionalidade de &#x27;Notas&#x27;</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Limitacao de licenca Partner Community (Notes/ContentNote). Gap procede.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-536" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-536">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-536" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-535" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-535</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Baixa</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-proc">PROCEDENTE</span>
+      <select class="status-sel" data-key="CRMB2B-535">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Sem pontuacao do lead pelo Einstein</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Einstein Lead Scoring nao exposto ao partner (licenca/dados).</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-535" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-535">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-535" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-487" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-487</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Baixa</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-proc">PROCEDENTE</span>
+      <select class="status-sel" data-key="CRMB2B-487">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Funcionalidade de campanha nao disponivel</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Zero ObjectPerms de Campaign no partner.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-487" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-487">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-487" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-488" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-488</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Baixa</span>
+      <span class="badge b-sit">Em Dev</span>
+      <span class="badge an-proc">PROCEDENTE</span>
+      <select class="status-sel" data-key="CRMB2B-488">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Funcionalidade de duplicidade nao disponivel</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Nenhuma Duplicate Rule ativa na HOMOL.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-488" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-488">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-488" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+</section>
+<section class="grupo" id="grp5"><div class="grupo-h"><span class="grupo-n">05</span><h2>Conversao / Lead internacional</h2></div>
+
+<article class="bug" data-key="CRMB2B-522" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-522</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Muito Alta</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-req">REQUER DETALHES</span>
+      <select class="status-sel" data-key="CRMB2B-522">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Cadastro de lead internacional exigindo segmento e campo desabilitado</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">VR de segmento disparando para internacional + campo travado. Precisa ver a regra.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-522" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-522">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-522" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-479" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-479</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Muito Alta</span>
+      <span class="badge b-sit">Em testes</span>
+      <span class="badge an-req">REQUER DETALHES</span>
+      <select class="status-sel" data-key="CRMB2B-479">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Conversao do lead internacional validando CNPJ</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Validacao de CNPJ em lead internacional sem CNPJ. Memoria anterior classificou como improcedente/contornado - reconfirmar.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-479" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-479">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-479" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+</section>
+<section class="grupo" id="grp6"><div class="grupo-h"><span class="grupo-n">06</span><h2>UX / menores</h2></div>
+
+<article class="bug" data-key="CRMB2B-542" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-542</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Alta</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-req">REQUER DETALHES</span>
+      <select class="status-sel" data-key="CRMB2B-542">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Nao tem relatorio disponivel</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Possivel duplicata tematica do 411. Confirmar.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-542" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-542">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-542" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-473" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-473</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Alta</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-proc">PROCEDENTE</span>
+      <select class="status-sel" data-key="CRMB2B-473">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Mensagem de erro nao desaparece mais da tela</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Toast/erro persistente no LWC - bug real de estado.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-473" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-473">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-473" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-415" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-415</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Media</span>
+      <span class="badge b-sit">Em Dev</span>
+      <span class="badge an-req">REQUER DETALHES</span>
+      <select class="status-sel" data-key="CRMB2B-415">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Tela de consulta de lead com divergencias</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Divergencias de exibicao vs. interno na lista de lead.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-415" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-415">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-415" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-409" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-409</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Media</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-proc">PROCEDENTE</span>
+      <select class="status-sel" data-key="CRMB2B-409">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Secao &#x27;Informacoes de Duplicidade&#x27; divergente da regra</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">No portal a secao nao deveria aparecer. Conecta ao 488.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-409" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-409">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-409" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-533" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-533</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Baixa</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-proc">PROCEDENTE</span>
+      <select class="status-sel" data-key="CRMB2B-533">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Menu &#x27;Calendario&#x27; esta em ingles</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">i18n: label do menu nao traduzido. Real e simples.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-533" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-533">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-533" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-524" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-524</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Baixa</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-proc">PROCEDENTE</span>
+      <select class="status-sel" data-key="CRMB2B-524">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Campos de controle interno mostrados no historico indevidamente</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Historico expondo campos internos ao partner.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-524" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-524">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-524" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+
+<article class="bug" data-key="CRMB2B-523" data-default="aberto">
+  <div class="bug-top">
+    <div class="bug-key">CRMB2B-523</div>
+    <div class="bug-badges">
+      <span class="badge b-prio">Baixa</span>
+      <span class="badge b-sit">BackLog</span>
+      <span class="badge an-proc">PROCEDENTE</span>
+      <select class="status-sel" data-key="CRMB2B-523">
+        <option value="aberto">Aberto</option>
+        <option value="analise">Em Analise</option>
+        <option value="corrigido">Corrigido</option>
+      </select>
+    </div>
+  </div>
+  <div class="bug-body">
+    <div class="row"><span class="lbl">Reclamacao</span><div class="val">Campos de telefone aparecendo desconfigurados</div></div>
+    <div class="row"><span class="lbl">Entendimento</span><div class="val">Formatacao/mascara de telefone quebrada.</div></div>
+  </div>
+  <div class="annot">
+    <div class="annot-h">Anotacoes</div>
+    <div class="editable anot-field" contenteditable="true" data-key="CRMB2B-523" data-ph="Digite suas anotacoes aqui..."></div>
+  </div>
+  <div class="evid">
+    <div class="evid-h"><span>Evidencias (cole Ctrl+V ou arraste imagens)</span>
+      <button type="button" class="btn-img no-print" data-key="CRMB2B-523">+ imagem</button></div>
+    <div class="dropzone editable evid-field" contenteditable="true" data-key="CRMB2B-523" data-ph="Cole (Ctrl+V) ou arraste imagens para dentro deste quadro..."></div>
+  </div>
+</article>
+</section>
+
+  <div class="rodape">
+    <span><b>EVER I9 / TRIAGEM BUGS PARTNER</b> &mdash; Confidencial, Uso Interno</span>
+    <span>Validado por: Alberto &middot; 17/08/2026</span>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" multiple style="display:none">
+
+<script>
+var API='/api/triagem';
+var state={};        // {key:{status,anotacoes,evidencias}}
+var saveTimers={};
+var currentZone=null;
+
+function flag(msg,ok){var f=document.getElementById('saveflag');f.textContent=msg;f.style.color=ok===false?'#e0a0a0':'#9ad19a';}
+function banner(msg){var b=document.getElementById('banner');if(!msg){b.style.display='none';return;}b.textContent=msg;b.style.display='block';}
+
+function applyStatus(bug,status){bug.setAttribute('data-status',status);var sel=bug.querySelector('.status-sel');if(sel)sel.value=status;}
+
+async function loadState(){
+  flag('carregando...');
+  try{
+    var r=await fetch(API);var j=await r.json();
+    state=(j&&j.data)||{};
+    document.querySelectorAll('.bug').forEach(function(bug){
+      var k=bug.getAttribute('data-key');
+      var s=state[k];
+      var status=(s&&s.status)||bug.getAttribute('data-default')||'aberto';
+      applyStatus(bug,status);
+      bug.querySelector('.anot-field').innerHTML=(s&&s.anotacoes)||'';
+      bug.querySelector('.evid-field').innerHTML=(s&&s.evidencias)||'';
+      if(!state[k]) state[k]={status:status,anotacoes:'',evidencias:''};
+    });
+    recount();banner('');flag('sincronizado');
+  }catch(e){banner('Sem conexao com o servidor de persistencia ('+e.message+'). As anotacoes NAO serao salvas ate reconectar.');flag('offline',false);}
+}
+function reloadState(){loadState();}
+
+function collect(k){
+  var bug=document.querySelector('.bug[data-key="'+CSS.escape(k)+'"]');
+  return {status:bug.getAttribute('data-status')||'aberto',
+           anotacoes:bug.querySelector('.anot-field').innerHTML,
+           evidencias:bug.querySelector('.evid-field').innerHTML};
+}
+async function saveBug(k){
+  var payload=collect(k);state[k]=payload;
+  flag('salvando...');
+  try{
+    var r=await fetch(API+'/'+encodeURIComponent(k),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    flag('salvo');
+  }catch(e){flag('erro ao salvar',false);banner('Falha ao salvar '+k+': '+e.message);}
+}
+function debounceSave(k){clearTimeout(saveTimers[k]);saveTimers[k]=setTimeout(function(){saveBug(k);},800);}
+
+// status change -> salva imediato
+document.querySelectorAll('.status-sel').forEach(function(sel){
+  sel.addEventListener('change',function(){
+    var k=sel.getAttribute('data-key');
+    var bug=document.querySelector('.bug[data-key="'+CSS.escape(k)+'"]');
+    bug.setAttribute('data-status',sel.value);
+    recount();applyFiltroAtual();saveBug(k);
+  });
+});
+
+// anotacoes/evidencias -> debounce
+document.querySelectorAll('.editable').forEach(function(el){
+  el.addEventListener('input',function(){debounceSave(el.getAttribute('data-key'));});
+});
+
+// paste imagem
+document.addEventListener('paste',function(e){
+  var t=document.activeElement;
+  if(!t||!t.classList||!t.classList.contains('editable'))return;
+  var items=(e.clipboardData||window.clipboardData).items;
+  for(var i=0;i<items.length;i++){
+    if(items[i].type.indexOf('image')!==-1){
+      e.preventDefault();var file=items[i].getAsFile();var rd=new FileReader();
+      rd.onload=function(ev){insertImg(t,ev.target.result);};rd.readAsDataURL(file);
+    }
+  }
+});
+function insertImg(zone,dataUrl){var img=document.createElement('img');img.src=dataUrl;zone.appendChild(img);saveBug(zone.getAttribute('data-key'));}
+document.querySelectorAll('.btn-img').forEach(function(b){
+  b.addEventListener('click',function(){currentZone=document.querySelector('.evid-field[data-key="'+CSS.escape(b.getAttribute('data-key'))+'"]');document.getElementById('fileInput').click();});
+});
+document.getElementById('fileInput').addEventListener('change',function(e){
+  if(!currentZone)return;
+  Array.from(e.target.files).forEach(function(file){var rd=new FileReader();rd.onload=function(ev){insertImg(currentZone,ev.target.result);};rd.readAsDataURL(file);});
+  this.value='';
+});
+document.querySelectorAll('.dropzone').forEach(function(z){
+  z.addEventListener('dragover',function(e){e.preventDefault();z.classList.add('dragover');});
+  z.addEventListener('dragleave',function(){z.classList.remove('dragover');});
+  z.addEventListener('drop',function(e){e.preventDefault();z.classList.remove('dragover');
+    Array.from(e.dataTransfer.files).forEach(function(file){if(file.type.indexOf('image')!==-1){var rd=new FileReader();rd.onload=function(ev){insertImg(z,ev.target.result);};rd.readAsDataURL(file);}});
+  });
+});
+
+// filtro + contadores
+var filtroAtual='todos';
+function recount(){
+  var c={todos:0,aberto:0,analise:0,corrigido:0};
+  document.querySelectorAll('.bug').forEach(function(bug){c.todos++;c[bug.getAttribute('data-status')||'aberto']++;});
+  ['todos','aberto','analise','corrigido'].forEach(function(k){var el=document.getElementById('c-'+k);if(el)el.textContent=c[k];});
+}
+function setFiltro(f,btn){filtroAtual=f;document.querySelectorAll('.filtros button').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');applyFiltroAtual();}
+function applyFiltroAtual(){
+  document.querySelectorAll('.bug').forEach(function(bug){
+    var st=bug.getAttribute('data-status')||'aberto';
+    bug.style.display=(filtroAtual==='todos'||st===filtroAtual)?'':'none';
+  });
+  document.querySelectorAll('.grupo').forEach(function(g){
+    var vis=g.querySelectorAll('.bug:not([style*="display: none"])').length;
+    g.style.display=vis>0?'':'none';
+  });
+}
+
+loadState();
+</script>
+</body></html>
