@@ -95,7 +95,8 @@
   .tr .interim{color:var(--ink-soft)}
   .tr .empty{color:var(--ink-soft);font-size:13.5px;font-style:italic}
 
-  .actions{display:flex;gap:9px;margin-top:14px}
+  .actions{display:flex;gap:9px;margin-top:14px;flex-wrap:wrap}
+  .actions .btn{flex:1 1 calc(50% - 5px);min-width:96px}
   .btn{flex:1;font-family:'Nunito';font-weight:800;font-size:13.5px;border-radius:11px;padding:11px 14px;cursor:pointer;
     border:1px solid transparent;display:flex;align-items:center;justify-content:center;gap:7px;transition:.15s}
   .btn.primary{background:var(--sf-blue);color:#fff;box-shadow:0 5px 12px rgba(1,118,211,.28)}
@@ -340,7 +341,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v14</b></footer>
+    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v15</b></footer>
   </div>
 
   <!-- Buddie: botão flutuante + modal -->
