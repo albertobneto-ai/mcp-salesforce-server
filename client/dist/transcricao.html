@@ -210,6 +210,9 @@
   .msg-speak{position:absolute;top:6px;right:6px;background:transparent;border:0;color:#0176D3;cursor:pointer;padding:3px;border-radius:6px;line-height:0}
   .msg-speak:hover{background:rgba(1,118,211,.12)}
   .flash-bar{display:flex;align-items:center;gap:8px}
+  .flash-bar #flashText{flex:1 1 auto;min-width:0}
+  .flash-bar #flashSend{flex:0 0 auto;padding:11px 16px}
+  .recBtn.flash-mic{width:44px;height:44px;flex:none}
   .recBtn.flash-mic{width:46px;height:46px;flex:none}
   .msg-actions{margin-top:7px}
   .msg-tr{font:600 11px Inter,system-ui,sans-serif;color:#0176D3;background:#fff;border:1px solid #bfdcff;border-radius:8px;padding:4px 7px;cursor:pointer;max-width:150px}
@@ -327,7 +330,7 @@
             <span class="ring" aria-hidden="true"></span>
             <span id="flashIco"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="12" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           </button>
-          <input id="flashText" placeholder="Escreva para o Buddie…" style="flex:1;font:inherit;padding:11px 12px;border:1.5px solid #e2e8f0;border-radius:12px;outline:none" />
+          <input id="flashText" placeholder="Escreva para o Buddie…" style="flex:1;min-width:0;font:inherit;padding:11px 12px;border:1.5px solid #e2e8f0;border-radius:12px;outline:none" />
           <button class="btn primary" id="flashSend">Enviar</button>
         </div>
         <div class="status" id="flashStatus" style="margin-top:8px;min-height:18px"></div>
@@ -337,7 +340,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <footer><b>Ever i9</b> · transcrição + flash + tradução + voz · PT-BR / EN. <b>v13</b></footer>
+    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v14</b></footer>
   </div>
 
   <!-- Buddie: botão flutuante + modal -->
@@ -694,8 +697,9 @@
     window.ttsVoice = flashVoice ? flashVoice.value : 'eve';
 
     function setMode(f){
-      if(f){ viewReuniao.style.display='none'; viewFlash.style.display='block'; mFlashBtn.classList.add('on'); mReuniaoBtn.classList.remove('on'); }
-      else { viewReuniao.style.display='block'; viewFlash.style.display='none'; mReuniaoBtn.classList.add('on'); mFlashBtn.classList.remove('on'); }
+      const fab=document.getElementById('fab');
+      if(f){ viewReuniao.style.display='none'; viewFlash.style.display='block'; mFlashBtn.classList.add('on'); mReuniaoBtn.classList.remove('on'); if(fab) fab.style.display='none'; }
+      else { viewReuniao.style.display='block'; viewFlash.style.display='none'; mReuniaoBtn.classList.add('on'); mFlashBtn.classList.remove('on'); if(fab) fab.style.display=''; }
     }
     mReuniaoBtn.addEventListener('click',()=>setMode(false));
     mFlashBtn.addEventListener('click',()=>setMode(true));
