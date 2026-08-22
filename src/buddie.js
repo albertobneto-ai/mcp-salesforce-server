@@ -69,4 +69,37 @@ router.post('/api/traduzir', async (req, res) => {
   }
 });
 
+// Speech-to-Text via Grok (xAI) — proxy seguro; a chave GROK_KEY nunca vai ao app
+router.post('/api/stt', async (req, res) => {
+  try {
+    const b = req.body || {};
+    const b64 = (b.audio || '').toString();
+    const mime = (b.mime || 'audio/m4a').toString();
+    const lang = (b.language || 'pt').toString();
+    if (!b64) return res.status(400).json({ error: 'audio vazio' });
+    const buf = Buffer.from(b64, 'base64');
+    if (!buf.length) return res.status(400).json({ error: 'audio invalido' });
+    let ext = 'm4a';
+    if (mime.includes('webm')) ext = 'webm';
+    else if (mime.includes('wav')) ext = 'wav';
+    else if (mime.includes('mp4')) ext = 'mp4';
+    else if (mime.includes('aac')) ext = 'aac';
+    else if (mime.includes('ogg')) ext = 'ogg';
+    else if (mime.includes('mpeg') || mime.includes('mp3')) ext = 'mp3';
+    const fd = new FormData();
+    fd.append('language', lang);
+    fd.append('format', 'true');
+    fd.append('filler_words', 'false');
+    fd.append('file', new Blob([buf], { type: mime }), 'audio.' + ext); // file por ultimo (exigencia da API)
+    const r = await fetch('https://api.x.ai/v1/stt', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + process.env.GROK_KEY },
+      body: fd
+    });
+    if (!r.ok) { const t = await r.text(); return res.status(r.status).json({ error: 'xAI ' + r.status + ': ' + t.slice(0,300) }); }
+    const d = await r.json();
+    res.json({ text: d.text || '', language: d.language, duration: d.duration });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 export { router as buddieRouter };
