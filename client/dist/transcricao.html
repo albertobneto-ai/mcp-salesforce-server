@@ -440,16 +440,11 @@
   // gravar/parar
   recBtn.addEventListener('click',()=>running?stop():start());
 
-  function start(){
-    if(permState==='denied'){ help.classList.add('show'); return; }
-    help.classList.remove('show');
-    sessionText='';
+  function makeRec(){
     rec=new SR();
     rec.lang=lang;
     rec.continuous=true;
     rec.interimResults=true;
-
-    // reconstrói o texto da sessão a cada evento (evita duplicação no Android)
     rec.onresult=e=>{
       let interim='';
       for(let i=e.resultIndex;i<e.results.length;i++){
@@ -457,19 +452,20 @@
         if(r.isFinal){ const t=r[0].transcript.trim(); if(t) committed=mergeAppend(committed,t); }
         else interim += r[0].transcript;
       }
-      sessionText='';
       render(interim);
     };
-    // ao encerrar a sessão, incorpora o texto e reinicia (segura reunião longa)
-    rec.onend=()=>{
-      
-      if(running){ try{rec.start();}catch(_){} }
-    };
+    // Android: recria o objeto a cada reinicio para nao vazar audio da sessao anterior (corrige repeticao de borda)
+    rec.onend=()=>{ if(running){ makeRec(); try{rec.start();}catch(_){} } };
     rec.onerror=ev=>{
-      if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){
-        permState='denied'; applyPerm(); stop();
-      } else if(ev.error==='no-speech'){ /* silêncio: o onend reinicia */ }
+      if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){ permState='denied'; applyPerm(); stop(); }
+      else if(ev.error==='no-speech'){ /* silencio: o onend reinicia */ }
     };
+  }
+  function start(){
+    if(permState==='denied'){ help.classList.add('show'); return; }
+    help.classList.remove('show');
+    sessionText='';
+    makeRec();
 
     try{ rec.start(); }
     catch(_){ show('Não consegui iniciar a captura de áudio.'); return; }
