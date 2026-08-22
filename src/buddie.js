@@ -49,9 +49,10 @@ router.post('/api/buddie', async (req, res) => {
     let system, userContent;
 
     if (action === 'responder') {
-      const langName = LANG_NAMES[language] || 'o mesmo idioma em que a pessoa falou';
-      system = `Você ajuda o usuário a responder durante uma conversa ou reunião ao vivo. Alguém acabou de dizer algo direcionado a ele. Com base no contexto da conversa, escreva a RESPOSTA que o usuário daria — em primeira pessoa, como se fosse ele mesmo falando: natural, direta e pronta para ser dita em voz alta. Escreva a resposta em ${langName}. Não resuma, não analise, não explique o que a pessoa disse — entregue apenas a resposta sugerida, sem títulos e com Markdown mínimo.`;
-      userContent = `CONTEXTO DA CONVERSA:\n"""\n${conversation || '(sem contexto anterior)'}\n"""\n\nO QUE ACABARAM DE DIZER (responda a isto como se fosse você):\n"""\n${context}\n"""`;
+      const langName = LANG_NAMES[language] || 'o mesmo idioma da conversa';
+      const inputType = (body.input_type || 'speech').toString();
+      system = `Você é o copiloto do usuário durante uma conversa ou reunião ao vivo — você o ajuda a responder e a conduzir a conversa. Abaixo vem o histórico da conversa até agora (o que a outra pessoa falou, as suas sugestões anteriores, e instruções que o usuário te deu). Regras: se a nova entrada for algo que a OUTRA PESSOA disse, escreva a resposta que o usuário daria, em primeira pessoa, natural e pronta para ser dita em voz alta. Se a nova entrada for uma instrução ou pergunta do PRÓPRIO usuário (por exemplo "reformula mais curto", "deixa mais formal", "e se eu recusar?"), atenda o pedido: ajuste a sugestão anterior ou responda, sempre mantendo o contexto. Responda em ${langName}. Seja direto e natural, sem títulos e com Markdown mínimo; entregue apenas o texto útil.`;
+      userContent = `HISTORICO DA CONVERSA:\n"""\n${conversation || '(inicio da conversa)'}\n"""\n\nNOVA ENTRADA (${inputType === 'text' ? 'mensagem do usuario para voce' : 'a outra pessoa acabou de dizer isto'}):\n"""\n${context}\n"""`;
     } else if (!action && prompt.trim()) {
       system = 'Você é o Buddie, um assistente útil e direto. Responda a qualquer pergunta com clareza e objetividade, em Markdown enxuto (sem enrolação). Se houver um trecho de contexto, use-o quando for relevante. Responda no mesmo idioma da pergunta.';
       userContent = context.trim() ? `CONTEXTO (use se ajudar):\n"""\n${context}\n"""\n\nPERGUNTA: ${prompt}` : prompt;
