@@ -320,7 +320,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <footer><b>Ever i9</b> · transcrição + flash (Grok) · PT-BR / EN. <b>v9</b></footer>
+    <footer><b>Ever i9</b> · transcrição + flash (Grok) · PT-BR / EN. <b>v10</b></footer>
   </div>
 
   <!-- Buddie: botão flutuante + modal -->
@@ -384,7 +384,7 @@
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   // ===== camada de voz NATIVA (Capacitor) com fallback web =====
   const Cap = window.Capacitor;
-  const VR = Cap && Cap.Plugins && Cap.Plugins.VoiceRecorder;
+  window.VR = Cap && Cap.Plugins && Cap.Plugins.VoiceRecorder;
   window.isNative = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform() && VR);
   window.API_BASE = isNative ? 'https://mcp-sf-provisioning-462dd29c2455.herokuapp.com' : '';
   let nativeRunning=false, chunkTimer=null;
