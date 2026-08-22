@@ -12,7 +12,7 @@ async function callClaude(system, userContent, model, maxTk) {
       'content-type': 'application/json'
     },
     body: JSON.stringify({
-      model: model || 'claude-haiku-4-5',
+      model: model || 'claude-sonnet-5',
       max_tokens: maxTk || 1200,
       system,
       messages: [{ role: 'user', content: userContent }]
