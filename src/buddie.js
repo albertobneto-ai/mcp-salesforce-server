@@ -67,8 +67,6 @@ router.post('/api/buddie', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-  }
-});
 
 // Tradução ao vivo da transcrição (PT<->EN) — Haiku, rápido e barato
 router.post('/api/traduzir', async (req, res) => {
