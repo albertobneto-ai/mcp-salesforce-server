@@ -212,8 +212,11 @@
   .msg-act-btn svg{width:13px;height:13px}
   .msg-act-btn.playing{background:#0176D3;color:#fff;border-color:#0176D3}
   .flash-bar{display:flex;align-items:center;gap:8px}
-  .flash-bar #flashText{flex:1 1 auto;min-width:0}
-  .flash-bar #flashSend{flex:0 0 auto;padding:11px 16px}
+  .flash-bar #flashText{flex:1 1 auto;min-width:0;font:inherit;padding:12px 16px;border:1.5px solid #e2e8f0;border-radius:22px;outline:none;background:#f8fafc;transition:border-color .15s,background .15s}
+  .flash-bar #flashText:focus{border-color:var(--sf-blue);background:#fff}
+  .flash-send{flex:none;width:44px;height:44px;border-radius:50%;border:none;background:var(--sf-blue);color:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(1,118,211,.28);transition:transform .12s,opacity .15s}
+  .flash-send:active{transform:scale(.94)}
+  .flash-send:disabled{opacity:.35;box-shadow:none;cursor:default}
   .recBtn.flash-mic{width:44px;height:44px;flex:none}
   .recBtn.flash-mic{width:46px;height:46px;flex:none}
   .msg-actions{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
@@ -332,8 +335,8 @@
             <span class="ring" aria-hidden="true"></span>
             <span id="flashIco"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="12" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           </button>
-          <input id="flashText" placeholder="Escreva para o Buddie…" style="flex:1;min-width:0;font:inherit;padding:11px 12px;border:1.5px solid #e2e8f0;border-radius:12px;outline:none" />
-          <button class="btn primary" id="flashSend">Enviar</button>
+          <input id="flashText" placeholder="Escreva para o Buddie…" />
+          <button class="flash-send" id="flashSend" aria-label="Enviar" disabled><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 12h13M12 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </div>
         <div class="status" id="flashStatus" style="margin-top:8px;min-height:18px"></div>
         <div class="actions"><button class="btn ghost" id="flashClear">Nova conversa</button></div>
@@ -342,7 +345,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v17</b></footer>
+    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v18</b></footer>
   </div>
 
   <!-- Buddie: botão flutuante + modal -->
@@ -788,8 +791,9 @@
     }
 
     flashBtn.addEventListener('click',()=>flashRunning?flashStop():flashStart());
-    function sendText(){ const t=(flashText.value||'').trim(); if(!t||busy) return; flashText.value=''; sendToBuddie(t, lastLang, 'text'); }
+    function sendText(){ const t=(flashText.value||'').trim(); if(!t||busy) return; flashText.value=''; flashSend.disabled=true; sendToBuddie(t, lastLang, 'text'); }
     flashSend.addEventListener('click',sendText);
+    flashText.addEventListener('input',()=>{ flashSend.disabled=!flashText.value.trim(); });
     flashText.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendText(); } });
     flashClear.addEventListener('click',()=>{ thread=[]; flashThread.innerHTML=EMPTY; flashStatus.textContent=''; if(window.ttsAudio){ try{window.ttsAudio.pause();}catch(_){}; window.ttsAudio=null; } });
   })();
