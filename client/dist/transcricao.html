@@ -194,6 +194,12 @@
   @keyframes blink{0%,100%{opacity:.3}50%{opacity:1}}
 
   @media (prefers-reduced-motion:reduce){.recBtn.rec .ring{display:none}.help.show{animation:none}.modal,.modal-bg{animation:none}.m-load .dot{animation:none}}
+
+  .modeSel{display:flex;gap:8px;margin-bottom:14px}
+  .modeBtn{flex:1;padding:11px 8px;border-radius:12px;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;font:600 14px Inter,system-ui,sans-serif;cursor:pointer;transition:.15s}
+  .modeBtn.on{background:#0176D3;color:#fff;border-color:#0176D3;box-shadow:0 2px 8px rgba(1,118,211,.25)}
+  #flashReply{font-size:15px;line-height:1.55;color:#0f172a}
+  #flashReply:not(:has(.empty)){background:#eef6ff;border-color:#bfdcff}
 </style>
 </head>
 <body>
@@ -201,8 +207,15 @@
     <header class="top">
       <div class="logo" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M17 10a5 5 0 0 0-9.6-1.9A4 4 0 0 0 7 16h9.5a3.5 3.5 0 0 0 .5-6z" fill="#fff"/><circle cx="12" cy="12" r="2.4" fill="#0176D3"/></svg></div>
       <div class="brand">Ever <span>i9</span><small>Transcrição de reunião · ao vivo</small></div>
+      <button id="closeApp" aria-label="Fechar o app" style="display:none;margin-left:auto;background:transparent;border:0;color:#64748b;cursor:pointer;padding:8px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
     </header>
 
+    <div class="modeSel">
+      <button class="modeBtn on" id="mReuniaoBtn">📄 Reunião</button>
+      <button class="modeBtn" id="mFlashBtn">⚡ Flash</button>
+    </div>
+
+    <div id="viewReuniao">
     <div class="card">
       <div class="banner" id="banner" role="alert">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2 1 21h22L12 2z" stroke="#8C4B02" stroke-width="2" stroke-linejoin="round"/><path d="M12 9v5M12 17.5v.5" stroke="#8C4B02" stroke-width="2" stroke-linecap="round"/></svg>
@@ -273,9 +286,41 @@
         <div class="saved-list" id="savedList"><span class="empty">Carregando…</span></div>
       </div>
     </div>
+    </div><!-- /viewReuniao -->
+
+    <div id="viewFlash" style="display:none">
+      <div class="card">
+        <p style="font-size:13px;color:#64748b;margin:0 0 14px;line-height:1.5">Alguém falou algo direcionado a você (às vezes em inglês)? Toque em <b>gravar</b>, deixe a pessoa falar, toque de novo — e o Buddie sugere <b>a sua resposta</b>, no idioma da conversa.</p>
+        <div class="lang">
+          <span class="tog" id="flashTradTog" role="switch" aria-checked="false" tabindex="0"><span class="sw"></span><span>Traduzir o que foi dito</span></span>
+        </div>
+        <div class="bar">
+          <button class="recBtn" id="flashBtn" aria-label="Capturar a fala">
+            <span class="ring" aria-hidden="true"></span>
+            <span id="flashIco"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="12" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </button>
+          <div class="bar-txt">
+            <div class="status" id="flashStatus">Toque para capturar a fala</div>
+          </div>
+        </div>
+        <div class="tr-head"><span>🎧 O que foi dito <small id="flashLang" style="color:#94a3b8;font-weight:400"></small></span></div>
+        <div class="tr" id="flashHeard"><span class="empty">A fala capturada aparece aqui.</span></div>
+        <div id="flashTradWrap" style="display:none">
+          <div class="tr-head"><span>🌐 Tradução</span></div>
+          <div class="tr" id="flashTradOut"></div>
+        </div>
+        <div class="tr-head"><span>💬 Sua resposta sugerida</span></div>
+        <div class="tr" id="flashReply"><span class="empty">A resposta que você pode dar aparece aqui.</span></div>
+        <div class="actions">
+          <button class="btn primary" id="flashCopy" disabled>Copiar resposta</button>
+          <button class="btn ghost" id="flashClear" disabled>Limpar</button>
+        </div>
+      </div>
+    </div>
+
     <div class="toast" id="toast"></div>
 
-    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v7</b></footer>
+    <footer><b>Ever i9</b> · transcrição + flash (Grok) · PT-BR / EN. <b>v9</b></footer>
   </div>
 
   <!-- Buddie: botão flutuante + modal -->
@@ -337,6 +382,66 @@
   const ICON_STOP='<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="6" y="6" width="12" height="12" rx="3" fill="currentColor"/></svg>';
 
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  // ===== camada de voz NATIVA (Capacitor) com fallback web =====
+  const Cap = window.Capacitor;
+  const VR = Cap && Cap.Plugins && Cap.Plugins.VoiceRecorder;
+  window.isNative = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform() && VR);
+  window.API_BASE = isNative ? 'https://mcp-sf-provisioning-462dd29c2455.herokuapp.com' : '';
+  let nativeRunning=false, chunkTimer=null;
+  const CHUNK_MS=25000; // blocos de ~25s: quase ao vivo, poucas emendas
+  async function transcribeChunk(b64, mime){
+    if(!b64) return;
+    try{
+      const r = await fetch(API_BASE+'/api/stt',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({audio:b64, mime:mime||'audio/aac', language:'pt'})});
+      const d = await r.json();
+      if(!r.ok || d.error) return;
+      const t=(d.text||'').trim();
+      if(t){ committed = mergeAppend(committed, t); render(''); if(trad) scheduleTrad(200); }
+    }catch(_){ /* silencioso: nao interrompe a gravacao */ }
+  }
+  async function rotateChunk(isFinal){
+    let out;
+    try{ out = await VR.stopRecording(); }catch(e){ out=null; }
+    if(!isFinal && nativeRunning){
+      try{ await VR.startRecording(); }catch(e){ /* segue mesmo assim */ }
+    }
+    const v = out && out.value;
+    if(v && v.recordDataBase64){
+      if(isFinal){ await transcribeChunk(v.recordDataBase64, v.mimeType); }
+      else { transcribeChunk(v.recordDataBase64, v.mimeType); }
+    }
+  }
+  async function startNative(){
+    try{
+      const perm = await VR.requestAudioRecordingPermission();
+      if(!perm || !perm.value){ permState='denied'; applyPerm(); return false; }
+      const st = await VR.startRecording();
+      if(!st || !st.value){ show('Nao consegui iniciar a gravacao.'); return false; }
+      nativeRunning=true;
+      if(!committed.trim()) tr.innerHTML='<span class="empty">\uD83D\uDD34 Gravando\u2026 o texto aparece em blocos a cada ~25s.</span>';
+      if(chunkTimer) clearInterval(chunkTimer);
+      chunkTimer=setInterval(()=>{ if(nativeRunning) rotateChunk(false); }, CHUNK_MS);
+      return true;
+    }catch(e){ show('Falha ao gravar: '+((e&&e.message)||e)); return false; }
+  }
+  async function stopNative(){
+    nativeRunning=false;
+    if(chunkTimer){ clearInterval(chunkTimer); chunkTimer=null; }
+    status.style.display='block'; status.textContent='Transcrevendo o ultimo bloco\u2026';
+    if(!committed.trim()) tr.innerHTML='<span class="empty">\u23F3 Transcrevendo\u2026</span>';
+    await rotateChunk(true);
+    status.textContent='Transcricao pausada'; render('');
+  }
+  (function(){
+    const closeBtn=document.getElementById('closeApp');
+    if(isNative && closeBtn){
+      closeBtn.style.display='block';
+      closeBtn.addEventListener('click', async ()=>{
+        try{ if(nativeRunning){ try{ await stopNative(); }catch(_){} } const AppP=Cap&&Cap.Plugins&&Cap.Plugins.App; if(AppP&&AppP.exitApp){ await AppP.exitApp(); } }catch(_){}
+      });
+    }
+  })();
   let lang='pt-BR'; let startedAt=null; let trad=false; let ok=false, running=false, rec=null, committed='', sessionText='', t0=null, timerId=null, permState='unknown';
   // funde b em a removendo a sobreposição (blinda contra replay/duplicação do Android)
   function mergeAppend(a,b){
@@ -413,7 +518,7 @@
     if(!complete){ tradPend.textContent='…'; scheduleTrad(1500); return; }
     tradBusy=true; tradTog.classList.add('busy'); tradPend.textContent='traduzindo…';
     try{
-      const r=await fetch('/api/traduzir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({texto:chunk,de:lang})});
+      const r=await fetch(API_BASE+'/api/traduzir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({texto:chunk,de:lang})});
       const d=await r.json();
       if(r.ok&&d.traducao){ tradText=(tradText?tradText+' ':'')+d.traducao; tradDoneWords+=w.length; }
       else tradPend.textContent='falha, tentando…';
@@ -465,25 +570,27 @@
     if(permState==='denied'){ help.classList.add('show'); return; }
     help.classList.remove('show');
     sessionText='';
-    makeRec();
-
-    try{ rec.start(); }
-    catch(_){ show('Não consegui iniciar a captura de áudio.'); return; }
+    if(isNative){ startNative(); }
+    else {
+      makeRec();
+      try{ rec.start(); }
+      catch(_){ show('Não consegui iniciar a captura de áudio.'); return; }
+      if(tr.querySelector('.empty')) tr.innerHTML='';
+    }
 
     running=true; lockLang(true);
     recBtn.classList.add('rec'); ico.innerHTML=ICON_STOP; recBtn.setAttribute('aria-label','Parar transcrição');
     status.style.display='none'; timerEl.classList.add('on');
     t0=Date.now(); if(!fullText().trim()) startedAt=new Date(); tick(); timerId=setInterval(tick,1000);
-    if(tr.querySelector('.empty')) tr.innerHTML='';
   }
 
   function stop(){
     running=false; lockLang(false);
-    if(rec){ try{rec.stop();}catch(_){} rec=null; }
     clearInterval(timerId);
     recBtn.classList.remove('rec'); ico.innerHTML=ICON_MIC; recBtn.setAttribute('aria-label','Iniciar transcrição');
     timerEl.classList.remove('on'); status.style.display='block';
-    status.textContent='Transcrição pausada'; render(''); if(trad) scheduleTrad(300);
+    if(isNative){ stopNative(); }
+    else { if(rec){ try{rec.stop();}catch(_){} rec=null; } status.textContent='Transcrição pausada'; render(''); if(trad) scheduleTrad(300); }
   }
 
   function render(interim){
@@ -523,7 +630,7 @@
     if(raw===null) return; const titulo=raw.trim();
     saveBtn.disabled=true;
     try{
-      const r=await fetch('/api/transcricoes',{method:'POST',headers:{'Content-Type':'application/json'},
+      const r=await fetch(API_BASE+'/api/transcricoes',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({titulo,idioma:lang,iniciado_em:ini.toISOString(),duracao_s:dur,palavras:texto.split(/\s+/).length,texto,traducao:trad?tradTextFor():''})});
       const d=await r.json();
       if(!r.ok||!d.ok) throw new Error(d.error||('erro '+r.status));
@@ -532,6 +639,101 @@
     saveBtn.disabled=false;
   });
 })();
+
+  // ===== FLASH MODE (start/stop, transcreve -> traduz -> Buddie responde no idioma) =====
+  (function(){
+    const mReuniaoBtn=document.getElementById('mReuniaoBtn'), mFlashBtn=document.getElementById('mFlashBtn');
+    const viewReuniao=document.getElementById('viewReuniao'), viewFlash=document.getElementById('viewFlash');
+    const flashBtn=document.getElementById('flashBtn'), flashIco=document.getElementById('flashIco'), flashStatus=document.getElementById('flashStatus');
+    const flashHeard=document.getElementById('flashHeard'), flashLang=document.getElementById('flashLang');
+    const flashTradWrap=document.getElementById('flashTradWrap'), flashTradOut=document.getElementById('flashTradOut');
+    const flashReply=document.getElementById('flashReply'), flashCopy=document.getElementById('flashCopy'), flashClear=document.getElementById('flashClear');
+    const flashTradTog=document.getElementById('flashTradTog');
+    if(!flashBtn) return;
+    const F_MIC='<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="12" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const F_STOP='<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
+    let flashTrad=false, flashRunning=false, flashConv='', mediaRec=null, mediaChunks=[], mediaStream=null, lastReply='';
+    const EMPTY_HEARD='<span class="empty">A fala capturada aparece aqui.</span>';
+    const EMPTY_REPLY='<span class="empty">A resposta que você pode dar aparece aqui.</span>';
+
+    function setMode(f){
+      if(f){ viewReuniao.style.display='none'; viewFlash.style.display='block'; mFlashBtn.classList.add('on'); mReuniaoBtn.classList.remove('on'); }
+      else { viewReuniao.style.display='block'; viewFlash.style.display='none'; mReuniaoBtn.classList.add('on'); mFlashBtn.classList.remove('on'); }
+    }
+    mReuniaoBtn.addEventListener('click',()=>setMode(false));
+    mFlashBtn.addEventListener('click',()=>setMode(true));
+    flashTradTog.addEventListener('click',()=>{ flashTrad=!flashTrad; flashTradTog.setAttribute('aria-checked',flashTrad?'true':'false'); flashTradTog.classList.toggle('on',flashTrad); });
+
+    function fbtn(rec){ flashRunning=rec; flashBtn.classList.toggle('rec',rec); flashIco.innerHTML=rec?F_STOP:F_MIC; }
+    function fstat(t){ flashStatus.textContent=t; }
+    function blobToB64(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onloadend=()=>res((r.result||'').toString().split(',')[1]||''); r.onerror=rej; r.readAsDataURL(blob); }); }
+
+    async function flashStart(){
+      if(flashRunning) return;
+      flashHeard.innerHTML='<span class="empty">Capturando…</span>'; flashLang.textContent=''; flashTradWrap.style.display='none';
+      flashReply.innerHTML=EMPTY_REPLY; flashCopy.disabled=true; flashClear.disabled=true;
+      if(isNative){
+        try{
+          const perm=await VR.requestAudioRecordingPermission();
+          if(!perm||!perm.value){ fstat('Permita o microfone para usar o flash.'); flashHeard.innerHTML=EMPTY_HEARD; return; }
+          const st=await VR.startRecording();
+          if(!st||!st.value){ fstat('Nao consegui iniciar a gravacao.'); flashHeard.innerHTML=EMPTY_HEARD; return; }
+        }catch(e){ fstat('Falha ao gravar: '+((e&&e.message)||e)); flashHeard.innerHTML=EMPTY_HEARD; return; }
+      } else {
+        try{
+          mediaStream=await navigator.mediaDevices.getUserMedia({audio:true});
+          mediaChunks=[]; mediaRec=new MediaRecorder(mediaStream);
+          mediaRec.ondataavailable=e=>{ if(e.data&&e.data.size) mediaChunks.push(e.data); };
+          mediaRec.start();
+        }catch(e){ fstat('Permita o microfone no navegador para usar o flash.'); flashHeard.innerHTML=EMPTY_HEARD; return; }
+      }
+      fbtn(true); fstat('\uD83D\uDD34 Gravando… toque de novo para parar.');
+    }
+
+    async function flashStop(){
+      if(!flashRunning) return;
+      fbtn(false); fstat('\u23F3 Transcrevendo…');
+      let b64='', mime='audio/aac';
+      if(isNative){
+        try{ const out=await VR.stopRecording(); const v=out&&out.value; if(v&&v.recordDataBase64){ b64=v.recordDataBase64; mime=v.mimeType||'audio/aac'; } }
+        catch(e){ fstat('Falha ao parar a gravacao.'); return; }
+      } else {
+        try{
+          const blob=await new Promise((res)=>{ mediaRec.onstop=()=>res(new Blob(mediaChunks,{type:mediaRec.mimeType||'audio/webm'})); mediaRec.stop(); });
+          if(mediaStream){ mediaStream.getTracks().forEach(t=>t.stop()); mediaStream=null; }
+          mime=blob.type||'audio/webm'; b64=await blobToB64(blob);
+        }catch(e){ fstat('Falha ao capturar o audio.'); return; }
+      }
+      if(!b64){ fstat('Nao capturei audio. Tente de novo.'); flashHeard.innerHTML=EMPTY_HEARD; return; }
+      let text='', det='';
+      try{
+        const r=await fetch(API_BASE+'/api/stt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({audio:b64,mime,language:'pt'})});
+        const d=await r.json();
+        if(!r.ok||d.error){ fstat('Erro ao transcrever: '+(d.error||('HTTP '+r.status))); return; }
+        text=(d.text||'').trim(); det=(d.language||'').toLowerCase();
+      }catch(e){ fstat('Falha ao transcrever: '+((e&&e.message)||e)); return; }
+      if(!text){ fstat('Nao entendi. Fale um pouco mais e tente de novo.'); flashHeard.innerHTML=EMPTY_HEARD; return; }
+      flashHeard.textContent=text; flashLang.textContent=det?('· '+det):'';
+      flashConv += (flashConv?'\n':'')+text;
+      if(flashTrad){
+        fstat('\uD83C\uDF10 Traduzindo…'); flashTradWrap.style.display='block'; flashTradOut.innerHTML='<span class="empty">Traduzindo…</span>';
+        try{ const rt=await fetch(API_BASE+'/api/traduzir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({texto:text})}); const dt=await rt.json(); flashTradOut.textContent=(dt.traducao||'').trim()||'(sem tradução)'; }
+        catch(_){ flashTradOut.textContent='(falha na tradução)'; }
+      } else { flashTradWrap.style.display='none'; }
+      fstat('\u270D\uFE0F Preparando a resposta…'); flashReply.innerHTML='<span class="empty">Preparando…</span>';
+      try{
+        const rb=await fetch(API_BASE+'/api/buddie',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'responder',language:det||'pt',conversation:flashConv,context:text,model:'claude-haiku-4-5'})});
+        const db=await rb.json(); lastReply=(db.answer||'').trim();
+        if(lastReply){ flashReply.textContent=lastReply; flashCopy.disabled=false; }
+        else { flashReply.innerHTML='<span class="empty">Nao consegui gerar a resposta. Tente de novo.</span>'; }
+      }catch(e){ flashReply.innerHTML='<span class="empty">Falha ao gerar a resposta.</span>'; }
+      flashClear.disabled=false; fstat('Pronto. Toque para capturar de novo.');
+    }
+
+    flashBtn.addEventListener('click',()=>flashRunning?flashStop():flashStart());
+    flashCopy.addEventListener('click',async()=>{ try{ await navigator.clipboard.writeText(lastReply); const o=flashCopy.textContent; flashCopy.textContent='\u2713 Copiado'; setTimeout(()=>flashCopy.textContent=o,1400); }catch(_){} });
+    flashClear.addEventListener('click',()=>{ flashConv=''; lastReply=''; flashHeard.innerHTML=EMPTY_HEARD; flashLang.textContent=''; flashTradWrap.style.display='none'; flashReply.innerHTML=EMPTY_REPLY; flashCopy.disabled=true; flashClear.disabled=true; fstat('Toque para capturar a fala'); });
+  })();
 </script>
 
 <script>
@@ -546,7 +748,7 @@
   async function load(){
     list.innerHTML='<span class="empty">Carregando…</span>';
     try{
-      const r=await fetch('/api/transcricoes'); const d=await r.json();
+      const r=await fetch(API_BASE+'/api/transcricoes'); const d=await r.json();
       if(!d.ok) throw new Error(d.error);
       if(!d.data.length){ list.innerHTML='<span class="empty">Nenhuma transcrição salva ainda.</span>'; return; }
       list.innerHTML=d.data.map(t=>`<div class="saved-item" data-id="${t.id}">
@@ -564,7 +766,7 @@
   }
   async function full(id){
     if(cache[id]) return cache[id];
-    const r=await fetch('/api/transcricoes/'+id); const d=await r.json();
+    const r=await fetch(API_BASE+'/api/transcricoes/'+id); const d=await r.json();
     if(!d.ok) throw new Error(d.error); cache[id]=d.data; return d.data;
   }
   list.addEventListener('click',async e=>{
@@ -590,12 +792,12 @@
       else if(act==='buddie'){ const ctx=document.getElementById('mCtx'); ctx.value=t.texto; document.getElementById('fab').click(); }
       else if(act==='rename'){
         const n=prompt('Novo título:', t.titulo||''); if(n===null) return;
-        await fetch('/api/transcricoes/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({titulo:n.trim()})});
+        await fetch(API_BASE+'/api/transcricoes/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({titulo:n.trim()})});
         delete cache[id]; load();
       }
       else if(act==='del'){
         if(!confirm('Excluir esta transcrição? Não dá para desfazer.')) return;
-        await fetch('/api/transcricoes/'+id,{method:'DELETE'}); delete cache[id]; load();
+        await fetch(API_BASE+'/api/transcricoes/'+id,{method:'DELETE'}); delete cache[id]; load();
       }
     }catch(err){ alert('Erro: '+err.message); }
   });
@@ -647,12 +849,15 @@
     setBusy(true);
     mOut.innerHTML='<span class="m-load"><span class="dot"></span><span class="dot"></span><span class="dot"></span> Buddie pensando…</span>';
     try{
-      const r=await fetch('/api/buddie',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({context,prompt,action})});
+      const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),60000);
+      const bd={context,prompt,action}; if(isNative) bd.model='claude-haiku-4-5';
+      const r=await fetch(API_BASE+'/api/buddie',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(bd),signal:ctrl.signal});
+      clearTimeout(to);
       const d=await r.json();
       if(!r.ok||d.error){ mOut.innerHTML='<span class="empty">Ops: '+esc(d.error||('erro '+r.status))+'</span>'; }
       else mOut.innerHTML=md(d.answer||'(sem resposta)');
-    }catch(e){ mOut.innerHTML='<span class="empty">Falha de conexão. Tente de novo.</span>'; }
+    }catch(e){ mOut.innerHTML='<span class="empty">Falha: '+esc((e&&e.message)||'conexao')+'</span>'; }
     setBusy(false);
   }
   function setBusy(b){ mSend.disabled=b; mChips.querySelectorAll('.m-chip').forEach(c=>c.disabled=b); }
