@@ -211,6 +211,8 @@
   .msg-speak:hover{background:rgba(1,118,211,.12)}
   .flash-bar{display:flex;align-items:center;gap:8px}
   .recBtn.flash-mic{width:46px;height:46px;flex:none}
+  .msg-actions{margin-top:7px}
+  .msg-tr{font:600 11px Inter,system-ui,sans-serif;color:#0176D3;background:#fff;border:1px solid #bfdcff;border-radius:8px;padding:4px 7px;cursor:pointer;max-width:150px}
 </style>
 </head>
 <body>
@@ -302,30 +304,30 @@
 
     <div id="viewFlash" style="display:none">
       <div class="card">
-        <p style="font-size:13px;color:#64748b;margin:0 0 12px;line-height:1.5">Converse com o Buddie ao vivo. Capture a fala (\U0001F3A4) ou escreva \u2014 ele sugere a <b>sua resposta</b> no idioma da conversa e lembra de tudo.</p>
+        <p style="font-size:13px;color:#64748b;margin:0 0 12px;line-height:1.5">Converse com o Buddie ao vivo. Capture a fala (🎤) ou escreva — ele sugere a <b>sua resposta</b> no idioma da conversa e lembra de tudo.</p>
         <div class="lang">
           <span class="tog" id="flashTradTog" role="switch" aria-checked="false" tabindex="0"><span class="sw"></span><span>Traduzir a fala</span></span>
           <span class="sep"></span>
           <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#64748b">Voz
             <select id="flashVoice" style="font:inherit;padding:4px 6px;border:1px solid #cfd8e3;border-radius:8px;background:#fff;color:#0f172a">
-              <option value="eve">Eve \u00b7 animada</option>
-              <option value="ara">Ara \u00b7 amig\u00e1vel</option>
-              <option value="sal">Sal \u00b7 equilibrada</option>
-              <option value="rigel">Rigel \u00b7 profissional</option>
-              <option value="luna">Luna \u00b7 suave</option>
-              <option value="leo">Leo \u00b7 firme</option>
-              <option value="rex">Rex \u00b7 confiante</option>
-              <option value="atlas">Atlas \u00b7 segura</option>
+              <option value="eve">Eve · animada</option>
+              <option value="ara">Ara · amigável</option>
+              <option value="sal">Sal · equilibrada</option>
+              <option value="rigel">Rigel · profissional</option>
+              <option value="luna">Luna · suave</option>
+              <option value="leo">Leo · firme</option>
+              <option value="rex">Rex · confiante</option>
+              <option value="atlas">Atlas · segura</option>
             </select>
           </label>
         </div>
-        <div class="thread" id="flashThread"><div class="empty" style="padding:24px 12px;text-align:center;color:#94a3b8">A conversa aparece aqui.<br>Capture uma fala \U0001F3A4 ou escreva abaixo.</div></div>
+        <div class="thread" id="flashThread"><div class="empty" style="padding:24px 12px;text-align:center;color:#94a3b8">A conversa aparece aqui.<br>Capture uma fala 🎤 ou escreva abaixo.</div></div>
         <div class="flash-bar">
           <button class="recBtn flash-mic" id="flashBtn" aria-label="Capturar fala">
             <span class="ring" aria-hidden="true"></span>
             <span id="flashIco"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="12" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           </button>
-          <input id="flashText" placeholder="Escreva para o Buddie\u2026" style="flex:1;font:inherit;padding:11px 12px;border:1.5px solid #e2e8f0;border-radius:12px;outline:none" />
+          <input id="flashText" placeholder="Escreva para o Buddie…" style="flex:1;font:inherit;padding:11px 12px;border:1.5px solid #e2e8f0;border-radius:12px;outline:none" />
           <button class="btn primary" id="flashSend">Enviar</button>
         </div>
         <div class="status" id="flashStatus" style="margin-top:8px;min-height:18px"></div>
@@ -335,7 +337,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <footer><b>Ever i9</b> · transcrição + flash conversa + voz (Grok) · PT-BR / EN. <b>v12</b></footer>
+    <footer><b>Ever i9</b> · transcrição + flash + tradução + voz · PT-BR / EN. <b>v13</b></footer>
   </div>
 
   <!-- Buddie: botão flutuante + modal -->
@@ -405,7 +407,7 @@
   const ICON_SPEAKER='<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
   window.ttsAudio=null;
   window.speak=async function(text, lang, btn){
-    const lbl=(s)=>{ if(!btn) return; btn.innerHTML=ICON_SPEAKER+(s==='load'?' \u2026':s==='play'?' Parar':' Ouvir'); };
+    const lbl=(s)=>{ if(!btn) return; btn.innerHTML=ICON_SPEAKER+(s==='load'?' …':s==='play'?' Parar':' Ouvir'); };
     if(window.ttsAudio){ try{window.ttsAudio.pause();}catch(_){}; window.ttsAudio=null; lbl('idle'); return; }
     if(!text||!text.trim()) return;
     lbl('load'); if(btn) btn.disabled=true;
@@ -454,7 +456,7 @@
       const st = await VR.startRecording();
       if(!st || !st.value){ show('Nao consegui iniciar a gravacao.'); return false; }
       nativeRunning=true;
-      if(!committed.trim()) tr.innerHTML='<span class="empty">\uD83D\uDD34 Gravando\u2026 o texto aparece em blocos a cada ~25s.</span>';
+      if(!committed.trim()) tr.innerHTML='<span class="empty">🔴 Gravando… o texto aparece em blocos a cada ~25s.</span>';
       if(chunkTimer) clearInterval(chunkTimer);
       chunkTimer=setInterval(()=>{ if(nativeRunning) rotateChunk(false); }, CHUNK_MS);
       return true;
@@ -463,8 +465,8 @@
   async function stopNative(){
     nativeRunning=false;
     if(chunkTimer){ clearInterval(chunkTimer); chunkTimer=null; }
-    status.style.display='block'; status.textContent='Transcrevendo o ultimo bloco\u2026';
-    if(!committed.trim()) tr.innerHTML='<span class="empty">\u23F3 Transcrevendo\u2026</span>';
+    status.style.display='block'; status.textContent='Transcrevendo o ultimo bloco…';
+    if(!committed.trim()) tr.innerHTML='<span class="empty">⏳ Transcrevendo…</span>';
     await rotateChunk(true);
     status.textContent='Transcricao pausada'; render('');
   }
@@ -686,7 +688,7 @@
     const SPK='<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
     const F_MIC='<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="12" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const F_STOP='<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
-    const EMPTY='<div class="empty" style="padding:24px 12px;text-align:center;color:#94a3b8">A conversa aparece aqui.<br>Capture uma fala \uD83C\uDFA4 ou escreva abaixo.</div>';
+    const EMPTY='<div class="empty" style="padding:24px 12px;text-align:center;color:#94a3b8">A conversa aparece aqui.<br>Capture uma fala 🎤 ou escreva abaixo.</div>';
     let flashTrad=false, flashRunning=false, mediaRec=null, mediaChunks=[], mediaStream=null, lastLang='pt-BR', busy=false;
     let thread=[];
     window.ttsVoice = flashVoice ? flashVoice.value : 'eve';
@@ -707,18 +709,26 @@
       const div=document.createElement('div'); div.className='msg '+role+(opts.pending?' pending':'');
       if(opts.tag){ const t=document.createElement('span'); t.className='role-tag'; t.textContent=opts.tag; div.appendChild(t); }
       const p=document.createElement('span'); p.className='msg-body'; p.textContent=text; div.appendChild(p);
-      if(role==='buddie'){ if(opts.lang) div.dataset.lang=opts.lang; const b=document.createElement('button'); b.className='msg-speak'; b.innerHTML=SPK; b.title='Ouvir'; b.addEventListener('click',()=>window.speak(div.querySelector('.msg-body').textContent, div.dataset.lang||'auto', b)); div.appendChild(b); }
+      if(role==='buddie'){ if(opts.lang) div.dataset.lang=opts.lang; const b=document.createElement('button'); b.className='msg-speak'; b.innerHTML=SPK; b.title='Ouvir'; b.addEventListener('click',()=>window.speak(div.querySelector('.msg-body').textContent, div.dataset.lang||'auto', b)); div.appendChild(b); if(!opts.notr){ const act=document.createElement('div'); act.className='msg-actions'; const sel=document.createElement('select'); sel.className='msg-tr'; sel.innerHTML='<option value="">🌐 traduzir resposta…</option><option>Inglês</option><option>Espanhol</option><option>Italiano</option><option>Alemão</option><option>Mandarim</option><option>Japonês</option>'; sel.addEventListener('change',()=>{ const to=sel.value; sel.value=''; if(to) translateReply(div,to); }); act.appendChild(sel); div.appendChild(act); } }
       flashThread.appendChild(div); scrollDown(); return div;
     }
     function setBubble(div, text, lang){ const p=div.querySelector('.msg-body'); if(p) p.textContent=text; div.classList.remove('pending'); if(lang) div.dataset.lang=lang; scrollDown(); }
     function buildConv(){ return thread.map(m=> m.role==='buddie' ? ('[Buddie sugeriu]: '+m.text) : ((m.itype==='text'?'[Voce pediu]: ':'[Outra pessoa disse]: ')+m.text)).join('\n'); }
+    const LANG_CODE={'Inglês':'en','Espanhol':'es-ES','Italiano':'it','Alemão':'de','Mandarim':'zh','Japonês':'ja'};
+    const LANG_FULL={'Inglês':'inglês','Espanhol':'espanhol','Italiano':'italiano','Alemão':'alemão','Mandarim':'mandarim (chinês simplificado)','Japonês':'japonês'};
+    async function translateReply(div, name){
+      const text=div.querySelector('.msg-body').textContent;
+      const trDiv=addBubble('buddie','…',{pending:true, tag:'tradução · '+name, lang:LANG_CODE[name]||'auto', notr:true});
+      try{ const r=await fetch(API_BASE+'/api/traduzir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({texto:text, to:LANG_FULL[name]||name})}); const d=await r.json(); setBubble(trDiv,(d.traducao||'').trim()||'(falha)', LANG_CODE[name]||'auto'); }
+      catch(e){ setBubble(trDiv,'(falha na tradução)'); }
+    }
 
     async function sendToBuddie(text, lang, itype){
       const conv=buildConv();
       thread.push({role:'user', text:text, itype:itype});
-      addBubble('user', text, {tag: itype==='text'?'voce \u2192 buddie':'fala capturada'});
-      const bDiv=addBubble('buddie','\u2026',{pending:true, tag:'buddie'});
-      busy=true; flashStatus.textContent='Buddie pensando\u2026';
+      addBubble('user', text, {tag: itype==='text'?'voce → buddie':'fala capturada'});
+      const bDiv=addBubble('buddie','…',{pending:true, tag:'buddie'});
+      busy=true; flashStatus.textContent='Buddie pensando…';
       try{
         const r=await fetch(API_BASE+'/api/buddie',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'responder',language:lang||'auto',input_type:itype,conversation:conv,context:text,model:'claude-haiku-4-5'})});
         const d=await r.json();
@@ -730,7 +740,7 @@
     }
     async function maybeTranslate(text){
       if(!flashTrad) return;
-      flashStatus.textContent='Traduzindo\u2026';
+      flashStatus.textContent='Traduzindo…';
       try{ const rt=await fetch(API_BASE+'/api/traduzir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({texto:text})}); const dt=await rt.json(); const tr=(dt.traducao||'').trim(); if(tr) addBubble('user', tr, {tag:'traducao'}); }catch(_){}
     }
     function blobToB64(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onloadend=()=>res((r.result||'').toString().split(',')[1]||''); r.onerror=rej; r.readAsDataURL(blob); }); }
@@ -742,11 +752,11 @@
       } else {
         try{ mediaStream=await navigator.mediaDevices.getUserMedia({audio:true}); mediaChunks=[]; mediaRec=new MediaRecorder(mediaStream); mediaRec.ondataavailable=e=>{ if(e.data&&e.data.size) mediaChunks.push(e.data); }; mediaRec.start(); }catch(e){ flashStatus.textContent='Permita o microfone no navegador.'; return; }
       }
-      flashRunning=true; flashBtn.classList.add('rec'); flashIco.innerHTML=F_STOP; flashStatus.textContent='\uD83D\uDD34 Gravando\u2026 toque para parar.';
+      flashRunning=true; flashBtn.classList.add('rec'); flashIco.innerHTML=F_STOP; flashStatus.textContent='🔴 Gravando… toque para parar.';
     }
     async function flashStop(){
       if(!flashRunning) return;
-      flashRunning=false; flashBtn.classList.remove('rec'); flashIco.innerHTML=F_MIC; flashStatus.textContent='\u23F3 Transcrevendo\u2026';
+      flashRunning=false; flashBtn.classList.remove('rec'); flashIco.innerHTML=F_MIC; flashStatus.textContent='⏳ Transcrevendo…';
       let b64='', mime='audio/aac';
       if(isNative){ try{ const out=await VR.stopRecording(); const v=out&&out.value; if(v&&v.recordDataBase64){ b64=v.recordDataBase64; mime=v.mimeType||'audio/aac'; } }catch(e){ flashStatus.textContent='Falha ao parar.'; return; } }
       else { try{ const blob=await new Promise((res)=>{ mediaRec.onstop=()=>res(new Blob(mediaChunks,{type:mediaRec.mimeType||'audio/webm'})); mediaRec.stop(); }); if(mediaStream){ mediaStream.getTracks().forEach(t=>t.stop()); mediaStream=null; } mime=blob.type||'audio/webm'; b64=await blobToB64(blob); }catch(e){ flashStatus.textContent='Falha ao capturar.'; return; } }
