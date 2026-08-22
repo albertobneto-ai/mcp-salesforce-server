@@ -275,6 +275,7 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-9 0v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Limpar
         </button>
+        <button class="btn ghost" id="ttsRead"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Ouvir</button>
         <button class="btn save" id="save" disabled>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 4h11l3 3v13H5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 4v5h7V4M8 20v-6h8v6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
           Salvar
@@ -313,6 +314,7 @@
         <div class="tr" id="flashReply"><span class="empty">A resposta que você pode dar aparece aqui.</span></div>
         <div class="actions">
           <button class="btn primary" id="flashCopy" disabled>Copiar resposta</button>
+          <button class="btn ghost" id="flashSpeak" disabled><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Ouvir</button>
           <button class="btn ghost" id="flashClear" disabled>Limpar</button>
         </div>
       </div>
@@ -320,7 +322,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <footer><b>Ever i9</b> · transcrição + flash (Grok) · PT-BR / EN. <b>v10</b></footer>
+    <footer><b>Ever i9</b> · transcrição + flash + leitura (Grok) · PT-BR / EN. <b>v11</b></footer>
   </div>
 
   <!-- Buddie: botão flutuante + modal -->
@@ -387,6 +389,26 @@
   window.VR = Cap && Cap.Plugins && Cap.Plugins.VoiceRecorder;
   window.isNative = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform() && VR);
   window.API_BASE = isNative ? 'https://mcp-sf-provisioning-462dd29c2455.herokuapp.com' : '';
+  const ICON_SPEAKER='<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+  window.ttsAudio=null;
+  window.speak=async function(text, lang, btn){
+    const lbl=(s)=>{ if(!btn) return; btn.innerHTML=ICON_SPEAKER+(s==='load'?' \u2026':s==='play'?' Parar':' Ouvir'); };
+    if(window.ttsAudio){ try{window.ttsAudio.pause();}catch(_){}; window.ttsAudio=null; lbl('idle'); return; }
+    if(!text||!text.trim()) return;
+    lbl('load'); if(btn) btn.disabled=true;
+    try{
+      const r=await fetch(window.API_BASE+'/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:text.slice(0,15000),language:lang||'auto',voice_id:'eve'})});
+      if(!r.ok) throw new Error('TTS '+r.status);
+      const url=URL.createObjectURL(await r.blob());
+      window.ttsAudio=new Audio(url);
+      window.ttsAudio.onended=()=>{URL.revokeObjectURL(url);window.ttsAudio=null;lbl('idle');};
+      window.ttsAudio.onerror=()=>{URL.revokeObjectURL(url);window.ttsAudio=null;lbl('idle');};
+      if(btn) btn.disabled=false;
+      lbl('play');
+      await window.ttsAudio.play();
+    }catch(e){ window.ttsAudio=null; lbl('idle'); if(btn) btn.disabled=false; }
+  };
+  (function(){ const b=document.getElementById('ttsRead'); if(b){ b.addEventListener('click',()=>{ const t=(typeof fullText==='function')?fullText():''; window.speak(t,'auto',b); }); } })();
   let nativeRunning=false, chunkTimer=null;
   const CHUNK_MS=25000; // blocos de ~25s: quase ao vivo, poucas emendas
   async function transcribeChunk(b64, mime){
@@ -647,12 +669,12 @@
     const flashBtn=document.getElementById('flashBtn'), flashIco=document.getElementById('flashIco'), flashStatus=document.getElementById('flashStatus');
     const flashHeard=document.getElementById('flashHeard'), flashLang=document.getElementById('flashLang');
     const flashTradWrap=document.getElementById('flashTradWrap'), flashTradOut=document.getElementById('flashTradOut');
-    const flashReply=document.getElementById('flashReply'), flashCopy=document.getElementById('flashCopy'), flashClear=document.getElementById('flashClear');
+    const flashReply=document.getElementById('flashReply'), flashCopy=document.getElementById('flashCopy'), flashClear=document.getElementById('flashClear'), flashSpeak=document.getElementById('flashSpeak');
     const flashTradTog=document.getElementById('flashTradTog');
     if(!flashBtn) return;
     const F_MIC='<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="12" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const F_STOP='<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
-    let flashTrad=false, flashRunning=false, flashConv='', mediaRec=null, mediaChunks=[], mediaStream=null, lastReply='';
+    let flashTrad=false, flashRunning=false, flashConv='', mediaRec=null, mediaChunks=[], mediaStream=null, lastReply='', lastDet='';
     const EMPTY_HEARD='<span class="empty">A fala capturada aparece aqui.</span>';
     const EMPTY_REPLY='<span class="empty">A resposta que você pode dar aparece aqui.</span>';
 
@@ -724,7 +746,7 @@
       try{
         const rb=await fetch(API_BASE+'/api/buddie',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'responder',language:det||'pt',conversation:flashConv,context:text,model:'claude-haiku-4-5'})});
         const db=await rb.json(); lastReply=(db.answer||'').trim();
-        if(lastReply){ flashReply.textContent=lastReply; flashCopy.disabled=false; }
+        if(lastReply){ flashReply.textContent=lastReply; flashCopy.disabled=false; lastDet=det; flashSpeak.disabled=false; }
         else { flashReply.innerHTML='<span class="empty">Nao consegui gerar a resposta. Tente de novo.</span>'; }
       }catch(e){ flashReply.innerHTML='<span class="empty">Falha ao gerar a resposta.</span>'; }
       flashClear.disabled=false; fstat('Pronto. Toque para capturar de novo.');
@@ -732,7 +754,8 @@
 
     flashBtn.addEventListener('click',()=>flashRunning?flashStop():flashStart());
     flashCopy.addEventListener('click',async()=>{ try{ await navigator.clipboard.writeText(lastReply); const o=flashCopy.textContent; flashCopy.textContent='\u2713 Copiado'; setTimeout(()=>flashCopy.textContent=o,1400); }catch(_){} });
-    flashClear.addEventListener('click',()=>{ flashConv=''; lastReply=''; flashHeard.innerHTML=EMPTY_HEARD; flashLang.textContent=''; flashTradWrap.style.display='none'; flashReply.innerHTML=EMPTY_REPLY; flashCopy.disabled=true; flashClear.disabled=true; fstat('Toque para capturar a fala'); });
+    flashSpeak.addEventListener('click',()=>window.speak(lastReply,lastDet,flashSpeak));
+    flashClear.addEventListener('click',()=>{ flashConv=''; lastReply=''; flashSpeak.disabled=true; flashHeard.innerHTML=EMPTY_HEARD; flashLang.textContent=''; flashTradWrap.style.display='none'; flashReply.innerHTML=EMPTY_REPLY; flashCopy.disabled=true; flashClear.disabled=true; fstat('Toque para capturar a fala'); });
   })();
 </script>
 
