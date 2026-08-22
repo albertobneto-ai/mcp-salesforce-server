@@ -204,7 +204,7 @@
 
   .thread{max-height:44vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:6px 2px;margin-bottom:12px}
   .msg{max-width:88%;padding:9px 12px;border-radius:14px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;position:relative}
-  .msg.user{align-self:flex-end;background:#e8eef6;color:#1e293b;border-bottom-right-radius:4px}
+  .msg.user{align-self:flex-end;background:#e8eef6;color:#1e293b;border-bottom-right-radius:4px;padding-right:34px}
   .msg.buddie{align-self:flex-start;background:#eef6ff;border:1px solid #bfdcff;color:#0f172a;border-bottom-left-radius:4px;padding-right:34px}
   .msg.pending{opacity:.55}
   .msg .role-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;opacity:.55;display:block;margin-bottom:3px}
@@ -341,7 +341,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v15</b></footer>
+    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v16</b></footer>
   </div>
 
   <!-- Buddie: botão flutuante + modal -->
@@ -714,7 +714,7 @@
       const div=document.createElement('div'); div.className='msg '+role+(opts.pending?' pending':'');
       if(opts.tag){ const t=document.createElement('span'); t.className='role-tag'; t.textContent=opts.tag; div.appendChild(t); }
       const p=document.createElement('span'); p.className='msg-body'; p.textContent=text; div.appendChild(p);
-      if(role==='buddie'){ if(opts.lang) div.dataset.lang=opts.lang; const b=document.createElement('button'); b.className='msg-speak'; b.innerHTML=SPK; b.title='Ouvir'; b.addEventListener('click',()=>window.speak(div.querySelector('.msg-body').textContent, div.dataset.lang||'auto', b)); div.appendChild(b); if(!opts.notr){ const act=document.createElement('div'); act.className='msg-actions'; const sel=document.createElement('select'); sel.className='msg-tr'; sel.innerHTML='<option value="">🌐 traduzir resposta…</option><option>Inglês</option><option>Espanhol</option><option>Italiano</option><option>Alemão</option><option>Mandarim</option><option>Japonês</option>'; sel.addEventListener('change',()=>{ const to=sel.value; sel.value=''; if(to) translateReply(div,to); }); act.appendChild(sel); div.appendChild(act); } }
+      if(opts.lang) div.dataset.lang=opts.lang; { const b=document.createElement('button'); b.className='msg-speak'; b.innerHTML=SPK; b.title='Ouvir'; b.addEventListener('click',()=>window.speak(div.querySelector('.msg-body').textContent, div.dataset.lang||'auto', b)); div.appendChild(b); if(!opts.notr){ const act=document.createElement('div'); act.className='msg-actions'; const sel=document.createElement('select'); sel.className='msg-tr'; sel.innerHTML='<option value="">🌐 traduzir'+(role==='buddie'?' resposta':'')+'…</option><option>Inglês</option><option>Espanhol</option><option>Italiano</option><option>Alemão</option><option>Mandarim</option><option>Japonês</option>'; sel.addEventListener('change',()=>{ const to=sel.value; sel.value=''; if(to) translateReply(div,to); }); act.appendChild(sel); div.appendChild(act); } }
       flashThread.appendChild(div); scrollDown(); return div;
     }
     function setBubble(div, text, lang){ const p=div.querySelector('.msg-body'); if(p) p.textContent=text; div.classList.remove('pending'); if(lang) div.dataset.lang=lang; scrollDown(); }
@@ -731,7 +731,7 @@
     async function sendToBuddie(text, lang, itype){
       const conv=buildConv();
       thread.push({role:'user', text:text, itype:itype});
-      addBubble('user', text, {tag: itype==='text'?'voce → buddie':'fala capturada'});
+      addBubble('user', text, {tag: itype==='text'?'você → buddie':'fala capturada', lang:lang});
       const bDiv=addBubble('buddie','…',{pending:true, tag:'buddie'});
       busy=true; flashStatus.textContent='Buddie pensando…';
       try{
@@ -746,7 +746,7 @@
     async function maybeTranslate(text){
       if(!flashTrad) return;
       flashStatus.textContent='Traduzindo…';
-      try{ const rt=await fetch(API_BASE+'/api/traduzir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({texto:text})}); const dt=await rt.json(); const tr=(dt.traducao||'').trim(); if(tr) addBubble('user', tr, {tag:'traducao'}); }catch(_){}
+      try{ const rt=await fetch(API_BASE+'/api/traduzir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({texto:text})}); const dt=await rt.json(); const tr=(dt.traducao||'').trim(); if(tr) addBubble('user', tr, {tag:'tradução (auto)', lang:'auto', notr:true}); }catch(_){}
     }
     function blobToB64(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onloadend=()=>res((r.result||'').toString().split(',')[1]||''); r.onerror=rej; r.readAsDataURL(blob); }); }
 
