@@ -117,4 +117,25 @@ router.post('/api/stt', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Text-to-Speech via Grok (xAI) — proxy seguro; retorna MP3
+router.post('/api/tts', async (req, res) => {
+  try {
+    const b = req.body || {};
+    const text = (b.text || '').toString().slice(0, 15000);
+    const voice = (b.voice_id || 'eve').toString();
+    const lang = (b.language || 'auto').toString();
+    if (!text.trim()) return res.status(400).json({ error: 'texto vazio' });
+    const r = await fetch('https://api.x.ai/v1/tts', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + process.env.GROK_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, voice_id: voice, language: lang })
+    });
+    if (!r.ok) { const t = await r.text(); return res.status(r.status).json({ error: 'xAI ' + r.status + ': ' + t.slice(0,200) }); }
+    const buf = Buffer.from(await r.arrayBuffer());
+    res.set('Content-Type', 'audio/mpeg');
+    res.set('Content-Length', String(buf.length));
+    res.send(buf);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 export { router as buddieRouter };
