@@ -31,25 +31,42 @@ const ACTIONS = {
   recomendacao: 'Dê recomendações práticas e priorizadas com base no trecho.'
 };
 
+const LANG_NAMES = { pt:'português do Brasil', 'pt-br':'português do Brasil', en:'inglês', 'en-us':'inglês', es:'espanhol', 'es-mx':'espanhol', fr:'francês', de:'alemão', it:'italiano' };
+
 router.post('/api/buddie', async (req, res) => {
   try {
     const body = req.body || {};
     const context = (body.context || '').toString().slice(0, 12000);
     const prompt = (body.prompt || '').toString().slice(0, 2000);
     const action = (body.action || '').toString();
+    const conversation = (body.conversation || '').toString().slice(0, 16000);
+    const language = (body.language || '').toString().toLowerCase();
 
     if (!context.trim() && !prompt.trim()) {
       return res.status(400).json({ error: 'Envie um trecho da transcrição ou uma pergunta.' });
     }
 
-    const instruction = ACTIONS[action] || prompt || 'Analise o trecho e ajude o usuário.';
-    const system = 'Você é o Buddie, um copilot de reuniões da Ever i9. Responda em português do Brasil, direto e útil, em Markdown enxuto (sem enrolação). Baseie-se apenas no trecho fornecido; se faltar contexto, diga objetivamente o que falta.';
-    const userContent = `TRECHO DA TRANSCRIÇÃO:\n"""\n${context || '(nenhum trecho selecionado)'}\n"""\n\nPEDIDO: ${instruction}`;
+    let system, userContent;
+
+    if (action === 'responder') {
+      const langName = LANG_NAMES[language] || 'o mesmo idioma em que a pessoa falou';
+      system = `Você ajuda o usuário a responder durante uma conversa ou reunião ao vivo. Alguém acabou de dizer algo direcionado a ele. Com base no contexto da conversa, escreva a RESPOSTA que o usuário daria — em primeira pessoa, como se fosse ele mesmo falando: natural, direta e pronta para ser dita em voz alta. Escreva a resposta em ${langName}. Não resuma, não analise, não explique o que a pessoa disse — entregue apenas a resposta sugerida, sem títulos e com Markdown mínimo.`;
+      userContent = `CONTEXTO DA CONVERSA:\n"""\n${conversation || '(sem contexto anterior)'}\n"""\n\nO QUE ACABARAM DE DIZER (responda a isto como se fosse você):\n"""\n${context}\n"""`;
+    } else if (!action && prompt.trim()) {
+      system = 'Você é o Buddie, um assistente útil e direto. Responda a qualquer pergunta com clareza e objetividade, em Markdown enxuto (sem enrolação). Se houver um trecho de contexto, use-o quando for relevante. Responda no mesmo idioma da pergunta.';
+      userContent = context.trim() ? `CONTEXTO (use se ajudar):\n"""\n${context}\n"""\n\nPERGUNTA: ${prompt}` : prompt;
+    } else {
+      const instruction = ACTIONS[action] || prompt || 'Analise o trecho e ajude o usuário.';
+      system = 'Você é o Buddie, um copilot de reuniões da Ever i9. Responda em português do Brasil, direto e útil, em Markdown enxuto (sem enrolação). Baseie-se no trecho fornecido; se faltar contexto, diga objetivamente o que falta.';
+      userContent = `TRECHO DA TRANSCRIÇÃO:\n"""\n${context || '(nenhum trecho selecionado)'}\n"""\n\nPEDIDO: ${instruction}`;
+    }
 
     const answer = await callClaude(system, userContent, body.model, 1200);
     res.json({ answer });
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
   }
 });
 
