@@ -328,6 +328,18 @@
               <option value="ja">Japonês</option>
             </select>
           </label>
+          <label class="fl-pick">Traduzir minha fala
+            <select id="flashFalaTrad">
+              <option value="Não">Não</option>
+              <option value="Inglês">Inglês</option>
+              <option value="Espanhol">Espanhol</option>
+              <option value="Italiano">Italiano</option>
+              <option value="Alemão">Alemão</option>
+              <option value="Mandarim">Mandarim</option>
+              <option value="Japonês">Japonês</option>
+              <option value="Português">Português</option>
+            </select>
+          </label>
           <label class="fl-pick">Voz
             <select id="flashVoice">
               <option value="eve">Eve · animada</option>
@@ -364,7 +376,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v23</b></footer>
+    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v24</b></footer>
   </div>
 
   <!-- Buddie: botão flutuante + modal -->
@@ -710,7 +722,7 @@
     const viewReuniao=document.getElementById('viewReuniao'), viewFlash=document.getElementById('viewFlash');
     const flashBtn=document.getElementById('flashBtn'), flashIco=document.getElementById('flashIco'), flashStatus=document.getElementById('flashStatus');
     const flashThread=document.getElementById('flashThread'), flashText=document.getElementById('flashText'), flashSend=document.getElementById('flashSend');
-    const flashClear=document.getElementById('flashClear'), flashVoice=document.getElementById('flashVoice'), flashLang=document.getElementById('flashLang'), flashConvTog=document.getElementById('flashConvTog'), flashBrainTog=document.getElementById('flashBrainTog'), convSetup=document.getElementById('convSetup'), convContext=document.getElementById('convContext'), convStart=document.getElementById('convStart');
+    const flashClear=document.getElementById('flashClear'), flashVoice=document.getElementById('flashVoice'), flashLang=document.getElementById('flashLang'), flashConvTog=document.getElementById('flashConvTog'), flashBrainTog=document.getElementById('flashBrainTog'), convSetup=document.getElementById('convSetup'), convContext=document.getElementById('convContext'), convStart=document.getElementById('convStart'), flashFalaTrad=document.getElementById('flashFalaTrad');
     if(!flashBtn) return;
     const SPK='<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
     const F_MIC='<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="12" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -751,8 +763,9 @@
     function addBubble(role, text, opts){ const e=flashThread.querySelector('.empty'); if(e) e.remove(); const div=createBubble(role,text,opts); flashThread.appendChild(div); scrollDown(); return div; }
     function setBubble(div, text, lang, noScroll){ const p=div.querySelector('.msg-body'); if(p) p.textContent=text; div.classList.remove('pending'); if(lang) div.dataset.lang=lang; if(!noScroll) scrollDown(); }
     function buildConv(){ return thread.map(m=> m.role==='buddie' ? ('[Buddie sugeriu]: '+m.text) : ((m.itype==='text'?'[Voce pediu]: ':'[Outra pessoa disse]: ')+m.text)).join('\n'); }
-    const LANG_CODE={'Inglês':'en','Espanhol':'es-ES','Italiano':'it','Alemão':'de','Mandarim':'zh','Japonês':'ja'};
-    const LANG_FULL={'Inglês':'inglês','Espanhol':'espanhol','Italiano':'italiano','Alemão':'alemão','Mandarim':'mandarim (chinês simplificado)','Japonês':'japonês'};
+    const LANG_CODE={'Inglês':'en','Espanhol':'es-ES','Italiano':'it','Alemão':'de','Mandarim':'zh','Japonês':'ja','Português':'pt-BR'};
+    const LANG_FULL={'Inglês':'inglês','Espanhol':'espanhol','Italiano':'italiano','Alemão':'alemão','Mandarim':'mandarim (chinês simplificado)','Japonês':'japonês','Português':'português do Brasil'};
+    function maybeAutoTradFala(uDiv){ const s=flashFalaTrad?flashFalaTrad.value:'Não'; if(s && s!=='Não' && uDiv) translateReply(uDiv, s); }
     async function translateReply(div, name){
       const srcId=div.dataset.bid;
       let anchor=div, next=div.nextElementSibling;
@@ -769,7 +782,7 @@
     async function sendToBuddie(text, lang, itype){
       const conv=buildConv();
       thread.push({role:'user', text:text, itype:itype});
-      addBubble('user', text, {tag: itype==='text'?'você → buddie':'fala capturada', lang:lang});
+      const uDiv=addBubble('user', text, {tag: itype==='text'?'você → buddie':'fala capturada', lang:lang}); maybeAutoTradFala(uDiv);
       const bDiv=addBubble('buddie','…',{pending:true, tag:'buddie'});
       busy=true; flashStatus.textContent='Buddie pensando…';
       try{
@@ -868,7 +881,7 @@
       catch(e){ flashStatus.textContent='Falha ao transcrever.'; if(convMode) setTimeout(convStartListen,600); return; }
       if(!text){ flashStatus.textContent='Não peguei nada. Continue falando…'; if(convMode) setTimeout(convStartListen,400); return; }
       if(det) lastLang=det;
-      thread.push({role:'user', text:text, itype:'speech'}); addBubble('user', text, {tag:'você', lang:det||'auto'});
+      thread.push({role:'user', text:text, itype:'speech'}); const uDiv=addBubble('user', text, {tag:'você', lang:det||'auto'}); maybeAutoTradFala(uDiv);
       await simTurn(false, text);
     }
     function convToggle(on){
@@ -907,7 +920,7 @@
       simTurn(true, '');
     });
     flashBtn.addEventListener('click',()=>{ if(convMode){ if(flashRunning) convStopListen(); else convStartListen(); } else { flashRunning?flashStop():flashStart(); } });
-    function sendText(){ const t=(flashText.value||'').trim(); if(!t||busy) return; flashText.value=''; flashSend.disabled=true; if(convMode){ thread.push({role:'user', text:t, itype:'text'}); addBubble('user', t, {tag:'você', lang:'auto'}); simTurn(false, t); } else { sendToBuddie(t, replyLangFor(''), 'text'); } }
+    function sendText(){ const t=(flashText.value||'').trim(); if(!t||busy) return; flashText.value=''; flashSend.disabled=true; if(convMode){ thread.push({role:'user', text:t, itype:'text'}); const uDiv=addBubble('user', t, {tag:'você', lang:'auto'}); maybeAutoTradFala(uDiv); simTurn(false, t); } else { sendToBuddie(t, replyLangFor(''), 'text'); } }
     flashSend.addEventListener('click',sendText);
     flashText.addEventListener('input',()=>{ flashSend.disabled=!flashText.value.trim(); });
     flashText.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendText(); } });
