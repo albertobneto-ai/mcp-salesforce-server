@@ -49,10 +49,13 @@ router.post('/api/buddie', async (req, res) => {
     let system, userContent;
 
     if (action === 'responder') {
-      const langName = LANG_NAMES[language] || 'o mesmo idioma da conversa';
       const inputType = (body.input_type || 'speech').toString();
-      system = `Você é o copiloto do usuário durante uma conversa ou reunião ao vivo — você o ajuda a responder e a conduzir a conversa. Abaixo vem o histórico da conversa até agora (o que a outra pessoa falou, as suas sugestões anteriores, e instruções que o usuário te deu). Regras: se a nova entrada for algo que a OUTRA PESSOA disse, escreva a resposta que o usuário daria, em primeira pessoa, natural e pronta para ser dita em voz alta. Se a nova entrada for uma instrução ou pergunta do PRÓPRIO usuário (por exemplo "reformula mais curto", "deixa mais formal", "e se eu recusar?"), atenda o pedido: ajuste a sugestão anterior ou responda, sempre mantendo o contexto. Responda em ${langName}. Seja direto e natural, sem títulos e com Markdown mínimo; entregue apenas o texto útil.`;
-      userContent = `HISTORICO DA CONVERSA:\n"""\n${conversation || '(inicio da conversa)'}\n"""\n\nNOVA ENTRADA (${inputType === 'text' ? 'mensagem do usuario para voce' : 'a outra pessoa acabou de dizer isto'}):\n"""\n${context}\n"""`;
+      const mapped = LANG_NAMES[language];
+      const langRule = mapped
+        ? `REGRA DE IDIOMA — OBRIGATORIA: escreva TODA a sua resposta em ${mapped}. Mesmo que a pessoa tenha falado em portugues ou em qualquer outro idioma, a resposta final deve estar 100% em ${mapped}, sem uma unica palavra em outro idioma. Responder em idioma diferente de ${mapped} conta como resposta errada.`
+        : 'Escreva a sua resposta no mesmo idioma em que a pessoa falou.';
+      system = `Voce e o copiloto do usuario durante uma conversa ao vivo — voce ajuda a responder e a conduzir a conversa. ${langRule} Regras de conteudo: se a nova entrada for algo que a OUTRA PESSOA disse, escreva a resposta que o usuario daria, em primeira pessoa, natural e pronta para ser dita em voz alta. Se a nova entrada for uma instrucao ou pergunta do PROPRIO usuario (ex.: reformula mais curto, deixa mais formal, e se eu recusar), atenda o pedido mantendo o contexto. Seja direto e natural, sem titulos e com Markdown minimo. Entregue apenas o texto util da resposta${mapped ? ', escrito integralmente em ' + mapped : ''}.`;
+      userContent = `HISTORICO DA CONVERSA:\n"""\n${conversation || '(inicio da conversa)'}\n"""\n\nNOVA ENTRADA (${inputType === 'text' ? 'mensagem do usuario para voce' : 'a outra pessoa acabou de dizer isto'}):\n"""\n${context}\n"""${mapped ? '\n\nLembrete final: a resposta inteira deve estar em ' + mapped + '.' : ''}`;
     } else if (!action && prompt.trim()) {
       system = 'Você é o Buddie, um assistente útil e direto. Responda a qualquer pergunta com clareza e objetividade, em Markdown enxuto (sem enrolação). Se houver um trecho de contexto, use-o quando for relevante. Responda no mesmo idioma da pergunta.';
       userContent = context.trim() ? `CONTEXTO (use se ajudar):\n"""\n${context}\n"""\n\nPERGUNTA: ${prompt}` : prompt;
