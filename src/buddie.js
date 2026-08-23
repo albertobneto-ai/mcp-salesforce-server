@@ -1,6 +1,7 @@
 // src/buddie.js — Copilot "Buddie" para a transcrição de reunião (Ever i9)
 // Usa Claude via ANTHROPIC_KEY (já no ambiente). Chave nunca vai ao navegador.
 import express from 'express';
+import { searchChunks } from './services/kb-db.js';
 const router = express.Router();
 
 async function callClaude(system, userContent, model, maxTk) {
@@ -65,6 +66,17 @@ router.post('/api/buddie', async (req, res) => {
       userContent = `TRECHO DA TRANSCRIÇÃO:\n"""\n${context || '(nenhum trecho selecionado)'}\n"""\n\nPEDIDO: ${instruction}`;
     }
 
+    if (body.brain) {
+      try {
+        const q = (context || prompt || '').toString().slice(0, 500);
+        const chunks = await searchChunks(q, 6, null);
+        if (chunks && chunks.length) {
+          const kb = chunks.map(x => '[' + (x.title || 'doc') + '] ' + (x.content || '')).join('\n\n').slice(0, 8000);
+          userContent += '\n\nCONHECIMENTO DO PROJETO (conceitos reais deste projeto — use se ajudarem a responder com precisao, em vez de generico):\n"""\n' + kb + '\n"""';
+          system += ' Se houver um bloco CONHECIMENTO DO PROJETO, baseie-se nele para dar respostas concretas e especificas do projeto.';
+        }
+      } catch (e) {}
+    }
     const answer = await callClaude(system, userContent, body.model, 1200);
     res.json({ answer });
   } catch (e) {
