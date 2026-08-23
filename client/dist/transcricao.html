@@ -380,7 +380,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v26</b></footer>
+    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v27</b></footer>
   </div>
 
   <!-- Buddie: botão flutuante + modal -->
@@ -802,8 +802,15 @@
     }
     function blobToB64(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onloadend=()=>res((r.result||'').toString().split(',')[1]||''); r.onerror=rej; r.readAsDataURL(blob); }); }
 
+    async function releaseMic(){
+      try{ if(isNative && VR){ await VR.stopRecording(); } }catch(_){}
+      try{ if(convRec && convRec.state && convRec.state!=='inactive') convRec.stop(); }catch(_){}
+      try{ if(convStream){ convStream.getTracks().forEach(t=>t.stop()); convStream=null; } }catch(_){}
+      convRec=null;
+    }
     async function flashStart(){
       if(flashRunning||busy) return;
+      await releaseMic();
       if(isNative){
         try{ const perm=await VR.requestAudioRecordingPermission(); if(!perm||!perm.value){ flashStatus.textContent='Permita o microfone.'; return; } const st=await VR.startRecording(); if(!st||!st.value){ flashStatus.textContent='Nao consegui gravar.'; return; } }catch(e){ flashStatus.textContent='Falha ao gravar: '+((e&&e.message)||e); return; }
       } else {
@@ -852,6 +859,7 @@
     }
     async function convStartListen(){
       if(!convMode || flashRunning || busy) return;
+      await releaseMic();
       convUsingVR=false;
       if(isNative && VR){ try{ const p=await VR.requestAudioRecordingPermission(); if(!p||!p.value){ flashStatus.textContent='Permita o microfone para o modo conversa.'; convToggle(false); return; } }catch(_){} }
       let ok=false;
