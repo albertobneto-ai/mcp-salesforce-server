@@ -341,6 +341,7 @@
             </select>
           </label>
           <span class="tog" id="flashConvTog" role="switch" aria-checked="false" tabindex="0"><span class="sw"></span><span>Modo conversa (voz automática)</span></span>
+          <span class="tog" id="flashBrainTog" role="switch" aria-checked="false" tabindex="0"><span class="sw"></span><span>🧠 Brain (conhecimento do projeto)</span></span>
         </div>
         <div class="thread" id="flashThread"><div class="empty" style="padding:24px 12px;text-align:center;color:#94a3b8">A conversa aparece aqui.<br>Capture uma fala 🎤 ou escreva abaixo.</div></div>
         <div class="flash-bar">
@@ -358,7 +359,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v21</b></footer>
+    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v22</b></footer>
   </div>
 
   <!-- Buddie: botão flutuante + modal -->
@@ -704,14 +705,14 @@
     const viewReuniao=document.getElementById('viewReuniao'), viewFlash=document.getElementById('viewFlash');
     const flashBtn=document.getElementById('flashBtn'), flashIco=document.getElementById('flashIco'), flashStatus=document.getElementById('flashStatus');
     const flashThread=document.getElementById('flashThread'), flashText=document.getElementById('flashText'), flashSend=document.getElementById('flashSend');
-    const flashClear=document.getElementById('flashClear'), flashVoice=document.getElementById('flashVoice'), flashLang=document.getElementById('flashLang'), flashConvTog=document.getElementById('flashConvTog');
+    const flashClear=document.getElementById('flashClear'), flashVoice=document.getElementById('flashVoice'), flashLang=document.getElementById('flashLang'), flashConvTog=document.getElementById('flashConvTog'), flashBrainTog=document.getElementById('flashBrainTog');
     if(!flashBtn) return;
     const SPK='<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
     const F_MIC='<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="12" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const F_STOP='<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
     const EMPTY='<div class="empty" style="padding:24px 12px;text-align:center;color:#94a3b8">A conversa aparece aqui.<br>Capture uma fala 🎤 ou escreva abaixo.</div>';
     let flashRunning=false, mediaRec=null, mediaChunks=[], mediaStream=null, lastLang='pt-BR', busy=false;
-    let convMode=false, convStream=null, convRec=null, convChunks=[], convCtx=null, convRAF=null, convUsingVR=false;
+    let convMode=false, convStream=null, convRec=null, convChunks=[], convCtx=null, convRAF=null, convUsingVR=false, brainMode=false;
     let thread=[];
     window.ttsVoice = flashVoice ? flashVoice.value : 'eve';
 
@@ -725,6 +726,7 @@
     if(flashVoice) flashVoice.addEventListener('change',()=>{ window.ttsVoice=flashVoice.value; });
     function replyLangFor(det){ return (flashLang && flashLang.value!=='auto') ? flashLang.value : (det||lastLang||'auto'); }
     flashConvTog.addEventListener('click',()=>{ convToggle(!convMode); });
+    if(flashBrainTog) flashBrainTog.addEventListener('click',()=>{ brainMode=!brainMode; flashBrainTog.setAttribute('aria-checked',brainMode?'true':'false'); flashBrainTog.classList.toggle('on',brainMode); });
 
     function scrollDown(){ flashThread.scrollTop=flashThread.scrollHeight; }
     let bubbleSeq=0;
@@ -766,7 +768,7 @@
       const bDiv=addBubble('buddie','…',{pending:true, tag:'buddie'});
       busy=true; flashStatus.textContent='Buddie pensando…';
       try{
-        const r=await fetch(API_BASE+'/api/buddie',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'responder',language:lang||'auto',input_type:itype,conversation:conv,context:text,model:'claude-haiku-4-5'})});
+        const r=await fetch(API_BASE+'/api/buddie',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'responder',language:lang||'auto',input_type:itype,conversation:conv,context:text,brain:brainMode,model:'claude-haiku-4-5'})});
         const d=await r.json();
         const reply=((d&&d.answer)||'').trim() || '(sem resposta)';
         thread.push({role:'buddie', text:reply});
@@ -865,7 +867,7 @@
       const conv=buildConv(); thread.push({role:'user', text:text, itype:'speech'}); addBubble('user', text, {tag:'você disse', lang:det||'auto'});
       const bDiv=addBubble('buddie','…',{pending:true, tag:'buddie'}); busy=true; flashStatus.textContent='Buddie respondendo…';
       let reply='';
-      try{ const r=await fetch(API_BASE+'/api/buddie',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'responder',language:rl,input_type:'speech',conversation:conv,context:text,model:'claude-haiku-4-5'})}); const d=await r.json(); reply=((d&&d.answer)||'').trim()||'(sem resposta)'; thread.push({role:'buddie', text:reply}); setBubble(bDiv, reply, rl); }
+      try{ const r=await fetch(API_BASE+'/api/buddie',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'responder',language:rl,input_type:'speech',conversation:conv,context:text,brain:brainMode,model:'claude-haiku-4-5'})}); const d=await r.json(); reply=((d&&d.answer)||'').trim()||'(sem resposta)'; thread.push({role:'buddie', text:reply}); setBubble(bDiv, reply, rl); }
       catch(e){ setBubble(bDiv,'(falha ao responder)', rl); }
       busy=false;
       if(reply && reply!=='(sem resposta)'){ flashStatus.textContent='🔊 Respondendo…'; playTTS(reply, rl, ()=>{ flashStatus.textContent=''; if(convMode) convStartListen(); }); }
