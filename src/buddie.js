@@ -57,6 +57,15 @@ router.post('/api/buddie', async (req, res) => {
         : 'Escreva a sua resposta no mesmo idioma em que a pessoa falou.';
       system = `Voce e o copiloto do usuario durante uma conversa ao vivo — voce ajuda a responder e a conduzir a conversa. ${langRule} Regras de conteudo: se a nova entrada for algo que a OUTRA PESSOA disse, escreva a resposta que o usuario daria, em primeira pessoa, natural e pronta para ser dita em voz alta. Se a nova entrada for uma instrucao ou pergunta do PROPRIO usuario (ex.: reformula mais curto, deixa mais formal, e se eu recusar), atenda o pedido mantendo o contexto. Seja direto e natural, sem titulos e com Markdown minimo. Entregue apenas o texto util da resposta${mapped ? ', escrito integralmente em ' + mapped : ''}.`;
       userContent = `HISTORICO DA CONVERSA:\n"""\n${conversation || '(inicio da conversa)'}\n"""\n\nNOVA ENTRADA (${inputType === 'text' ? 'mensagem do usuario para voce' : 'a outra pessoa acabou de dizer isto'}):\n"""\n${context}\n"""${mapped ? '\n\nLembrete final: a resposta inteira deve estar em ' + mapped + '.' : ''}`;
+    } else if (action === 'simular') {
+      const langName = LANG_NAMES[language] || 'português do Brasil';
+      const simCtx = (body.sim_context || '').toString().slice(0, 1200);
+      system = `Você está participando de uma SIMULAÇÃO DE CONVERSA (roleplay) para o usuário praticar. CONTEXTO DA SIMULAÇÃO: ${simCtx}. Você assume o papel do interlocutor apropriado a esse contexto (ex.: se for entrevista de emprego, você é o entrevistador; se for pedir um café, você é o atendente; se for negociação, você é a contraparte) e conversa de forma natural e realista, em primeira pessoa como esse personagem. REGRAS: nunca revele que é uma simulação ou IA; nunca peça esclarecimentos sobre o contexto; nunca faça comentários meta ou saia do personagem; apenas conduza a conversa. Mantenha as falas curtas e naturais, como numa conversa falada real (1 a 3 frases). Escreva SEMPRE em ${langName}.`;
+      if (body.sim_start) {
+        userContent = 'Inicie a conversa agora — VOCÊ fala primeiro, como o interlocutor. Diga a abertura apropriada ao contexto (uma saudação e/ou a primeira fala ou pergunta). Seja natural e breve.';
+      } else {
+        userContent = `HISTORICO DA CONVERSA:\n"""\n${conversation || '(inicio)'}\n"""\n\nA outra pessoa (o usuário) acabou de dizer: "${context}"\n\nResponda como o seu personagem, continuando a conversa de forma natural, em ${langName}. Se a conversa chegou a um fim natural, pode se despedir.`;
+      }
     } else if (!action && prompt.trim()) {
       system = 'Você é o Buddie, um assistente útil e direto. Responda a qualquer pergunta com clareza e objetividade, em Markdown enxuto (sem enrolação). Se houver um trecho de contexto, use-o quando for relevante. Responda no mesmo idioma da pergunta.';
       userContent = context.trim() ? `CONTEXTO (use se ajudar):\n"""\n${context}\n"""\n\nPERGUNTA: ${prompt}` : prompt;
