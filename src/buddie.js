@@ -31,7 +31,7 @@ const ACTIONS = {
   recomendacao: 'Dê recomendações práticas e priorizadas com base no trecho.'
 };
 
-const LANG_NAMES = { pt:'português do Brasil', 'pt-br':'português do Brasil', en:'inglês', 'en-us':'inglês', es:'espanhol', 'es-mx':'espanhol', fr:'francês', de:'alemão', it:'italiano' };
+const LANG_NAMES = { pt:'português do Brasil', 'pt-br':'português do Brasil', en:'inglês', 'en-us':'inglês', 'en-gb':'inglês', es:'espanhol', 'es-es':'espanhol', 'es-mx':'espanhol', fr:'francês', de:'alemão', it:'italiano', zh:'mandarim (chinês simplificado)', 'zh-cn':'mandarim (chinês simplificado)', 'zh-hans':'mandarim (chinês simplificado)', ja:'japonês', 'ja-jp':'japonês' };
 
 router.post('/api/buddie', async (req, res) => {
   try {
