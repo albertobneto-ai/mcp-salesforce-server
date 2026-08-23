@@ -343,6 +343,11 @@
           <span class="tog" id="flashConvTog" role="switch" aria-checked="false" tabindex="0"><span class="sw"></span><span>Modo conversa (voz automática)</span></span>
           <span class="tog" id="flashBrainTog" role="switch" aria-checked="false" tabindex="0"><span class="sw"></span><span>🧠 Brain (conhecimento do projeto)</span></span>
         </div>
+        <div id="convSetup" style="display:none;background:#eef6ff;border:1px solid #bfdcff;border-radius:12px;padding:12px;margin-bottom:12px">
+          <div style="font-size:12px;color:#0369a1;margin-bottom:6px;font-weight:700">🎭 Contexto da simulação</div>
+          <textarea id="convContext" rows="2" placeholder="Ex.: entrevista de emprego para arquiteto Salesforce · pedir um café em Paris · negociação de contrato" style="width:100%;box-sizing:border-box;font:inherit;padding:9px 11px;border:1.5px solid #bfdcff;border-radius:10px;outline:none;resize:vertical"></textarea>
+          <button class="btn primary" id="convStart" style="margin-top:8px;width:100%">Começar simulação ▸</button>
+        </div>
         <div class="thread" id="flashThread"><div class="empty" style="padding:24px 12px;text-align:center;color:#94a3b8">A conversa aparece aqui.<br>Capture uma fala 🎤 ou escreva abaixo.</div></div>
         <div class="flash-bar">
           <button class="recBtn flash-mic" id="flashBtn" aria-label="Capturar fala">
@@ -359,7 +364,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v22</b></footer>
+    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v23</b></footer>
   </div>
 
   <!-- Buddie: botão flutuante + modal -->
@@ -705,14 +710,14 @@
     const viewReuniao=document.getElementById('viewReuniao'), viewFlash=document.getElementById('viewFlash');
     const flashBtn=document.getElementById('flashBtn'), flashIco=document.getElementById('flashIco'), flashStatus=document.getElementById('flashStatus');
     const flashThread=document.getElementById('flashThread'), flashText=document.getElementById('flashText'), flashSend=document.getElementById('flashSend');
-    const flashClear=document.getElementById('flashClear'), flashVoice=document.getElementById('flashVoice'), flashLang=document.getElementById('flashLang'), flashConvTog=document.getElementById('flashConvTog'), flashBrainTog=document.getElementById('flashBrainTog');
+    const flashClear=document.getElementById('flashClear'), flashVoice=document.getElementById('flashVoice'), flashLang=document.getElementById('flashLang'), flashConvTog=document.getElementById('flashConvTog'), flashBrainTog=document.getElementById('flashBrainTog'), convSetup=document.getElementById('convSetup'), convContext=document.getElementById('convContext'), convStart=document.getElementById('convStart');
     if(!flashBtn) return;
     const SPK='<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
     const F_MIC='<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="12" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const F_STOP='<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
     const EMPTY='<div class="empty" style="padding:24px 12px;text-align:center;color:#94a3b8">A conversa aparece aqui.<br>Capture uma fala 🎤 ou escreva abaixo.</div>';
     let flashRunning=false, mediaRec=null, mediaChunks=[], mediaStream=null, lastLang='pt-BR', busy=false;
-    let convMode=false, convStream=null, convRec=null, convChunks=[], convCtx=null, convRAF=null, convUsingVR=false, brainMode=false;
+    let convMode=false, convStream=null, convRec=null, convChunks=[], convCtx=null, convRAF=null, convUsingVR=false, brainMode=false, simContext='';
     let thread=[];
     window.ttsVoice = flashVoice ? flashVoice.value : 'eve';
 
@@ -863,27 +868,46 @@
       catch(e){ flashStatus.textContent='Falha ao transcrever.'; if(convMode) setTimeout(convStartListen,600); return; }
       if(!text){ flashStatus.textContent='Não peguei nada. Continue falando…'; if(convMode) setTimeout(convStartListen,400); return; }
       if(det) lastLang=det;
-      const rl=replyLangFor(det);
-      const conv=buildConv(); thread.push({role:'user', text:text, itype:'speech'}); addBubble('user', text, {tag:'você disse', lang:det||'auto'});
-      const bDiv=addBubble('buddie','…',{pending:true, tag:'buddie'}); busy=true; flashStatus.textContent='Buddie respondendo…';
-      let reply='';
-      try{ const r=await fetch(API_BASE+'/api/buddie',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'responder',language:rl,input_type:'speech',conversation:conv,context:text,brain:brainMode,model:'claude-haiku-4-5'})}); const d=await r.json(); reply=((d&&d.answer)||'').trim()||'(sem resposta)'; thread.push({role:'buddie', text:reply}); setBubble(bDiv, reply, rl); }
-      catch(e){ setBubble(bDiv,'(falha ao responder)', rl); }
-      busy=false;
-      if(reply && reply!=='(sem resposta)'){ flashStatus.textContent='🔊 Respondendo…'; playTTS(reply, rl, ()=>{ flashStatus.textContent=''; if(convMode) convStartListen(); }); }
-      else if(convMode){ convStartListen(); }
+      thread.push({role:'user', text:text, itype:'speech'}); addBubble('user', text, {tag:'você', lang:det||'auto'});
+      await simTurn(false, text);
     }
     function convToggle(on){
       convMode=on; if(flashConvTog){ flashConvTog.setAttribute('aria-checked', on?'true':'false'); flashConvTog.classList.toggle('on', on); }
-      if(on){ if(flashRunning){ flashRunning=false; flashBtn.classList.remove('rec'); flashIco.innerHTML=F_MIC; } convStartListen(); }
-      else {
+      if(on){
+        if(convSetup) convSetup.style.display='block';
+        flashStatus.textContent='Defina o contexto e toque em Começar.';
+        if(convContext) convContext.focus();
+      } else {
+        if(convSetup) convSetup.style.display='none';
         if(flashRunning){ flashRunning=false; flashBtn.classList.remove('rec'); flashIco.innerHTML=F_MIC; stopSilence(); if(convUsingVR){ try{ if(VR) VR.stopRecording(); }catch(_){}; } else { try{ if(convRec&&convRec.state!=='inactive') convRec.stop(); }catch(_){}; if(convStream){ convStream.getTracks().forEach(t=>t.stop()); convStream=null; } } }
         if(window.ttsAudio){ try{window.ttsAudio.pause();}catch(_){}; window.ttsAudio=null; }
         flashStatus.textContent='';
       }
     }
+    function buildConvSim(){ return thread.map(m=> m.role==='buddie' ? ('Voce (o personagem): '+m.text) : ('A outra pessoa: '+m.text)).join('\n'); }
+    async function simTurn(isStart, userText){
+      if(busy) return;
+      busy=true; flashStatus.textContent = isStart ? 'Preparando a simulação…' : 'Respondendo…';
+      const bDiv=addBubble('buddie','…',{pending:true, tag:'interlocutor'});
+      const rl=replyLangFor(lastLang);
+      let reply='';
+      try{
+        const r=await fetch(API_BASE+'/api/buddie',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'simular', sim_context:simContext, sim_start:!!isStart, language:rl, conversation:buildConvSim(), context:userText||'', brain:brainMode, model:'claude-haiku-4-5'})});
+        const d=await r.json(); reply=((d&&d.answer)||'').trim();
+        if(reply){ thread.push({role:'buddie', text:reply}); setBubble(bDiv, reply, rl); } else { setBubble(bDiv,'(sem resposta — tente de novo)', rl); }
+      }catch(e){ setBubble(bDiv,'(falha ao responder)', rl); reply=''; }
+      busy=false;
+      if(reply){ flashStatus.textContent='🔊 Falando…'; playTTS(reply, rl, ()=>{ flashStatus.textContent=''; if(convMode) convStartListen(); }); }
+      else if(convMode){ convStartListen(); }
+    }
+    if(convStart) convStart.addEventListener('click',()=>{
+      simContext=(convContext.value||'').trim();
+      if(!simContext){ convContext.focus(); return; }
+      if(convSetup) convSetup.style.display='none';
+      simTurn(true, '');
+    });
     flashBtn.addEventListener('click',()=>{ if(convMode){ if(flashRunning) convStopListen(); else convStartListen(); } else { flashRunning?flashStop():flashStart(); } });
-    function sendText(){ const t=(flashText.value||'').trim(); if(!t||busy) return; flashText.value=''; flashSend.disabled=true; sendToBuddie(t, replyLangFor(''), 'text'); }
+    function sendText(){ const t=(flashText.value||'').trim(); if(!t||busy) return; flashText.value=''; flashSend.disabled=true; if(convMode){ thread.push({role:'user', text:t, itype:'text'}); addBubble('user', t, {tag:'você', lang:'auto'}); simTurn(false, t); } else { sendToBuddie(t, replyLangFor(''), 'text'); } }
     flashSend.addEventListener('click',sendText);
     flashText.addEventListener('input',()=>{ flashSend.disabled=!flashText.value.trim(); });
     flashText.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendText(); } });
