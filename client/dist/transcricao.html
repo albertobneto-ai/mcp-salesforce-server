@@ -207,6 +207,8 @@
   .msg.user{align-self:flex-end;background:#e8eef6;color:#1e293b;border-bottom-right-radius:4px}
   .msg.buddie{align-self:flex-start;background:#eef6ff;border:1px solid #bfdcff;color:#0f172a;border-bottom-left-radius:4px}
   .msg.pending{opacity:.55}
+  .msg.suggest{align-self:flex-start;background:#fffbeb;border:1px dashed #f59e0b;color:#78350f;max-width:90%}
+  .msg.suggest .role-tag{color:#b45309;opacity:1}
   .msg .role-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;opacity:.55;display:block;margin-bottom:3px}
   .msg-act-btn{display:inline-flex;align-items:center;gap:4px;font:600 11px Inter,system-ui,sans-serif;color:#0176D3;background:#fff;border:1px solid #bfdcff;border-radius:8px;padding:4px 8px;cursor:pointer;line-height:1}
   .msg-act-btn svg{width:13px;height:13px}
@@ -355,6 +357,7 @@
           <span class="tog" id="flashConvTog" role="switch" aria-checked="false" tabindex="0"><span class="sw"></span><span>Modo conversa (voz automática)</span></span>
           <span class="tog" id="flashBrainTog" role="switch" aria-checked="false" tabindex="0"><span class="sw"></span><span>🧠 Brain (conhecimento do projeto)</span></span>
           <span class="tog" id="flashTransTog" role="switch" aria-checked="false" tabindex="0"><span class="sw"></span><span>🔄 Modo tradutor (sem IA)</span></span>
+          <span class="tog" id="flashSuggestTog" role="switch" aria-checked="false" tabindex="0"><span class="sw"></span><span>💡 Sugerir minha resposta</span></span>
         </div>
         <div id="convSetup" style="display:none;background:#eef6ff;border:1px solid #bfdcff;border-radius:12px;padding:12px;margin-bottom:12px">
           <div style="font-size:12px;color:#0369a1;margin-bottom:6px;font-weight:700">🎭 Contexto da simulação</div>
@@ -377,7 +380,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v25</b></footer>
+    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v26</b></footer>
   </div>
 
   <!-- Buddie: botão flutuante + modal -->
@@ -723,14 +726,14 @@
     const viewReuniao=document.getElementById('viewReuniao'), viewFlash=document.getElementById('viewFlash');
     const flashBtn=document.getElementById('flashBtn'), flashIco=document.getElementById('flashIco'), flashStatus=document.getElementById('flashStatus');
     const flashThread=document.getElementById('flashThread'), flashText=document.getElementById('flashText'), flashSend=document.getElementById('flashSend');
-    const flashClear=document.getElementById('flashClear'), flashVoice=document.getElementById('flashVoice'), flashLang=document.getElementById('flashLang'), flashConvTog=document.getElementById('flashConvTog'), flashBrainTog=document.getElementById('flashBrainTog'), convSetup=document.getElementById('convSetup'), convContext=document.getElementById('convContext'), convStart=document.getElementById('convStart'), flashFalaTrad=document.getElementById('flashFalaTrad'), flashTransTog=document.getElementById('flashTransTog');
+    const flashClear=document.getElementById('flashClear'), flashVoice=document.getElementById('flashVoice'), flashLang=document.getElementById('flashLang'), flashConvTog=document.getElementById('flashConvTog'), flashBrainTog=document.getElementById('flashBrainTog'), convSetup=document.getElementById('convSetup'), convContext=document.getElementById('convContext'), convStart=document.getElementById('convStart'), flashFalaTrad=document.getElementById('flashFalaTrad'), flashTransTog=document.getElementById('flashTransTog'), flashSuggestTog=document.getElementById('flashSuggestTog');
     if(!flashBtn) return;
     const SPK='<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
     const F_MIC='<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="12" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const F_STOP='<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
     const EMPTY='<div class="empty" style="padding:24px 12px;text-align:center;color:#94a3b8">A conversa aparece aqui.<br>Capture uma fala 🎤 ou escreva abaixo.</div>';
     let flashRunning=false, mediaRec=null, mediaChunks=[], mediaStream=null, lastLang='pt-BR', busy=false;
-    let convMode=false, convStream=null, convRec=null, convChunks=[], convCtx=null, convRAF=null, convUsingVR=false, brainMode=false, simContext='', transMode=false;
+    let convMode=false, convStream=null, convRec=null, convChunks=[], convCtx=null, convRAF=null, convUsingVR=false, brainMode=false, simContext='', transMode=false, suggestMode=false;
     let thread=[];
     window.ttsVoice = flashVoice ? flashVoice.value : 'eve';
 
@@ -746,6 +749,7 @@
     flashConvTog.addEventListener('click',()=>{ convToggle(!convMode); });
     if(flashBrainTog) flashBrainTog.addEventListener('click',()=>{ brainMode=!brainMode; flashBrainTog.setAttribute('aria-checked',brainMode?'true':'false'); flashBrainTog.classList.toggle('on',brainMode); });
     if(flashTransTog) flashTransTog.addEventListener('click',()=>{ transMode=!transMode; flashTransTog.setAttribute('aria-checked',transMode?'true':'false'); flashTransTog.classList.toggle('on',transMode); });
+    if(flashSuggestTog) flashSuggestTog.addEventListener('click',()=>{ suggestMode=!suggestMode; flashSuggestTog.setAttribute('aria-checked',suggestMode?'true':'false'); flashSuggestTog.classList.toggle('on',suggestMode); });
 
     function scrollDown(){ flashThread.scrollTop=flashThread.scrollHeight; }
     let bubbleSeq=0;
@@ -912,8 +916,22 @@
         if(reply){ thread.push({role:'buddie', text:reply}); setBubble(bDiv, reply, rl); } else { setBubble(bDiv,'(sem resposta — tente de novo)', rl); }
       }catch(e){ setBubble(bDiv,'(falha ao responder)', rl); reply=''; }
       busy=false;
+      if(reply && suggestMode){ showSuggestion(reply, bDiv); }
       if(reply){ flashStatus.textContent='🔊 Falando…'; playTTS(reply, rl, ()=>{ flashStatus.textContent=''; if(convMode) convStartListen(); }); }
       else if(convMode){ convStartListen(); }
+    }
+    function buildConvForSuggestion(){ return thread.map(m=> m.role==='buddie' ? ('A outra pessoa disse: '+m.text) : ('Voce respondeu: '+m.text)).join('\n'); }
+    async function showSuggestion(interlocutorText, afterDiv){
+      const sDiv=document.createElement('div'); sDiv.className='msg suggest';
+      const t=document.createElement('span'); t.className='role-tag'; t.textContent='💡 sua resposta sugerida'; sDiv.appendChild(t);
+      const p=document.createElement('span'); p.className='msg-body'; p.textContent='…'; sDiv.appendChild(p);
+      afterDiv.insertAdjacentElement('afterend', sDiv); scrollDown();
+      const rl=replyLangFor(lastLang);
+      try{
+        const r=await fetch(API_BASE+'/api/buddie',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'responder', language:rl, input_type:'speech', conversation:buildConvForSuggestion(), context:interlocutorText, brain:brainMode, model:'claude-haiku-4-5'})});
+        const d=await r.json(); p.textContent=((d&&d.answer)||'').trim()||'(sem sugestão)';
+      }catch(e){ p.textContent='(falha na sugestão)'; }
+      scrollDown();
     }
     async function doTranslateMode(text, det){
       if(busy) return; busy=true;
