@@ -358,7 +358,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v20</b></footer>
+    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v21</b></footer>
   </div>
 
   <!-- Buddie: botão flutuante + modal -->
@@ -711,7 +711,7 @@
     const F_STOP='<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
     const EMPTY='<div class="empty" style="padding:24px 12px;text-align:center;color:#94a3b8">A conversa aparece aqui.<br>Capture uma fala 🎤 ou escreva abaixo.</div>';
     let flashRunning=false, mediaRec=null, mediaChunks=[], mediaStream=null, lastLang='pt-BR', busy=false;
-    let convMode=false, convStream=null, convRec=null, convChunks=[], convCtx=null, convRAF=null;
+    let convMode=false, convStream=null, convRec=null, convChunks=[], convCtx=null, convRAF=null, convUsingVR=false;
     let thread=[];
     window.ttsVoice = flashVoice ? flashVoice.value : 'eve';
 
@@ -826,21 +826,35 @@
     }
     async function convStartListen(){
       if(!convMode || flashRunning || busy) return;
+      convUsingVR=false;
       if(isNative && VR){ try{ const p=await VR.requestAudioRecordingPermission(); if(!p||!p.value){ flashStatus.textContent='Permita o microfone para o modo conversa.'; convToggle(false); return; } }catch(_){} }
-      try{ convStream=await navigator.mediaDevices.getUserMedia({audio:true}); }
-      catch(e){ flashStatus.textContent='Microfone indisponível: '+((e&&e.message)||e); convToggle(false); return; }
-      convChunks=[]; try{ convRec=new MediaRecorder(convStream); }catch(e){ flashStatus.textContent='Gravação não suportada aqui — use o botão parar.'; }
-      if(convRec){ convRec.ondataavailable=e=>{ if(e.data&&e.data.size) convChunks.push(e.data); }; convRec.start(); }
-      flashRunning=true; flashBtn.classList.add('rec'); flashIco.innerHTML=F_STOP; flashStatus.textContent='🎙️ Ouvindo… (paro após 5s de silêncio, ou toque para parar)';
-      monitorSilence(convStream);
+      let ok=false;
+      if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+        try{ convStream=await navigator.mediaDevices.getUserMedia({audio:true}); ok=true; }catch(e){ ok=false; }
+      }
+      if(ok){
+        convChunks=[]; try{ convRec=new MediaRecorder(convStream); }catch(e){ convRec=null; }
+        if(convRec){ convRec.ondataavailable=e=>{ if(e.data&&e.data.size) convChunks.push(e.data); }; convRec.start(); flashRunning=true; flashBtn.classList.add('rec'); flashIco.innerHTML=F_STOP; flashStatus.textContent='🎙️ Ouvindo… (paro após 5s de silêncio, ou toque para parar)'; monitorSilence(convStream); return; }
+        if(convStream){ convStream.getTracks().forEach(t=>t.stop()); convStream=null; }
+      }
+      if(isNative && VR){
+        try{ const st=await VR.startRecording(); if(!st||!st.value){ flashStatus.textContent='Não consegui gravar.'; convToggle(false); return; } }catch(e){ flashStatus.textContent='Falha ao gravar: '+((e&&e.message)||e); convToggle(false); return; }
+        convUsingVR=true; flashRunning=true; flashBtn.classList.add('rec'); flashIco.innerHTML=F_STOP; flashStatus.textContent='🎙️ Ouvindo… toque no microfone quando terminar de falar.';
+        return;
+      }
+      flashStatus.textContent='Microfone indisponível aqui.'; convToggle(false);
     }
     async function convStopListen(){
       if(!flashRunning) return;
       flashRunning=false; flashBtn.classList.remove('rec'); flashIco.innerHTML=F_MIC; stopSilence();
       flashStatus.textContent='⏳ Transcrevendo…';
       let b64='', mime='audio/webm';
-      try{ const blob=await new Promise((res)=>{ if(!convRec){ res(new Blob([])); return; } convRec.onstop=()=>res(new Blob(convChunks,{type:convRec.mimeType||'audio/webm'})); convRec.stop(); }); if(convStream){ convStream.getTracks().forEach(t=>t.stop()); convStream=null; } mime=blob.type||'audio/webm'; if(blob.size) b64=await blobToB64(blob); }
-      catch(e){ flashStatus.textContent='Falha ao capturar.'; if(convMode) setTimeout(convStartListen,500); return; }
+      if(convUsingVR){
+        try{ const out=await VR.stopRecording(); const v=out&&out.value; if(v&&v.recordDataBase64){ b64=v.recordDataBase64; mime=v.mimeType||'audio/aac'; } }catch(e){ flashStatus.textContent='Falha ao parar.'; if(convMode) setTimeout(convStartListen,500); return; }
+      } else {
+        try{ const blob=await new Promise((res)=>{ if(!convRec){ res(new Blob([])); return; } convRec.onstop=()=>res(new Blob(convChunks,{type:convRec.mimeType||'audio/webm'})); convRec.stop(); }); if(convStream){ convStream.getTracks().forEach(t=>t.stop()); convStream=null; } mime=blob.type||'audio/webm'; if(blob.size) b64=await blobToB64(blob); }
+        catch(e){ flashStatus.textContent='Falha ao capturar.'; if(convMode) setTimeout(convStartListen,500); return; }
+      }
       if(!b64){ flashStatus.textContent='Não peguei áudio. Continue falando…'; if(convMode) setTimeout(convStartListen,400); return; }
       let text='', det='';
       try{ const r=await fetch(API_BASE+'/api/stt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({audio:b64,mime:mime,language:'pt'})}); const d=await r.json(); if(!r.ok||d.error){ flashStatus.textContent='Erro na transcrição.'; if(convMode) setTimeout(convStartListen,600); return; } text=(d.text||'').trim(); det=(d.language||'').toLowerCase(); }
@@ -861,7 +875,7 @@
       convMode=on; if(flashConvTog){ flashConvTog.setAttribute('aria-checked', on?'true':'false'); flashConvTog.classList.toggle('on', on); }
       if(on){ if(flashRunning){ flashRunning=false; flashBtn.classList.remove('rec'); flashIco.innerHTML=F_MIC; } convStartListen(); }
       else {
-        if(flashRunning){ flashRunning=false; flashBtn.classList.remove('rec'); flashIco.innerHTML=F_MIC; stopSilence(); try{ if(convRec&&convRec.state!=='inactive') convRec.stop(); }catch(_){}; if(convStream){ convStream.getTracks().forEach(t=>t.stop()); convStream=null; } }
+        if(flashRunning){ flashRunning=false; flashBtn.classList.remove('rec'); flashIco.innerHTML=F_MIC; stopSilence(); if(convUsingVR){ try{ if(VR) VR.stopRecording(); }catch(_){}; } else { try{ if(convRec&&convRec.state!=='inactive') convRec.stop(); }catch(_){}; if(convStream){ convStream.getTracks().forEach(t=>t.stop()); convStream=null; } } }
         if(window.ttsAudio){ try{window.ttsAudio.pause();}catch(_){}; window.ttsAudio=null; }
         flashStatus.textContent='';
       }
