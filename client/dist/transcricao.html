@@ -358,7 +358,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v19</b></footer>
+    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v20</b></footer>
   </div>
 
   <!-- Buddie: botão flutuante + modal -->
@@ -779,7 +779,7 @@
     async function flashStart(){
       if(flashRunning||busy) return;
       if(isNative){
-        try{ const perm=await VR.requestAudioRecordingPermission(); if(!perm||!perm.value){ flashStatus.textContent='Permita o microfone.'; return; } const st=await VR.startRecording(); if(!st||!st.value){ flashStatus.textContent='Nao consegui gravar.'; return; } }catch(e){ flashStatus.textContent='Falha ao gravar.'; return; }
+        try{ const perm=await VR.requestAudioRecordingPermission(); if(!perm||!perm.value){ flashStatus.textContent='Permita o microfone.'; return; } const st=await VR.startRecording(); if(!st||!st.value){ flashStatus.textContent='Nao consegui gravar.'; return; } }catch(e){ flashStatus.textContent='Falha ao gravar: '+((e&&e.message)||e); return; }
       } else {
         try{ mediaStream=await navigator.mediaDevices.getUserMedia({audio:true}); mediaChunks=[]; mediaRec=new MediaRecorder(mediaStream); mediaRec.ondataavailable=e=>{ if(e.data&&e.data.size) mediaChunks.push(e.data); }; mediaRec.start(); }catch(e){ flashStatus.textContent='Permita o microfone no navegador.'; return; }
       }
@@ -826,8 +826,9 @@
     }
     async function convStartListen(){
       if(!convMode || flashRunning || busy) return;
+      if(isNative && VR){ try{ const p=await VR.requestAudioRecordingPermission(); if(!p||!p.value){ flashStatus.textContent='Permita o microfone para o modo conversa.'; convToggle(false); return; } }catch(_){} }
       try{ convStream=await navigator.mediaDevices.getUserMedia({audio:true}); }
-      catch(e){ flashStatus.textContent='Preciso do microfone para o modo conversa.'; convToggle(false); return; }
+      catch(e){ flashStatus.textContent='Microfone indisponível: '+((e&&e.message)||e); convToggle(false); return; }
       convChunks=[]; try{ convRec=new MediaRecorder(convStream); }catch(e){ flashStatus.textContent='Gravação não suportada aqui — use o botão parar.'; }
       if(convRec){ convRec.ondataavailable=e=>{ if(e.data&&e.data.size) convChunks.push(e.data); }; convRec.start(); }
       flashRunning=true; flashBtn.classList.add('rec'); flashIco.innerHTML=F_STOP; flashStatus.textContent='🎙️ Ouvindo… (paro após 5s de silêncio, ou toque para parar)';
