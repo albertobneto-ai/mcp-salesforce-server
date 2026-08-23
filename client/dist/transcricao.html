@@ -354,6 +354,7 @@
           </label>
           <span class="tog" id="flashConvTog" role="switch" aria-checked="false" tabindex="0"><span class="sw"></span><span>Modo conversa (voz automática)</span></span>
           <span class="tog" id="flashBrainTog" role="switch" aria-checked="false" tabindex="0"><span class="sw"></span><span>🧠 Brain (conhecimento do projeto)</span></span>
+          <span class="tog" id="flashTransTog" role="switch" aria-checked="false" tabindex="0"><span class="sw"></span><span>🔄 Modo tradutor (sem IA)</span></span>
         </div>
         <div id="convSetup" style="display:none;background:#eef6ff;border:1px solid #bfdcff;border-radius:12px;padding:12px;margin-bottom:12px">
           <div style="font-size:12px;color:#0369a1;margin-bottom:6px;font-weight:700">🎭 Contexto da simulação</div>
@@ -376,7 +377,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v24</b></footer>
+    <footer><b>Ever i9</b> · transcrição nativa do navegador · PT-BR / EN. <b>v25</b></footer>
   </div>
 
   <!-- Buddie: botão flutuante + modal -->
@@ -722,14 +723,14 @@
     const viewReuniao=document.getElementById('viewReuniao'), viewFlash=document.getElementById('viewFlash');
     const flashBtn=document.getElementById('flashBtn'), flashIco=document.getElementById('flashIco'), flashStatus=document.getElementById('flashStatus');
     const flashThread=document.getElementById('flashThread'), flashText=document.getElementById('flashText'), flashSend=document.getElementById('flashSend');
-    const flashClear=document.getElementById('flashClear'), flashVoice=document.getElementById('flashVoice'), flashLang=document.getElementById('flashLang'), flashConvTog=document.getElementById('flashConvTog'), flashBrainTog=document.getElementById('flashBrainTog'), convSetup=document.getElementById('convSetup'), convContext=document.getElementById('convContext'), convStart=document.getElementById('convStart'), flashFalaTrad=document.getElementById('flashFalaTrad');
+    const flashClear=document.getElementById('flashClear'), flashVoice=document.getElementById('flashVoice'), flashLang=document.getElementById('flashLang'), flashConvTog=document.getElementById('flashConvTog'), flashBrainTog=document.getElementById('flashBrainTog'), convSetup=document.getElementById('convSetup'), convContext=document.getElementById('convContext'), convStart=document.getElementById('convStart'), flashFalaTrad=document.getElementById('flashFalaTrad'), flashTransTog=document.getElementById('flashTransTog');
     if(!flashBtn) return;
     const SPK='<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
     const F_MIC='<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="12" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const F_STOP='<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
     const EMPTY='<div class="empty" style="padding:24px 12px;text-align:center;color:#94a3b8">A conversa aparece aqui.<br>Capture uma fala 🎤 ou escreva abaixo.</div>';
     let flashRunning=false, mediaRec=null, mediaChunks=[], mediaStream=null, lastLang='pt-BR', busy=false;
-    let convMode=false, convStream=null, convRec=null, convChunks=[], convCtx=null, convRAF=null, convUsingVR=false, brainMode=false, simContext='';
+    let convMode=false, convStream=null, convRec=null, convChunks=[], convCtx=null, convRAF=null, convUsingVR=false, brainMode=false, simContext='', transMode=false;
     let thread=[];
     window.ttsVoice = flashVoice ? flashVoice.value : 'eve';
 
@@ -744,6 +745,7 @@
     function replyLangFor(det){ return (flashLang && flashLang.value!=='auto') ? flashLang.value : (det||lastLang||'auto'); }
     flashConvTog.addEventListener('click',()=>{ convToggle(!convMode); });
     if(flashBrainTog) flashBrainTog.addEventListener('click',()=>{ brainMode=!brainMode; flashBrainTog.setAttribute('aria-checked',brainMode?'true':'false'); flashBrainTog.classList.toggle('on',brainMode); });
+    if(flashTransTog) flashTransTog.addEventListener('click',()=>{ transMode=!transMode; flashTransTog.setAttribute('aria-checked',transMode?'true':'false'); flashTransTog.classList.toggle('on',transMode); });
 
     function scrollDown(){ flashThread.scrollTop=flashThread.scrollHeight; }
     let bubbleSeq=0;
@@ -816,7 +818,7 @@
       try{ const r=await fetch(API_BASE+'/api/stt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({audio:b64,mime:mime,language:'pt'})}); const d=await r.json(); if(!r.ok||d.error){ flashStatus.textContent='Erro na transcricao.'; return; } text=(d.text||'').trim(); det=(d.language||'').toLowerCase(); }catch(e){ flashStatus.textContent='Falha ao transcrever.'; return; }
       if(!text){ flashStatus.textContent='Nao entendi. Fale mais um pouco.'; return; }
       if(det) lastLang=det;
-      await sendToBuddie(text, replyLangFor(det), 'speech');
+      if(transMode){ await doTranslateMode(text, det); } else { await sendToBuddie(text, replyLangFor(det), 'speech'); }
     }
 
     async function playTTS(text, lang, onDone){
@@ -881,15 +883,15 @@
       catch(e){ flashStatus.textContent='Falha ao transcrever.'; if(convMode) setTimeout(convStartListen,600); return; }
       if(!text){ flashStatus.textContent='Não peguei nada. Continue falando…'; if(convMode) setTimeout(convStartListen,400); return; }
       if(det) lastLang=det;
+      if(transMode){ await doTranslateMode(text, det); return; }
       thread.push({role:'user', text:text, itype:'speech'}); const uDiv=addBubble('user', text, {tag:'você', lang:det||'auto'}); maybeAutoTradFala(uDiv);
       await simTurn(false, text);
     }
     function convToggle(on){
       convMode=on; if(flashConvTog){ flashConvTog.setAttribute('aria-checked', on?'true':'false'); flashConvTog.classList.toggle('on', on); }
       if(on){
-        if(convSetup) convSetup.style.display='block';
-        flashStatus.textContent='Defina o contexto e toque em Começar.';
-        if(convContext) convContext.focus();
+        if(transMode){ flashStatus.textContent='🎙️ Tradutor de conversa ligado…'; convStartListen(); }
+        else { if(convSetup) convSetup.style.display='block'; flashStatus.textContent='Defina o contexto e toque em Começar.'; if(convContext) convContext.focus(); }
       } else {
         if(convSetup) convSetup.style.display='none';
         if(flashRunning){ flashRunning=false; flashBtn.classList.remove('rec'); flashIco.innerHTML=F_MIC; stopSilence(); if(convUsingVR){ try{ if(VR) VR.stopRecording(); }catch(_){}; } else { try{ if(convRec&&convRec.state!=='inactive') convRec.stop(); }catch(_){}; if(convStream){ convStream.getTracks().forEach(t=>t.stop()); convStream=null; } } }
@@ -912,6 +914,24 @@
       busy=false;
       if(reply){ flashStatus.textContent='🔊 Falando…'; playTTS(reply, rl, ()=>{ flashStatus.textContent=''; if(convMode) convStartListen(); }); }
       else if(convMode){ convStartListen(); }
+    }
+    async function doTranslateMode(text, det){
+      if(busy) return; busy=true;
+      const alvo = (flashFalaTrad && flashFalaTrad.value!=='Não') ? flashFalaTrad.value : 'Inglês';
+      const isPt = (det||'').toLowerCase().startsWith('pt') || !det;
+      const toName = isPt ? alvo : 'Português';
+      const toFull = LANG_FULL[toName] || 'português do Brasil';
+      const toCode = LANG_CODE[toName] || 'pt-BR';
+      const uDiv = addBubble('user', text, {tag:'você ('+((det||'??').toUpperCase())+')', lang:det||'auto', notr:true});
+      const trDiv = createBubble('buddie', '…', {pending:true, tag:'→ '+toName, lang:toCode, notr:true});
+      trDiv.dataset.trOf = uDiv.dataset.bid; uDiv.insertAdjacentElement('afterend', trDiv); scrollDown();
+      flashStatus.textContent='🌐 Traduzindo…';
+      let tr='';
+      try{ const r=await fetch(API_BASE+'/api/traduzir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({texto:text, to:toFull})}); const d=await r.json(); tr=(d.traducao||'').trim(); setBubble(trDiv, tr||'(falha)', toCode, true); }
+      catch(e){ setBubble(trDiv,'(falha na tradução)', null, true); tr=''; }
+      busy=false;
+      if(tr){ flashStatus.textContent='🔊 Falando…'; playTTS(tr, toCode, ()=>{ flashStatus.textContent=''; if(convMode) convStartListen(); }); }
+      else if(convMode) convStartListen();
     }
     if(convStart) convStart.addEventListener('click',()=>{
       simContext=(convContext.value||'').trim();
