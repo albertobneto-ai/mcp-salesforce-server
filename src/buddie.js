@@ -43,7 +43,7 @@ router.post('/api/buddie', async (req, res) => {
     const conversation = (body.conversation || '').toString().slice(0, 16000);
     const language = (body.language || '').toString().toLowerCase();
 
-    if (!context.trim() && !prompt.trim()) {
+    if (action !== 'simular' && !context.trim() && !prompt.trim()) {
       return res.status(400).json({ error: 'Envie um trecho da transcrição ou uma pergunta.' });
     }
 
