@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Via Ross — identidade e book de Instagram</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cal:#E9E7E2; --cal2:#F4F3F0; --concreto:#B9BBB5; --asfalto:#24272A;
+  --rose:#C29A9A; --vinho:#5C3A40; --cinza:#6E716D;
+  --serif:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+  --sans:'Jost','Helvetica Neue',Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--cal);color:var(--asfalto);font-family:var(--sans);font-weight:300;font-size:16px;line-height:1.65;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.book{max-width:720px;margin:0 auto;padding:0 22px 72px}
+p{margin:0 0 1em;max-width:60ch}
+.muted{color:var(--cinza);font-size:14px}
+strong{font-weight:500}
+
+.hero{padding:88px 0 40px}
+.wordmark{display:flex;align-items:center;gap:.5em;font-family:var(--serif);font-weight:300;text-transform:uppercase;letter-spacing:.3em;font-size:clamp(30px,9vw,56px);line-height:1}
+.wordmark .via{flex:1;height:1px;background:currentColor;min-width:36px}
+.wordmark span:last-child{margin-right:-.3em}
+.tagline{font-family:var(--serif);font-style:italic;font-weight:300;font-size:clamp(24px,6vw,34px);margin:28px 0 12px;line-height:1.2}
+.hero .muted{max-width:none}
+
+section{border-top:1px solid var(--asfalto);padding-top:26px;margin-top:60px}
+h2{font-family:var(--serif);font-weight:400;font-size:30px;line-height:1.1;margin:0 0 18px}
+h3{font-weight:500;font-size:15px;margin:28px 0 10px}
+
+.marks{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:22px}
+.mark{aspect-ratio:3/2;display:flex;align-items:center;justify-content:center;padding:22px}
+.mark .wordmark{font-size:22px;width:100%}
+.mark.pos{background:var(--cal2);color:var(--asfalto)}
+.mark.neg{background:var(--asfalto);color:var(--cal)}
+.mark.ros{background:var(--rose);color:var(--vinho)}
+.mono{width:96px;height:96px;border-radius:50%;background:var(--asfalto);color:var(--cal);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--serif);font-weight:300;font-size:34px;letter-spacing:.12em;text-indent:.12em;line-height:1}
+.mono i{display:block;width:30px;height:1px;background:currentColor;margin-top:8px}
+.monorow{display:flex;align-items:center;gap:22px;margin-top:22px}
+.monorow .mono{flex:none}
+
+.swatches{display:grid;gap:10px;margin-top:8px}
+.sw{display:grid;grid-template-columns:64px 1fr auto;gap:16px;align-items:center;padding:8px 0}
+.sw .chip{width:64px;height:64px}
+.sw b{display:block;font-weight:500}
+.sw .hex{font-variant-numeric:tabular-nums;color:var(--cinza);font-size:14px}
+.sw .use{font-size:14px;color:var(--cinza)}
+.sw .pct{font-size:14px;color:var(--cinza);white-space:nowrap}
+.bar{display:flex;height:18px;margin-top:22px}
+.bar i{display:block;height:100%}
+
+.type{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:22px;margin-top:8px}
+.spec{background:var(--cal2);padding:26px 24px}
+.spec .big{font-size:64px;line-height:1;margin-bottom:12px}
+.spec.serif .big{font-family:var(--serif);font-weight:300}
+.spec.sans .big{font-family:var(--sans);font-weight:300;letter-spacing:.02em}
+.scale{margin-top:22px;border-top:1px solid var(--concreto)}
+.scale div{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:12px 0;border-bottom:1px solid var(--concreto)}
+.scale .muted{white-space:nowrap}
+.q{font-family:var(--serif);font-style:italic;font-size:28px;line-height:1.15}
+.nome{font-weight:500;font-size:15px;letter-spacing:.02em}
+.preco{font-weight:400;font-variant-numeric:tabular-nums}
+.leg{font-size:15px}
+
+.phone{width:min(100%,340px);margin:14px auto 0;background:var(--cal2);border:1px solid var(--asfalto);border-radius:34px;padding:22px 14px 18px}
+.ph-top{display:flex;align-items:center;gap:18px;padding:0 4px}
+.ph-top .mono{width:74px;height:74px;font-size:26px;flex:none}
+.ph-top .mono i{width:22px;margin-top:6px}
+.stats{display:flex;gap:18px;flex:1;justify-content:space-around}
+.stats div{text-align:center;line-height:1.2}
+.stats b{display:block;font-weight:500;font-size:16px}
+.stats span{font-size:12px;color:var(--cinza)}
+.bio{padding:14px 4px 0;font-size:14px;line-height:1.45}
+.bio b{display:block;font-weight:500;font-size:15px}
+.bio .cat{color:var(--cinza)}
+.bio a{color:var(--vinho);text-decoration:none}
+.btns{display:flex;gap:8px;padding:14px 4px 0}
+.btns span{flex:1;text-align:center;font-size:13px;font-weight:400;padding:7px 0;border:1px solid var(--asfalto);border-radius:6px}
+.btns span:first-child{background:var(--asfalto);color:var(--cal)}
+.hl{display:flex;gap:10px;padding:18px 4px 6px;overflow:hidden}
+.hl div{text-align:center;flex:1;min-width:0}
+.hl i{display:flex;align-items:center;justify-content:center;width:52px;height:52px;margin:0 auto 5px;border-radius:50%;border:1px solid var(--asfalto);background:var(--cal2)}
+.hl svg{width:26px;height:26px}
+.hl span{font-size:11px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;margin-top:14px}
+.tile{aspect-ratio:1;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.tile svg{width:56%;height:56%}
+.tile.cal{background:var(--cal)}
+.tile.con{background:var(--concreto);color:var(--asfalto)}
+.tile.asf{background:var(--asfalto);color:var(--cal)}
+.tile.ros{background:var(--rose);color:var(--vinho)}
+.tile .fr{font-family:var(--serif);font-style:italic;font-size:15px;line-height:1.15;text-align:center;padding:0 8px}
+.tile svg.hatch{width:100%;height:100%}
+.grid-cap{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;margin-top:6px;text-align:center;font-size:11px;color:var(--cinza)}
+
+.tpls{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:22px;margin-top:8px}
+.tpl{aspect-ratio:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.tpl svg{width:46%;height:46%}
+.tpl.cal2{background:var(--cal2)}
+.tpl.ros{background:var(--rose);color:var(--vinho)}
+.tpl .foot{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;padding:16px 18px;font-size:14px}
+.tpl .foot .nome{font-size:14px}
+.tpl .split{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr}
+.tpl .split div{display:flex;align-items:center;justify-content:center}
+.tpl .split div:first-child{background:var(--concreto)}
+.tpl .split div:last-child{background:var(--cal2)}
+.tpl .split svg{width:60%;height:60%}
+.tpl .frase{font-family:var(--serif);font-style:italic;font-size:clamp(26px,7vw,38px);line-height:1.15;text-align:center;padding:0 28px}
+.tpl .wm{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-family:var(--serif);text-transform:uppercase;letter-spacing:.3em;font-size:12px;font-weight:400}
+.tpl .ficha{position:absolute;inset:0;padding:26px 24px;font-size:14px;line-height:1.5}
+.tpl .ficha b{display:block;font-weight:500;font-size:15px;margin-bottom:14px}
+.tpl .ficha div{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--concreto);padding:8px 0}
+.tpl .ficha div span:last-child{text-align:right;color:var(--cinza)}
+.cap{margin-top:8px;font-size:14px;color:var(--cinza)}
+
+.stories{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:22px;margin-top:8px;max-width:520px}
+.story{aspect-ratio:9/16;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:18px}
+.story.cal2{background:var(--cal2)}
+.story.asf{background:var(--asfalto);color:var(--cal)}
+.story .wm{position:absolute;top:22px;left:0;right:0;text-align:center;font-family:var(--serif);text-transform:uppercase;letter-spacing:.3em;font-size:12px;font-weight:400}
+.story svg{width:52%;height:auto}
+.story .foot{position:absolute;bottom:22px;left:0;right:0;text-align:center;font-size:13px;line-height:1.5}
+.story .pill{display:inline-block;margin-top:10px;padding:6px 16px;border:1px solid currentColor;border-radius:999px;font-size:12px}
+.story .frase{font-family:var(--serif);font-style:italic;font-size:26px;line-height:1.15;text-align:center;padding:0 6px}
+
+.dest{margin-top:8px}
+.dest > div{display:grid;grid-template-columns:56px 1fr;gap:18px;align-items:center;padding:12px 0;border-bottom:1px solid var(--concreto)}
+.dest i{display:flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:50%;border:1px solid var(--asfalto);background:var(--cal2)}
+.dest svg{width:28px;height:28px}
+.dest b{display:block;font-weight:500}
+.dest span{font-size:14px;color:var(--cinza)}
+
+ol.rules{padding-left:1.2em;margin:8px 0 0;max-width:60ch}
+ol.rules li{padding:6px 0 6px 6px}
+.legs{margin-top:8px}
+.legs p{padding:14px 0;border-bottom:1px solid var(--concreto);max-width:60ch}
+
+footer{margin-top:72px;padding-top:18px;border-top:1px solid var(--asfalto);display:flex;justify-content:space-between;gap:16px;font-size:13px;color:var(--cinza)}
+
+@page{size:A4;margin:14mm 14mm 16mm}
+@media print{
+  body{background:#fff}
+  .hero{padding-top:40px}
+  section{margin-top:36px;break-inside:auto}
+  .phone,.tpl,.story,.marks,.type,.dest,.swatches{break-inside:avoid}
+  h2{break-after:avoid}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="camisa" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M34 18 L42 14 Q50 22 58 14 L66 18 L80 30 L72 40 L66 36 V84 H34 V36 L28 40 L20 30 Z"/>
+  </symbol>
+  <symbol id="calca" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M34 16 H66 L70 84 H56 L50 44 L44 84 H30 Z"/><path d="M34 26 H66"/>
+  </symbol>
+  <symbol id="bolsa" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M26 40 H74 L70 84 H30 Z"/><path d="M38 40 V32 Q50 14 62 32 V40"/>
+  </symbol>
+  <symbol id="corpos" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+    <circle cx="33" cy="21" r="7"/><path d="M20 86 V50 Q20 34 33 34 Q46 34 46 50 V86"/>
+    <circle cx="67" cy="19" r="7"/><path d="M58 86 V46 Q58 32 67 32 Q76 32 76 46 V86"/>
+  </symbol>
+  <symbol id="rolo" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+    <ellipse cx="30" cy="50" rx="10" ry="26"/><path d="M30 24 H70 Q80 24 80 50 Q80 76 70 76 H30"/><path d="M50 24 V76"/>
+  </symbol>
+  <symbol id="cabide" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M56 24 Q56 16 48 16 Q40 16 40 24 Q40 30 48 32 V42 L16 64 H84 L48 42"/>
+  </symbol>
+  <symbol id="regua" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M14 42 H86 V62 H14 Z M26 42 V52 M38 42 V56 M50 42 V52 M62 42 V56 M74 42 V52"/>
+  </symbol>
+  <symbol id="trocas" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M26 40 H74 L62 28 M74 60 H26 L38 72"/>
+  </symbol>
+  <symbol id="hatch" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1" preserveAspectRatio="none">
+    <path d="M0 25 L25 0 M0 50 L50 0 M0 75 L75 0 M0 100 L100 0 M25 100 L100 25 M50 100 L100 50 M75 100 L100 75"/>
+  </symbol>
+</svg>
+
+<div class="book">
+
+<header class="hero">
+  <div class="wordmark"><span>Via</span><i class="via"></i><span>Ross</span></div>
+  <p class="tagline">Poucas peças, um caminho.</p>
+  <p class="muted">Identidade visual e book de Instagram. Preparado para Ivia Ross, agosto de 2026.</p>
+</header>
+
+<section id="nome">
+  <h2>O nome e a marca</h2>
+  <p>Via é caminho. Ross é o sobrenome de Ivia, e soa como rosé, de onde vem o único acento de cor da marca. O nome diz o que a loja faz: oferece um caminho curto, com poucas peças, para se vestir bem todos os dias.</p>
+  <p>A linha entre as duas palavras é a via. Ela aparece no logo, separa as seções deste book e volta nos stories. É o único elemento gráfico além do texto.</p>
+  <div class="marks">
+    <div class="mark pos"><div class="wordmark"><span>Via</span><i class="via"></i><span>Ross</span></div></div>
+    <div class="mark neg"><div class="wordmark"><span>Via</span><i class="via"></i><span>Ross</span></div></div>
+    <div class="mark ros"><div class="wordmark"><span>Via</span><i class="via"></i><span>Ross</span></div></div>
+  </div>
+  <div class="monorow">
+    <div class="mono">VR<i></i></div>
+    <p class="muted" style="margin:0">Monograma para avatar do Instagram, etiqueta interna e favicon. Sempre em asfalto sobre cal, ou cal sobre asfalto.</p>
+  </div>
+</section>
+
+<section id="paleta">
+  <h2>Cores</h2>
+  <p>Cinco cores, em proporção fixa. Os neutros vêm da rua: cal, concreto e asfalto. O rosé entra em pequena dose e é o que dá o toque feminino a uma loja que veste todo mundo.</p>
+  <div class="swatches">
+    <div class="sw"><div class="chip" style="background:#E9E7E2;border:1px solid #B9BBB5"></div><div><b>Cal</b><span class="hex">#E9E7E2</span><br><span class="use">Fundo de fotos, site, embalagem</span></div><span class="pct">60%</span></div>
+    <div class="sw"><div class="chip" style="background:#B9BBB5"></div><div><b>Concreto</b><span class="hex">#B9BBB5</span><br><span class="use">Segundo fundo, linhas, etiquetas</span></div><span class="pct">15%</span></div>
+    <div class="sw"><div class="chip" style="background:#24272A"></div><div><b>Asfalto</b><span class="hex">#24272A</span><br><span class="use">Texto, logo, botões</span></div><span class="pct">15%</span></div>
+    <div class="sw"><div class="chip" style="background:#C29A9A"></div><div><b>Rosé</b><span class="hex">#C29A9A</span><br><span class="use">Posts de frase, capa de stories, laço da embalagem</span></div><span class="pct">8%</span></div>
+    <div class="sw"><div class="chip" style="background:#5C3A40"></div><div><b>Vinho</b><span class="hex">#5C3A40</span><br><span class="use">Texto sobre rosé, link da bio</span></div><span class="pct">2%</span></div>
+  </div>
+  <div class="bar"><i style="width:60%;background:#E9E7E2;border:1px solid #B9BBB5"></i><i style="width:15%;background:#B9BBB5"></i><i style="width:15%;background:#24272A"></i><i style="width:8%;background:#C29A9A"></i><i style="width:2%;background:#5C3A40"></i></div>
+  <p class="muted" style="margin-top:10px">Proporção de uso no feed e nas peças de comunicação. Nunca mais de uma cor de acento na mesma imagem.</p>
+</section>
+
+<section id="tipografia">
+  <h2>Tipografia</h2>
+  <p>Duas famílias, gratuitas no Google Fonts. A serifa é a voz da marca: logo, frases e títulos. A sans faz o trabalho do dia a dia: nomes de peças, preços, legendas e site.</p>
+  <div class="type">
+    <div class="spec serif"><div class="big">Ross</div><b>Cormorant Garamond</b><br><span class="muted">Light e Regular, com itálico. Logo, frases, capas.</span></div>
+    <div class="spec sans"><div class="big">Via</div><b>Jost</b><br><span class="muted">Light, Regular e Medium. Textos, preços, botões, site.</span></div>
+  </div>
+  <div class="scale">
+    <div><span class="q">Poucas peças, um caminho.</span><span class="muted">frase</span></div>
+    <div><span class="nome">Camisa reta 01</span><span class="muted">nome da peça</span></div>
+    <div><span class="preco">R$ 289</span><span class="muted">preço</span></div>
+    <div><span class="leg">Algodão, corte reto, cai igual em qualquer corpo.</span><span class="muted">legenda</span></div>
+  </div>
+</section>
+
+<section id="perfil">
+  <h2>Perfil</h2>
+  <p>Como a página fica no dia do lançamento. Bio em três linhas, nada a mais. Os destaques cobrem toda dúvida de compra antes de a pessoa mandar mensagem.</p>
+  <div class="phone">
+    <div class="ph-top">
+      <div class="mono">VR<i></i></div>
+      <div class="stats"><div><b>12</b><span>posts</span></div><div><b>2.350</b><span>seguidores</span></div><div><b>98</b><span>seguindo</span></div></div>
+    </div>
+    <div class="bio">
+      <b>Via Ross</b>
+      <span class="cat">Loja de roupas</span><br>
+      Poucas peças, um caminho.<br>
+      Essenciais unissex, corte preciso, preço justo.<br>
+      Envio para todo o Brasil.<br>
+      <a href="#">viaross.com.br</a>
+    </div>
+    <div class="btns"><span>Seguir</span><span>Mensagem</span></div>
+    <div class="hl">
+      <div><i><svg><use href="#cabide"/></svg></i><span>Peças</span></div>
+      <div><i><svg><use href="#regua"/></svg></i><span>Medidas</span></div>
+      <div><i><svg><use href="#bolsa"/></svg></i><span>Comprar</span></div>
+      <div><i><svg><use href="#trocas"/></svg></i><span>Trocas</span></div>
+      <div><i><svg><use href="#rolo"/></svg></i><span>Bastidores</span></div>
+    </div>
+    <div class="grid">
+      <div class="tile cal"><svg><use href="#camisa"/></svg></div>
+      <div class="tile con"><svg><use href="#corpos"/></svg></div>
+      <div class="tile asf"><svg class="hatch"><use href="#hatch"/></svg></div>
+      <div class="tile ros"><span class="fr">Poucas peças, um caminho.</span></div>
+      <div class="tile cal"><svg><use href="#bolsa"/></svg></div>
+      <div class="tile con"><svg><use href="#corpos"/></svg></div>
+      <div class="tile con"><svg class="hatch"><use href="#hatch"/></svg></div>
+      <div class="tile cal"><svg><use href="#calca"/></svg></div>
+      <div class="tile cal"><svg><use href="#rolo"/></svg></div>
+    </div>
+    <div class="grid-cap"><span>still</span><span>no corpo</span><span>detalhe</span><span>frase</span><span>still</span><span>no corpo</span><span>detalhe</span><span>still</span><span>bastidores</span></div>
+  </div>
+  <p class="cap" style="max-width:60ch;margin:18px auto 0">O feed segue um ritmo fixo: peça em fundo cal, peça no corpo em fundo concreto, detalhe do tecido em escuro. Um post de frase em rosé a cada seis. Nunca duas fotos de corpo lado a lado.</p>
+</section>
+
+<section id="posts">
+  <h2>Modelos de post</h2>
+  <p>Quatro modelos cobrem tudo o que a loja precisa publicar. Foto sempre com luz natural, fundo liso e a peça ocupando o centro.</p>
+  <div class="tpls">
+    <div>
+      <div class="tpl cal2"><svg><use href="#camisa"/></svg><div class="foot"><span class="nome">Camisa reta 01</span><span class="preco">R$ 289</span></div></div>
+      <p class="cap"><strong>Peça.</strong> Still em fundo cal. Nome e preço na própria imagem, sempre visíveis.</p>
+    </div>
+    <div>
+      <div class="tpl"><div class="split"><div><svg><use href="#corpos"/></svg></div><div><svg><use href="#camisa"/></svg></div></div></div>
+      <p class="cap"><strong>No corpo.</strong> A mesma peça em duas pessoas de corpos e gêneros diferentes, lado a lado.</p>
+    </div>
+    <div>
+      <div class="tpl ros"><span class="frase">Poucas peças, um caminho.</span><span class="wm">Via Ross</span></div>
+      <p class="cap"><strong>Frase.</strong> Manifesto da marca em rosé, uma vez a cada seis posts. Texto curto, sem hashtag.</p>
+    </div>
+    <div>
+      <div class="tpl cal2"><div class="ficha"><b>Camisa reta 01</b><div><span>Tecido</span><span>algodão 100%</span></div><div><span>Caimento</span><span>reto</span></div><div><span>Tamanhos</span><span>P ao GG</span></div><div><span>Modelo</span><span>1,78 m veste M</span></div><div><span>Cuidado</span><span>lavar a frio</span></div></div></div>
+      <p class="cap"><strong>Ficha.</strong> Segunda página do carrossel da peça. Medidas em centímetros nos comentários fixados.</p>
+    </div>
+  </div>
+</section>
+
+<section id="stories">
+  <h2>Stories e capa de reels</h2>
+  <p>Story de produto em cal, com a via no topo e um único botão. Capa de reels em asfalto, só com a frase do vídeo.</p>
+  <div class="stories">
+    <div class="story cal2"><span class="wm">Via Ross</span><svg viewBox="0 0 100 100"><use href="#calca"/></svg><div class="foot"><span class="nome">Calça alfaiataria 02</span><br><span class="preco">R$ 349</span><br><span class="pill">Ver na loja</span></div></div>
+    <div class="story asf"><span class="wm">Via Ross</span><span class="frase">Um corte, dois corpos.</span><div class="foot muted" style="color:#B9BBB5">reels, 12 s</div></div>
+  </div>
+</section>
+
+<section id="destaques">
+  <h2>Destaques</h2>
+  <p>Capas em cal com ícone de linha. Cinco, sempre nesta ordem.</p>
+  <div class="dest">
+    <div><i><svg><use href="#cabide"/></svg></i><div><b>Peças</b><span>Um story por peça da coleção atual, com preço.</span></div></div>
+    <div><i><svg><use href="#regua"/></svg></i><div><b>Medidas</b><span>Tabela em centímetros e como medir uma peça que já se tem.</span></div></div>
+    <div><i><svg><use href="#bolsa"/></svg></i><div><b>Comprar</b><span>Link da loja, formas de pagamento, prazo de envio.</span></div></div>
+    <div><i><svg><use href="#trocas"/></svg></i><div><b>Trocas</b><span>Regra de troca em três frases e como pedir.</span></div></div>
+    <div><i><svg><use href="#rolo"/></svg></i><div><b>Bastidores</b><span>Tecido, prova de modelagem, dia de foto.</span></div></div>
+  </div>
+</section>
+
+<section id="regras">
+  <h2>Regras do feed</h2>
+  <ol class="rules">
+    <li>Três posts por semana no feed, um reels de até 15 segundos entre eles, story todo dia.</li>
+    <li>Preço sempre na imagem ou na primeira linha da legenda. Nunca "valor no direct".</li>
+    <li>Mesma luz e mesmos fundos em toda a coleção. Foto de celular serve se a luz for natural.</li>
+    <li>Legenda curta, em minúsculas, sem exclamação e sem emoji. Nome da peça, material, uso, preço.</li>
+    <li>Rosé só no post de frase e na capa de story. Nunca em foto de produto.</li>
+    <li>Peças nomeadas por função e número, nunca por gênero: camisa reta 01, calça alfaiataria 02, bolsa base.</li>
+  </ol>
+</section>
+
+<section id="legendas">
+  <h2>Legendas de exemplo</h2>
+  <div class="legs">
+    <p>camisa reta 01. algodão, corte reto, cai igual em qualquer corpo. R$ 289, link na bio.</p>
+    <p>bolsa base. couro sintético estruturado, cabe um caderno e o celular. R$ 219.</p>
+    <p>menos peças, melhores escolhas. a primeira coleção Via Ross abre quinta, 9h, para quem está na lista.</p>
+  </div>
+</section>
+
+<footer>
+  <span>Via Ross</span>
+  <span>Identidade e book de Instagram, versão 1</span>
+</footer>
+
+</div>
+</body>
+</html>
