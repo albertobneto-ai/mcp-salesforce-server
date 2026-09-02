@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Refinamento Funcional — Banda Larga · Componentes Salesforce</title>
+<style>
+  @page { size: A4; margin: 18mm 14mm 16mm 14mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height: 1.5; color: #0d0d0d; background: #fafbfc; }
+  .page { max-width: 780px; margin: 0 auto; }
+  .capa { background: linear-gradient(135deg, #0d0d0d 0%, #4a4a4a 100%); color: #f2f3f5; padding: 70px 46px 46px 46px; page-break-after: always; min-height: 480px; }
+  .capa .kicker { font-size: 9pt; letter-spacing: 3px; text-transform: uppercase; color: #d9d9d9; margin-bottom: 26px; }
+  .capa h1 { font-size: 25pt; font-weight: 700; line-height: 1.2; margin-bottom: 10px; }
+  .capa .sub { font-size: 12.5pt; color: #ececec; font-weight: 300; margin-bottom: 40px; }
+  .capa .meta { border-top: 1px solid #6b6b6b; padding-top: 18px; font-size: 9.5pt; color: #d9d9d9; }
+  .capa .meta div { margin-bottom: 5px; } .capa .meta b { color: #f2f3f5; font-weight: 600; }
+  h2.sec { font-size: 14.5pt; font-weight: 700; margin: 34px 0 4px 0; padding: 9px 14px; background: #0d0d0d; color: #fafbfc; page-break-after: avoid; }
+  h2.sec .n { color: #d9d9d9; font-weight: 400; margin-right: 10px; }
+  h3 { font-size: 11.5pt; font-weight: 700; margin: 20px 0 6px 0; border-bottom: 2px solid #0d0d0d; padding-bottom: 3px; page-break-after: avoid; }
+  h4 { font-size: 10pt; font-weight: 700; margin: 14px 0 4px 0; color: #333; text-transform: uppercase; letter-spacing: .5px; page-break-after: avoid; }
+  p { margin: 6px 0; } ul, ol { margin: 6px 0 8px 22px; } li { margin-bottom: 3px; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 14px 0; font-size: 9pt; }
+  thead th { background: #0d0d0d; color: #fafbfc; text-align: left; padding: 6px 8px; font-weight: 600; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .4px; }
+  tbody td { padding: 6px 8px; border-bottom: 1px solid #d9d9d9; vertical-align: top; }
+  tbody tr:nth-child(even) { background: #f2f3f5; }
+  td.k, th.k { white-space: nowrap; font-weight: 600; }
+  tr { page-break-inside: avoid; }
+  .tag { display: inline-block; font-size: 7.5pt; font-weight: 700; letter-spacing: .3px; padding: 1px 6px; border: 1px solid #6b6b6b; color: #333; background: #ececec; border-radius: 2px; white-space: nowrap; }
+  .tag.dark { background: #0d0d0d; color: #fafbfc; border-color: #0d0d0d; }
+  .tag.mid { background: #6b6b6b; color: #fafbfc; border-color: #6b6b6b; }
+  .co { margin: 12px 0; padding: 10px 14px; background: #f2f3f5; border-left: 6px solid #0d0d0d; page-break-inside: avoid; }
+  .co.alert { border-left: 8px double #0d0d0d; }
+  .co.info { border-left: 3px solid #6b6b6b; background: #fafbfc; border-top: 1px solid #d9d9d9; border-bottom: 1px solid #d9d9d9; border-right: 1px solid #d9d9d9; }
+  .co .lbl { font-size: 8pt; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #6b6b6b; display: block; margin-bottom: 3px; }
+  .mono { font-family: 'Consolas', 'Courier New', monospace; font-size: 8.6pt; background: #ececec; padding: 0 4px; border-radius: 2px; }
+  pre { font-family: 'Consolas', 'Courier New', monospace; font-size: 8.6pt; background: #ececec; border: 1px solid #d9d9d9; padding: 12px 14px; margin: 10px 0; line-height: 1.45; white-space: pre-wrap; page-break-inside: avoid; }
+  .fig { margin: 12px 0 6px 0; border: 1px solid #d9d9d9; background: #fafbfc; padding: 8px; page-break-inside: avoid; }
+  .fig svg { width: 100%; height: auto; display: block; }
+  .cap { font-size: 8.4pt; color: #6b6b6b; margin: 2px 0 14px 0; }
+  .toc { background: #f2f3f5; border: 1px solid #d9d9d9; padding: 14px 20px; margin: 16px 0; }
+  .toc div { padding: 2px 0; font-size: 9.5pt; } .toc b { display: inline-block; width: 30px; color: #6b6b6b; }
+  .foot { margin-top: 40px; padding: 12px 0; border-top: 2px solid #0d0d0d; font-size: 8pt; color: #6b6b6b; display: flex; justify-content: space-between; }
+  .small { font-size: 8.6pt; color: #444; }
+  .oo { font-size: 7.5pt; font-weight: 800; letter-spacing: .8px; padding: 1px 5px; border-radius: 2px; white-space: nowrap; }
+  .oo.n { background: #0d0d0d; color: #fafbfc; } .oo.c { background: #fafbfc; color: #0d0d0d; border: 1px solid #0d0d0d; } .oo.e { background: #6b6b6b; color: #fafbfc; }
+
+  span.rnlink { position:relative; color:#0d0d0d; font-family:Consolas,monospace; font-size:8.2pt;
+    background:#ececec; border:1px solid #6b6b6b; border-bottom:2px solid #0d0d0d;
+    padding:0 4px; border-radius:2px; white-space:nowrap; cursor:help; outline:none; }
+  span.rnlink::after { content: attr(data-rule); position:absolute; left:0; bottom:135%;
+    width:340px; max-width:72vw; background:#0d0d0d; color:#fafbfc;
+    font-family:'Segoe UI',Arial,sans-serif; font-size:8.6pt; line-height:1.45; font-weight:400;
+    padding:9px 12px; border-radius:4px; white-space:normal; text-align:left;
+    opacity:0; visibility:hidden; transition:opacity .12s; z-index:50;
+    box-shadow:0 3px 10px rgba(0,0,0,.35); pointer-events:none; }
+  span.rnlink::before { content:""; position:absolute; left:14px; bottom:118%;
+    border:6px solid transparent; border-top-color:#0d0d0d; opacity:0; visibility:hidden; transition:opacity .12s; z-index:50; }
+  span.rnlink:hover::after, span.rnlink:focus::after,
+  span.rnlink:hover::before, span.rnlink:focus::before { opacity:1; visibility:visible; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="capa">
+  <div class="kicker">CRM B2B Algar Telecom · Fase 2 · Frente Catálogo de Produtos</div>
+  <h1>Refinamento Funcional<br>Banda Larga</h1>
+  <div class="sub">Resultado do refinamento sob a ótica dos componentes Salesforce · Trilha de referência: Revenue Cloud / RLM (PCM nativo)</div>
+  <div class="meta">
+    <div><b>Documento:</b> RF-BL-001 · Versão 1.1 (backlog por slice — Use Case 2.0)</div>
+    <div><b>Data:</b> 01/09/2026</div>
+    <div><b>Autores:</b> Alberto Bottaro Neto e Kauê (Analistas Funcionais)</div>
+    <div><b>Deriva de:</b> EF-BL-001 v4.0 (Especificação Funcional — Use Case 2.0) · MAN-AF-001 v2.0 (padrão de análise funcional)</div>
+    <div><b>Alimenta:</b> ET-BL-001 (Especificação Técnica, a derivar) · backlog de construção em blocos</div>
+    <div><b>Grounding:</b> RLM Developer Guide · Object Reference · Salesforce Help/Trailhead · org arqevery (Tooling API)</div>
+    <div><b>Classificação:</b> Confidencial — Uso Interno</div>
+  </div>
+</div>
+
+<h2 class="sec"><span class="n">§</span>Sumário e convenções</h2>
+<div class="toc">
+  <div><b>1</b> Posição do documento e premissas</div>
+  <div><b>2</b> Arquitetura da solução em componentes Salesforce</div>
+  <div><b>3</b> Casos de uso → componentes (UC-01 a UC-09)</div>
+  <div><b>4</b> Modelo físico do catálogo (registros a construir)</div>
+  <div><b>5</b> Regras de negócio → mecanismo Salesforce</div>
+  <div><b>6</b> Dicionário de dados → mapeamento físico</div>
+  <div><b>7</b> Perfis → licenças e permission sets</div>
+  <div><b>8</b> Integrações e contexto</div>
+  <div><b>9</b> Gap OOTB × custom</div>
+  <div><b>10</b> Decisões de arquitetura (candidatas a ADR)</div>
+  <div><b>11</b> Backlog de construção em blocos</div>
+  <div><b>12</b> Riscos técnicos, pendências herdadas e fronteira</div>
+</div>
+<p class="small">Marcações de origem preservadas do EF: <span class="tag dark">VERIFICADO: doc oficial</span> <span class="tag dark">VERIFICADO: org</span> <span class="tag dark">VERIFICADO: EF-BL-001</span> <span class="tag mid">INFERIDO</span> <span class="tag">PENDENTE</span>. Classificação de esforço por elemento: <span class="oo n">NATIVO</span> configuração declarativa da plataforma · <span class="oo c">CUSTOM</span> exige Flow/Apex/LWC/objeto custom · <span class="oo e">EXTERNO</span> depende de sistema ou time fora do CRM.</p>
+
+<!-- 1 -->
+<h2 class="sec"><span class="n">01</span>Posição do documento e premissas</h2>
+<p>O EF-BL-001 diz <b>o que</b> o negócio precisa (casos de uso, regras, dados). A especificação técnica dirá <b>como</b> se constrói (metadado, código, deploy). Este documento é o elo: registra, para cada elemento funcional, <b>com qual componente Salesforce</b> ele é resolvido, se a solução é nativa ou custom, e quais decisões precisam ser ratificadas antes de o técnico começar. É o artefato de saída do refinamento funcional, par arquiteto + analista.</p>
+<pre>EF-BL-001 (o quê)  ──►  RF-BL-001 (com o quê · nativo × custom · decisões)  ──►  ET-BL-001 (como)  ──►  build em blocos</pre>
+<h3>1.1 Premissas</h3>
+<table>
+<thead><tr><th class="k">#</th><th>Premissa</th><th>Origem</th></tr></thead>
+<tbody>
+<tr><td class="k">PR-1</td><td>Trilha <b>Revenue Cloud / RLM nativo</b> (PCM + Pricing + Transaction Management + DRO). Communications Cloud (Vlocity CMT v900.650) permanece instalado, mas <b>não governa</b> este produto — catálogo canônico único.</td><td>ADR-01 (§10) · <span class="tag">PENDENTE ratificação</span></td></tr>
+<tr><td class="k">PR-2</td><td>Objetos PCM disponíveis e feature habilitada na org de arquitetura; camada de atributos/classificação/bundle/regras com contagem zero — construção integralmente nova.</td><td><span class="tag dark">VERIFICADO: org</span></td></tr>
+<tr><td class="k">PR-3</td><td><span class="mono">ProductComponentGroup</span> / <span class="mono">ProductRelatedComponent</span> exigem Industries EPC ou Subscription Management habilitado — condição satisfeita (objetos presentes).</td><td><span class="tag dark">VERIFICADO: Object Reference + org</span></td></tr>
+<tr><td class="k">PR-4</td><td>Motor de constraints habilitado em Revenue Settings ("Configuration Rules and Constraints with Constraints Engine") antes do Bloco 2.</td><td><span class="tag dark">VERIFICADO: doc oficial</span> · habilitação <span class="tag">PENDENTE</span></td></tr>
+<tr><td class="k">PR-5</td><td>Análise de viabilidade entregue por API (MuleSoft) com os três atributos de acesso por endereço.</td><td><span class="tag">PENDENTE: contrato</span></td></tr>
+<tr><td class="k">PR-6</td><td>Escopo MVP conforme EF: itens marcados Pendente/Em validação entram como incremento sem alterar a fundação.</td><td><span class="tag dark">VERIFICADO: EF-BL-001</span></td></tr>
+</tbody>
+</table>
+
+<!-- 2 -->
+<h2 class="sec"><span class="n">02</span>Arquitetura da solução em componentes Salesforce</h2>
+<p>A ordem de construção segue a ordem oficial de deployment do RLM: <b>Product Catalog Management → Salesforce Pricing → Transaction Management → Dynamic Revenue Orchestrator</b>. <span class="tag dark">VERIFICADO: RLM Dev Guide (Deployment)</span> Os blocos do EF mapeiam sobre essa pilha:</p>
+<div class="fig"><svg viewBox="0 0 760 470" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial" font-size="8.6">
+<defs><marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#0d0d0d"/></marker></defs>
+<style>.b{fill:#fafbfc;stroke:#0d0d0d;stroke-width:1.3}.h{fill:#0d0d0d}.ht{fill:#fafbfc;font-weight:700;font-size:9px}.t{fill:#0d0d0d}.g{fill:#f2f3f5;stroke:#6b6b6b;stroke-dasharray:4 3}.ex{fill:#ececec;stroke:#6b6b6b}.l{stroke:#0d0d0d;stroke-width:1.1;fill:none}
+  span.rnlink { position:relative; color:#0d0d0d; font-family:Consolas,monospace; font-size:8.2pt;
+    background:#ececec; border:1px solid #6b6b6b; border-bottom:2px solid #0d0d0d;
+    padding:0 4px; border-radius:2px; white-space:nowrap; cursor:help; outline:none; }
+  span.rnlink::after { content: attr(data-rule); position:absolute; left:0; bottom:135%;
+    width:340px; max-width:72vw; background:#0d0d0d; color:#fafbfc;
+    font-family:'Segoe UI',Arial,sans-serif; font-size:8.6pt; line-height:1.45; font-weight:400;
+    padding:9px 12px; border-radius:4px; white-space:normal; text-align:left;
+    opacity:0; visibility:hidden; transition:opacity .12s; z-index:50;
+    box-shadow:0 3px 10px rgba(0,0,0,.35); pointer-events:none; }
+  span.rnlink::before { content:""; position:absolute; left:14px; bottom:118%;
+    border:6px solid transparent; border-top-color:#0d0d0d; opacity:0; visibility:hidden; transition:opacity .12s; z-index:50; }
+  span.rnlink:hover::after, span.rnlink:focus::after,
+  span.rnlink:hover::before, span.rnlink:focus::before { opacity:1; visibility:visible; }
+</style>
+<!-- camada experiência -->
+<rect class="g" x="10" y="10" width="740" height="70"/><text x="20" y="26" font-size="8" font-weight="700" fill="#6b6b6b">EXPERIÊNCIA DO VENDEDOR</text>
+<g transform="translate(30,36)"><rect class="b" width="200" height="36"/><rect class="h" width="200" height="14"/><text class="ht" x="100" y="10.5" text-anchor="middle">PRODUCT DISCOVERY</text><text class="t" x="6" y="28">navegação · busca · qualificação na descoberta</text></g>
+<g transform="translate(250,36)"><rect class="b" width="230" height="36"/><rect class="h" width="230" height="14"/><text class="ht" x="115" y="10.5" text-anchor="middle">CONFIGURADOR (CONSTRAINTS ENGINE)</text><text class="t" x="6" y="28">modelo CML · visibilidade · auto-set · mensagens</text></g>
+<g transform="translate(500,36)"><rect class="b" width="230" height="36"/><rect class="h" width="230" height="14"/><text class="ht" x="115" y="10.5" text-anchor="middle">QUOTE / ORDER (TRANSACTION MGMT)</text><text class="t" x="6" y="28">Quote · QuoteLineItem · Order · OrderItem</text></g>
+<!-- camada regras -->
+<rect class="g" x="10" y="92" width="740" height="70"/><text x="20" y="108" font-size="8" font-weight="700" fill="#6b6b6b">REGRAS</text>
+<g transform="translate(30,118)"><rect class="b" width="220" height="36"/><rect class="h" width="220" height="14"/><text class="ht" x="110" y="10.5" text-anchor="middle">QUALIFICATION (DECISION TABLES)</text><text class="t" x="6" y="28">ProductQualification · Disqualification · Category</text></g>
+<g transform="translate(270,118)"><rect class="b" width="220" height="36"/><rect class="h" width="220" height="14"/><text class="ht" x="110" y="10.5" text-anchor="middle">CONSTRAINT MODELS (CML)</text><text class="t" x="6" y="28">atributo ↔ atributo · exclusão · auto-set</text></g>
+<g transform="translate(510,118)"><rect class="b" width="220" height="36"/><rect class="h" width="220" height="14"/><text class="ht" x="110" y="10.5" text-anchor="middle">PRODUCT CONFIGURATION RULES</text><text class="t" x="6" y="28">validação · inclusão · exclusão na transação</text></g>
+<!-- camada catálogo -->
+<rect class="g" x="10" y="174" width="740" height="112"/><text x="20" y="190" font-size="8" font-weight="700" fill="#6b6b6b">PRODUCT CATALOG MANAGEMENT (PCM) — fonte única de verdade do produto</text>
+<g transform="translate(30,200)"><rect class="b" width="170" height="76"/><rect class="h" width="170" height="14"/><text class="ht" x="85" y="10.5" text-anchor="middle">TAXONOMIA</text><text class="t" x="6" y="28">ProductCatalog</text><text class="t" x="6" y="40">ProductCategory</text><text class="t" x="6" y="52">ProductCategoryProduct</text><text class="t" x="6" y="64">ProductSpecificationType</text></g>
+<g transform="translate(215,200)"><rect class="b" width="170" height="76"/><rect class="h" width="170" height="14"/><text class="ht" x="85" y="10.5" text-anchor="middle">ATRIBUTOS</text><text class="t" x="6" y="28">AttributeCategory</text><text class="t" x="6" y="40">AttributeDefinition · Picklist</text><text class="t" x="6" y="52">ProductClassification / Attr</text><text class="t" x="6" y="64">ProductAttributeDefinition</text></g>
+<g transform="translate(400,200)"><rect class="b" width="170" height="76"/><rect class="h" width="170" height="14"/><text class="ht" x="85" y="10.5" text-anchor="middle">PRODUTO E BUNDLE</text><text class="t" x="6" y="28">Product2</text><text class="t" x="6" y="40">ProductComponentGroup</text><text class="t" x="6" y="52">ProductRelatedComponent</text><text class="t" x="6" y="64">ProductRelationshipType</text></g>
+<g transform="translate(585,200)"><rect class="b" width="145" height="76"/><rect class="h" width="145" height="14"/><text class="ht" x="72" y="10.5" text-anchor="middle">MODELO DE VENDA</text><text class="t" x="6" y="28">ProductSellingModel</text><text class="t" x="6" y="40">ProductSellingModelOption</text><text class="t" x="6" y="52">Pricebook2</text><text class="t" x="6" y="64">PricebookEntry</text></g>
+<!-- camada downstream -->
+<rect class="g" x="10" y="298" width="740" height="70"/><text x="20" y="314" font-size="8" font-weight="700" fill="#6b6b6b">BLOCOS SEGUINTES (fora do escopo deste refinamento — registrados pela dependência)</text>
+<g transform="translate(30,324)"><rect class="b" width="220" height="36" stroke-dasharray="4 3"/><rect class="h" width="220" height="14"/><text class="ht" x="110" y="10.5" text-anchor="middle">SALESFORCE PRICING</text><text class="t" x="6" y="28">pricing procedures · PriceAdjustmentSchedule</text></g>
+<g transform="translate(270,324)"><rect class="b" width="220" height="36" stroke-dasharray="4 3"/><rect class="h" width="220" height="14"/><text class="ht" x="110" y="10.5" text-anchor="middle">DYNAMIC REVENUE ORCHESTRATOR</text><text class="t" x="6" y="28">decomposição · orquestração · temporário</text></g>
+<g transform="translate(510,324)"><rect class="b" width="220" height="36" stroke-dasharray="4 3"/><rect class="h" width="220" height="14"/><text class="ht" x="110" y="10.5" text-anchor="middle">ASSET LIFECYCLE</text><text class="t" x="6" y="28">Asset · AssetAction · pós-venda</text></g>
+<!-- camada contexto / integrações -->
+<rect class="g" x="10" y="380" width="740" height="80"/><text x="20" y="396" font-size="8" font-weight="700" fill="#6b6b6b">CONTEXTO E INTEGRAÇÕES</text>
+<g transform="translate(30,406)"><rect class="b" width="170" height="44"/><rect class="h" width="170" height="14"/><text class="ht" x="85" y="10.5" text-anchor="middle">CONTEXT SERVICE</text><text class="t" x="6" y="28">definição de contexto de venda</text><text class="t" x="6" y="40">tecnologia · rede · parceiro · segmento</text></g>
+<g transform="translate(215,406)"><rect class="ex" width="160" height="44"/><text class="t" x="80" y="18" text-anchor="middle" font-weight="700">VIABILIDADE (MuleSoft)</text><text class="t" x="80" y="34" text-anchor="middle">API por endereço · «externo»</text></g>
+<g transform="translate(390,406)"><rect class="ex" width="160" height="44"/><text class="t" x="80" y="18" text-anchor="middle" font-weight="700">SNOWFLAKE</text><text class="t" x="80" y="34" text-anchor="middle">equipamento em base · «externo»</text></g>
+<g transform="translate(565,406)"><rect class="ex" width="165" height="44"/><text class="t" x="82" y="18" text-anchor="middle" font-weight="700">PRÉ-PAGO ALGAR</text><text class="t" x="82" y="34" text-anchor="middle">validação de número · «externo»</text></g>
+<g transform="translate(30,406)"><rect class="b" x="0" y="46" width="0" height="0"/></g>
+<!-- dado de referência -->
+<g class="l"><line x1="115" y1="406" x2="115" y2="372" stroke-dasharray="3 3"/><line x1="140" y1="154" x2="140" y2="174" marker-end="url(#ar)"/><line x1="380" y1="154" x2="380" y2="174" marker-end="url(#ar)"/><line x1="620" y1="154" x2="620" y2="174" marker-end="url(#ar)"/><line x1="130" y1="72" x2="130" y2="118" marker-end="url(#ar)"/><line x1="365" y1="72" x2="365" y2="118" marker-end="url(#ar)"/><line x1="615" y1="72" x2="615" y2="118" marker-end="url(#ar)"/></g>
+<text x="128" y="378" font-size="7.5" fill="#6b6b6b">contexto alimenta regras</text>
+</svg></div>
+<p class="cap">Figura 1 — Pilha de componentes Salesforce da solução. Caixas sólidas: escopo deste refinamento (Blocos 0–2 do EF). Tracejadas: blocos seguintes. Cinza: sistemas externos.</p>
+<div class="co"><span class="lbl">Objeto de referência para listas de localidade</span>As três listas (377 localidades × propriedade de rede, 113 Fast Support, 28 UpLoad 50%) precisam de um lugar consultável pelas regras e mantido pela Gestão de Produtos (UC-09). Decisão registrada em ADR-03: <b>objeto custom <span class="mono">Locality__c</span></b> (chave localidade + UF) com os três indicadores, consumido por decision tables e pelo contexto. Alternativas avaliadas: Custom Metadata (não editável por perfil de negócio sem deploy) e carga direta nas decision tables (sem trilha de auditoria). <span class="tag mid">INFERIDO</span> <span class="oo c">CUSTOM</span></div>
+
+<!-- 3 -->
+<h2 class="sec"><span class="n">03</span>Casos de uso → componentes Salesforce</h2>
+<p class="small">Para cada UC do EF-BL-001: o componente que o realiza, os objetos/mecanismos envolvidos e a classificação nativo × custom × externo.</p>
+<table>
+<thead><tr><th class="k">UC</th><th>Realizado por</th><th>Objetos / mecanismos</th><th class="k">Classe</th></tr></thead>
+<tbody>
+<tr><td class="k">UC-01 Localizar e selecionar produto</td><td>Product Discovery + qualificação executada na descoberta</td><td><span class="mono">ProductCatalog</span>, <span class="mono">ProductCategory</span>, <span class="mono">ProductQualification</span> (<span class="rnlink" tabindex="0" data-rule="Plano &quot;Convencional Especial&quot; restrito aos perfis: ADMINISTRADOR · CONSULTORIA_INTERNA · ADM_VENDAS_REGIONAL · ADM_VENDAS_CENTRALIZADA · CONSULTOR_CORPORATIVO · GESTÃO_PRODUTOS">RN-01</span> por perfil; <span class="rnlink" tabindex="0" data-rule="Plano &quot;Na Escola&quot; exige segmento Corporativo com subsegmento Governo">RN-02</span> por segmento) via decision tables sobre o contexto</td><td class="k"><span class="oo n">NATIVO</span></td></tr>
+<tr><td class="k">UC-02 Executar análise de viabilidade</td><td>Flow orquestrando callout à API de viabilidade; resultado gravado no contexto de venda (Context Service) e nos atributos somente leitura</td><td>Named Credential + External Service/Apex callout · Context Definition (tecnologia, rede, parceiro) · atributos <span class="mono">AccessTechnology</span>, <span class="mono">NetworkOwnership</span>, <span class="mono">NetworkPartner</span></td><td class="k"><span class="oo c">CUSTOM</span> + <span class="oo e">EXTERNO</span></td></tr>
+<tr><td class="k">UC-03 Configurar plano e velocidade</td><td>Configurador de atributos do produto-pai; fidelização como escolha do selling model</td><td><span class="mono">ProductAttributeDefinition</span> (Plan, Speed) · <span class="mono">ProductSellingModel</span> Evergreen / TermDefined 12–60</td><td class="k"><span class="oo n">NATIVO</span></td></tr>
+<tr><td class="k">UC-04 Contratar link temporário</td><td>Atributos condicionais governados por Constraint Model; regime de execução no DRO (Bloco 5)</td><td>Atributos <span class="mono">IsTemporary</span>, <span class="mono">TemporaryStartDate</span>, <span class="mono">TemporaryDays</span> · CML C1/C2/C6 · desqualificação de SVAs (<span class="rnlink" tabindex="0" data-rule="Temporário não é elegível à aquisição de SVAs">RN-14</span>) e por parceiro (<span class="rnlink" tabindex="0" data-rule="Temporário inelegível quando Parceiro de Rede = Vtal">RN-15</span>)</td><td class="k"><span class="oo n">NATIVO</span> (catálogo) · DRO no Bloco 5</td></tr>
+<tr><td class="k">UC-05 Definir CGNAT e Modem automaticamente</td><td>Constraint Model lendo contexto (segmento, propriedade de rede, localidade híbrida)</td><td>CML C3/C4 · atributos <span class="mono">IsCgnat</span>, <span class="mono">ModemRegime</span> · leitura de <span class="mono">Locality__c.NetworkOwnership__c</span> via contexto</td><td class="k"><span class="oo n">NATIVO</span> + <span class="oo c">CUSTOM</span> (objeto de localidade)</td></tr>
+<tr><td class="k">UC-06 Registrar Produto a Serviço</td><td>Atributo restrito por permission set; campos condicionais por CML; inclusão automática por configuration rule</td><td><span class="mono">ServiceUsageType</span> (Não/Interno/Teste) · CML C7 · <span class="mono">ProductConfigurationRule</span> R3 (LDI/LDN) · irreversibilidade (<span class="rnlink" tabindex="0" data-rule="Registrado como Interno ou Teste, não retorna a &quot;Não&quot;">RN-20</span>) exige validação além do configurador</td><td class="k"><span class="oo n">NATIVO</span> + <span class="oo c">CUSTOM</span> (<span class="rnlink" tabindex="0" data-rule="Registrado como Interno ou Teste, não retorna a &quot;Não&quot;">RN-20</span>)</td></tr>
+<tr><td class="k">UC-07 Adicionar serviços opcionais</td><td>Bundle com grupos de cardinalidade; qualificação por contexto; validações de captura</td><td><span class="mono">ProductComponentGroup</span> ×4 · <span class="mono">ProductRelatedComponent</span> ×14 · Q3–Q7, Q9 · CML C5 · R1/R2 · <span class="rnlink" tabindex="0" data-rule="Exa: uma licença por CPF/CNPJ">RN-32</span> (1 licença Exa por CNPJ) exige consulta a Asset</td><td class="k"><span class="oo n">NATIVO</span> + <span class="oo c">CUSTOM</span> (<span class="rnlink" tabindex="0" data-rule="Exa: uma licença por CPF/CNPJ">RN-32</span>, <span class="rnlink" tabindex="0" data-rule="Monitora Rede em base existente: viabilidade do equipamento via base Snowflake (modem contendo &quot;beegol&quot;)">RN-40</span>)</td></tr>
+<tr><td class="k">UC-08 Adicionar Recarga Recorrente</td><td>Produto-filho com dois atributos; validação externa do número</td><td><span class="mono">Product2</span> Recarga · atributos <span class="mono">TopUpAmount</span>, <span class="mono">TopUpPhoneNumber</span> · callout Pré-Pago (R5)</td><td class="k"><span class="oo n">NATIVO</span> + <span class="oo e">EXTERNO</span></td></tr>
+<tr><td class="k">UC-09 Manter dados de referência</td><td>Objeto custom com layout e permissão de edição para Gestão de Produtos; histórico de campo</td><td><span class="mono">Locality__c</span> + Field History · oferta promocional Skeelo como campo de contexto</td><td class="k"><span class="oo c">CUSTOM</span></td></tr>
+</tbody>
+</table>
+
+<!-- 4 -->
+<h2 class="sec"><span class="n">04</span>Modelo físico do catálogo — registros a construir</h2>
+<p class="small">Nomenclatura conforme manual técnico: API/DeveloperName em inglês, Label em português. Volumes fecham com o EF: 19 atributos, 17 produtos, 4 grupos, 14 vínculos, 7 selling models, 22 opções. <span class="tag dark">VERIFICADO: EF-BL-001</span> · objetos e campos <span class="tag dark">VERIFICADO: Object Reference / RLM Dev Guide</span></p>
+
+<h3>4.1 Taxonomia e classificação</h3>
+<table>
+<thead><tr><th>Objeto</th><th>Registro (Label · DeveloperName)</th><th>Observação</th></tr></thead>
+<tbody>
+<tr><td class="k">ProductCatalog</td><td>Catálogo Algar B2B · <span class="mono">AlgarB2BCatalog</span></td><td>Único e canônico (P5 default)</td></tr>
+<tr><td class="k">ProductCategory</td><td>Conectividade · <span class="mono">Connectivity</span></td><td>Categoria raiz desta fase</td></tr>
+<tr><td class="k">ProductCategoryProduct</td><td>Conectividade ↔ Banda Larga (+ filhos vendáveis)</td><td>Filhos técnicos ocultos (LDI/LDN) fora da categoria navegável</td></tr>
+<tr><td class="k">ProductClassification</td><td>Banda Larga · <span class="mono">Broadband</span></td><td>Arquétipo; <span class="mono">ProductClassificationAttr</span> ×14</td></tr>
+<tr><td class="k">ProductSpecificationType</td><td>Acesso Banda Larga · <span class="mono">BroadbandAccess</span></td><td>Âncora da spec técnica (TMF) para o DRO</td></tr>
+</tbody>
+</table>
+
+<h3>4.2 Atributos — 19 AttributeDefinition</h3>
+<table>
+<thead><tr><th class="k">DD</th><th>Label · DeveloperName</th><th class="k">DataType</th><th>Picklist / domínio · aplicação</th></tr></thead>
+<tbody>
+<tr><td class="k">DD-01</td><td>Plano · <span class="mono">Plan</span></td><td class="k">Picklist</td><td><span class="mono">Conventional · ConventionalSpecial · AtSchool</span> · pai</td></tr>
+<tr><td class="k">DD-02</td><td>Velocidade · <span class="mono">Speed</span></td><td class="k">Picklist</td><td><span class="mono">S100…S800, S1024</span> (9) · pai</td></tr>
+<tr><td class="k">DD-04</td><td>Tecnologia de acesso · <span class="mono">AccessTechnology</span></td><td class="k">Picklist</td><td><span class="mono">GPON · ADSL · VDSL · RADIO</span> · pai · read-only (CML C8)</td></tr>
+<tr><td class="k">DD-05</td><td>Propriedade de rede · <span class="mono">NetworkOwnership</span></td><td class="k">Picklist</td><td><span class="mono">Algar · Franchisee</span> · pai · read-only</td></tr>
+<tr><td class="k">DD-06</td><td>Parceiro de rede · <span class="mono">NetworkPartner</span></td><td class="k">Picklist</td><td><span class="mono">None · Vtal</span> · pai · read-only</td></tr>
+<tr><td class="k">DD-07</td><td>Temporário · <span class="mono">IsTemporary</span></td><td class="k">Checkbox</td><td>default false · pai</td></tr>
+<tr><td class="k">DD-08</td><td>Data início temporário · <span class="mono">TemporaryStartDate</span></td><td class="k">Date</td><td>condicional C1 · pai</td></tr>
+<tr><td class="k">DD-09</td><td>Qtde dias temporário · <span class="mono">TemporaryDays</span></td><td class="k">Number</td><td>1–364 (C2) · pai</td></tr>
+<tr><td class="k">DD-10</td><td>Produto a Serviço · <span class="mono">ServiceUsageType</span></td><td class="k">Picklist</td><td><span class="mono">No · Internal · Test</span> · pai · D1</td></tr>
+<tr><td class="k">DD-11</td><td>Motivo do teste · <span class="mono">TestReason</span></td><td class="k">Picklist</td><td><span class="mono">External · Test · Monitoring</span> · pai · C7</td></tr>
+<tr><td class="k">DD-12</td><td>Centro de resultado · <span class="mono">CostCenter</span></td><td class="k">Text</td><td>80 · pai · C7</td></tr>
+<tr><td class="k">DD-13</td><td>Associado responsável · <span class="mono">ResponsibleAssociate</span></td><td class="k">Text</td><td>80 · pai · C7</td></tr>
+<tr><td class="k">DD-14</td><td>IP CGNAT · <span class="mono">IsCgnat</span></td><td class="k">Checkbox</td><td>default true · pai · C3</td></tr>
+<tr><td class="k">DD-15</td><td>Modem · <span class="mono">ModemRegime</span></td><td class="k">Picklist</td><td><span class="mono">Franchisee · Loan</span> · pai · C4</td></tr>
+<tr><td class="k">DD-23</td><td>Recarga — valor · <span class="mono">TopUpAmount</span></td><td class="k">Picklist</td><td><span class="mono">R20 · R25 · R30 · R50 · R100</span> · filho Recarga</td></tr>
+<tr><td class="k">DD-24</td><td>Recarga — número · <span class="mono">TopUpPhoneNumber</span></td><td class="k">Number</td><td>11 dígitos · filho Recarga · R5</td></tr>
+<tr><td class="k">DD-25</td><td>Nome do contato · <span class="mono">ServiceContactName</span></td><td class="k">Text</td><td>120 · filho Proteção WEB · R2</td></tr>
+<tr><td class="k">DD-26</td><td>E-mail do contato · <span class="mono">ServiceContactEmail</span></td><td class="k">Text</td><td>e-mail · filhos Exa e Proteção · R1/R2</td></tr>
+<tr><td class="k">DD-27</td><td>Celular do contato · <span class="mono">ServiceContactMobile</span></td><td class="k">Text</td><td>11 dígitos · filhos Exa e Proteção · R1/R2</td></tr>
+</tbody>
+</table>
+<p class="small">DD-03 (fidelização) não é atributo: é termo do selling model. DD-16 a DD-22 (SVAs) não são atributos: são produtos-filho. DD-28 a DD-31 são contexto (Endereço, Conta, Localidade, Usuário). <span class="mono">AttributeCategory</span>: <span class="mono">Plan</span>, <span class="mono">Access</span>, <span class="mono">General</span>, <span class="mono">TopUp</span>, <span class="mono">ServiceContact</span>.</p>
+
+<h3>4.3 Produtos — 17 Product2 e 7 selling models</h3>
+<table>
+<thead><tr><th>Grupo</th><th>Product2 (Label · ProductCode)</th><th>Selling model</th><th class="k">Assetizable</th></tr></thead>
+<tbody>
+<tr><td class="k">Núcleo</td><td>Banda Larga · <span class="mono">BB-ACCESS</span> (pai, configurável)</td><td>EVG · T12 · T24 · T36 · T48 · T60</td><td class="k">Sim</td></tr>
+<tr><td class="k">Exa (grupo máx. 1)</td><td>Exa Segurança Essencial / Pro / Premium · <span class="mono">BB-EXA-ESS / PRO / PRM</span></td><td>EVG</td><td class="k">Sim (filho)</td></tr>
+<tr><td class="k">Skeelo (grupo máx. 1)</td><td>5 variantes · <span class="mono">BB-SKL-AUD / MIN / BKS / BUS / KID</span></td><td>EVG</td><td class="k">Sim (filho)</td></tr>
+<tr><td class="k">Serviços</td><td>Fast Support · UpLoad 50% · IP Fixo Válido · Proteção WEB · Monitora Rede · <span class="mono">BB-FSP / BB-UPL / BB-IPF / BB-WEB / BB-MON</span></td><td>EVG</td><td class="k">Sim (filho)</td></tr>
+<tr><td class="k">Funcionalidade</td><td>Recarga Recorrente Pós · <span class="mono">BB-TOPUP</span></td><td>EVG</td><td class="k">Não</td></tr>
+<tr><td class="k">Charges</td><td>Taxa de Instalação · Taxa de Mudança de Endereço · <span class="mono">BB-FEE-INST / BB-FEE-MOVE</span></td><td>OT</td><td class="k">Não</td></tr>
+<tr><td class="k">Técnicos ocultos</td><td>Bloqueio LDI · Bloqueio LDN · <span class="mono">BB-BLK-LDI / LDN</span></td><td>EVG (sem preço)</td><td class="k">Sim</td></tr>
+</tbody>
+</table>
+<p class="small">Selling models: <span class="mono">BB-EVG</span> Evergreen (PricingTerm 1 Month) · <span class="mono">BB-T12…T60</span> TermDefined (PricingTerm n, Months) · <span class="mono">BB-OT</span> OneTime. Todos criados em <b>Draft</b>; ativação só após validação de preço — ativo não retorna a Draft. <span class="tag dark">VERIFICADO: Object Reference</span> Não existe <span class="mono">SellingModelType=Usage</span>; não requerido.</p>
+
+<h3>4.4 Bundle — 4 ProductComponentGroup · 14 ProductRelatedComponent</h3>
+<table>
+<thead><tr><th>ProductComponentGroup</th><th class="k">Min / Max</th><th>ProductRelatedComponent — todos <span class="mono">ChildProductRole=AddOnComponent</span> · MinQty=MaxQty=1 · <span class="mono">IsQuantityEditable=false</span> · <span class="mono">ChildSellingModelId</span>=BB-EVG</th></tr></thead>
+<tbody>
+<tr><td class="k">Exa Segurança · <span class="mono">ExaSecurity</span></td><td class="k">0 / 1</td><td>3 vínculos — exclusão mútua estrutural (<span class="rnlink" tabindex="0" data-rule="Níveis Exa (Essencial/Pro/Premium) mutuamente exclusivos">RN-33</span> sem regra)</td></tr>
+<tr><td class="k">Skeelo · <span class="mono">Skeelo</span></td><td class="k">0 / 1</td><td>5 vínculos — exclusão mútua estrutural</td></tr>
+<tr><td class="k">Serviços · <span class="mono">Services</span></td><td class="k">0 / 5</td><td>5 vínculos</td></tr>
+<tr><td class="k">Funcionalidades · <span class="mono">Features</span></td><td class="k">0 / 1</td><td>1 vínculo (Recarga)</td></tr>
+</tbody>
+</table>
+<p class="small"><span class="mono">ProductSellingModelOption</span>: pai ×6 + filhos recorrentes ×14 + charges ×2 = <b>22</b>. <span class="mono">PricebookEntry</span> por opção no <span class="mono">Pricebook2</span> padrão, com placeholder até a tabela de preços (Bloco 3). Carga via Composite API em ordem de dependência.</p>
+
+<!-- 5 -->
+<h2 class="sec"><span class="n">05</span>Regras de negócio → mecanismo Salesforce</h2>
+<p class="small">As 47 RNs do EF distribuídas nos mecanismos oficiais. Três mecanismos nativos + os casos que exigem complemento custom. <span class="tag dark">VERIFICADO: RLM Dev Guide — ProductQualification, ProductConfigurationRule, CML</span></p>
+
+<h3>5.1 Qualificação — ProductQualification / Disqualification via decision tables</h3>
+<table>
+<thead><tr><th class="k">#</th><th>Regra(s)</th><th>Alvo</th><th>Entradas de contexto</th><th class="k">Classe</th></tr></thead>
+<tbody>
+<tr><td class="k">Q1</td><td><span class="rnlink" tabindex="0" data-rule="Plano &quot;Convencional Especial&quot; restrito aos perfis: ADMINISTRADOR · CONSULTORIA_INTERNA · ADM_VENDAS_REGIONAL · ADM_VENDAS_CENTRALIZADA · CONSULTOR_CORPORATIVO · GESTÃO_PRODUTOS">RN-01</span></td><td>Valor de atributo Plan = ConventionalSpecial</td><td>Usuário: permission set / custom permission <span class="mono">Catalog_SpecialPlan</span></td><td class="k"><span class="oo n">NATIVO</span></td></tr>
+<tr><td class="k">Q2</td><td><span class="rnlink" tabindex="0" data-rule="Plano &quot;Na Escola&quot; exige segmento Corporativo com subsegmento Governo">RN-02</span></td><td>Plan = AtSchool</td><td>Conta: <span class="mono">Segment</span> = Corporate ∧ <span class="mono">SubSegment</span> = Government (D4)</td><td class="k"><span class="oo n">NATIVO</span></td></tr>
+<tr><td class="k">Q3</td><td><span class="rnlink" tabindex="0" data-rule="IP Fixo Válido: novas vendas apenas para Corporativo e Operadoras">RN-26</span></td><td>Produto BB-IPF</td><td>Conta: Segment ∈ {Corporate, Carrier}</td><td class="k"><span class="oo n">NATIVO</span></td></tr>
+<tr><td class="k">Q4</td><td><span class="rnlink" tabindex="0" data-rule="Monitora Rede: disponível apenas com tecnologia GPON e Parceiro de Rede &quot;Nenhum&quot;">RN-39</span></td><td>Produto BB-MON</td><td>Contexto: AccessTechnology = GPON ∧ NetworkPartner = None</td><td class="k"><span class="oo n">NATIVO</span></td></tr>
+<tr><td class="k">Q5</td><td><span class="rnlink" tabindex="0" data-rule="Fast Support: restrito às localidades habilitadas (lista de 113)">RN-35</span></td><td>Produto BB-FSP</td><td><span class="mono">Locality__c.FastSupportEnabled__c</span> (113)</td><td class="k"><span class="oo n">NATIVO</span> + objeto custom</td></tr>
+<tr><td class="k">Q6</td><td><span class="rnlink" tabindex="0" data-rule="UpLoad 50%: restrito às localidades habilitadas (lista de 28)">RN-36</span></td><td>Produto BB-UPL</td><td><span class="mono">Locality__c.UploadBoostEnabled__c</span> (28)</td><td class="k"><span class="oo n">NATIVO</span> + objeto custom</td></tr>
+<tr><td class="k">Q7</td><td><span class="rnlink" tabindex="0" data-rule="Temporário não é elegível à aquisição de SVAs">RN-14</span></td><td>Grupos Services / Features / Exa / Skeelo</td><td>Configuração: IsTemporary = true → desqualificar</td><td class="k"><span class="oo n">NATIVO</span></td></tr>
+<tr><td class="k">Q8</td><td><span class="rnlink" tabindex="0" data-rule="Temporário inelegível quando Parceiro de Rede = Vtal">RN-15</span></td><td>Atributo IsTemporary</td><td>Contexto: NetworkPartner = Vtal → indisponível</td><td class="k"><span class="oo n">NATIVO</span> (CML se por atributo)</td></tr>
+<tr><td class="k">Q9</td><td><span class="rnlink" tabindex="0" data-rule="Skeelo: configurável somente em vendas promocionais, em pacote (obrigatório)">RN-41</span></td><td>Grupo Skeelo</td><td>Transação: oferta promocional ativa (campo de contexto <span class="mono">PromoOfferId</span>)</td><td class="k"><span class="oo n">NATIVO</span> · gatilho <span class="tag">PENDENTE</span></td></tr>
+<tr><td class="k">Q10</td><td><span class="rnlink" tabindex="0" data-rule="Elegível apenas em nova ativação ou conversão temporário→permanente; conversão permanente→temporário vedada">RN-18</span></td><td>Atributo IsTemporary</td><td>Transação: tipo = nova ativação ∨ conversão temp→perm</td><td class="k"><span class="oo n">NATIVO</span></td></tr>
+</tbody>
+</table>
+
+<h3>5.2 Constraint Model (CML) — comportamento no configurador</h3>
+<table>
+<thead><tr><th class="k">#</th><th>Regra(s)</th><th>Expressão do modelo (linguagem de negócio → CML)</th><th class="k">Classe</th></tr></thead>
+<tbody>
+<tr><td class="k">C1</td><td><span class="rnlink" tabindex="0" data-rule="Data de Início visível somente com Temporário=Sim; não informada, assume a data de ativação do link">RN-08</span></td><td>IsTemporary = false → ocultar e limpar TemporaryStartDate, TemporaryDays</td><td class="k"><span class="oo n">NATIVO</span></td></tr>
+<tr><td class="k">C2</td><td><span class="rnlink" tabindex="0" data-rule="Quantidade de dias corridos entre 1 e 364, contados da ativação">RN-09</span>/10</td><td>TemporaryDays ∈ [1, 364]; mensagem fora da faixa</td><td class="k"><span class="oo n">NATIVO</span></td></tr>
+<tr><td class="k">C3</td><td><span class="rnlink" tabindex="0" data-rule="CGNAT marcado por padrão, sem opção de desmarcar para Varejo e Empresarial">RN-24</span>/25</td><td>IsCgnat default true; Segment ∈ {Retail, Business} → read-only; Segment ∈ {Corporate, Carrier} ∧ BB-IPF selecionado → IsCgnat = false (auto-set), remoção → true</td><td class="k"><span class="oo n">NATIVO</span></td></tr>
+<tr><td class="k">C4</td><td><span class="rnlink" tabindex="0" data-rule="Rede Franqueado em localidade híbrida: Modem &quot;Franqueado&quot; automático, com permissão de troca">RN-27</span>/28/29</td><td>NetworkOwnership = Algar → ModemRegime = Loan read-only; Franchisee ∧ Locality.Hybrid → Franchisee editável; Franchisee ∧ ¬Hybrid → Franchisee read-only</td><td class="k"><span class="oo n">NATIVO</span> + contexto de localidade</td></tr>
+<tr><td class="k">C5</td><td><span class="rnlink" tabindex="0" data-rule="UpLoad 50%: vendável somente até a velocidade de 800 mb">RN-37</span></td><td>Speed &gt; S800 → BB-UPL bloqueado com mensagem; BB-UPL selecionado → Speed limitado a ≤ S800</td><td class="k"><span class="oo n">NATIVO</span></td></tr>
+<tr><td class="k">C6</td><td><span class="rnlink" tabindex="0" data-rule="&quot;Temporário&quot; nasce como &quot;Não&quot;, com opção de alteração">RN-07</span></td><td>IsTemporary default false, editável (respeitadas Q8/Q10)</td><td class="k"><span class="oo n">NATIVO</span></td></tr>
+<tr><td class="k">C7</td><td><span class="rnlink" tabindex="0" data-rule="Padrão &quot;Não&quot;; alteração exclusiva do perfil &quot;Gestão de Pedidos&quot;; &quot;Interno&quot; = uso interno Algar, &quot;Teste&quot; = teste de produto">RN-19</span>/23</td><td>ServiceUsageType ≠ No → TestReason, CostCenter, ResponsibleAssociate visíveis e obrigatórios; edição do atributo por custom permission <span class="mono">Catalog_ServiceUsage</span></td><td class="k"><span class="oo n">NATIVO</span></td></tr>
+<tr><td class="k">C8</td><td><span class="rnlink" tabindex="0" data-rule="Tecnologia, Propriedade de Rede e Parceiro de Rede são retornos da viabilidade — preenchimento automático, sem edição pelo usuário">RN-06</span></td><td>AccessTechnology, NetworkOwnership, NetworkPartner read-only, valorados pelo contexto; vazios → configuração não conclui</td><td class="k"><span class="oo n">NATIVO</span></td></tr>
+</tbody>
+</table>
+
+<h3>5.3 Product Configuration Rules — validação e inclusão na transação</h3>
+<table>
+<thead><tr><th class="k">#</th><th>Regra(s)</th><th class="k">Tipo</th><th>Configuração</th><th class="k">Classe</th></tr></thead>
+<tbody>
+<tr><td class="k">R1</td><td><span class="rnlink" tabindex="0" data-rule="Exa Segurança exige E-mail e Celular do contato">RN-31</span></td><td class="k">Validação</td><td>BB-EXA-* na configuração → ServiceContactEmail e ServiceContactMobile obrigatórios</td><td class="k"><span class="oo n">NATIVO</span></td></tr>
+<tr><td class="k">R2</td><td><span class="rnlink" tabindex="0" data-rule="Proteção WEB exige Nome do Contato, E-mail e Celular">RN-38</span></td><td class="k">Validação</td><td>BB-WEB → ServiceContactName, Email, Mobile obrigatórios</td><td class="k"><span class="oo n">NATIVO</span></td></tr>
+<tr><td class="k">R3</td><td><span class="rnlink" tabindex="0" data-rule="&quot;Teste&quot; obriga a inclusão dos serviços Bloqueio LDI e Bloqueio LDN">RN-22</span></td><td class="k">Inclusão</td><td>ServiceUsageType = Test → incluir BB-BLK-LDI e BB-BLK-LDN (produtos técnicos ocultos)</td><td class="k"><span class="oo n">NATIVO</span></td></tr>
+<tr><td class="k">R4</td><td><span class="rnlink" tabindex="0" data-rule="Exa: uma licença por CPF/CNPJ">RN-32</span></td><td class="k">Validação</td><td>Uma licença Exa por CPF/CNPJ — exige consulta a <span class="mono">Asset</span> da Conta (base ativa); fora do alcance de regra declarativa pura</td><td class="k"><span class="oo c">CUSTOM</span> (Flow/Apex)</td></tr>
+<tr><td class="k">R5</td><td><span class="rnlink" tabindex="0" data-rule="Recarga Recorrente: número informado deve estar ativo no plano Pré-Pago Algar">RN-42</span></td><td class="k">Validação</td><td>TopUpPhoneNumber ativo no Pré-Pago — callout síncrono na confirmação</td><td class="k"><span class="oo e">EXTERNO</span> + Flow</td></tr>
+</tbody>
+</table>
+
+<h3>5.4 Regras fora do configurador</h3>
+<table>
+<thead><tr><th>Regra(s)</th><th>Onde vive</th><th class="k">Bloco</th></tr></thead>
+<tbody>
+<tr><td><span class="rnlink" tabindex="0" data-rule="Endereço de instalação obrigatório para contratação">RN-03</span>/04/05 — endereço obrigatório e gate de viabilidade</td><td>Validação na Quote (Flow) + status de viabilidade no contexto</td><td class="k">Bloco 4</td></tr>
+<tr><td><span class="rnlink" tabindex="0" data-rule="Sem multa de cancelamento; cobrança garantida, sem pró-rata — cancelamento antecipado paga integral (validação regulatória: DJUR-37286 · ASR-734)">RN-11</span>/12/13/16/17 — regime do temporário (cobrança, D+1, recolha, preço)</td><td>Pricing procedures (<span class="rnlink" tabindex="0" data-rule="Precificação diferenciada (superior à permanente) e taxa de instalação devida">RN-17</span>) + planos de orquestração DRO (<span class="rnlink" tabindex="0" data-rule="Desativação automática em D+1 da data fim">RN-12</span>/13) + validação regulatória (<span class="rnlink" tabindex="0" data-rule="Sem multa de cancelamento; cobrança garantida, sem pró-rata — cancelamento antecipado paga integral (validação regulatória: DJUR-37286 · ASR-734)">RN-11</span>)</td><td class="k">Blocos 3 e 5</td></tr>
+<tr><td><span class="rnlink" tabindex="0" data-rule="Registrado como Interno ou Teste, não retorna a &quot;Não&quot;">RN-20</span> — irreversibilidade Interno/Teste → Não</td><td>Validation Rule / Flow na linha da transação (histórico do atributo)</td><td class="k">Bloco 4 · <span class="oo c">CUSTOM</span></td></tr>
+<tr><td><span class="rnlink" tabindex="0" data-rule="Data de vencimento obrigatoriamente dia 27">RN-21</span> — vencimento dia 27</td><td>Requisito de billing repassado ao downstream</td><td class="k">Fora (billing)</td></tr>
+<tr><td><span class="rnlink" tabindex="0" data-rule="Monitora Rede em base existente: viabilidade do equipamento via base Snowflake (modem contendo &quot;beegol&quot;)">RN-40</span> — Monitora Rede em base existente (Snowflake)</td><td>Consulta à base de equipamento (Data Cloud ou callout) como entrada de contexto</td><td class="k">Bloco 2 · <span class="oo e">EXTERNO</span></td></tr>
+<tr><td><span class="rnlink" tabindex="0" data-rule="Comercialização nos segmentos Varejo, PME, Corporativo e Atacado (divergência com taxonomia das RN-24/26 — Devolutiva D4)">RN-43</span> a 47 — comerciais e preço</td><td>Salesforce Pricing</td><td class="k">Bloco 3</td></tr>
+</tbody>
+</table>
+
+<!-- 6 -->
+<h2 class="sec"><span class="n">06</span>Dicionário de dados → mapeamento físico</h2>
+<table>
+<thead><tr><th class="k">DD</th><th>Informação</th><th>Destino físico</th></tr></thead>
+<tbody>
+<tr><td class="k">01–02, 04–15</td><td>Atributos do produto-pai</td><td><span class="mono">AttributeDefinition</span> (§4.2) aplicados via <span class="mono">ProductAttributeDefinition</span>; valor por transação em <span class="mono">QuoteLineItem</span> / <span class="mono">OrderItem</span> (atributos de linha)</td></tr>
+<tr><td class="k">03</td><td>Período de fidelização</td><td><span class="mono">ProductSellingModel</span> escolhido (T12…T60) → <span class="mono">ProductSellingModelOption</span></td></tr>
+<tr><td class="k">16–22</td><td>SVAs e variantes</td><td><span class="mono">Product2</span> filhos via <span class="mono">ProductRelatedComponent</span>; presença = linha filha na transação</td></tr>
+<tr><td class="k">23–24</td><td>Recarga valor / número</td><td>Atributos do filho BB-TOPUP</td></tr>
+<tr><td class="k">25–27</td><td>Contato do serviço</td><td>Atributos dos filhos BB-EXA-* e BB-WEB (categoria ServiceContact)</td></tr>
+<tr><td class="k">28</td><td>Endereço de instalação</td><td><span class="mono">Address</span> padrão (ou campo de endereço da Quote) — entrada da viabilidade; <span class="tag">PENDENTE: padrão de endereço do projeto</span></td></tr>
+<tr><td class="k">29</td><td>Segmento / Subsegmento</td><td><span class="mono">Account</span> — campos canônicos a confirmar (D4)</td></tr>
+<tr><td class="k">30</td><td>Localidade</td><td><span class="mono">Locality__c</span> (chave <span class="mono">LocalityCode__c</span>) referenciada pelo endereço</td></tr>
+<tr><td class="k">31</td><td>Perfil do usuário</td><td>Custom permissions em permission sets (§7) — nunca nome de perfil</td></tr>
+</tbody>
+</table>
+
+<!-- 7 -->
+<h2 class="sec"><span class="n">07</span>Perfis → licenças e permission sets</h2>
+<p class="small">Licenças (PSL) já provisionadas na org. <span class="tag dark">VERIFICADO: org</span> Permission sets seguem convenção funcional do manual técnico (nome pelo escopo, nunca pelo perfil).</p>
+<table>
+<thead><tr><th>Perfil funcional (EF)</th><th>PSLs</th><th>Permission set / custom permission</th><th>Alcance</th></tr></thead>
+<tbody>
+<tr><td class="k">Consultor de Vendas · Backoffice</td><td>Revenue Cloud User · Product Catalog Management Viewer · Product Discovery</td><td><span class="mono">PS_Catalog_Sell_Broadband</span></td><td>UC-01 a 04, 07, 08; leitura de Locality__c</td></tr>
+<tr><td class="k">Perfis autorizados ao Especial (<span class="rnlink" tabindex="0" data-rule="Plano &quot;Convencional Especial&quot; restrito aos perfis: ADMINISTRADOR · CONSULTORIA_INTERNA · ADM_VENDAS_REGIONAL · ADM_VENDAS_CENTRALIZADA · CONSULTOR_CORPORATIVO · GESTÃO_PRODUTOS">RN-01</span>)</td><td>idem</td><td><span class="mono">PS_Catalog_Sell_Broadband_Special</span> → custom permission <span class="mono">Catalog_SpecialPlan</span></td><td>+ Plan = ConventionalSpecial (Q1)</td></tr>
+<tr><td class="k">Gestão de Pedidos</td><td>idem</td><td><span class="mono">PS_Catalog_ServiceUsage</span> → custom permission <span class="mono">Catalog_ServiceUsage</span></td><td>UC-06 (C7)</td></tr>
+<tr><td class="k">Gestão de Produtos</td><td>Product Catalog Management Admin</td><td><span class="mono">PS_Catalog_Admin_Broadband</span> + <span class="mono">PS_Locality_Manage</span></td><td>Manutenção do catálogo e de Locality__c (UC-09)</td></tr>
+<tr><td class="k">Integração (usuário técnico)</td><td>—</td><td><span class="mono">PS_Integration_Viability</span></td><td>Escrita no contexto / atributos de acesso</td></tr>
+</tbody>
+</table>
+<div class="co alert"><span class="lbl">Mapeamento pendente — D5</span>Os seis nomes de perfil legado citados em <span class="rnlink" tabindex="0" data-rule="Plano &quot;Convencional Especial&quot; restrito aos perfis: ADMINISTRADOR · CONSULTORIA_INTERNA · ADM_VENDAS_REGIONAL · ADM_VENDAS_CENTRALIZADA · CONSULTOR_CORPORATIVO · GESTÃO_PRODUTOS">RN-01</span> (ADMINISTRADOR, CONSULTORIA_INTERNA, ADM_VENDAS_REGIONAL, ADM_VENDAS_CENTRALIZADA, CONSULTOR_CORPORATIVO, GESTÃO_PRODUTOS) precisam ser resolvidos em <b>usuários/grupos que recebem</b> <span class="mono">PS_Catalog_Sell_Broadband_Special</span>. A regra não referencia perfil; referencia a custom permission. <span class="tag">PENDENTE</span></div>
+
+<!-- 8 -->
+<h2 class="sec"><span class="n">08</span>Integrações e contexto</h2>
+<table>
+<thead><tr><th>Interface</th><th>Direção · disparo</th><th>Contrato mínimo</th><th>Falha</th><th class="k">Classe</th></tr></thead>
+<tbody>
+<tr><td class="k">Viabilidade (MuleSoft)</td><td>CRM → API · UC-02 (novo endereço, mudança, upgrade)</td><td>Entrada: endereço estruturado + localidade. Saída: aprovado/reprovado, AccessTechnology, NetworkOwnership, NetworkPartner, motivo</td><td>Timeout/indisponível → configuração bloqueada, retry manual (UC-02/X1)</td><td class="k"><span class="oo e">EXTERNO</span></td></tr>
+<tr><td class="k">Base de equipamento (Snowflake)</td><td>CRM → consulta · UC-07 quando BB-MON em base existente</td><td>Entrada: identificador do circuito/asset. Saída: modem contém "beegol" (sim/não)</td><td>Indisponível → BB-MON não elegível com mensagem</td><td class="k"><span class="oo e">EXTERNO</span></td></tr>
+<tr><td class="k">Pré-Pago Algar</td><td>CRM → API · UC-08 na confirmação</td><td>Entrada: número. Saída: ativo no pré-pago (sim/não)</td><td>Indisponível → inclusão bloqueada</td><td class="k"><span class="oo e">EXTERNO</span></td></tr>
+<tr><td class="k">Context Service</td><td>Interno · alimenta Discovery, CML e qualification</td><td>Context definition <span class="mono">BroadbandSalesContext</span>: segmento, subsegmento, localidade (+ indicadores), tecnologia, rede, parceiro, tipo de transação, oferta promocional</td><td>—</td><td class="k"><span class="oo n">NATIVO</span></td></tr>
+</tbody>
+</table>
+<p class="small">Padrão de conexão: Named Credential + External Credential (OAuth) por interface, conforme cadeia já validada no projeto para MuleSoft. Mock das três interfaces necessário para desenvolver e testar os Blocos 2 e 4 antes da entrega dos contratos. <span class="tag mid">INFERIDO</span></p>
+
+<!-- 9 -->
+<h2 class="sec"><span class="n">09</span>Gap OOTB × custom</h2>
+<p class="small">Consolidação da classificação. Princípio do manual técnico: nativo antes de custom; Apex é a última opção e cada subida de nível fica justificada.</p>
+<table>
+<thead><tr><th>Elemento</th><th class="k">Classe</th><th>Justificativa da subida de nível</th></tr></thead>
+<tbody>
+<tr><td>Taxonomia, atributos, classificação, produtos, bundle, selling models, pricebook</td><td class="k"><span class="oo n">NATIVO</span></td><td>—</td></tr>
+<tr><td>Q1–Q10 qualificação · C1–C8 constraints · R1–R3 configuration rules</td><td class="k"><span class="oo n">NATIVO</span></td><td>—</td></tr>
+<tr><td>Product Discovery, Context Service, PSLs e permission sets</td><td class="k"><span class="oo n">NATIVO</span></td><td>—</td></tr>
+<tr><td>Objeto <span class="mono">Locality__c</span> + layout + histórico</td><td class="k"><span class="oo c">CUSTOM</span></td><td>Listas editáveis por negócio com auditoria; Custom Metadata exigiria deploy; decision table pura não audita (ADR-03)</td></tr>
+<tr><td>Orquestração da viabilidade (Flow + callout) e gravação no contexto</td><td class="k"><span class="oo c">CUSTOM</span></td><td>Não há conector nativo para a API da Algar; Flow com External Service antes de Apex</td></tr>
+<tr><td>R4 — uma licença Exa por CNPJ (consulta a Asset)</td><td class="k"><span class="oo c">CUSTOM</span></td><td>Regra declarativa não consulta base ativa da Conta; Flow record-triggered ou Apex na validação</td></tr>
+<tr><td><span class="rnlink" tabindex="0" data-rule="Registrado como Interno ou Teste, não retorna a &quot;Não&quot;">RN-20</span> — irreversibilidade do Produto a Serviço</td><td class="k"><span class="oo c">CUSTOM</span></td><td>Depende do valor anterior do atributo na transação; Validation Rule/Flow</td></tr>
+<tr><td><span class="rnlink" tabindex="0" data-rule="Monitora Rede em base existente: viabilidade do equipamento via base Snowflake (modem contendo &quot;beegol&quot;)">RN-40</span> — consulta Snowflake · R5 — validação Pré-Pago</td><td class="k"><span class="oo e">EXTERNO</span></td><td>Contratos e disponibilidade fora do CRM; mock obrigatório</td></tr>
+<tr><td>Regime do temporário (D+1, recolha) · preço · assetização</td><td class="k">Blocos 3–6</td><td>Fora deste refinamento; dependências registradas</td></tr>
+</tbody>
+</table>
+<p class="small">Resultado: <b>~85% nativo</b> em número de elementos; o custom concentra-se em um objeto de referência, na orquestração de integrações e em duas validações que consultam estado fora do configurador. Nenhum LWC previsto para o escopo dos Blocos 0–2.</p>
+
+<!-- 10 -->
+<h2 class="sec"><span class="n">10</span>Decisões de arquitetura — candidatas a ADR</h2>
+<table>
+<thead><tr><th class="k">ADR</th><th>Decisão</th><th>Alternativas avaliadas</th><th class="k">Status</th></tr></thead>
+<tbody>
+<tr><td class="k">ADR-01</td><td>Trilha RLM/PCM nativo para o catálogo da Fase 2; Vlocity não governa o mesmo produto</td><td>(a) Communications Cloud/EPC — força em OM/TMF, catálogo em managed package; (b) híbrido por produto — vedado pelo princípio do catálogo canônico; (c) RLM nativo — PCM como fonte única, convergência oficial</td><td class="k"><span class="tag">PENDENTE ARQ CORE</span></td></tr>
+<tr><td class="k">ADR-02</td><td>Exclusão mútua por cardinalidade de grupo (Max=1), não por regra</td><td>(a) CML exclude rules — 8 regras + testes; (b) ProductConfigurationRule exclusão — idem; (c) cardinalidade — estrutural, zero regra</td><td class="k">Proposta</td></tr>
+<tr><td class="k">ADR-03</td><td>Listas de localidade em objeto custom <span class="mono">Locality__c</span></td><td>(a) Custom Metadata — deploy para alterar; (b) dados só na decision table — sem auditoria/UI; (c) objeto custom — editável, auditável, consultável</td><td class="k">Proposta</td></tr>
+<tr><td class="k">ADR-04</td><td>Fidelização como <span class="mono">ProductSellingModel</span> TermDefined, sem atributo espelho</td><td>(a) atributo "Período" + PSM — duas fontes; (b) só PSM — uma fonte, preço por termo nativo</td><td class="k">Proposta (D2)</td></tr>
+<tr><td class="k">ADR-05</td><td>Autorização por custom permission, nunca por nome de perfil</td><td>(a) qualificação por Profile.Name — frágil, acoplada ao legado; (b) custom permission em permission set — desacoplada, auditável</td><td class="k">Proposta (D5)</td></tr>
+<tr><td class="k">ADR-06</td><td>Viabilidade via Flow + External Service antes de Apex</td><td>(a) Apex callout — mais controle, mais código; (b) Flow + External Service — declarativo, suficiente para request/response síncrono</td><td class="k">Proposta</td></tr>
+<tr><td class="k">ADR-07</td><td>Produtos técnicos ocultos (LDI/LDN) fora da categoria navegável, incluídos só por regra</td><td>(a) não modelar e tratar no OM — perde rastreio na transação; (b) produtos ocultos — visíveis na linha, invisíveis na descoberta</td><td class="k">Proposta</td></tr>
+</tbody>
+</table>
+
+<!-- 11 -->
+<h2 class="sec"><span class="n">11</span>Backlog de construção em blocos e slices</h2>
+<p class="small">Os blocos organizam a construção da fundação (catálogo, regras, preço, OM); os <b>slices</b> do EF v4.0 são as unidades de entrega funcional que cada bloco habilita — cada slice com seus testes. Estimativas de build com execução assistida por AI via API (ponderação AI × dev, tempo arredondado para cima). Definição de preços corre em paralelo (~6 d, Pricing/Marketing).</p>
+<table>
+<thead><tr><th class="k">Bloco</th><th>Componentes Salesforce entregues</th><th>Slices habilitados (onda)</th><th class="k">AI × Dev</th><th class="k">Estim.</th></tr></thead>
+<tbody>
+<tr><td class="k">0 Modelagem</td><td>Este documento ratificado; ADR-01 a 07; D1–D5 respondidos</td><td>—</td><td class="k">40/60</td><td class="k">1 d</td></tr>
+<tr><td class="k">1 Catálogo</td><td>§4 via Composite API; Locality__c com as 3 listas; PSMs em Draft; pricebook placeholder</td><td>03.1 · 03.2 · 07.2 (estrutura) · 09.1 (MVP)</td><td class="k">90/10</td><td class="k">1 d</td></tr>
+<tr><td class="k">2 Regras</td><td>Context definition; Q1–Q10; CML C1–C8; R1–R3; custom permissions e permission sets; mocks das 3 interfaces; suíte de combinação (CA-T1)</td><td>01.1 · 01.2 · 04.1 · 04.2 · 05.1 · 05.2 · 05.3 · 07.1 · 07.3 a 07.6 (MVP) · 01.3 · 06.1 · 06.2 · 06.3 · 07.9 (INC-1)</td><td class="k">70/30</td><td class="k">2 d</td></tr>
+<tr><td class="k">3 Preço</td><td>Pricing procedures, PriceAdjustmentSchedule, ativação dos PSMs</td><td>04.5 (parte preço)</td><td class="k">80/20</td><td class="k">2 d</td></tr>
+<tr><td class="k">4 Cotação/Pedido</td><td>Flow de viabilidade (ADR-06) + gates <span class="rnlink" tabindex="0" data-rule="Endereço de instalação obrigatório para contratação">RN-03</span>/05; R4, R5, <span class="rnlink" tabindex="0" data-rule="Registrado como Interno ou Teste, não retorna a &quot;Não&quot;">RN-20</span> custom</td><td>02.1 · 02.2 (MVP) · 02.3 · 04.3 · 04.4 · 07.7 · 07.8 · 08.1 (INC-1)</td><td class="k">80/20</td><td class="k">1 d</td></tr>
+<tr><td class="k">5 OM</td><td>ProductSpecificationType técnico, planos DRO, regime do temporário, callouts</td><td>04.5 (parte execução)</td><td class="k">50/50</td><td class="k">3 d</td></tr>
+<tr><td class="k">6 Asset + disponibilização + QA</td><td>Assetização, Discovery settings, atribuição de PS, suíte end-to-end (CA-T1 a T3)</td><td>09.2 (INC-1) · release MVP</td><td class="k">60/40</td><td class="k">2 d</td></tr>
+<tr><td class="k"></td><td><b>Total build</b></td><td>MVP = 18 slices / 39 testes · INC-1 = 12 slices / 20 testes</td><td class="k"></td><td class="k"><b>12 d</b></td></tr>
+</tbody>
+</table>
+<p class="small">Leitura: o MVP fica vendável em cotação ao fim do Bloco 4 (~6 d); os slices INC-1 dependem dos contratos externos (viabilidade, Snowflake, Pré-Pago) e das devolutivas D1/D2 — por isso entram na segunda onda sem retrabalho na fundação.</p>
+
+<!-- 12 -->
+<h2 class="sec"><span class="n">12</span>Riscos técnicos, pendências herdadas e fronteira</h2>
+<h3>12.1 Riscos técnicos</h3>
+<table>
+<thead><tr><th class="k">#</th><th>Risco</th><th>Mitigação</th></tr></thead>
+<tbody>
+<tr><td class="k">RT-1</td><td>ADR-01 reaberto após o Bloco 1</td><td>Gate formal; §3–§5 preservam o conceito, trocam objetos</td></tr>
+<tr><td class="k">RT-2</td><td>Constraints engine não habilitado na org-alvo ou com limites para o volume de regras</td><td>Habilitar e provar C1–C8 em POC no Bloco 2 antes de escalar</td></tr>
+<tr><td class="k">RT-3</td><td>Contexto de venda não expõe localidade/indicadores como esperado pelas decision tables</td><td>Prototipar context definition com Locality__c antes de escrever Q5/Q6</td></tr>
+<tr><td class="k">RT-4</td><td>Resíduo Vlocity (14 ProductChildItem) confundindo catálogo</td><td>Limpeza e critério "zero registro Vlocity"</td></tr>
+<tr><td class="k">RT-5</td><td>Ativação prematura de ProductSellingModel</td><td>Ativação só no Bloco 3, em janela controlada</td></tr>
+<tr><td class="k">RT-6</td><td>Campos criados via API sem FLS (aparecem como "coluna inexistente")</td><td>Deploy de FLS imediatamente após criação, conforme lição registrada no projeto</td></tr>
+<tr><td class="k">RT-7</td><td>Contratos externos atrasarem e travarem R4/R5/UC-02</td><td>Mocks das 3 interfaces no Bloco 2; contratos no caminho crítico do projeto</td></tr>
+<tr><td class="k">RT-8</td><td>Org-alvo da Fase 2 ≠ arqevery (HOMOL zerada)</td><td>Verificar feature/objetos na org-alvo antes do Bloco 1; empacotar como metadado + dados versionados</td></tr>
+</tbody>
+</table>
+<h3>12.2 Pendências herdadas do EF</h3>
+<p class="small">D1 (Produto a Serviço em três estados — assumido) · D2 (fidelização sem atributo espelho — ADR-04) · D3 (mapa de Asset — bloqueia Bloco 6) · D4 (taxonomia de segmento — bloqueia Q2/Q3/C3) · D5 (perfis legados — ADR-05).</p>
+<h3>12.3 Fronteira</h3>
+<p class="small"><b>Fora de escopo:</b> pricing procedures e valores; desenho dos planos DRO; billing; migração de assets legados; UI além do configurador nativo. <b>Suposições:</b> PR-1 a PR-6. <b>Exige validação humana:</b> ADR-01 (ARQ CORE), ADR-02 a 07 (arquitetura), D1–D5 (negócio). <b>Não verificado:</b> limites do constraints engine e das decision tables em volume; disponibilidade dos recursos na org-alvo definitiva; formato exato de exposição da localidade no Context Service.</p>
+
+<div class="foot"><span>RF-BL-001 · Refinamento Funcional — Banda Larga · Componentes Salesforce · v1.1</span><span>Confidencial — Uso Interno</span></div>
+</div>
+</body>
+</html>
