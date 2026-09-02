@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Ficha de Produto — Banda Larga</title>
+<style>
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height: 1.5;
+         color: #0d0d0d; background: #fafbfc; }
+  .page { max-width: 780px; margin: 0 auto; }
+  .capa { background: linear-gradient(135deg, #0d0d0d 0%, #4a4a4a 100%); color: #f2f3f5;
+          padding: 70px 46px 46px 46px; page-break-after: always; min-height: 480px; }
+  .capa .kicker { font-size: 9pt; letter-spacing: 3px; text-transform: uppercase; color: #d9d9d9; margin-bottom: 26px; }
+  .capa h1 { font-size: 25pt; font-weight: 700; line-height: 1.2; margin-bottom: 10px; }
+  .capa .sub { font-size: 12.5pt; color: #ececec; font-weight: 300; margin-bottom: 40px; }
+  .capa .meta { border-top: 1px solid #6b6b6b; padding-top: 18px; font-size: 9.5pt; color: #d9d9d9; }
+  .capa .meta div { margin-bottom: 5px; }
+  .capa .meta b { color: #f2f3f5; font-weight: 600; }
+  h2.sec { font-size: 14.5pt; font-weight: 700; margin: 34px 0 4px 0; padding: 9px 14px;
+           background: #0d0d0d; color: #fafbfc; page-break-after: avoid; }
+  h2.sec .n { color: #d9d9d9; font-weight: 400; margin-right: 10px; }
+  h3 { font-size: 11.5pt; font-weight: 700; margin: 20px 0 6px 0; color: #0d0d0d;
+       border-bottom: 2px solid #0d0d0d; padding-bottom: 3px; page-break-after: avoid; }
+  h4 { font-size: 10pt; font-weight: 700; margin: 12px 0 3px 0; color: #333; text-transform: uppercase; letter-spacing: .5px; page-break-after: avoid; }
+  p { margin: 6px 0; }
+  ul, ol { margin: 6px 0 8px 22px; }
+  li { margin-bottom: 3px; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 14px 0; font-size: 9pt; }
+  thead th { background: #0d0d0d; color: #fafbfc; text-align: left; padding: 6px 8px; font-weight: 600; font-size: 8.5pt;
+             text-transform: uppercase; letter-spacing: .4px; }
+  tbody td { padding: 6px 8px; border-bottom: 1px solid #d9d9d9; vertical-align: top; }
+  tbody tr:nth-child(even) { background: #f2f3f5; }
+  td.k, th.k { white-space: nowrap; font-weight: 600; }
+  tr { page-break-inside: avoid; }
+  .uc { border: 1px solid #6b6b6b; margin: 18px 0; page-break-inside: avoid; background: #fafbfc; }
+  .uc.long { page-break-inside: auto; }
+  .uc-h { background: #0d0d0d; color: #fafbfc; padding: 8px 14px; font-weight: 700; font-size: 11pt; }
+  .uc-h .id { color: #d9d9d9; font-weight: 400; margin-right: 10px; }
+  .uc-b { padding: 10px 14px 12px 14px; }
+  .uc-meta { width: 100%; border-collapse: collapse; margin: 0 0 8px 0; font-size: 8.8pt; }
+  .uc-meta td { border-bottom: 1px solid #ececec; padding: 3px 6px 3px 0; }
+  .uc-meta td.l { font-weight: 700; color: #6b6b6b; text-transform: uppercase; font-size: 7.8pt; letter-spacing: .5px; width: 118px; white-space: nowrap; }
+  ol.fx { counter-reset: item; margin-left: 0; padding-left: 0; list-style: none; }
+  ol.fx > li { counter-increment: item; margin-bottom: 4px; padding-left: 30px; position: relative; font-size: 9.4pt; }
+  ol.fx > li::before { content: counter(item); position: absolute; left: 0; top: 1px; width: 20px; height: 20px;
+                       background: #ececec; border: 1px solid #6b6b6b; color: #0d0d0d; font-weight: 700; font-size: 8.2pt;
+                       display: flex; align-items: center; justify-content: center; border-radius: 2px; }
+  .alt { margin: 6px 0 6px 0; padding: 7px 10px; background: #f2f3f5; border-left: 4px solid #6b6b6b; font-size: 9.2pt; }
+  .alt b.tag-a { font-size: 8pt; letter-spacing: 1px; color: #6b6b6b; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  .exc { margin: 6px 0; padding: 7px 10px; background: #ececec; border-left: 6px double #0d0d0d; font-size: 9.2pt; }
+  .rn { font-family: 'Consolas', monospace; font-size: 8.2pt; background: #ececec; border: 1px solid #d9d9d9; padding: 0 4px; border-radius: 2px; white-space: nowrap; }
+  .tag { display: inline-block; font-size: 7.5pt; font-weight: 700; letter-spacing: .3px; padding: 1px 6px;
+         border: 1px solid #6b6b6b; color: #333; background: #ececec; border-radius: 2px; white-space: nowrap; }
+  .tag.dark { background: #0d0d0d; color: #fafbfc; border-color: #0d0d0d; }
+  .tag.mid { background: #6b6b6b; color: #fafbfc; border-color: #6b6b6b; }
+  .co { margin: 12px 0; padding: 10px 14px; background: #f2f3f5; border-left: 6px solid #0d0d0d; page-break-inside: avoid; }
+  .co.alert { border-left: 8px double #0d0d0d; }
+  .co .lbl { font-size: 8pt; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #6b6b6b; display: block; margin-bottom: 3px; }
+  .mono { font-family: 'Consolas', monospace; font-size: 8.6pt; background: #ececec; padding: 0 4px; border-radius: 2px; }
+  .toc { background: #f2f3f5; border: 1px solid #d9d9d9; padding: 14px 20px; margin: 16px 0; }
+  .toc div { padding: 2px 0; font-size: 9.5pt; }
+  .toc b { display: inline-block; width: 30px; color: #6b6b6b; }
+  .foot { margin-top: 40px; padding: 12px 0; border-top: 2px solid #0d0d0d; font-size: 8pt; color: #6b6b6b;
+          display: flex; justify-content: space-between; }
+  .small { font-size: 8.6pt; color: #444; }
+
+  .fig { margin: 12px 0 6px 0; border: 1px solid #d9d9d9; background: #fafbfc; padding: 8px; page-break-inside: avoid; }
+  .fig svg { width: 100%; height: auto; display: block; }
+  .cap { font-size: 8.4pt; color: #6b6b6b; margin: 2px 0 14px 0; }
+  table.dd { font-size: 8pt; }
+  table.dd td { padding: 5px 6px; }
+  table.mx td, table.mx th { text-align: center; }
+  table.mx td:first-child, table.mx th:first-child { text-align: left; }
+
+  /* CARD ÚNICO */
+  body { background:#e9eaee; }
+  .page { max-width: 860px; background:#fafbfc; border:1px solid #6b6b6b; border-radius:8px;
+          padding: 28px 30px 20px 30px; margin: 24px auto; box-shadow: 0 2px 14px rgba(0,0,0,.12); }
+  .cardhead { background: linear-gradient(135deg,#0d0d0d 0%,#4a4a4a 100%); color:#f2f3f5;
+              margin:-28px -30px 16px -30px; padding: 22px 30px 16px 30px; border-radius:8px 8px 0 0; }
+  .cardhead .kicker { font-size:8.5pt; letter-spacing:2.5px; text-transform:uppercase; color:#d9d9d9; margin-bottom:8px; }
+  .cardhead h1 { font-size:19pt; font-weight:700; margin-bottom:6px; }
+  .cardhead .sub { font-size:8.6pt; color:#d9d9d9; line-height:1.5; }
+  h2.sec { margin: 22px 0 4px 0; font-size:12.5pt; page-break-after:auto; }
+  * { page-break-inside:auto !important; page-break-after:auto !important; }
+
+  a.rnlink { color:#0d0d0d; font-family:Consolas,monospace; font-size:8.2pt; background:#ececec;
+             border:1px solid #6b6b6b; border-bottom:2px solid #0d0d0d; padding:0 4px; border-radius:2px;
+             text-decoration:none; white-space:nowrap; cursor:help; }
+  table.attrs { table-layout:fixed; font-size:8pt; }
+  table.attrs td, table.attrs th { white-space:normal !important; overflow-wrap:anywhere; }
+  table.attrs td.k { white-space:normal; }
+  table.attrs tbody tr:nth-child(even){ background:#f5f6f8; }
+  .page{ box-shadow:none; }
+
+  span.rnlink { position:relative; color:#0d0d0d; font-family:Consolas,monospace; font-size:8.2pt;
+    background:#ececec; border:1px solid #6b6b6b; border-bottom:2px solid #0d0d0d;
+    padding:0 4px; border-radius:2px; white-space:nowrap; cursor:help; outline:none; }
+  span.rnlink::after { content: attr(data-rule); position:absolute; left:50%; bottom:135%;
+    transform:translateX(-50%); width:340px; max-width:72vw; background:#0d0d0d; color:#fafbfc;
+    font-family:'Segoe UI',Arial,sans-serif; font-size:8.6pt; line-height:1.45; font-weight:400;
+    padding:9px 12px; border-radius:4px; white-space:normal; text-align:left;
+    opacity:0; visibility:hidden; transition:opacity .12s; z-index:50;
+    box-shadow:0 3px 10px rgba(0,0,0,.35); pointer-events:none; }
+  span.rnlink::before { content:""; position:absolute; left:50%; bottom:118%; transform:translateX(-50%);
+    border:6px solid transparent; border-top-color:#0d0d0d; opacity:0; visibility:hidden; transition:opacity .12s; z-index:50; }
+  span.rnlink:hover::after, span.rnlink:focus::after,
+  span.rnlink:hover::before, span.rnlink:focus::before { opacity:1; visibility:visible; }
+  td span.rnlink::after { left:0; transform:none; }
+  td span.rnlink::before { left:14px; transform:none; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="cardhead">
+  <div class="kicker">CRM B2B Algar · Fase 2 · Frente Catálogo de Produtos</div>
+  <h1>Ficha de Produto — Banda Larga</h1>
+  <div class="sub">FP-BL-001 v1.5 · 02/09/2026 · Alberto Bottaro Neto e Kauê (Analistas Funcionais) · Confidencial — Uso Interno</div>
+</div>
+
+
+<h2 class="sec"><span class="n">01</span>Identificação</h2>
+<table>
+<tbody>
+<tr><td class="k">Nome</td><td>Banda Larga</td></tr>
+<tr><td class="k">Tipo</td><td>Bundle configurável — produto-pai com produtos-filho opcionais</td></tr>
+<tr><td class="k">Categoria</td><td>Conectividade</td></tr>
+<tr><td class="k">Classificação (herança)</td><td>Broadband — molde de atributos: os 19 atributos da seção 8 são definidos uma única vez nesse molde e herdados pelo produto; futuros produtos do mesmo feitio reutilizam o molde</td></tr>
+<tr><td class="k">Assetizável</td><td>Sim — persiste como ativo no pós-venda</td></tr>
+<tr><td class="k">Status</td><td>Em modelagem</td></tr>
+</tbody>
+</table>
+
+<h2 class="sec"><span class="n">02</span>Classificação comercial</h2>
+<table>
+<tbody>
+<tr><td class="k">Modelo de cobrança</td><td>Assinatura recorrente mensal (<span class="rnlink" tabindex="0" data-rule="Cobrança por assinatura recorrente mensal">RN-44</span>) + Taxa de Instalação (<span class="rnlink" tabindex="0" data-rule="Cobrança de taxa de instalação">RN-45</span>) + Taxa de Mudança de Endereço (<span class="rnlink" tabindex="0" data-rule="Cobrança de taxa de mudança de endereço">RN-46</span>), com descontos conforme políticas comerciais do marketing de segmentos (<span class="rnlink" tabindex="0" data-rule="Descontos conforme políticas comerciais e ofertas vigentes do marketing de segmentos">RN-47</span>)</td></tr>
+<tr><td class="k">Segmentos atendidos</td><td>Varejo · PME · Corporativo · Atacado (<span class="rnlink" tabindex="0" data-rule="Comercialização nos segmentos Varejo, PME, Corporativo e Atacado">RN-43</span>)</td></tr>
+<tr><td class="k">Restrição de plano por perfil</td><td>Convencional Especial: somente ADMINISTRADOR, CONSULTORIA_INTERNA, ADM_VENDAS_REGIONAL, ADM_VENDAS_CENTRALIZADA, CONSULTOR_CORPORATIVO e GESTÃO_PRODUTOS (<span class="rnlink" tabindex="0" data-rule="Plano &quot;Convencional Especial&quot; restrito aos perfis: ADMINISTRADOR · CONSULTORIA_INTERNA · ADM_VENDAS_REGIONAL · ADM_VENDAS_CENTRALIZADA · CONSULTOR_CORPORATIVO · GESTÃO_PRODUTOS">RN-01</span>)</td></tr>
+<tr><td class="k">Restrição de plano por segmento</td><td>Na Escola: somente segmento Corporativo com subsegmento Governo (<span class="rnlink" tabindex="0" data-rule="Plano &quot;Na Escola&quot; exige segmento Corporativo com subsegmento Governo">RN-02</span>)</td></tr>
+</tbody>
+</table>
+
+<h2 class="sec"><span class="n">03</span>Dimensões de configuração</h2>
+<p class="small">O que o vendedor escolhe ao configurar o produto.</p>
+<table>
+<thead><tr><th class="k">Dimensão</th><th>Opções (domínio completo)</th><th>Condição</th></tr></thead>
+<tbody>
+<tr><td class="k">Plano</td><td>Convencional · Convencional Especial · Na Escola</td><td><span class="rnlink" tabindex="0" data-rule="Plano &quot;Convencional Especial&quot; restrito aos perfis: ADMINISTRADOR · CONSULTORIA_INTERNA · ADM_VENDAS_REGIONAL · ADM_VENDAS_CENTRALIZADA · CONSULTOR_CORPORATIVO · GESTÃO_PRODUTOS">RN-01</span> · <span class="rnlink" tabindex="0" data-rule="Plano &quot;Na Escola&quot; exige segmento Corporativo com subsegmento Governo">RN-02</span></td></tr>
+<tr><td class="k">Velocidade</td><td>100 · 200 · 300 · 400 · 500 · 600 · 700 · 800 · 1024 mb</td><td>—</td></tr>
+<tr><td class="k">Fidelização</td><td>nenhuma · 12 meses · 24 meses · 36 meses · 48 meses · 60 meses</td><td>Somente no plano Convencional Especial (<span class="rnlink" tabindex="0" data-rule="Períodos de fidelização do plano Convencional Especial: 12 · 24 · 36 · 48 · 60 meses">RN-30</span>)</td></tr>
+<tr><td class="k">Modalidade</td><td>Permanente · Temporário (1 a 364 dias corridos)</td><td>Temporário: sem SVA, sem fidelidade, regime próprio de cobrança (<span class="rnlink" tabindex="0" data-rule="&quot;Temporário&quot; nasce como &quot;Não&quot;, com opção de alteração">RN-07</span> a <span class="rnlink" tabindex="0" data-rule="Elegível apenas em nova ativação ou conversão temporário→permanente; conversão permanente→temporário vedada">RN-18</span>)</td></tr>
+<tr><td class="k">Serviços opcionais</td><td>Enumerados na seção 7 (vínculos V1 a V14)</td><td>Elegibilidade nas <span class="rnlink" tabindex="0" data-rule="Exa Segurança exige E-mail e Celular do contato">RN-31</span> a <span class="rnlink" tabindex="0" data-rule="Recarga Recorrente: número informado deve estar ativo no plano Pré-Pago Algar">RN-42</span></td></tr>
+</tbody>
+</table>
+
+<h2 class="sec"><span class="n">04</span>Valores de contexto</h2>
+<p class="small">Chegam prontos à configuração; o usuário não os edita.</p>
+<table>
+<thead><tr><th class="k">Origem</th><th>Valor</th><th>Domínio completo</th></tr></thead>
+<tbody>
+<tr><td class="k">Análise de Viabilidade</td><td>Tecnologia de Acesso</td><td>GPON · ADSL · VDSL · RADIO (<span class="rnlink" tabindex="0" data-rule="Tecnologia, Propriedade de Rede e Parceiro de Rede são retornos da viabilidade — preenchimento automático, sem edição pelo usuário">RN-06</span>)</td></tr>
+<tr><td class="k">Análise de Viabilidade</td><td>Propriedade de Rede</td><td>Algar · Franqueado (<span class="rnlink" tabindex="0" data-rule="Tecnologia, Propriedade de Rede e Parceiro de Rede são retornos da viabilidade — preenchimento automático, sem edição pelo usuário">RN-06</span>)</td></tr>
+<tr><td class="k">Análise de Viabilidade</td><td>Parceiro de Rede</td><td>Nenhum · Vtal (<span class="rnlink" tabindex="0" data-rule="Tecnologia, Propriedade de Rede e Parceiro de Rede são retornos da viabilidade — preenchimento automático, sem edição pelo usuário">RN-06</span>)</td></tr>
+<tr><td class="k">Conta</td><td>Segmento e Subsegmento</td><td>Taxonomia da Conta</td></tr>
+<tr><td class="k">Endereço de instalação</td><td>Localidade</td><td>Cruzada com as listas de referência da planilha (377 localidades × propriedade de rede · 113 Fast Support · 28 UpLoad 50%)</td></tr>
+</tbody>
+</table>
+
+<h2 class="sec"><span class="n">05</span>Regras automáticas do sistema</h2>
+<table>
+<thead><tr><th class="k">Campo</th><th>Comportamento completo</th></tr></thead>
+<tbody>
+<tr><td class="k">CGNAT<br><span class="small">(IP Dinâmico Não Válido)</span></td><td>Marcado por padrão em toda configuração (<span class="rnlink" tabindex="0" data-rule="CGNAT marcado por padrão, sem opção de desmarcar para Varejo e Empresarial">RN-24</span>). Para contas Varejo e Empresarial, permanece marcado e bloqueado, sem opção de desmarcar (<span class="rnlink" tabindex="0" data-rule="CGNAT marcado por padrão, sem opção de desmarcar para Varejo e Empresarial">RN-24</span>). Para contas Corporativo e Operadoras, é desmarcado automaticamente quando o serviço IP Fixo Válido é incluído, e remarcado quando o serviço é removido (<span class="rnlink" tabindex="0" data-rule="Corporativo/Operadoras: CGNAT desmarcado automaticamente quando o serviço IP Fixo Válido é selecionado">RN-25</span>).</td></tr>
+<tr><td class="k">Modem</td><td>Propriedade de Rede Algar: "Comodato" automático e bloqueado, independentemente da localidade (<span class="rnlink" tabindex="0" data-rule="Rede Algar: Modem &quot;Comodato&quot; automático, sem troca, independentemente da localidade">RN-29</span>). Propriedade Franqueado em localidade híbrida: "Franqueado" automático, com permissão de troca para "Comodato" (<span class="rnlink" tabindex="0" data-rule="Rede Franqueado em localidade híbrida: Modem &quot;Franqueado&quot; automático, com permissão de troca">RN-27</span>). Propriedade Franqueado em localidade não híbrida: "Franqueado" automático e bloqueado (<span class="rnlink" tabindex="0" data-rule="Rede Franqueado em localidade não híbrida: Modem &quot;Franqueado&quot; automático, sem troca">RN-28</span>). Localidades híbridas: lista de referência de 377 localidades × propriedade de rede da planilha.</td></tr>
+<tr><td class="k">Bloqueios de teste</td><td>Quando Produto a Serviço = "Teste", o sistema inclui automaticamente os itens Bloqueio LDI e Bloqueio LDN (<span class="rnlink" tabindex="0" data-rule="&quot;Teste&quot; obriga a inclusão dos serviços Bloqueio LDI e Bloqueio LDN">RN-22</span> — existência dos itens pendente na).</td></tr>
+</tbody>
+</table>
+
+<h2 class="sec"><span class="n">06</span>Inventário de produtos — 19 itens</h2>
+<p class="small">Todos os registros de produto que o catálogo Banda Larga cria. Conferência direta: 1 pai + 14 filhos de grupo + 2 taxas + 2 itens técnicos ocultos = 19.</p>
+<table>
+<thead><tr><th class="k">#</th><th>Produto</th><th>Papel no catálogo</th></tr></thead>
+<tbody>
+<tr><td class="k">1</td><td>Banda Larga</td><td>Produto-pai configurável (bundle)</td></tr>
+<tr><td class="k">2</td><td>Exa Segurança Essencial</td><td>Produto-filho — grupo Exa Segurança</td></tr>
+<tr><td class="k">3</td><td>Exa Segurança Pro</td><td>Produto-filho — grupo Exa Segurança</td></tr>
+<tr><td class="k">4</td><td>Exa Segurança Premium</td><td>Produto-filho — grupo Exa Segurança</td></tr>
+<tr><td class="k">5</td><td>Skeelo Audio Books</td><td>Produto-filho — grupo Skeelo</td></tr>
+<tr><td class="k">6</td><td>Skeelo Mini Books</td><td>Produto-filho — grupo Skeelo</td></tr>
+<tr><td class="k">7</td><td>Skeelo Books</td><td>Produto-filho — grupo Skeelo</td></tr>
+<tr><td class="k">8</td><td>Skeelo Books Business</td><td>Produto-filho — grupo Skeelo</td></tr>
+<tr><td class="k">9</td><td>Skeelo Books Kids</td><td>Produto-filho — grupo Skeelo</td></tr>
+<tr><td class="k">10</td><td>Fast Support</td><td>Produto-filho — grupo Serviços</td></tr>
+<tr><td class="k">11</td><td>UpLoad 50%</td><td>Produto-filho — grupo Serviços</td></tr>
+<tr><td class="k">12</td><td>IP Fixo Válido</td><td>Produto-filho — grupo Serviços</td></tr>
+<tr><td class="k">13</td><td>Proteção WEB</td><td>Produto-filho — grupo Serviços</td></tr>
+<tr><td class="k">14</td><td>Monitora Rede</td><td>Produto-filho — grupo Serviços</td></tr>
+<tr><td class="k">15</td><td>Recarga Recorrente Pós</td><td>Produto-filho — grupo Funcionalidades</td></tr>
+<tr><td class="k">16</td><td>Taxa de Instalação</td><td>Item de cobrança avulsa (fora de grupo)</td></tr>
+<tr><td class="k">17</td><td>Taxa de Mudança de Endereço</td><td>Item de cobrança avulsa (fora de grupo)</td></tr>
+<tr><td class="k">18</td><td>Bloqueio LDI</td><td>Item técnico oculto — incluído por regra</td></tr>
+<tr><td class="k">19</td><td>Bloqueio LDN</td><td>Item técnico oculto — incluído por regra</td></tr>
+</tbody>
+</table>
+
+<h2 class="sec"><span class="n">07</span>Estrutura do bundle — 4 grupos · 14 vínculos</h2>
+<p class="small">Cada vínculo pai→filho enumerado. A exclusão mútua dos grupos Exa Segurança e Skeelo é estrutural: máximo 1 no grupo — nenhuma regra adicional é necessária. As taxas são itens de cobrança avulsa fora de grupo; os bloqueios entram por regra de inclusão, não por navegação.</p>
+<table>
+<thead><tr><th class="k">#</th><th>Grupo</th><th class="k">Min..Max</th><th>Produto-filho</th><th>Papel</th><th class="k">Qtde</th><th>Editável</th><th>Modelo de venda</th></tr></thead>
+<tbody>
+<tr><td class="k">V1</td><td>Exa Segurança</td><td class="k">0..1</td><td>Exa Segurança Essencial</td><td>Adicional (AddOn)</td><td class="k">1 (fixa)</td><td>Não</td><td>Evergreen mensal</td></tr>
+<tr><td class="k">V2</td><td>Exa Segurança</td><td class="k">0..1</td><td>Exa Segurança Pro</td><td>Adicional (AddOn)</td><td class="k">1 (fixa)</td><td>Não</td><td>Evergreen mensal</td></tr>
+<tr><td class="k">V3</td><td>Exa Segurança</td><td class="k">0..1</td><td>Exa Segurança Premium</td><td>Adicional (AddOn)</td><td class="k">1 (fixa)</td><td>Não</td><td>Evergreen mensal</td></tr>
+<tr><td class="k">V4</td><td>Skeelo</td><td class="k">0..1</td><td>Skeelo Audio Books</td><td>Adicional (AddOn)</td><td class="k">1 (fixa)</td><td>Não</td><td>Evergreen mensal</td></tr>
+<tr><td class="k">V5</td><td>Skeelo</td><td class="k">0..1</td><td>Skeelo Mini Books</td><td>Adicional (AddOn)</td><td class="k">1 (fixa)</td><td>Não</td><td>Evergreen mensal</td></tr>
+<tr><td class="k">V6</td><td>Skeelo</td><td class="k">0..1</td><td>Skeelo Books</td><td>Adicional (AddOn)</td><td class="k">1 (fixa)</td><td>Não</td><td>Evergreen mensal</td></tr>
+<tr><td class="k">V7</td><td>Skeelo</td><td class="k">0..1</td><td>Skeelo Books Business</td><td>Adicional (AddOn)</td><td class="k">1 (fixa)</td><td>Não</td><td>Evergreen mensal</td></tr>
+<tr><td class="k">V8</td><td>Skeelo</td><td class="k">0..1</td><td>Skeelo Books Kids</td><td>Adicional (AddOn)</td><td class="k">1 (fixa)</td><td>Não</td><td>Evergreen mensal</td></tr>
+<tr><td class="k">V9</td><td>Serviços</td><td class="k">0..5</td><td>Fast Support</td><td>Adicional (AddOn)</td><td class="k">1 (fixa)</td><td>Não</td><td>Evergreen mensal</td></tr>
+<tr><td class="k">V10</td><td>Serviços</td><td class="k">0..5</td><td>UpLoad 50%</td><td>Adicional (AddOn)</td><td class="k">1 (fixa)</td><td>Não</td><td>Evergreen mensal</td></tr>
+<tr><td class="k">V11</td><td>Serviços</td><td class="k">0..5</td><td>IP Fixo Válido</td><td>Adicional (AddOn)</td><td class="k">1 (fixa)</td><td>Não</td><td>Evergreen mensal</td></tr>
+<tr><td class="k">V12</td><td>Serviços</td><td class="k">0..5</td><td>Proteção WEB</td><td>Adicional (AddOn)</td><td class="k">1 (fixa)</td><td>Não</td><td>Evergreen mensal</td></tr>
+<tr><td class="k">V13</td><td>Serviços</td><td class="k">0..5</td><td>Monitora Rede</td><td>Adicional (AddOn)</td><td class="k">1 (fixa)</td><td>Não</td><td>Evergreen mensal</td></tr>
+<tr><td class="k">V14</td><td>Funcionalidades</td><td class="k">0..1</td><td>Recarga Recorrente Pós</td><td>Adicional (AddOn)</td><td class="k">1 (fixa)</td><td>Não</td><td>Evergreen mensal</td></tr>
+</tbody>
+</table>
+<table>
+<thead><tr><th>Grupo</th><th class="k">Min..Max</th><th>Significado da cardinalidade</th></tr></thead>
+<tbody>
+<tr><td>Exa Segurança</td><td class="k">0..1</td><td>Opcional; no máximo um nível (Essencial, Pro ou Premium) — exclusão mútua estrutural (<span class="rnlink" tabindex="0" data-rule="Níveis Exa (Essencial/Pro/Premium) mutuamente exclusivos">RN-33</span>)</td></tr>
+<tr><td>Skeelo</td><td class="k">0..1</td><td>Opcional; no máximo uma variante entre as cinco — exclusão mútua estrutural</td></tr>
+<tr><td>Serviços</td><td class="k">0..5</td><td>Opcional; até os cinco serviços simultâneos, um de cada por circuito (<span class="rnlink" tabindex="0" data-rule="Fast Support: limitado a um por circuito de Banda Larga">RN-34</span>)</td></tr>
+<tr><td>Funcionalidades</td><td class="k">0..1</td><td>Opcional; no máximo uma Recarga Recorrente Pós</td></tr>
+</tbody>
+</table>
+
+<h2 class="sec"><span class="n">08</span>Atributos</h2>
+<table class="attrs">
+<thead><tr><th style="width:11%">Nome técnico</th><th style="width:12%">Rótulo</th><th style="width:9%">Tipo</th><th style="width:17%">Domínio completo</th><th style="width:10%">Padrão</th><th style="width:12%">Quem preenche</th><th style="width:29%">Condições e regras</th></tr></thead>
+<tbody>
+<tr><td class="k">Plan</td><td>Plano</td><td>Lista de seleção (3)</td><td>Convencional · Convencional Especial · Na Escola</td><td>—</td><td>Comercial</td><td>Convencional Especial restrito aos perfis da <span class="rnlink" tabindex="0" data-rule="Plano &quot;Convencional Especial&quot; restrito aos perfis: ADMINISTRADOR · CONSULTORIA_INTERNA · ADM_VENDAS_REGIONAL · ADM_VENDAS_CENTRALIZADA · CONSULTOR_CORPORATIVO · GESTÃO_PRODUTOS">RN-01</span>; Na Escola restrito a Corporativo/Governo (<span class="rnlink" tabindex="0" data-rule="Plano &quot;Na Escola&quot; exige segmento Corporativo com subsegmento Governo">RN-02</span>)</td></tr>
+<tr><td class="k">Speed</td><td>Velocidade</td><td>Lista de seleção (9)</td><td>100 · 200 · 300 · 400 · 500 · 600 · 700 · 800 · 1024 mb</td><td>—</td><td>Comercial</td><td>—</td></tr>
+<tr><td class="k">AccessTechnology</td><td>Tecnologia de Acesso</td><td>Lista de seleção (4)</td><td>GPON · ADSL · VDSL · RADIO</td><td>—</td><td>Sistema de Viabilidade (automático)</td><td>Somente leitura (<span class="rnlink" tabindex="0" data-rule="Tecnologia, Propriedade de Rede e Parceiro de Rede são retornos da viabilidade — preenchimento automático, sem edição pelo usuário">RN-06</span>)</td></tr>
+<tr><td class="k">NetworkOwnership</td><td>Propriedade de Rede</td><td>Lista de seleção (2)</td><td>Algar · Franqueado</td><td>—</td><td>Sistema de Viabilidade (automático)</td><td>Somente leitura (<span class="rnlink" tabindex="0" data-rule="Tecnologia, Propriedade de Rede e Parceiro de Rede são retornos da viabilidade — preenchimento automático, sem edição pelo usuário">RN-06</span>)</td></tr>
+<tr><td class="k">NetworkPartner</td><td>Parceiro de Rede</td><td>Lista de seleção (2)</td><td>Nenhum · Vtal</td><td>—</td><td>Sistema de Viabilidade (automático)</td><td>Somente leitura (<span class="rnlink" tabindex="0" data-rule="Tecnologia, Propriedade de Rede e Parceiro de Rede são retornos da viabilidade — preenchimento automático, sem edição pelo usuário">RN-06</span>)</td></tr>
+<tr><td class="k">IsTemporary</td><td>Temporário</td><td>Booleano</td><td>Sim · Não</td><td>Não</td><td>Comercial</td><td>Indisponível quando Parceiro de Rede = Vtal (<span class="rnlink" tabindex="0" data-rule="Temporário inelegível quando Parceiro de Rede = Vtal">RN-15</span>)</td></tr>
+<tr><td class="k">TemporaryStartDate</td><td>Data de Início do Temporário</td><td>Data</td><td>data válida</td><td>vazio = data de ativação do link (<span class="rnlink" tabindex="0" data-rule="Data de Início visível somente com Temporário=Sim; não informada, assume a data de ativação do link">RN-08</span>)</td><td>Comercial</td><td>Visível somente quando Temporário = Sim (<span class="rnlink" tabindex="0" data-rule="Data de Início visível somente com Temporário=Sim; não informada, assume a data de ativação do link">RN-08</span>)</td></tr>
+<tr><td class="k">TemporaryDays</td><td>Quantidade de Dias Corridos</td><td>Número inteiro</td><td>1 a 364</td><td>—</td><td>Comercial</td><td>Visível e obrigatório somente quando Temporário = Sim (<span class="rnlink" tabindex="0" data-rule="Quantidade de dias corridos entre 1 e 364, contados da ativação">RN-09</span>)</td></tr>
+<tr><td class="k">IsCgnat</td><td>IP Dinâmico Não Válido (CGNAT)</td><td>Booleano</td><td>Sim · Não</td><td>Sim (marcado) (<span class="rnlink" tabindex="0" data-rule="CGNAT marcado por padrão, sem opção de desmarcar para Varejo e Empresarial">RN-24</span>)</td><td>Sistema (regra automática)</td><td>Bloqueado para Varejo e Empresarial (<span class="rnlink" tabindex="0" data-rule="CGNAT marcado por padrão, sem opção de desmarcar para Varejo e Empresarial">RN-24</span>); desmarcado automaticamente em Corporativo/Operadoras com IP Fixo Válido (<span class="rnlink" tabindex="0" data-rule="Corporativo/Operadoras: CGNAT desmarcado automaticamente quando o serviço IP Fixo Válido é selecionado">RN-25</span>)</td></tr>
+<tr><td class="k">ModemRegime</td><td>Modem</td><td>Lista de seleção (2)</td><td>Comodato · Franqueado</td><td>conforme rede: Algar = Comodato · Franqueado = Franqueado</td><td>Sistema (regra automática)</td><td>Algar: bloqueado (<span class="rnlink" tabindex="0" data-rule="Rede Algar: Modem &quot;Comodato&quot; automático, sem troca, independentemente da localidade">RN-29</span>) · Franqueado em localidade híbrida: troca permitida (<span class="rnlink" tabindex="0" data-rule="Rede Franqueado em localidade híbrida: Modem &quot;Franqueado&quot; automático, com permissão de troca">RN-27</span>) · Franqueado em localidade não híbrida: bloqueado (<span class="rnlink" tabindex="0" data-rule="Rede Franqueado em localidade não híbrida: Modem &quot;Franqueado&quot; automático, sem troca">RN-28</span>)</td></tr>
+<tr><td class="k">ServiceUsageType</td><td>Produto a Serviço</td><td>Lista de seleção (3)</td><td>Não · Interno · Teste</td><td>Não</td><td>Gestão de Pedidos (exclusivo, <span class="rnlink" tabindex="0" data-rule="Padrão &quot;Não&quot;; alteração exclusiva do perfil &quot;Gestão de Pedidos&quot;; &quot;Interno&quot; = uso interno Algar, &quot;Teste&quot; = teste de produto">RN-19</span>)</td><td>Somente leitura para os demais perfis; irreversível após Interno/Teste (<span class="rnlink" tabindex="0" data-rule="Registrado como Interno ou Teste, não retorna a &quot;Não&quot;">RN-20</span>)</td></tr>
+<tr><td class="k">TestReason</td><td>Motivo do Teste</td><td>Lista de seleção (3)</td><td>Externo · Teste · Monitoramento</td><td>—</td><td>Gestão de Pedidos</td><td>Obrigatório quando Produto a Serviço ≠ Não (<span class="rnlink" tabindex="0" data-rule="Motivo do Teste, Centro de Resultado e Associado Responsável obrigatórios quando Produto a Serviço ≠ &quot;Não&quot;">RN-23</span>)</td></tr>
+<tr><td class="k">CostCenter</td><td>Centro de Resultado</td><td>Texto</td><td>texto livre</td><td>—</td><td>Gestão de Pedidos</td><td>Obrigatório quando Produto a Serviço ≠ Não (<span class="rnlink" tabindex="0" data-rule="Motivo do Teste, Centro de Resultado e Associado Responsável obrigatórios quando Produto a Serviço ≠ &quot;Não&quot;">RN-23</span>)</td></tr>
+<tr><td class="k">ResponsibleAssociate</td><td>Associado Responsável</td><td>Texto</td><td>texto livre</td><td>—</td><td>Gestão de Pedidos</td><td>Obrigatório quando Produto a Serviço ≠ Não (<span class="rnlink" tabindex="0" data-rule="Motivo do Teste, Centro de Resultado e Associado Responsável obrigatórios quando Produto a Serviço ≠ &quot;Não&quot;">RN-23</span>)</td></tr>
+<tr><td class="k">TopUpAmount</td><td>Valor da Recarga</td><td>Lista de seleção (5)</td><td>R$ 20 · R$ 25 · R$ 30 · R$ 50 · R$ 100</td><td>—</td><td>Comercial</td><td>Atributo do produto-filho Recarga Recorrente Pós</td></tr>
+<tr><td class="k">TopUpPhoneNumber</td><td>Número Beneficiário da Recarga</td><td>Número (11 dígitos)</td><td>telefone válido</td><td>—</td><td>Comercial</td><td>Validado como ativo no plano Pré-Pago Algar (<span class="rnlink" tabindex="0" data-rule="Recarga Recorrente: número informado deve estar ativo no plano Pré-Pago Algar">RN-42</span>); atributo do produto-filho Recarga Recorrente Pós</td></tr>
+<tr><td class="k">ServiceContactName</td><td>Nome do Contato do Serviço</td><td>Texto</td><td>texto livre</td><td>—</td><td>Comercial</td><td>Obrigatório no produto-filho Proteção WEB (<span class="rnlink" tabindex="0" data-rule="Proteção WEB exige Nome do Contato, E-mail e Celular">RN-38</span>)</td></tr>
+<tr><td class="k">ServiceContactEmail</td><td>E-mail do Contato do Serviço</td><td>E-mail</td><td>e-mail válido</td><td>—</td><td>Comercial</td><td>Obrigatório nos produtos-filho Exa Segurança (<span class="rnlink" tabindex="0" data-rule="Exa Segurança exige E-mail e Celular do contato">RN-31</span>) e Proteção WEB (<span class="rnlink" tabindex="0" data-rule="Proteção WEB exige Nome do Contato, E-mail e Celular">RN-38</span>)</td></tr>
+<tr><td class="k">ServiceContactMobile</td><td>Celular do Contato do Serviço</td><td>Número (11 dígitos)</td><td>celular válido</td><td>—</td><td>Comercial</td><td>Obrigatório nos produtos-filho Exa Segurança (<span class="rnlink" tabindex="0" data-rule="Exa Segurança exige E-mail e Celular do contato">RN-31</span>) e Proteção WEB (<span class="rnlink" tabindex="0" data-rule="Proteção WEB exige Nome do Contato, E-mail e Celular">RN-38</span>)</td></tr>
+</tbody>
+</table>
+<div class="co"><span class="lbl">O que não é atributo</span>Fidelização é condição de venda (modelo de prazo definido — seção 9), não atributo. Os serviços adicionais são produtos-filho (seção 7), não atributos. Segmento e localidade são contexto da conta e do endereço (seção 4), não atributos do produto.</div>
+
+<h2 class="sec"><span class="n">09</span>Modelos de venda</h2>
+<table>
+<thead><tr><th class="k">Modelo</th><th>Tipo e termo</th></tr></thead>
+<tbody>
+<tr><td class="k">Evergreen</td><td>Evergreen — assinatura recorrente mensal, sem prazo definido</td></tr>
+<tr><td class="k">Prazo 12m</td><td>Prazo definido — 12 meses (fidelização do plano Convencional Especial)</td></tr>
+<tr><td class="k">Prazo 24m</td><td>Prazo definido — 24 meses (fidelização do plano Convencional Especial)</td></tr>
+<tr><td class="k">Prazo 36m</td><td>Prazo definido — 36 meses (fidelização do plano Convencional Especial)</td></tr>
+<tr><td class="k">Prazo 48m</td><td>Prazo definido — 48 meses (fidelização do plano Convencional Especial)</td></tr>
+<tr><td class="k">Prazo 60m</td><td>Prazo definido — 60 meses (fidelização do plano Convencional Especial)</td></tr>
+<tr><td class="k">Cobrança única</td><td>Cobrança única (OneTime) — taxas avulsas</td></tr>
+</tbody>
+</table>
+<p class="small">As 22 opções produto × modelo, uma a uma (15 Evergreen + 5 prazos definidos + 2 cobranças únicas). Todas nascem em rascunho (Draft); a ativação ocorre somente quando o preço existir (Bloco 3).</p>
+<table>
+<thead><tr><th class="k">#</th><th>Produto</th><th class="k">Modelo</th><th>Termo</th></tr></thead>
+<tbody>
+<tr><td class="k">O1</td><td>Banda Larga (sem fidelização)</td><td class="k">Evergreen</td><td>Evergreen · recorrência mensal</td></tr>
+<tr><td class="k">O2</td><td>Exa Segurança Essencial</td><td class="k">Evergreen</td><td>Evergreen · recorrência mensal</td></tr>
+<tr><td class="k">O3</td><td>Exa Segurança Pro</td><td class="k">Evergreen</td><td>Evergreen · recorrência mensal</td></tr>
+<tr><td class="k">O4</td><td>Exa Segurança Premium</td><td class="k">Evergreen</td><td>Evergreen · recorrência mensal</td></tr>
+<tr><td class="k">O5</td><td>Skeelo Audio Books</td><td class="k">Evergreen</td><td>Evergreen · recorrência mensal</td></tr>
+<tr><td class="k">O6</td><td>Skeelo Mini Books</td><td class="k">Evergreen</td><td>Evergreen · recorrência mensal</td></tr>
+<tr><td class="k">O7</td><td>Skeelo Books</td><td class="k">Evergreen</td><td>Evergreen · recorrência mensal</td></tr>
+<tr><td class="k">O8</td><td>Skeelo Books Business</td><td class="k">Evergreen</td><td>Evergreen · recorrência mensal</td></tr>
+<tr><td class="k">O9</td><td>Skeelo Books Kids</td><td class="k">Evergreen</td><td>Evergreen · recorrência mensal</td></tr>
+<tr><td class="k">O10</td><td>Fast Support</td><td class="k">Evergreen</td><td>Evergreen · recorrência mensal</td></tr>
+<tr><td class="k">O11</td><td>UpLoad 50%</td><td class="k">Evergreen</td><td>Evergreen · recorrência mensal</td></tr>
+<tr><td class="k">O12</td><td>IP Fixo Válido</td><td class="k">Evergreen</td><td>Evergreen · recorrência mensal</td></tr>
+<tr><td class="k">O13</td><td>Proteção WEB</td><td class="k">Evergreen</td><td>Evergreen · recorrência mensal</td></tr>
+<tr><td class="k">O14</td><td>Monitora Rede</td><td class="k">Evergreen</td><td>Evergreen · recorrência mensal</td></tr>
+<tr><td class="k">O15</td><td>Recarga Recorrente Pós</td><td class="k">Evergreen</td><td>Evergreen · recorrência mensal</td></tr>
+<tr><td class="k">O16</td><td>Banda Larga (Convencional Especial fidelizado 12 meses)</td><td class="k">Prazo 12m</td><td>Prazo definido · 12 meses</td></tr>
+<tr><td class="k">O17</td><td>Banda Larga (Convencional Especial fidelizado 24 meses)</td><td class="k">Prazo 24m</td><td>Prazo definido · 24 meses</td></tr>
+<tr><td class="k">O18</td><td>Banda Larga (Convencional Especial fidelizado 36 meses)</td><td class="k">Prazo 36m</td><td>Prazo definido · 36 meses</td></tr>
+<tr><td class="k">O19</td><td>Banda Larga (Convencional Especial fidelizado 48 meses)</td><td class="k">Prazo 48m</td><td>Prazo definido · 48 meses</td></tr>
+<tr><td class="k">O20</td><td>Banda Larga (Convencional Especial fidelizado 60 meses)</td><td class="k">Prazo 60m</td><td>Prazo definido · 60 meses</td></tr>
+<tr><td class="k">O21</td><td>Taxa de Instalação</td><td class="k">Cobrança única</td><td>Cobrança única (OneTime)</td></tr>
+<tr><td class="k">O22</td><td>Taxa de Mudança de Endereço</td><td class="k">Cobrança única</td><td>Cobrança única (OneTime)</td></tr>
+</tbody>
+</table>
+
+<h2 class="sec"><span class="n">10</span>Regras de negócio</h2>
+<p class="small">As 47 regras extraídas da planilha, no texto integral do catálogo de regras da EF-BL-001 v5.0 — nenhuma referência abreviada.</p>
+<table>
+<thead><tr><th class="k">RN</th><th>Regra (texto integral)</th></tr></thead>
+<tbody>
+<tr id="rn-01"><td class="k">RN-01</td><td>Plano "Convencional Especial" restrito aos perfis: ADMINISTRADOR · CONSULTORIA_INTERNA · ADM_VENDAS_REGIONAL · ADM_VENDAS_CENTRALIZADA · CONSULTOR_CORPORATIVO · GESTÃO_PRODUTOS</td></tr>
+<tr id="rn-02"><td class="k">RN-02</td><td>Plano "Na Escola" exige segmento Corporativo com subsegmento Governo</td></tr>
+<tr id="rn-03"><td class="k">RN-03</td><td>Endereço de instalação obrigatório para contratação</td></tr>
+<tr id="rn-04"><td class="k">RN-04</td><td>Viabilidade técnica/capacidade executada em: nova instalação, mudança de endereço e upgrade de velocidade</td></tr>
+<tr id="rn-05"><td class="k">RN-05</td><td>Contratação condicionada à aprovação da viabilidade</td></tr>
+<tr id="rn-06"><td class="k">RN-06</td><td>Tecnologia, Propriedade de Rede e Parceiro de Rede são retornos da viabilidade — preenchimento automático, sem edição pelo usuário</td></tr>
+<tr id="rn-07"><td class="k">RN-07</td><td>"Temporário" nasce como "Não", com opção de alteração</td></tr>
+<tr id="rn-08"><td class="k">RN-08</td><td>Data de Início visível somente com Temporário=Sim; não informada, assume a data de ativação do link</td></tr>
+<tr id="rn-09"><td class="k">RN-09</td><td>Quantidade de dias corridos entre 1 e 364, contados da ativação</td></tr>
+<tr id="rn-10"><td class="k">RN-10</td><td>Prorrogação permitida até o teto, postergando a data fim; data de início inalterável</td></tr>
+<tr id="rn-11"><td class="k">RN-11</td><td>Sem multa de cancelamento; cobrança garantida, sem pró-rata — cancelamento antecipado paga integral (validação regulatória: DJUR-37286 · ASR-734)</td></tr>
+<tr id="rn-12"><td class="k">RN-12</td><td>Desativação automática em D+1 da data fim</td></tr>
+<tr id="rn-13"><td class="k">RN-13</td><td>Há processo de recolha do equipamento ao término</td></tr>
+<tr id="rn-14"><td class="k">RN-14</td><td>Temporário não é elegível à aquisição de SVAs</td></tr>
+<tr id="rn-15"><td class="k">RN-15</td><td>Temporário inelegível quando Parceiro de Rede = Vtal</td></tr>
+<tr id="rn-16"><td class="k">RN-16</td><td>Temporário não tem fidelidade contratual</td></tr>
+<tr id="rn-17"><td class="k">RN-17</td><td>Precificação diferenciada (superior à permanente) e taxa de instalação devida</td></tr>
+<tr id="rn-18"><td class="k">RN-18</td><td>Elegível apenas em nova ativação ou conversão temporário→permanente; conversão permanente→temporário vedada</td></tr>
+<tr id="rn-19"><td class="k">RN-19</td><td>Padrão "Não"; alteração exclusiva do perfil "Gestão de Pedidos"; "Interno" = uso interno Algar, "Teste" = teste de produto</td></tr>
+<tr id="rn-20"><td class="k">RN-20</td><td>Registrado como Interno ou Teste, não retorna a "Não"</td></tr>
+<tr id="rn-21"><td class="k">RN-21</td><td>Data de vencimento obrigatoriamente dia 27</td></tr>
+<tr id="rn-22"><td class="k">RN-22</td><td>"Teste" obriga a inclusão dos serviços Bloqueio LDI e Bloqueio LDN</td></tr>
+<tr id="rn-23"><td class="k">RN-23</td><td>Motivo do Teste, Centro de Resultado e Associado Responsável obrigatórios quando Produto a Serviço ≠ "Não"</td></tr>
+<tr id="rn-24"><td class="k">RN-24</td><td>CGNAT marcado por padrão, sem opção de desmarcar para Varejo e Empresarial</td></tr>
+<tr id="rn-25"><td class="k">RN-25</td><td>Corporativo/Operadoras: CGNAT desmarcado automaticamente quando o serviço IP Fixo Válido é selecionado</td></tr>
+<tr id="rn-26"><td class="k">RN-26</td><td>IP Fixo Válido: novas vendas apenas para Corporativo e Operadoras</td></tr>
+<tr id="rn-27"><td class="k">RN-27</td><td>Rede Franqueado em localidade híbrida: Modem "Franqueado" automático, com permissão de troca</td></tr>
+<tr id="rn-28"><td class="k">RN-28</td><td>Rede Franqueado em localidade não híbrida: Modem "Franqueado" automático, sem troca</td></tr>
+<tr id="rn-29"><td class="k">RN-29</td><td>Rede Algar: Modem "Comodato" automático, sem troca, independentemente da localidade</td></tr>
+<tr id="rn-30"><td class="k">RN-30</td><td>Períodos de fidelização do plano Convencional Especial: 12 · 24 · 36 · 48 · 60 meses</td></tr>
+<tr id="rn-31"><td class="k">RN-31</td><td>Exa Segurança exige E-mail e Celular do contato</td></tr>
+<tr id="rn-32"><td class="k">RN-32</td><td>Exa: uma licença por CPF/CNPJ</td></tr>
+<tr id="rn-33"><td class="k">RN-33</td><td>Níveis Exa (Essencial/Pro/Premium) mutuamente exclusivos</td></tr>
+<tr id="rn-34"><td class="k">RN-34</td><td>Fast Support: limitado a um por circuito de Banda Larga</td></tr>
+<tr id="rn-35"><td class="k">RN-35</td><td>Fast Support: restrito às localidades habilitadas (lista de 113)</td></tr>
+<tr id="rn-36"><td class="k">RN-36</td><td>UpLoad 50%: restrito às localidades habilitadas (lista de 28)</td></tr>
+<tr id="rn-37"><td class="k">RN-37</td><td>UpLoad 50%: vendável somente até a velocidade de 800 mb</td></tr>
+<tr id="rn-38"><td class="k">RN-38</td><td>Proteção WEB exige Nome do Contato, E-mail e Celular</td></tr>
+<tr id="rn-39"><td class="k">RN-39</td><td>Monitora Rede: disponível apenas com tecnologia GPON e Parceiro de Rede "Nenhum"</td></tr>
+<tr id="rn-40"><td class="k">RN-40</td><td>Monitora Rede em base existente: viabilidade do equipamento via base Snowflake (modem contendo "beegol")</td></tr>
+<tr id="rn-41"><td class="k">RN-41</td><td>Skeelo: configurável somente em vendas promocionais, em pacote (obrigatório)</td></tr>
+<tr id="rn-42"><td class="k">RN-42</td><td>Recarga Recorrente: número informado deve estar ativo no plano Pré-Pago Algar</td></tr>
+<tr id="rn-43"><td class="k">RN-43</td><td>Comercialização nos segmentos Varejo, PME, Corporativo e Atacado</td></tr>
+<tr id="rn-44"><td class="k">RN-44</td><td>Cobrança por assinatura recorrente mensal</td></tr>
+<tr id="rn-45"><td class="k">RN-45</td><td>Cobrança de taxa de instalação</td></tr>
+<tr id="rn-46"><td class="k">RN-46</td><td>Cobrança de taxa de mudança de endereço</td></tr>
+<tr id="rn-47"><td class="k">RN-47</td><td>Descontos conforme políticas comerciais e ofertas vigentes do marketing de segmentos</td></tr>
+</tbody>
+</table>
+
+<div class="foot"><span>FP-BL-001 · Ficha de Produto — Banda Larga · v1.5</span><span>Confidencial — Uso Interno</span></div>
+</div>
+</body>
+</html>
