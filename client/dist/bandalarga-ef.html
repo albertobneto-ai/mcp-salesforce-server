@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Especificação Funcional — Banda Larga · Casos de Uso</title>
+<style>
+  @page { size: A4; margin: 18mm 14mm 16mm 14mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height: 1.5;
+         color: #0d0d0d; background: #fafbfc; }
+  .page { max-width: 780px; margin: 0 auto; }
+  .capa { background: linear-gradient(135deg, #0d0d0d 0%, #4a4a4a 100%); color: #f2f3f5;
+          padding: 70px 46px 46px 46px; page-break-after: always; min-height: 480px; }
+  .capa .kicker { font-size: 9pt; letter-spacing: 3px; text-transform: uppercase; color: #d9d9d9; margin-bottom: 26px; }
+  .capa h1 { font-size: 25pt; font-weight: 700; line-height: 1.2; margin-bottom: 10px; }
+  .capa .sub { font-size: 12.5pt; color: #ececec; font-weight: 300; margin-bottom: 40px; }
+  .capa .meta { border-top: 1px solid #6b6b6b; padding-top: 18px; font-size: 9.5pt; color: #d9d9d9; }
+  .capa .meta div { margin-bottom: 5px; }
+  .capa .meta b { color: #f2f3f5; font-weight: 600; }
+  h2.sec { font-size: 14.5pt; font-weight: 700; margin: 34px 0 4px 0; padding: 9px 14px;
+           background: #0d0d0d; color: #fafbfc; page-break-after: avoid; }
+  h2.sec .n { color: #d9d9d9; font-weight: 400; margin-right: 10px; }
+  h3 { font-size: 11.5pt; font-weight: 700; margin: 20px 0 6px 0; color: #0d0d0d;
+       border-bottom: 2px solid #0d0d0d; padding-bottom: 3px; page-break-after: avoid; }
+  h4 { font-size: 10pt; font-weight: 700; margin: 12px 0 3px 0; color: #333; text-transform: uppercase; letter-spacing: .5px; page-break-after: avoid; }
+  p { margin: 6px 0; }
+  ul, ol { margin: 6px 0 8px 22px; }
+  li { margin-bottom: 3px; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 14px 0; font-size: 9pt; }
+  thead th { background: #0d0d0d; color: #fafbfc; text-align: left; padding: 6px 8px; font-weight: 600; font-size: 8.5pt;
+             text-transform: uppercase; letter-spacing: .4px; }
+  tbody td { padding: 6px 8px; border-bottom: 1px solid #d9d9d9; vertical-align: top; }
+  tbody tr:nth-child(even) { background: #f2f3f5; }
+  td.k, th.k { white-space: nowrap; font-weight: 600; }
+  tr { page-break-inside: avoid; }
+  .uc { border: 1px solid #6b6b6b; margin: 18px 0; page-break-inside: avoid; background: #fafbfc; }
+  .uc.long { page-break-inside: auto; }
+  .uc-h { background: #0d0d0d; color: #fafbfc; padding: 8px 14px; font-weight: 700; font-size: 11pt; }
+  .uc-h .id { color: #d9d9d9; font-weight: 400; margin-right: 10px; }
+  .uc-b { padding: 10px 14px 12px 14px; }
+  .uc-meta { width: 100%; border-collapse: collapse; margin: 0 0 8px 0; font-size: 8.8pt; }
+  .uc-meta td { border-bottom: 1px solid #ececec; padding: 3px 6px 3px 0; }
+  .uc-meta td.l { font-weight: 700; color: #6b6b6b; text-transform: uppercase; font-size: 7.8pt; letter-spacing: .5px; width: 118px; white-space: nowrap; }
+  ol.fx { counter-reset: item; margin-left: 0; padding-left: 0; list-style: none; }
+  ol.fx > li { counter-increment: item; margin-bottom: 4px; padding-left: 30px; position: relative; font-size: 9.4pt; }
+  ol.fx > li::before { content: counter(item); position: absolute; left: 0; top: 1px; width: 20px; height: 20px;
+                       background: #ececec; border: 1px solid #6b6b6b; color: #0d0d0d; font-weight: 700; font-size: 8.2pt;
+                       display: flex; align-items: center; justify-content: center; border-radius: 2px; }
+  .alt { margin: 6px 0 6px 0; padding: 7px 10px; background: #f2f3f5; border-left: 4px solid #6b6b6b; font-size: 9.2pt; }
+  .alt b.tag-a { font-size: 8pt; letter-spacing: 1px; color: #6b6b6b; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  .exc { margin: 6px 0; padding: 7px 10px; background: #ececec; border-left: 6px double #0d0d0d; font-size: 9.2pt; }
+  .rn { font-family: 'Consolas', monospace; font-size: 8.2pt; background: #ececec; border: 1px solid #d9d9d9; padding: 0 4px; border-radius: 2px; white-space: nowrap; }
+  .tag { display: inline-block; font-size: 7.5pt; font-weight: 700; letter-spacing: .3px; padding: 1px 6px;
+         border: 1px solid #6b6b6b; color: #333; background: #ececec; border-radius: 2px; white-space: nowrap; }
+  .tag.dark { background: #0d0d0d; color: #fafbfc; border-color: #0d0d0d; }
+  .tag.mid { background: #6b6b6b; color: #fafbfc; border-color: #6b6b6b; }
+  .co { margin: 12px 0; padding: 10px 14px; background: #f2f3f5; border-left: 6px solid #0d0d0d; page-break-inside: avoid; }
+  .co.alert { border-left: 8px double #0d0d0d; }
+  .co .lbl { font-size: 8pt; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #6b6b6b; display: block; margin-bottom: 3px; }
+  .mono { font-family: 'Consolas', monospace; font-size: 8.6pt; background: #ececec; padding: 0 4px; border-radius: 2px; }
+  .toc { background: #f2f3f5; border: 1px solid #d9d9d9; padding: 14px 20px; margin: 16px 0; }
+  .toc div { padding: 2px 0; font-size: 9.5pt; }
+  .toc b { display: inline-block; width: 30px; color: #6b6b6b; }
+  .foot { margin-top: 40px; padding: 12px 0; border-top: 2px solid #0d0d0d; font-size: 8pt; color: #6b6b6b;
+          display: flex; justify-content: space-between; }
+  .small { font-size: 8.6pt; color: #444; }
+
+  .fig { margin: 12px 0 6px 0; border: 1px solid #d9d9d9; background: #fafbfc; padding: 8px; page-break-inside: avoid; }
+  .fig svg { width: 100%; height: auto; display: block; }
+  .cap { font-size: 8.4pt; color: #6b6b6b; margin: 2px 0 14px 0; }
+  table.dd { font-size: 8pt; }
+  table.dd td { padding: 5px 6px; }
+  table.mx td, table.mx th { text-align: center; }
+  table.mx td:first-child, table.mx th:first-child { text-align: left; }
+
+  span.rnlink { position:relative; color:#0d0d0d; font-family:Consolas,monospace; font-size:8.2pt;
+    background:#ececec; border:1px solid #6b6b6b; border-bottom:2px solid #0d0d0d;
+    padding:0 4px; border-radius:2px; white-space:nowrap; cursor:help; outline:none; }
+  span.rnlink::after { content: attr(data-rule); position:absolute; left:0; bottom:135%;
+    width:340px; max-width:72vw; background:#0d0d0d; color:#fafbfc;
+    font-family:'Segoe UI',Arial,sans-serif; font-size:8.6pt; line-height:1.45; font-weight:400;
+    padding:9px 12px; border-radius:4px; white-space:normal; text-align:left;
+    opacity:0; visibility:hidden; transition:opacity .12s; z-index:50;
+    box-shadow:0 3px 10px rgba(0,0,0,.35); pointer-events:none; }
+  span.rnlink::before { content:""; position:absolute; left:14px; bottom:118%;
+    border:6px solid transparent; border-top-color:#0d0d0d; opacity:0; visibility:hidden; transition:opacity .12s; z-index:50; }
+  span.rnlink:hover::after, span.rnlink:focus::after,
+  span.rnlink:hover::before, span.rnlink:focus::before { opacity:1; visibility:visible; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- CAPA -->
+<div class="capa">
+  <div class="kicker">CRM B2B Algar Telecom · Fase 2 · Frente Catálogo de Produtos</div>
+  <h1>Especificação Funcional<br>Produto Banda Larga</h1>
+  <div class="sub">Kit completo de análise funcional · Casos de Uso · Dicionário de Dados · Modelo de Dados · Permissões · Rastreabilidade</div>
+  <div class="meta">
+    <div><b>Documento:</b> EF-BL-001 · Versão 6.1 (kit funcional · casos de uso enxutos)</div>
+    <div><b>Data:</b> 01/09/2026</div>
+    <div><b>Autores:</b> Alberto Bottaro Neto e Kauê (Analistas Funcionais)</div>
+        <div><b>Grounding técnico:</b> doc oficial Salesforce (RLM) · org de arquitetura (verificação 28/08/2026)</div>
+    <div><b>Classificação:</b> Confidencial — Uso Interno</div>
+  </div>
+</div>
+
+<!-- SUMARIO -->
+<h2 class="sec"><span class="n">§</span>Sumário e convenções</h2>
+<div class="toc">
+  <div><b>1</b> Objetivo, escopo e atores</div>
+  <div><b>2</b> Visão geral, diagrama de casos de uso e processo ponta a ponta</div>
+  <div><b>3</b> Casos de uso — UC-01 a UC-09</div>
+  <div><b>4</b> Catálogo de Regras de Negócio (RN-01 a RN-47)</div>
+  <div><b>5</b> Dicionário de dados</div>
+  <div><b>6</b> Modelo de dados (MER)</div>
+  <div><b>7</b> Matriz perfil × permissão</div>
+  <div><b>8</b> Matriz de rastreabilidade</div>
+  <div><b>9</b> Pendências e devolutivas ao negócio</div>
+  <div><b>10</b> Critérios de aceitação</div>
+  <div><b>11</b> Anexo A — Rastreabilidade funcional → modelo de catálogo</div>
+  <div><b>12</b> Fronteira do documento</div>
+</div>
+  <div><b>2</b> Visão geral e mapa de casos de uso</div>
+  <div><b>3</b> Casos de uso — UC-01 a UC-09</div>
+  <div><b>4</b> Catálogo de Regras de Negócio (RN-01 a RN-47)</div>
+  <div><b>5</b> Informações capturadas e dados de referência</div>
+  <div><b>6</b> Pendências e devolutivas ao negócio (D1–D5)</div>
+  <div><b>7</b> Critérios de aceitação</div>
+  <div><b>8</b> Anexo A — Rastreabilidade funcional → modelo de catálogo</div>
+  <div><b>9</b> Fronteira do documento</div>
+</div>
+<p class="small">Marcações: <span class="tag dark">VERIFICADO</span> fato lido na fonte (requisito de origem, doc oficial ou org) · <span class="tag mid">INFERIDO</span> síntese proposta · <span class="tag">PENDENTE</span> aguarda negócio. Referências <span class="rn">RN-nn</span> apontam para a seção 4 e DD-nn para o dicionário (seção 5); fluxos alternativos = <b>A</b>n; fluxos de exceção = <b>X</b>n.</p>
+
+<!-- 1 -->
+<h2 class="sec"><span class="n">01</span>Objetivo, escopo e atores</h2>
+<p><b>Objetivo.</b> Especificar, sob a ótica de quem vende e de quem administra, como o produto <b>Banda Larga</b> é disponibilizado, configurado e validado no CRM — cobrindo a jornada do catálogo à configuração completa com regras aplicadas. O documento é o insumo do refinamento funcional e da especificação técnica.</p>
+<p><b>Escopo.</b> Blocos 0–2 (modelagem, catálogo, regras/configurador). <b>Fora de escopo:</b> precificação (valores), cotação/pedido, orquestração/provisionamento, faturamento, migração de base.</p>
+<table>
+<thead><tr><th class="k">Ator</th><th>Papel na jornada</th></tr></thead>
+<tbody>
+<tr><td class="k">Comercial</td><td>Localiza o produto, configura o acesso e adiciona serviços — na venda direta ou no atendimento interno; enxerga apenas o que seu perfil/segmento permite. <b>Ator padrão de todos os casos de uso</b></td></tr>
+<tr><td class="k">Gestão de Pedidos</td><td>Único perfil autorizado a registrar "Produto a Serviço" (uso interno/teste)</td></tr>
+<tr><td class="k">Gestão de Produtos</td><td>Administra o catálogo: listas de localidades, ofertas promocionais, valores de referência</td></tr>
+<tr><td class="k">Sistema de Viabilidade <span class="small">(externo)</span></td><td>Retorna, por endereço, tecnologia, propriedade e parceiro de rede; aprova/reprova a contratação</td></tr>
+<tr><td class="k">Cliente <span class="small">(indireto)</span></td><td>Titular (CPF/CNPJ) da conta; seu segmento e localidade condicionam a oferta</td></tr>
+</tbody>
+</table>
+
+<!-- 2 -->
+<h2 class="sec"><span class="n">02</span>Visão geral</h2>
+<p><b>O produto.</b> Banda Larga é o acesso à internet da Algar vendido como <b>assinatura mensal recorrente</b>, com taxa de instalação e taxa de mudança de endereço, nos segmentos Varejo, PME, Corporativo e Atacado <span class="rnlink" tabindex="0" data-rule="Comercialização nos segmentos Varejo, PME, Corporativo e Atacado (divergência com taxonomia das RN-24/26 — Devolutiva D4)">RN-43</span>–<span class="rnlink" tabindex="0" data-rule="Cobrança de taxa de mudança de endereço">RN-46</span>. Três planos (Convencional, Convencional Especial e Na Escola), nove velocidades de 100 mb a 1 Gb, fidelização opcional de 12 a 60 meses no plano Especial, e uma variante de <b>link temporário</b> por prazo determinado (1 a 364 dias) com regime próprio de cobrança. Em torno do acesso, sete serviços adicionais (SVA) e a funcionalidade de Recarga Recorrente compõem a oferta.</p>
+<p><b>A jornada de venda.</b> O consultor informa o endereço de instalação e a <b>análise de viabilidade</b> decide o que a rede entrega ali — tecnologia, propriedade e parceiro de rede chegam preenchidos, sem digitação e sem edição. Aprovada a viabilidade, o consultor escolhe plano e velocidade; o sistema define sozinho o CGNAT e o regime do modem a partir da rede e da localidade; e os serviços adicionais aparecem <b>apenas quando elegíveis</b> ao contexto — segmento da conta, localidade, tecnologia e perfil de quem vende. Nada que o consultor vê pode gerar venda inválida: a inteligência está nas regras, não no treinamento.</p>
+<p><b>O que sustenta a oferta.</b> Três conjuntos de dados de referência mantidos pela Gestão de Produtos (377 localidades × propriedade de rede, 113 localidades Fast Support, 28 UpLoad 50%), três integrações externas (viabilidade via MuleSoft, base de equipamentos no Snowflake, validação de número no Pré-Pago) e um catálogo de <b>47 regras de negócio</b> que este documento enumera na seção 4 e referencia dentro de cada caso de uso.</p>
+<p><b>Fora da venda.</b> O regime de execução do temporário (desativação automática em D+1, prorrogação, recolha de equipamento), o preço e o faturamento (vencimento dia 27 do Produto a Serviço) são requisitos registrados aqui e executados nos blocos de Preço, OM e billing.</p>
+<table>
+<thead><tr><th class="k">UC</th><th>Caso de uso</th><th>Ator (quando difere do padrão Comercial)</th><th class="k">RNs</th></tr></thead>
+<tbody>
+<tr><td class="k">UC-01</td><td>Localizar e selecionar o produto no catálogo</td><td>—</td><td class="k">01–02, 43</td></tr>
+<tr><td class="k">UC-02</td><td>Executar análise de viabilidade do endereço</td><td>+ Sistema de Viabilidade (externo)</td><td class="k">03–06</td></tr>
+<tr><td class="k">UC-03</td><td>Configurar plano e velocidade</td><td>—</td><td class="k">01–02, 30</td></tr>
+<tr><td class="k">UC-04</td><td>Contratar link temporário</td><td>—</td><td class="k">07–18</td></tr>
+<tr><td class="k">UC-05</td><td>Definir CGNAT e Modem automaticamente</td><td>Sistema</td><td class="k">24–29</td></tr>
+<tr><td class="k">UC-06</td><td>Registrar Produto a Serviço (uso interno / teste)</td><td>Gestão de Pedidos</td><td class="k">19–23</td></tr>
+<tr><td class="k">UC-07</td><td>Adicionar serviços opcionais (SVA)</td><td>—</td><td class="k">14, 31–41</td></tr>
+<tr><td class="k">UC-08</td><td>Adicionar Recarga Recorrente na conta Pós</td><td>—</td><td class="k">42</td></tr>
+<tr><td class="k">UC-09</td><td>Manter dados de referência do catálogo</td><td>Gestão de Produtos</td><td class="k">27–28, 35–36</td></tr>
+</tbody>
+</table>
+<h3>2.1 Diagrama de casos de uso</h3>
+<div class="fig"><svg viewBox="0 0 760 480" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial" font-size="10">
+<defs><g id="actor"><circle cx="0" cy="0" r="7" fill="none" stroke="#0d0d0d" stroke-width="1.6"/><line x1="0" y1="7" x2="0" y2="28" stroke="#0d0d0d" stroke-width="1.6"/><line x1="-12" y1="15" x2="12" y2="15" stroke="#0d0d0d" stroke-width="1.6"/><line x1="0" y1="28" x2="-10" y2="42" stroke="#0d0d0d" stroke-width="1.6"/><line x1="0" y1="28" x2="10" y2="42" stroke="#0d0d0d" stroke-width="1.6"/></g></defs>
+<rect x="170" y="14" width="420" height="440" fill="#f2f3f5" stroke="#0d0d0d" stroke-width="1.4"/>
+<text x="380" y="34" text-anchor="middle" font-weight="700" font-size="11">CRM — Produto Banda Larga</text>
+<g id="ucs" fill="#fafbfc" stroke="#0d0d0d" stroke-width="1.2">
+<ellipse cx="300" cy="70" rx="88" ry="20"/><ellipse cx="300" cy="120" rx="88" ry="20"/><ellipse cx="300" cy="170" rx="88" ry="20"/>
+<ellipse cx="300" cy="220" rx="88" ry="20"/><ellipse cx="300" cy="270" rx="88" ry="20"/><ellipse cx="300" cy="320" rx="88" ry="20"/>
+<ellipse cx="300" cy="370" rx="88" ry="20"/><ellipse cx="300" cy="420" rx="88" ry="20"/>
+<ellipse cx="480" cy="420" rx="88" ry="20"/>
+</g>
+<g text-anchor="middle" fill="#0d0d0d">
+<text x="300" y="67">UC-01 Localizar e</text><text x="300" y="78">selecionar produto</text>
+<text x="300" y="117">UC-02 Executar análise</text><text x="300" y="128">de viabilidade</text>
+<text x="300" y="167">UC-03 Configurar</text><text x="300" y="178">plano e velocidade</text>
+<text x="300" y="217">UC-04 Contratar</text><text x="300" y="228">link temporário</text>
+<text x="300" y="267">UC-05 Definir CGNAT e</text><text x="300" y="278">Modem automaticamente</text>
+<text x="300" y="317">UC-06 Registrar</text><text x="300" y="328">Produto a Serviço</text>
+<text x="300" y="367">UC-07 Adicionar</text><text x="300" y="378">serviços opcionais (SVA)</text>
+<text x="300" y="417">UC-08 Adicionar</text><text x="300" y="428">Recarga Recorrente</text>
+<text x="480" y="417">UC-09 Manter dados</text><text x="480" y="428">de referência</text>
+</g>
+<g stroke="#6b6b6b" stroke-width="1" fill="none">
+<line x1="82" y1="120" x2="212" y2="70"/><line x1="82" y1="120" x2="212" y2="120"/><line x1="82" y1="120" x2="212" y2="170"/>
+<line x1="82" y1="120" x2="212" y2="220"/><line x1="82" y1="120" x2="212" y2="370"/><line x1="82" y1="120" x2="212" y2="420"/>
+<line x1="82" y1="300" x2="212" y2="320"/>
+<path d="M86,372 L150,372 L150,462 L480,462 L480,440"/>
+<line x1="690" y1="120" x2="388" y2="120"/>
+<line x1="690" y1="270" x2="388" y2="270" stroke-dasharray="4 3"/>
+
+</g>
+<g transform="translate(60,60)"><use href="#actor"/><text x="0" y="60" text-anchor="middle" font-size="9.5" font-weight="700">Comercial /</text><text x="0" y="71" text-anchor="middle" font-size="9.5" font-weight="700">Backoffice</text></g>
+<g transform="translate(60,250)"><use href="#actor"/><text x="0" y="60" text-anchor="middle" font-size="9.5" font-weight="700">Gestão de</text><text x="0" y="71" text-anchor="middle" font-size="9.5" font-weight="700">Pedidos</text></g>
+<g transform="translate(60,350)"><use href="#actor"/><text x="0" y="60" text-anchor="middle" font-size="9.5" font-weight="700">Gestão de</text><text x="0" y="71" text-anchor="middle" font-size="9.5" font-weight="700">Produtos</text></g>
+<g transform="translate(712,70)"><rect x="-38" y="0" width="76" height="34" fill="#ececec" stroke="#0d0d0d" stroke-width="1.2"/><text x="0" y="14" text-anchor="middle" font-size="8.5" font-weight="700">Sistema de</text><text x="0" y="26" text-anchor="middle" font-size="8.5" font-weight="700">Viabilidade</text><text x="0" y="48" text-anchor="middle" font-size="8" fill="#6b6b6b">«externo»</text></g>
+<g transform="translate(712,240)"><rect x="-38" y="0" width="76" height="34" fill="#ececec" stroke="#0d0d0d" stroke-width="1.2"/><text x="0" y="14" text-anchor="middle" font-size="8.5" font-weight="700">Base de</text><text x="0" y="26" text-anchor="middle" font-size="8.5" font-weight="700">Equipamentos</text><text x="0" y="48" text-anchor="middle" font-size="8" fill="#6b6b6b">«Snowflake · RN-40»</text></g>
+<text x="380" y="474" text-anchor="middle" font-size="8" fill="#6b6b6b">UC-02 precede UC-03/04/05 · UC-07/08 somente após UC-03 e contratação não temporária</text>
+</svg></div>
+<p class="cap">Figura 1 — Diagrama de casos de uso (UML). Linha tracejada = consulta sob condição (base existente). O Cliente é ator indireto: seu segmento e localidade entram como contexto.</p>
+
+<h3>2.2 Processo ponta a ponta (visão de raias)</h3>
+<div class="fig"><svg viewBox="0 0 760 356" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial" font-size="8.6">
+<defs><marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#0d0d0d"/></marker></defs>
+<g stroke="#6b6b6b" stroke-width="1" fill="#fafbfc"><rect x="0" y="0" width="760" height="88"/><rect x="0" y="88" width="760" height="88"/><rect x="0" y="176" width="760" height="88"/><rect x="0" y="264" width="760" height="88"/></g>
+<rect x="0" y="0" width="70" height="352" fill="#ececec" stroke="#6b6b6b"/>
+<g font-weight="700" font-size="8.5" text-anchor="middle"><text x="35" y="40">Comercial /</text><text x="35" y="51">Backoffice</text><text x="35" y="128">Sistema</text><text x="35" y="139">CRM</text><text x="35" y="216">Viabilidade</text><text x="35" y="227">(externo)</text><text x="35" y="304">Gestão de</text><text x="35" y="315">Pedidos</text></g>
+<g fill="#fafbfc" stroke="#0d0d0d" stroke-width="1.2">
+<circle cx="100" cy="44" r="8"/>
+<rect x="122" y="25" width="110" height="38" rx="4"/>
+<rect x="122" y="113" width="110" height="38" rx="4"/>
+<rect x="250" y="196" width="120" height="44" rx="4"/>
+<polygon points="410,200 436,218 410,236 384,218"/>
+<circle cx="410" cy="254" r="8"/><circle cx="410" cy="254" r="4.5" fill="#0d0d0d"/>
+<rect x="430" y="25" width="120" height="38" rx="4"/>
+<rect x="430" y="113" width="120" height="38" rx="4"/>
+<rect x="580" y="25" width="110" height="38" rx="4"/>
+<circle cx="720" cy="44" r="8"/><circle cx="720" cy="44" r="4.5" fill="#0d0d0d"/>
+<rect x="580" y="290" width="110" height="38" rx="4"/>
+</g>
+<g text-anchor="middle" fill="#0d0d0d">
+<text x="177" y="41">Informar endereço</text><text x="177" y="53">e selecionar produto</text><text x="177" y="74" font-size="7.5" fill="#6b6b6b">UC-01</text>
+<text x="177" y="129">Filtrar planos por</text><text x="177" y="141">perfil e segmento</text>
+<text x="310" y="212">Analisar viabilidade</text><text x="310" y="224">tecnologia · rede ·</text><text x="310" y="235">parceiro</text><text x="310" y="252" font-size="7.5" fill="#6b6b6b">UC-02</text>
+<text x="410" y="221" font-size="7.8">Aprovada?</text>
+<text x="490" y="41">Configurar plano,</text><text x="490" y="53">velocidade, temporário, SVAs</text><text x="490" y="74" font-size="7.5" fill="#6b6b6b">UC-03 · 04 · 07 · 08</text>
+<text x="490" y="129">Aplicar regras automáticas</text><text x="490" y="141">e validar configuração</text><text x="490" y="162" font-size="7.5" fill="#6b6b6b">UC-05 · RN</text>
+<text x="635" y="41">Configuração válida</text><text x="635" y="53">→ cotação</text><text x="635" y="74" font-size="7.5" fill="#6b6b6b">Bloco 4 (fora de escopo)</text>
+<text x="635" y="306">Classificar Produto</text><text x="635" y="318">a Serviço (opcional)</text><text x="635" y="340" font-size="7.5" fill="#6b6b6b">UC-06</text>
+<text x="445" y="258" font-size="7.5" fill="#6b6b6b" text-anchor="start">Reprovada: fim (RN-05)</text>
+<text x="398" y="182" font-size="7.5" fill="#6b6b6b">sim</text><text x="398" y="248" font-size="7.5" fill="#6b6b6b">não</text>
+</g>
+<g stroke="#0d0d0d" stroke-width="1.1" fill="none" marker-end="url(#ar)">
+<line x1="108" y1="44" x2="121" y2="44"/>
+<line x1="177" y1="63" x2="177" y2="112"/>
+<path d="M232,132 L241,132 L241,218 L249,218"/>
+<line x1="370" y1="218" x2="383" y2="218"/>
+<path d="M410,200 L410,44 L429,44"/>
+<line x1="410" y1="236" x2="410" y2="245"/>
+<line x1="490" y1="63" x2="490" y2="112"/>
+<path d="M550,132 L565,132 L565,44 L579,44"/>
+<line x1="690" y1="44" x2="711" y2="44"/>
+<path d="M490,151 L490,168 L635,168 L635,289" stroke-dasharray="4 3"/>
+<path d="M690,309 L702,309 L702,70 L686,70 L686,64" stroke-dasharray="4 3"/>
+</g>
+</svg></div>
+<p class="cap">Figura 2 — Processo TO-BE em raias. Tracejado = ramo opcional restrito ao perfil Gestão de Pedidos. A viabilidade é o gate: reprovada, o processo encerra (RN-05).</p>
+
+<!-- 3 -->
+<h2 class="sec"><span class="n">03</span>Casos de uso</h2>
+<p class="small">Convenção: o ator padrão de todos os casos de uso é o <b>Comercial</b>; a ficha só nomeia ator quando ele difere do padrão — sistema, integração externa ou perfil restrito por regra. Formato: condições e regras na ficha; fluxo principal numerado; <b>A</b>n = alternativos (caminhos válidos), <b>X</b>n = exceções (falha ou bloqueio), em uma linha cada. As regras vivem na seção 4 — a ficha lista quais valem para o caso de uso; dentro do fluxo, a referência aparece só onde é decisiva.</p>
+
+<!-- UC-01 -->
+<div class="uc"><div class="uc-h"><span class="id">UC-01</span>Localizar e selecionar o produto no catálogo</div><div class="uc-b">
+<table class="uc-meta">
+<tr><td class="l">Pré → Pós</td><td>Conta com segmento e usuário com perfil de venda → produto e plano selecionados</td></tr>
+<tr><td class="l">Regras</td><td><span class="rnlink" tabindex="0" data-rule="Plano &quot;Convencional Especial&quot; restrito aos perfis: ADMINISTRADOR · CONSULTORIA_INTERNA · ADM_VENDAS_REGIONAL · ADM_VENDAS_CENTRALIZADA · CONSULTOR_CORPORATIVO · GESTÃO_PRODUTOS">RN-01</span> <span class="rnlink" tabindex="0" data-rule="Plano &quot;Na Escola&quot; exige segmento Corporativo com subsegmento Governo">RN-02</span> <span class="rnlink" tabindex="0" data-rule="Comercialização nos segmentos Varejo, PME, Corporativo e Atacado (divergência com taxonomia das RN-24/26 — Devolutiva D4)">RN-43</span></td></tr>
+</table>
+<h4>Fluxo principal</h4>
+<ol class="fx">
+<li>Comercial busca "Banda Larga" ou navega pela categoria Conectividade.</li>
+<li>Sistema exibe o produto com os planos elegíveis ao perfil do usuário e ao segmento da conta.</li>
+<li>Comercial seleciona o plano; sistema abre a configuração.</li>
+</ol>
+<div class="alt"><b class="tag-a">A1 — Plano restrito fora da alçada</b>"Convencional Especial" só aparece para os perfis autorizados <span class="rnlink" tabindex="0" data-rule="Plano &quot;Convencional Especial&quot; restrito aos perfis: ADMINISTRADOR · CONSULTORIA_INTERNA · ADM_VENDAS_REGIONAL · ADM_VENDAS_CENTRALIZADA · CONSULTOR_CORPORATIVO · GESTÃO_PRODUTOS">RN-01</span>; "Na Escola" só para Corporativo/Governo <span class="rnlink" tabindex="0" data-rule="Plano &quot;Na Escola&quot; exige segmento Corporativo com subsegmento Governo">RN-02</span>. Os demais planos seguem normais.</div>
+<div class="exc"><b>X1 — Nenhum plano elegível.</b> Sistema informa a indisponibilidade e registra o motivo.</div>
+</div></div>
+
+<!-- UC-02 -->
+<div class="uc"><div class="uc-h"><span class="id">UC-02</span>Executar análise de viabilidade do endereço</div><div class="uc-b">
+<table class="uc-meta">
+<tr><td class="l">Ator adicional</td><td>Sistema de Viabilidade (externo)</td></tr>
+<tr><td class="l">Gatilhos</td><td>Nova instalação · mudança de endereço · upgrade de velocidade</td></tr>
+<tr><td class="l">Pré → Pós</td><td>Endereço de instalação informado → Tecnologia, Propriedade e Parceiro de Rede preenchidos e bloqueados; contratação liberada ou impedida</td></tr>
+<tr><td class="l">Regras</td><td><span class="rnlink" tabindex="0" data-rule="Endereço de instalação obrigatório para contratação">RN-03</span> a <span class="rnlink" tabindex="0" data-rule="Tecnologia, Propriedade de Rede e Parceiro de Rede são retornos da viabilidade — preenchimento automático, sem edição pelo usuário">RN-06</span></td></tr>
+</table>
+<h4>Fluxo principal</h4>
+<ol class="fx">
+<li>Comercial informa ou confirma o endereço.</li>
+<li>Sistema aciona a viabilidade e recebe tecnologia, propriedade e parceiro de rede.</li>
+<li>Sistema grava os três atributos como somente leitura e libera o prosseguimento.</li>
+</ol>
+<div class="alt"><b class="tag-a">A1 — Viabilidade reprovada</b>Contratação impedida no endereço, com o motivo registrado <span class="rnlink" tabindex="0" data-rule="Contratação condicionada à aprovação da viabilidade">RN-05</span>.</div>
+<div class="exc"><b>X1 — Serviço indisponível / timeout.</b> Atributos ficam vazios e sinalizados; configuração não conclui; reexecução disponível.</div>
+<div class="exc"><b>X2 — Localidade fora das listas de referência.</b> Serviços condicionados a localidade tratados como não elegíveis; o acesso segue o retorno da viabilidade.</div>
+</div></div>
+
+<!-- UC-03 -->
+<div class="uc"><div class="uc-h"><span class="id">UC-03</span>Configurar plano e velocidade</div><div class="uc-b">
+<table class="uc-meta">
+<tr><td class="l">Pré → Pós</td><td>UC-01 e UC-02 concluídos → acesso configurado, condição comercial fechada para o preço</td></tr>
+<tr><td class="l">Regras</td><td><span class="rnlink" tabindex="0" data-rule="Períodos de fidelização do plano Especial: 12 · 24 · 36 · 48 · 60 meses (regra referencia atributo &quot;Fidelização = Sim&quot; inexistente na árvore — Devolutiva D2)">RN-30</span></td></tr>
+</table>
+<h4>Fluxo principal</h4>
+<ol class="fx">
+<li>Comercial seleciona a velocidade entre as nove disponíveis (100 a 1024 mb).</li>
+<li>No plano Especial, indica se haverá fidelização e o período (12 · 24 · 36 · 48 · 60 meses); sem fidelização, a assinatura segue sem prazo.</li>
+<li>Sistema consolida a condição comercial.</li>
+</ol>
+<div class="exc"><b>X1 — Regra referencia atributo inexistente.</b> A condição "Fidelização = Sim" cita atributo que não está na árvore — comportamento definitivo na Devolutiva D2; até lá, a escolha do período vale como adesão. <span class="tag">PENDENTE</span></div>
+</div></div>
+
+<!-- UC-04 -->
+<div class="uc long"><div class="uc-h"><span class="id">UC-04</span>Contratar link temporário</div><div class="uc-b">
+<table class="uc-meta">
+<tr><td class="l">Pré → Pós</td><td>Nova ativação (ou conversão a partir de temporário), Parceiro ≠ Vtal → contratação por prazo, sem SVA e sem fidelidade, com desativação automática programada</td></tr>
+<tr><td class="l">Regras</td><td><span class="rnlink" tabindex="0" data-rule="&quot;Temporário&quot; nasce como &quot;Não&quot;, com opção de alteração">RN-07</span> a <span class="rnlink" tabindex="0" data-rule="Elegível apenas em nova ativação ou conversão temporário→permanente; conversão permanente→temporário vedada">RN-18</span> · condições de cobrança em validação regulatória (DJUR-37286 · ASR-734) <span class="tag">PENDENTE</span></td></tr>
+</table>
+<h4>Fluxo principal</h4>
+<ol class="fx">
+<li>Comercial marca "Temporário = Sim" (padrão é "Não").</li>
+<li>Sistema exibe Data de Início (opcional; vazia, vale a data de ativação) e Quantidade de dias corridos (1 a 364).</li>
+<li>Sistema oculta os serviços opcionais e desabilita a fidelização.</li>
+<li>Sistema registra o regime comercial — cobrança garantida sem pró-rata, sem multa, preço diferenciado com taxa de instalação — e programa a desativação em D+1 do fim com recolha do equipamento (execução no Bloco OM).</li>
+</ol>
+<div class="alt"><b class="tag-a">A1 — Prorrogação</b>Alterar a quantidade de dias posterga o fim até o teto de 364; a data de início não muda.</div>
+<div class="alt"><b class="tag-a">A2 — Conversão em permanente</b>Por renegociação, o temporário vira permanente: datas encerradas, SVAs e fidelização passam a valer.</div>
+<div class="exc"><b>X1 — Permanente → temporário:</b> vedado <span class="rnlink" tabindex="0" data-rule="Elegível apenas em nova ativação ou conversão temporário→permanente; conversão permanente→temporário vedada">RN-18</span>. · <b>X2 — Prazo &gt; 364 dias:</b> bloqueado, orientação de conversão. · <b>X3 — Parceiro = Vtal:</b> opção indisponível.</div>
+</div></div>
+
+<!-- UC-05 -->
+<div class="uc"><div class="uc-h"><span class="id">UC-05</span>Definir CGNAT e Modem automaticamente</div><div class="uc-b">
+<table class="uc-meta">
+<tr><td class="l">Ator</td><td>Sistema (sem ação do usuário)</td></tr>
+<tr><td class="l">Pré → Pós</td><td>Viabilidade concluída e segmento conhecido → CGNAT e Modem valorados</td></tr>
+<tr><td class="l">Regras</td><td><span class="rnlink" tabindex="0" data-rule="CGNAT marcado por padrão, sem opção de desmarcar para Varejo e Empresarial">RN-24</span> a <span class="rnlink" tabindex="0" data-rule="Rede Algar: Modem &quot;Comodato&quot; automático, sem troca, independentemente da localidade">RN-29</span> · taxonomia de segmento na Devolutiva D4 <span class="tag">PENDENTE</span></td></tr>
+</table>
+<h4>Fluxo principal</h4>
+<ol class="fx">
+<li>Sistema marca o CGNAT por padrão; em Varejo/Empresarial, o campo fica bloqueado.</li>
+<li>Sistema define o Modem pela propriedade de rede: Algar → "Comodato" bloqueado; Franqueado em localidade híbrida → "Franqueado" com troca permitida; Franqueado em localidade não híbrida → "Franqueado" bloqueado.</li>
+</ol>
+<div class="alt"><b class="tag-a">A1 — Corporativo/Operadoras com IP Fixo</b>Ao incluir o IP Fixo Válido (UC-07), o CGNAT é desmarcado automaticamente; removido o serviço, volta a marcado <span class="rnlink" tabindex="0" data-rule="Corporativo/Operadoras: CGNAT desmarcado automaticamente quando o serviço IP Fixo Válido é selecionado">RN-25</span>.</div>
+</div></div>
+
+<!-- UC-06 -->
+<div class="uc"><div class="uc-h"><span class="id">UC-06</span>Registrar Produto a Serviço (uso interno / teste)</div><div class="uc-b">
+<table class="uc-meta">
+<tr><td class="l">Ator</td><td>Gestão de Pedidos (exclusivo — demais perfis: somente leitura)</td></tr>
+<tr><td class="l">Pré → Pós</td><td>Configuração em andamento → contratação classificada, com responsáveis e centro de resultado</td></tr>
+<tr><td class="l">Regras</td><td><span class="rnlink" tabindex="0" data-rule="Padrão &quot;Não&quot;; alteração exclusiva do perfil &quot;Gestão de Pedidos&quot;; &quot;Interno&quot; = uso interno Algar, &quot;Teste&quot; = teste de produto">RN-19</span> a <span class="rnlink" tabindex="0" data-rule="Motivo do Teste, Centro de Resultado e Associado Responsável obrigatórios quando Produto a Serviço ≠ &quot;Não&quot;">RN-23</span></td></tr>
+</table>
+<h4>Fluxo principal</h4>
+<ol class="fx">
+<li>Usuário altera "Produto a Serviço" de "Não" para "Interno" ou "Teste".</li>
+<li>Sistema exige Motivo do Teste, Centro de Resultado e Associado Responsável.</li>
+<li>Se "Teste", sistema inclui automaticamente Bloqueio LDI e Bloqueio LDN.</li>
+<li>Sistema registra o vencimento no dia 27 (requisito repassado ao faturamento).</li>
+</ol>
+<div class="exc"><b>X1 — Reversão para "Não":</b> vedada após registrado <span class="rnlink" tabindex="0" data-rule="Registrado como Interno ou Teste, não retorna a &quot;Não&quot;">RN-20</span>.</div>
+</div></div>
+
+<!-- UC-07 -->
+<div class="uc long"><div class="uc-h"><span class="id">UC-07</span>Adicionar serviços opcionais (SVA)</div><div class="uc-b">
+<table class="uc-meta">
+<tr><td class="l">Pré → Pós</td><td>Acesso configurado e contratação não temporária → SVAs elegíveis incluídos, um por circuito, com contatos capturados</td></tr>
+<tr><td class="l">Regras</td><td><span class="rnlink" tabindex="0" data-rule="Temporário não é elegível à aquisição de SVAs">RN-14</span> · <span class="rnlink" tabindex="0" data-rule="Corporativo/Operadoras: CGNAT desmarcado automaticamente quando o serviço IP Fixo Válido é selecionado">RN-25</span>–<span class="rnlink" tabindex="0" data-rule="IP Fixo Válido: novas vendas apenas para Corporativo e Operadoras">RN-26</span> · <span class="rnlink" tabindex="0" data-rule="Exa Segurança exige E-mail e Celular do contato">RN-31</span> a <span class="rnlink" tabindex="0" data-rule="Skeelo: configurável somente em vendas promocionais, em pacote (obrigatório)">RN-41</span></td></tr>
+</table>
+<h4>Fluxo principal</h4>
+<ol class="fx">
+<li>Sistema exibe somente os serviços elegíveis ao contexto — a tabela abaixo é a fonte única da elegibilidade e das capturas.</li>
+<li>Comercial seleciona os desejados; sistema exige os contatos onde indicado e consolida.</li>
+</ol>
+<table>
+<thead><tr><th class="k">SVA</th><th>Elegível quando</th><th>Captura obrigatória</th></tr></thead>
+<tbody>
+<tr><td class="k">Exa Segurança<br><span class="small">Essencial · Pro · Premium</span></td><td>Um nível por cliente (mutuamente exclusivos); uma licença por CPF/CNPJ</td><td>E-mail e Celular</td></tr>
+<tr><td class="k">Fast Support</td><td>Localidade habilitada (lista de 113)</td><td>—</td></tr>
+<tr><td class="k">UpLoad 50%</td><td>Localidade habilitada (lista de 28) e velocidade até 800 mb</td><td>—</td></tr>
+<tr><td class="k">IP Fixo Válido</td><td>Novas vendas: Corporativo e Operadoras; desliga o CGNAT (UC-05/A1)</td><td>—</td></tr>
+<tr><td class="k">Proteção WEB</td><td>Sempre</td><td>Nome, E-mail e Celular</td></tr>
+<tr><td class="k">Monitora Rede</td><td>GPON com Parceiro "Nenhum"; em base existente, também viabilidade do equipamento (Snowflake)</td><td>—</td></tr>
+<tr><td class="k">Skeelo <span class="small">(5 variantes, escolha única)</span></td><td>Somente venda promocional em pacote</td><td>—</td></tr>
+</tbody>
+</table>
+<div class="exc"><b>X1 — Licença Exa já existente no CPF/CNPJ:</b> inclusão bloqueada; troca de nível é pós-venda. · <b>X2 — Upgrade acima de 800 mb com UpLoad ativo:</b> bloqueado até remover o serviço. · <b>X3 — Mudança de segmento após inclusão restrita:</b> revalidação exige remoção antes de concluir.</div>
+</div></div>
+
+<!-- UC-08 -->
+<div class="uc"><div class="uc-h"><span class="id">UC-08</span>Adicionar Recarga Recorrente na conta Pós</div><div class="uc-b">
+<table class="uc-meta">
+<tr><td class="l">Pré → Pós</td><td>Contratação não temporária e linha Pré-Pago Algar ativa → recarga mensal vinculada à fatura</td></tr>
+<tr><td class="l">Regras</td><td><span class="rnlink" tabindex="0" data-rule="Recarga Recorrente: número informado deve estar ativo no plano Pré-Pago Algar">RN-42</span></td></tr>
+</table>
+<h4>Fluxo principal</h4>
+<ol class="fx">
+<li>Comercial inclui a Recarga, escolhe o valor (R$ 20 · 25 · 30 · 50 · 100) e informa o número beneficiário.</li>
+<li>Sistema valida o número no Pré-Pago Algar e confirma a inclusão.</li>
+</ol>
+<div class="exc"><b>X1 — Número inválido ou validação indisponível:</b> inclusão bloqueada com mensagem.</div>
+</div></div>
+
+<!-- UC-09 -->
+<div class="uc"><div class="uc-h"><span class="id">UC-09</span>Manter dados de referência do catálogo</div><div class="uc-b">
+<table class="uc-meta">
+<tr><td class="l">Ator</td><td>Gestão de Produtos</td></tr>
+<tr><td class="l">Pré → Pós</td><td>Perfil administrativo → listas versionadas, aplicadas imediatamente às novas vendas</td></tr>
+<tr><td class="l">Regras</td><td><span class="rnlink" tabindex="0" data-rule="Rede Franqueado em localidade híbrida: Modem &quot;Franqueado&quot; automático, com permissão de troca">RN-27</span>–<span class="rnlink" tabindex="0" data-rule="Rede Franqueado em localidade não híbrida: Modem &quot;Franqueado&quot; automático, sem troca">RN-28</span> · <span class="rnlink" tabindex="0" data-rule="Fast Support: restrito às localidades habilitadas (lista de 113)">RN-35</span>–<span class="rnlink" tabindex="0" data-rule="UpLoad 50%: restrito às localidades habilitadas (lista de 28)">RN-36</span> · <span class="rnlink" tabindex="0" data-rule="Skeelo: configurável somente em vendas promocionais, em pacote (obrigatório)">RN-41</span></td></tr>
+</table>
+<h4>Fluxo principal</h4>
+<ol class="fx">
+<li>Administrador atualiza as listas: localidades × propriedade de rede (377), Fast Support (113), UpLoad 50% (28).</li>
+<li>Sistema versiona a alteração (autor e data) e passa a aplicá-la nas novas configurações.</li>
+</ol>
+<div class="alt"><b class="tag-a">A1 — Oferta promocional</b>Ativa ou encerra a oferta promocional que qualifica o Skeelo.</div>
+</div></div>
+
+<!-- 4 -->
+<h2 class="sec"><span class="n">04</span>Catálogo de Regras de Negócio</h2>
+<p class="small">A numeração é a referência única usada nos casos de uso.</p>
+<h3>Comerciais gerais</h3>
+<table>
+<thead><tr><th class="k">RN</th><th>Regra</th></tr></thead>
+<tbody>
+<tr><td class="k">RN-43</td><td>Comercialização nos segmentos Varejo, PME, Corporativo e Atacado <i>(divergência com taxonomia das RN-24/26 — Devolutiva D4)</i></td></tr>
+<tr><td class="k">RN-44</td><td>Cobrança por assinatura recorrente mensal</td></tr>
+<tr><td class="k">RN-45</td><td>Cobrança de taxa de instalação</td></tr>
+<tr><td class="k">RN-46</td><td>Cobrança de taxa de mudança de endereço</td></tr>
+<tr><td class="k">RN-47</td><td>Descontos conforme políticas comerciais e ofertas vigentes do marketing de segmentos</td></tr>
+</tbody>
+</table>
+<h3>Plano e elegibilidade de venda</h3>
+<table>
+<thead><tr><th class="k">RN</th><th>Regra</th></tr></thead>
+<tbody>
+<tr><td class="k">RN-01</td><td>Plano "Convencional Especial" restrito aos perfis: ADMINISTRADOR · CONSULTORIA_INTERNA · ADM_VENDAS_REGIONAL · ADM_VENDAS_CENTRALIZADA · CONSULTOR_CORPORATIVO · GESTÃO_PRODUTOS</td></tr>
+<tr><td class="k">RN-02</td><td>Plano "Na Escola" exige segmento Corporativo com subsegmento Governo</td></tr>
+</tbody>
+</table>
+<h3>Endereço e viabilidade</h3>
+<table>
+<thead><tr><th class="k">RN</th><th>Regra</th></tr></thead>
+<tbody>
+<tr><td class="k">RN-03</td><td>Endereço de instalação obrigatório para contratação</td></tr>
+<tr><td class="k">RN-04</td><td>Viabilidade técnica/capacidade executada em: nova instalação, mudança de endereço e upgrade de velocidade</td></tr>
+<tr><td class="k">RN-05</td><td>Contratação condicionada à aprovação da viabilidade</td></tr>
+<tr><td class="k">RN-06</td><td>Tecnologia, Propriedade de Rede e Parceiro de Rede são retornos da viabilidade — preenchimento automático, sem edição pelo usuário</td></tr>
+</tbody>
+</table>
+<h3>Link temporário</h3>
+<table>
+<thead><tr><th class="k">RN</th><th>Regra</th></tr></thead>
+<tbody>
+<tr><td class="k">RN-07</td><td>"Temporário" nasce como "Não", com opção de alteração</td></tr>
+<tr><td class="k">RN-08</td><td>Data de Início visível somente com Temporário=Sim; não informada, assume a data de ativação do link</td></tr>
+<tr><td class="k">RN-09</td><td>Quantidade de dias corridos entre 1 e 364, contados da ativação</td></tr>
+<tr><td class="k">RN-10</td><td>Prorrogação permitida até o teto, postergando a data fim; data de início inalterável</td></tr>
+<tr><td class="k">RN-11</td><td>Sem multa de cancelamento; cobrança garantida, sem pró-rata — cancelamento antecipado paga integral <i>(validação regulatória: DJUR-37286 · ASR-734)</i></td></tr>
+<tr><td class="k">RN-12</td><td>Desativação automática em D+1 da data fim</td></tr>
+<tr><td class="k">RN-13</td><td>Há processo de recolha do equipamento ao término</td></tr>
+<tr><td class="k">RN-14</td><td>Temporário não é elegível à aquisição de SVAs</td></tr>
+<tr><td class="k">RN-15</td><td>Temporário inelegível quando Parceiro de Rede = Vtal</td></tr>
+<tr><td class="k">RN-16</td><td>Temporário não tem fidelidade contratual</td></tr>
+<tr><td class="k">RN-17</td><td>Precificação diferenciada (superior à permanente) e taxa de instalação devida</td></tr>
+<tr><td class="k">RN-18</td><td>Elegível apenas em nova ativação ou conversão temporário→permanente; conversão permanente→temporário vedada</td></tr>
+</tbody>
+</table>
+<h3>Produto a Serviço</h3>
+<table>
+<thead><tr><th class="k">RN</th><th>Regra</th></tr></thead>
+<tbody>
+<tr><td class="k">RN-19</td><td>Padrão "Não"; alteração exclusiva do perfil "Gestão de Pedidos"; "Interno" = uso interno Algar, "Teste" = teste de produto</td></tr>
+<tr><td class="k">RN-20</td><td>Registrado como Interno ou Teste, não retorna a "Não"</td></tr>
+<tr><td class="k">RN-21</td><td>Data de vencimento obrigatoriamente dia 27</td></tr>
+<tr><td class="k">RN-22</td><td>"Teste" obriga a inclusão dos serviços Bloqueio LDI e Bloqueio LDN</td></tr>
+<tr><td class="k">RN-23</td><td>Motivo do Teste, Centro de Resultado e Associado Responsável obrigatórios quando Produto a Serviço ≠ "Não"</td></tr>
+</tbody>
+</table>
+<h3>CGNAT, IP e Modem</h3>
+<table>
+<thead><tr><th class="k">RN</th><th>Regra</th></tr></thead>
+<tbody>
+<tr><td class="k">RN-24</td><td>CGNAT marcado por padrão, sem opção de desmarcar para Varejo e Empresarial</td></tr>
+<tr><td class="k">RN-25</td><td>Corporativo/Operadoras: CGNAT desmarcado automaticamente quando o serviço IP Fixo Válido é selecionado</td></tr>
+<tr><td class="k">RN-26</td><td>IP Fixo Válido: novas vendas apenas para Corporativo e Operadoras</td></tr>
+<tr><td class="k">RN-27</td><td>Rede Franqueado em localidade híbrida: Modem "Franqueado" automático, com permissão de troca</td></tr>
+<tr><td class="k">RN-28</td><td>Rede Franqueado em localidade não híbrida: Modem "Franqueado" automático, sem troca</td></tr>
+<tr><td class="k">RN-29</td><td>Rede Algar: Modem "Comodato" automático, sem troca, independentemente da localidade</td></tr>
+</tbody>
+</table>
+<h3>Fidelização</h3>
+<table>
+<thead><tr><th class="k">RN</th><th>Regra</th></tr></thead>
+<tbody>
+<tr><td class="k">RN-30</td><td>Períodos de fidelização do plano Especial: 12 · 24 · 36 · 48 · 60 meses <i>(regra referencia atributo "Fidelização = Sim" inexistente na árvore — Devolutiva D2)</i></td></tr>
+</tbody>
+</table>
+<h3>Serviços opcionais e funcionalidade</h3>
+<table>
+<thead><tr><th class="k">RN</th><th>Regra</th></tr></thead>
+<tbody>
+<tr><td class="k">RN-31</td><td>Exa Segurança exige E-mail e Celular do contato</td></tr>
+<tr><td class="k">RN-32</td><td>Exa: uma licença por CPF/CNPJ</td></tr>
+<tr><td class="k">RN-33</td><td>Níveis Exa (Essencial/Pro/Premium) mutuamente exclusivos</td></tr>
+<tr><td class="k">RN-34</td><td>Fast Support: limitado a um por circuito de Banda Larga</td></tr>
+<tr><td class="k">RN-35</td><td>Fast Support: restrito às localidades habilitadas (lista de 113)</td></tr>
+<tr><td class="k">RN-36</td><td>UpLoad 50%: restrito às localidades habilitadas (lista de 28)</td></tr>
+<tr><td class="k">RN-37</td><td>UpLoad 50%: vendável somente até a velocidade de 800 mb</td></tr>
+<tr><td class="k">RN-38</td><td>Proteção WEB exige Nome do Contato, E-mail e Celular</td></tr>
+<tr><td class="k">RN-39</td><td>Monitora Rede: disponível apenas com tecnologia GPON e Parceiro de Rede "Nenhum"</td></tr>
+<tr><td class="k">RN-40</td><td>Monitora Rede em base existente: viabilidade do equipamento via base Snowflake (modem contendo "beegol")</td></tr>
+<tr><td class="k">RN-41</td><td>Skeelo: configurável somente em vendas promocionais, em pacote (obrigatório)</td></tr>
+<tr><td class="k">RN-42</td><td>Recarga Recorrente: número informado deve estar ativo no plano Pré-Pago Algar</td></tr>
+</tbody>
+</table>
+
+<!-- 5 -->
+<h2 class="sec"><span class="n">05</span>Dicionário de dados</h2>
+<p class="small">Cada informação manipulada nos casos de uso, uma a uma. <b>Obrig.</b>: S = sempre · C = condicional (ver RN) · N = opcional. <b>Origem</b>: U = usuário · V = viabilidade · S = sistema · G = gestão. Mapeamento = destino no catálogo (trilha de referência RLM) para o handoff técnico.</p>
+<table class="dd">
+<thead><tr><th class="k">ID</th><th>Informação · descrição</th><th class="k">Tipo · formato</th><th>Domínio</th><th class="k">Obrig. · Origem</th><th>RNs · Mapeamento</th></tr></thead>
+<tbody>
+<tr><td class="k">DD-01</td><td><b>Plano</b> — modalidade comercial da Banda Larga</td><td class="k">Lista</td><td>Convencional · Convencional Especial · Na Escola</td><td class="k">S · U</td><td>RN-01, 02 · Atributo do produto-pai</td></tr>
+<tr><td class="k">DD-02</td><td><b>Velocidade</b> — banda contratada (download)</td><td class="k">Lista</td><td>100 · 200 · 300 · 400 · 500 · 600 · 700 · 800 · 1024 mb</td><td class="k">S · U</td><td>RN-37 · Atributo do pai; impacta preço</td></tr>
+<tr><td class="k">DD-03</td><td><b>Período de fidelização</b> — prazo de permanência do plano Especial</td><td class="k">Lista (meses)</td><td>12 · 24 · 36 · 48 · 60</td><td class="k">C · U</td><td>RN-30 · Termo do modelo de venda (não é atributo)</td></tr>
+<tr><td class="k">DD-04</td><td><b>Tecnologia de acesso</b> — meio físico entregue no endereço</td><td class="k">Lista</td><td>GPON · ADSL · VDSL · RADIO</td><td class="k">S · V</td><td>RN-06, 39 · Atributo do pai, somente leitura</td></tr>
+<tr><td class="k">DD-05</td><td><b>Propriedade de rede</b> — dono da infraestrutura no endereço</td><td class="k">Lista</td><td>Algar · Franqueado</td><td class="k">S · V</td><td>RN-06, 27–29 · Atributo do pai, somente leitura</td></tr>
+<tr><td class="k">DD-06</td><td><b>Parceiro de rede</b> — operador de rede terceiro, quando houver</td><td class="k">Lista</td><td>Nenhum · Vtal</td><td class="k">S · V</td><td>RN-06, 15, 39 · Atributo do pai, somente leitura</td></tr>
+<tr><td class="k">DD-07</td><td><b>Temporário</b> — indica contratação por prazo determinado</td><td class="k">Sim/Não</td><td>padrão Não</td><td class="k">S · U</td><td>RN-07, 14–18 · Atributo do pai</td></tr>
+<tr><td class="k">DD-08</td><td><b>Data de início do temporário</b></td><td class="k">Data (dd/mm/aaaa)</td><td>≥ data atual; vazio = data de ativação</td><td class="k">N · U</td><td>RN-08, 10 · Atributo do pai, condicional a DD-07</td></tr>
+<tr><td class="k">DD-09</td><td><b>Quantidade de dias corridos</b> — duração do temporário</td><td class="k">Inteiro</td><td>1 a 364</td><td class="k">C · U</td><td>RN-09, 10 · Atributo do pai, condicional a DD-07</td></tr>
+<tr><td class="k">DD-10</td><td><b>Produto a Serviço</b> — classificação de uso interno/teste</td><td class="k">Lista</td><td>Não · Interno · Teste (padrão Não)</td><td class="k">S · U (Gestão de Pedidos)</td><td>RN-19–23 · Atributo do pai (D1: três estados)</td></tr>
+<tr><td class="k">DD-11</td><td><b>Motivo do teste</b></td><td class="k">Lista</td><td>Externo · Teste · Monitoramento</td><td class="k">C · U</td><td>RN-23 · Atributo do pai, condicional a DD-10 ≠ Não</td></tr>
+<tr><td class="k">DD-12</td><td><b>Centro de resultado</b> — unidade responsável pelo custo</td><td class="k">Texto (80)</td><td>livre</td><td class="k">C · U</td><td>RN-23 · Atributo do pai, condicional</td></tr>
+<tr><td class="k">DD-13</td><td><b>Associado responsável</b> — colaborador responsável</td><td class="k">Texto (80)</td><td>livre</td><td class="k">C · U</td><td>RN-23 · Atributo do pai, condicional</td></tr>
+<tr><td class="k">DD-14</td><td><b>IP dinâmico não válido (CGNAT)</b> — endereçamento compartilhado</td><td class="k">Sim/Não</td><td>padrão Sim</td><td class="k">S · S</td><td>RN-24, 25 · Atributo do pai, automático</td></tr>
+<tr><td class="k">DD-15</td><td><b>Modem</b> — regime de fornecimento do equipamento</td><td class="k">Lista</td><td>Franqueado · Comodato</td><td class="k">S · S (editável: RN-27)</td><td>RN-27–29 · Atributo do pai, automático</td></tr>
+<tr><td class="k">DD-16</td><td><b>Exa Segurança — nível</b></td><td class="k">Escolha única</td><td>Essencial · Pro · Premium · nenhum</td><td class="k">N · U</td><td>RN-31–33 · Produtos-filho em grupo máx. 1</td></tr>
+<tr><td class="k">DD-17</td><td><b>Fast Support</b> — suporte técnico prioritário</td><td class="k">Sim/Não</td><td>—</td><td class="k">N · U</td><td>RN-34, 35 · Produto-filho opcional</td></tr>
+<tr><td class="k">DD-18</td><td><b>UpLoad 50%</b> — upload a 50% do download</td><td class="k">Sim/Não</td><td>—</td><td class="k">N · U</td><td>RN-36, 37 · Produto-filho opcional</td></tr>
+<tr><td class="k">DD-19</td><td><b>IP Fixo Válido</b> — endereço IP público fixo</td><td class="k">Sim/Não</td><td>—</td><td class="k">N · U</td><td>RN-25, 26 · Produto-filho opcional</td></tr>
+<tr><td class="k">DD-20</td><td><b>Proteção WEB</b> — navegação protegida</td><td class="k">Sim/Não</td><td>—</td><td class="k">N · U</td><td>RN-38 · Produto-filho opcional</td></tr>
+<tr><td class="k">DD-21</td><td><b>Monitora Rede</b> — monitoramento da rede do cliente</td><td class="k">Sim/Não</td><td>—</td><td class="k">N · U</td><td>RN-39, 40 · Produto-filho opcional</td></tr>
+<tr><td class="k">DD-22</td><td><b>Skeelo — variante</b> — pacote de leitura/áudio</td><td class="k">Escolha única</td><td>Audio Books · Mini Books · Skeelo Books · Books Business · Books Kids · nenhum</td><td class="k">N · U</td><td>RN-41 · Produtos-filho em grupo máx. 1</td></tr>
+<tr><td class="k">DD-23</td><td><b>Recarga — valor mensal</b></td><td class="k">Lista (R$)</td><td>20 · 25 · 30 · 50 · 100</td><td class="k">C · U</td><td>RN-42 · Atributo do filho Recarga</td></tr>
+<tr><td class="k">DD-24</td><td><b>Recarga — número beneficiário</b></td><td class="k">Numérico (DDD+número, 11 dígitos)</td><td>linha ativa no Pré-Pago Algar</td><td class="k">C · U</td><td>RN-42 · Atributo do filho; validação externa</td></tr>
+<tr><td class="k">DD-25</td><td><b>Nome do contato do serviço</b></td><td class="k">Texto (120)</td><td>livre</td><td class="k">C · U</td><td>RN-38 · Atributo dos filhos Proteção WEB</td></tr>
+<tr><td class="k">DD-26</td><td><b>E-mail do contato do serviço</b></td><td class="k">Texto (e-mail válido)</td><td>formato e-mail</td><td class="k">C · U</td><td>RN-31, 38 · Atributo dos filhos Exa e Proteção WEB</td></tr>
+<tr><td class="k">DD-27</td><td><b>Celular do contato do serviço</b></td><td class="k">Numérico (11 dígitos)</td><td>celular válido</td><td class="k">C · U</td><td>RN-31, 38 · Atributo dos filhos Exa e Proteção WEB</td></tr>
+<tr><td class="k">DD-28</td><td><b>Endereço de instalação</b> — local de entrega do serviço</td><td class="k">Endereço estruturado</td><td>CEP válido; localidade reconhecida</td><td class="k">S · U</td><td>RN-03, 04 · Contexto da transação (entrada da viabilidade)</td></tr>
+<tr><td class="k">DD-29</td><td><b>Segmento · Subsegmento</b> — classificação comercial do cliente</td><td class="k">Listas</td><td>Varejo · PME · Corporativo · Atacado (+ Governo; D4)</td><td class="k">S · Conta</td><td>RN-02, 24–26, 43 · Contexto (Conta)</td></tr>
+<tr><td class="k">DD-30</td><td><b>Localidade</b> — município/área do endereço</td><td class="k">Lista de referência</td><td>377 localidades cadastradas</td><td class="k">S · Endereço</td><td>RN-27, 28, 35, 36 · Contexto; chave das listas de referência</td></tr>
+<tr><td class="k">DD-31</td><td><b>Perfil do usuário</b> — alçada de venda</td><td class="k">Lista</td><td>perfis do CRM (mapeados de D5)</td><td class="k">S · Usuário</td><td>RN-01, 19 · Contexto (Usuário)</td></tr>
+</tbody>
+</table>
+
+<h3>5.1 Dados de referência (administrados no UC-09)</h3>
+<table>
+<thead><tr><th>Lista</th><th class="k">Chave</th><th>Conteúdo</th><th class="k">Volume</th><th>Uso</th></tr></thead>
+<tbody>
+<tr><td>Localidade × Propriedade de rede</td><td class="k">Localidade · UF · código</td><td>Algar · Franqueado · Híbrido (Franquias e Própria)</td><td class="k">377</td><td>DD-15 (Modem) · UC-05</td></tr>
+<tr><td>Localidades Fast Support</td><td class="k">Localidade</td><td>habilitada</td><td class="k">113</td><td>DD-17 · UC-07</td></tr>
+<tr><td>Localidades UpLoad 50%</td><td class="k">Cidade · UF</td><td>habilitada</td><td class="k">28</td><td>DD-18 · UC-07</td></tr>
+</tbody>
+</table>
+
+<!-- 6 MODELO DE DADOS -->
+<h2 class="sec"><span class="n">06</span>Modelo de dados (MER)</h2>
+<p class="small">Visão conceitual das entidades que o produto exige e de como se relacionam. Notação: 1 — N. Entidades de contexto (Conta, Usuário, Endereço) já existem no CRM; entidades de catálogo são construídas neste escopo. <span class="tag mid">INFERIDO</span> sobre estrutura <span class="tag dark">VERIFICADO: doc oficial</span></p>
+<div class="fig"><svg viewBox="0 0 760 560" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial" font-size="8.6">
+<defs><marker id="one" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"><line x1="5" y1="1" x2="5" y2="9" stroke="#0d0d0d" stroke-width="1.4"/></marker>
+<marker id="many" markerWidth="12" markerHeight="12" refX="11" refY="6" orient="auto"><path d="M0,6 L11,1 M0,6 L11,11 M0,6 L11,6" stroke="#0d0d0d" stroke-width="1.2" fill="none"/></marker></defs>
+<style>.e{fill:#fafbfc;stroke:#0d0d0d;stroke-width:1.3}.h{fill:#0d0d0d}.ht{fill:#fafbfc;font-weight:700;font-size:9px}.a{fill:#0d0d0d}.ctx{fill:#ececec;stroke:#6b6b6b;stroke-dasharray:4 3}.l{stroke:#0d0d0d;stroke-width:1.1;fill:none}
+  span.rnlink { position:relative; color:#0d0d0d; font-family:Consolas,monospace; font-size:8.2pt;
+    background:#ececec; border:1px solid #6b6b6b; border-bottom:2px solid #0d0d0d;
+    padding:0 4px; border-radius:2px; white-space:nowrap; cursor:help; outline:none; }
+  span.rnlink::after { content: attr(data-rule); position:absolute; left:0; bottom:135%;
+    width:340px; max-width:72vw; background:#0d0d0d; color:#fafbfc;
+    font-family:'Segoe UI',Arial,sans-serif; font-size:8.6pt; line-height:1.45; font-weight:400;
+    padding:9px 12px; border-radius:4px; white-space:normal; text-align:left;
+    opacity:0; visibility:hidden; transition:opacity .12s; z-index:50;
+    box-shadow:0 3px 10px rgba(0,0,0,.35); pointer-events:none; }
+  span.rnlink::before { content:""; position:absolute; left:14px; bottom:118%;
+    border:6px solid transparent; border-top-color:#0d0d0d; opacity:0; visibility:hidden; transition:opacity .12s; z-index:50; }
+  span.rnlink:hover::after, span.rnlink:focus::after,
+  span.rnlink:hover::before, span.rnlink:focus::before { opacity:1; visibility:visible; }
+</style>
+<!-- Catálogo -->
+<g transform="translate(20,20)"><rect class="e" width="130" height="52"/><rect class="h" width="130" height="16"/><text class="ht" x="65" y="12" text-anchor="middle">CATÁLOGO</text><text class="a" x="6" y="30">nome (canônico)</text><text class="a" x="6" y="44">1 por org</text></g>
+<g transform="translate(20,100)"><rect class="e" width="130" height="52"/><rect class="h" width="130" height="16"/><text class="ht" x="65" y="12" text-anchor="middle">CATEGORIA</text><text class="a" x="6" y="30">nome (Conectividade)</text><text class="a" x="6" y="44">hierarquia</text></g>
+<!-- Classificação -->
+<g transform="translate(200,20)"><rect class="e" width="150" height="52"/><rect class="h" width="150" height="16"/><text class="ht" x="75" y="12" text-anchor="middle">CLASSIFICAÇÃO</text><text class="a" x="6" y="30">Banda Larga (arquétipo)</text><text class="a" x="6" y="44">herda atributos</text></g>
+<!-- Atributo -->
+<g transform="translate(400,20)"><rect class="e" width="150" height="66"/><rect class="h" width="150" height="16"/><text class="ht" x="75" y="12" text-anchor="middle">ATRIBUTO</text><text class="a" x="6" y="30">nome · tipo · domínio</text><text class="a" x="6" y="44">padrão · obrigatório</text><text class="a" x="6" y="58">categoria de atributo</text></g>
+<!-- Produto -->
+<g transform="translate(200,120)"><rect class="e" width="150" height="80"/><rect class="h" width="150" height="16"/><text class="ht" x="75" y="12" text-anchor="middle">PRODUTO</text><text class="a" x="6" y="30">Banda Larga (pai)</text><text class="a" x="6" y="44">SVAs · Recarga · Taxas</text><text class="a" x="6" y="58">ativo · assetizável</text><text class="a" x="6" y="72">especificação técnica</text></g>
+<!-- Grupo -->
+<g transform="translate(400,120)"><rect class="e" width="150" height="52"/><rect class="h" width="150" height="16"/><text class="ht" x="75" y="12" text-anchor="middle">GRUPO DE COMPONENTES</text><text class="a" x="6" y="30">Exa · Skeelo · Serviços · Func.</text><text class="a" x="6" y="44">mín · máx</text></g>
+<!-- Componente -->
+<g transform="translate(590,120)"><rect class="e" width="150" height="52"/><rect class="h" width="150" height="16"/><text class="ht" x="75" y="12" text-anchor="middle">COMPONENTE</text><text class="a" x="6" y="30">produto-filho (→ PRODUTO) · papel</text><text class="a" x="6" y="44">qtd mín/máx · editável</text></g>
+<!-- Modelo de venda -->
+<g transform="translate(590,20)"><rect class="e" width="150" height="66"/><rect class="h" width="150" height="16"/><text class="ht" x="75" y="12" text-anchor="middle">MODELO DE VENDA</text><text class="a" x="6" y="30">recorrente sem prazo</text><text class="a" x="6" y="44">termo 12–60 meses</text><text class="a" x="6" y="58">avulso (taxas)</text></g>
+<!-- Regras -->
+<g transform="translate(200,240)"><rect class="e" width="150" height="66"/><rect class="h" width="150" height="16"/><text class="ht" x="75" y="12" text-anchor="middle">REGRA DE ELEGIBILIDADE</text><text class="a" x="6" y="30">contexto → visível?</text><text class="a" x="6" y="44">RN-01/02/26/35/36/39/41</text><text class="a" x="6" y="58">decision table</text></g>
+<g transform="translate(400,240)"><rect class="e" width="150" height="66"/><rect class="h" width="150" height="16"/><text class="ht" x="75" y="12" text-anchor="middle">REGRA DE CONFIGURAÇÃO</text><text class="a" x="6" y="30">atributo ↔ atributo</text><text class="a" x="6" y="44">RN-08/09/24/25/27–29/37</text><text class="a" x="6" y="58">validação · inclusão</text></g>
+<g transform="translate(590,240)"><rect class="e" width="150" height="66"/><rect class="h" width="150" height="16"/><text class="ht" x="75" y="12" text-anchor="middle">LISTA DE REFERÊNCIA</text><text class="a" x="6" y="30">localidade × propriedade</text><text class="a" x="6" y="44">Fast Support · UpLoad</text><text class="a" x="6" y="58">versionada (UC-09)</text></g>
+<!-- Contexto -->
+<g transform="translate(20,380)"><rect class="ctx" width="130" height="52"/><rect class="h" width="130" height="16"/><text class="ht" x="65" y="12" text-anchor="middle">CONTA</text><text class="a" x="6" y="30">CPF/CNPJ</text><text class="a" x="6" y="44">segmento · subsegmento</text></g>
+<g transform="translate(200,380)"><rect class="ctx" width="150" height="52"/><rect class="h" width="150" height="16"/><text class="ht" x="75" y="12" text-anchor="middle">ENDEREÇO / VIABILIDADE</text><text class="a" x="6" y="30">localidade · CEP</text><text class="a" x="6" y="44">tecnologia · rede · parceiro</text></g>
+<g transform="translate(400,380)"><rect class="ctx" width="150" height="52"/><rect class="h" width="150" height="16"/><text class="ht" x="75" y="12" text-anchor="middle">USUÁRIO / PERFIL</text><text class="a" x="6" y="30">alçada de venda</text><text class="a" x="6" y="44">RN-01 · RN-19</text></g>
+<g transform="translate(590,380)"><rect class="e" width="150" height="80"/><rect class="h" width="150" height="16"/><text class="ht" x="75" y="12" text-anchor="middle">CONFIGURAÇÃO DA VENDA</text><text class="a" x="6" y="30">instância na cotação</text><text class="a" x="6" y="44">valores DD-01…DD-27</text><text class="a" x="6" y="58">itens escolhidos</text><text class="a" x="6" y="72">→ pedido → ativo</text></g>
+<!-- Relações -->
+<g class="l">
+<line x1="85" y1="72" x2="85" y2="100" marker-start="url(#one)" marker-end="url(#many)"/>
+<line x1="150" y1="126" x2="200" y2="140" marker-start="url(#many)" marker-end="url(#many)"/>
+<line x1="275" y1="72" x2="275" y2="120" marker-start="url(#one)" marker-end="url(#many)"/>
+<line x1="350" y1="46" x2="400" y2="46" marker-start="url(#many)" marker-end="url(#many)"/>
+
+<line x1="350" y1="146" x2="400" y2="146" marker-start="url(#one)" marker-end="url(#many)"/>
+<line x1="550" y1="146" x2="590" y2="146" marker-start="url(#one)" marker-end="url(#many)"/>
+<path d="M600,86 L600,103 L290,103 L290,120" marker-start="url(#many)" marker-end="url(#many)"/>
+<line x1="275" y1="200" x2="275" y2="240" marker-start="url(#one)" marker-end="url(#many)"/>
+<path d="M320,200 L320,222 L475,222 L475,240" marker-start="url(#one)" marker-end="url(#many)"/>
+
+<line x1="550" y1="290" x2="590" y2="290" stroke-dasharray="4 3"/><path d="M300,306 L300,330 L665,330 L665,306" stroke-dasharray="4 3"/>
+<line x1="150" y1="406" x2="200" y2="406" marker-start="url(#one)" marker-end="url(#many)"/>
+
+<line x1="550" y1="406" x2="590" y2="406" stroke-dasharray="4 3"/>
+
+<line x1="275" y1="306" x2="275" y2="380" stroke-dasharray="4 3"/>
+<path d="M85,432 L85,470 L665,470 L665,460" stroke-dasharray="4 3"/><line x1="275" y1="432" x2="275" y2="470" stroke-dasharray="4 3"/>
+</g>
+<g font-size="7.6" fill="#6b6b6b">
+<text x="553" y="286">consome</text><text x="420" y="342">consome listas</text><text x="140" y="480">contexto avaliado pelas regras e materializado na configuração</text>
+<text x="440" y="99">vendido com (N:N)</text>
+</g>
+<rect x="20" y="500" width="720" height="48" fill="#f2f3f5" stroke="#d9d9d9"/>
+<text x="30" y="518" font-size="8.2" fill="#0d0d0d"><tspan font-weight="700">Legenda</tspan> — caixa sólida: entidade construída neste escopo · caixa tracejada: contexto já existente no CRM · linha tracejada: leitura/consumo. As regras avaliam o contexto e a configuração em curso.</text>
+<text x="30" y="536" font-size="8.2" fill="#0d0d0d">Cardinalidades-chave: 1 Produto-pai → N Grupos → N Componentes · 1 Produto → N Modelos de venda · Classificação 1 → N Produtos · Atributo N ↔ N Produtos (via classificação).</text>
+</svg></div>
+<p class="cap">Figura 3 — Modelo entidade-relacionamento conceitual do catálogo Banda Larga e seu contexto de venda.</p>
+
+<!-- 7 MATRIZ PERFIL x PERMISSAO -->
+<h2 class="sec"><span class="n">07</span>Matriz perfil × permissão</h2>
+<p class="small">E = executa · V = apenas visualiza · — = sem acesso · ★ = restrito a subconjunto (ver nota). Perfis são funcionais; o mapeamento para perfis/permissões do CRM é a Devolutiva D5.</p>
+<table class="mx">
+<thead><tr><th>Caso de uso</th><th>Comercial de Vendas</th><th>Backoffice</th><th>Gestão de Pedidos</th><th>Gestão de Produtos</th><th>Perfis RN-01 ★</th></tr></thead>
+<tbody>
+<tr><td>UC-01 Localizar/selecionar produto</td><td>E (sem Especial)</td><td>E (sem Especial)</td><td>V</td><td>V</td><td>E (com Especial)</td></tr>
+<tr><td>UC-02 Análise de viabilidade</td><td>E</td><td>E</td><td>—</td><td>—</td><td>E</td></tr>
+<tr><td>UC-03 Plano e velocidade</td><td>E</td><td>E</td><td>—</td><td>—</td><td>E</td></tr>
+<tr><td>UC-04 Link temporário</td><td>E</td><td>E</td><td>—</td><td>—</td><td>E</td></tr>
+<tr><td>UC-05 CGNAT e Modem automáticos</td><td>V (Modem editável: RN-27)</td><td>V</td><td>—</td><td>—</td><td>V</td></tr>
+<tr><td>UC-06 Produto a Serviço</td><td>V</td><td>V</td><td><b>E</b></td><td>—</td><td>V</td></tr>
+<tr><td>UC-07 Serviços opcionais</td><td>E</td><td>E</td><td>—</td><td>—</td><td>E</td></tr>
+<tr><td>UC-08 Recarga Recorrente</td><td>E</td><td>E</td><td>—</td><td>—</td><td>E</td></tr>
+<tr><td>UC-09 Dados de referência</td><td>—</td><td>—</td><td>—</td><td><b>E</b></td><td>V (GESTÃO_PRODUTOS)</td></tr>
+</tbody>
+</table>
+<p class="small">★ Perfis autorizados ao plano Especial (RN-01): ADMINISTRADOR · CONSULTORIA_INTERNA · ADM_VENDAS_REGIONAL · ADM_VENDAS_CENTRALIZADA · CONSULTOR_CORPORATIVO · GESTÃO_PRODUTOS — herdam as permissões do Comercial e adicionam o plano Especial.</p>
+<h3>7.1 Permissão sobre dados de referência</h3>
+<table class="mx">
+<thead><tr><th>Lista</th><th>Comercial</th><th>Gestão de Pedidos</th><th>Gestão de Produtos</th></tr></thead>
+<tbody>
+<tr><td>Localidade × Propriedade de rede</td><td>Leitura (indireta, via regras)</td><td>Leitura</td><td>Criar · Ler · Alterar · Inativar</td></tr>
+<tr><td>Localidades Fast Support / UpLoad 50%</td><td>Leitura (indireta)</td><td>Leitura</td><td>Criar · Ler · Alterar · Inativar</td></tr>
+<tr><td>Oferta promocional (Skeelo)</td><td>Leitura</td><td>Leitura</td><td>Ativar · Encerrar</td></tr>
+</tbody>
+</table>
+
+<!-- 8 RASTREABILIDADE -->
+<h2 class="sec"><span class="n">08</span>Matriz de rastreabilidade</h2>
+<p class="small">Garante que nenhuma regra, informação ou caso de uso ficou sem verificação. CA = critério de aceitação (seção 10).</p>
+<table>
+<thead><tr><th class="k">UC</th><th>Regras de negócio</th><th>Informações (DD)</th><th class="k">CA</th></tr></thead>
+<tbody>
+<tr><td class="k">UC-01</td><td>RN-01, 02, 43</td><td>DD-01, 29, 31</td><td class="k">CA-1</td></tr>
+<tr><td class="k">UC-02</td><td>RN-03, 04, 05, 06</td><td>DD-04, 05, 06, 28, 30</td><td class="k">CA-2</td></tr>
+<tr><td class="k">UC-03</td><td>RN-01, 02, 30</td><td>DD-01, 02, 03</td><td class="k">CA-3</td></tr>
+<tr><td class="k">UC-04</td><td>RN-07 a 18</td><td>DD-06, 07, 08, 09</td><td class="k">CA-4</td></tr>
+<tr><td class="k">UC-05</td><td>RN-24 a 29</td><td>DD-05, 14, 15, 19, 29, 30</td><td class="k">CA-5</td></tr>
+<tr><td class="k">UC-06</td><td>RN-19 a 23</td><td>DD-10, 11, 12, 13, 31</td><td class="k">CA-6</td></tr>
+<tr><td class="k">UC-07</td><td>RN-14, 25, 26, 31 a 41</td><td>DD-02, 04, 06, 16 a 22, 25, 26, 27, 29, 30</td><td class="k">CA-7</td></tr>
+<tr><td class="k">UC-08</td><td>RN-42</td><td>DD-23, 24</td><td class="k">CA-8</td></tr>
+<tr><td class="k">UC-09</td><td>RN-27, 28, 35, 36, 41</td><td>DD-30 · listas 5.1</td><td class="k">CA-9</td></tr>
+<tr><td class="k">Transversal</td><td>RN-44 a 47 (comerciais — Bloco 3)</td><td>—</td><td class="k">CA-10</td></tr>
+</tbody>
+</table>
+<p class="small">Cobertura: 47/47 regras referenciadas por ao menos um caso de uso (RN-44–47 são requisitos de preço, cobertos pelo Bloco 3); 31/31 informações do dicionário vinculadas a caso de uso; 9/9 casos de uso com critério de aceitação.</p>
+
+<!-- 6 -->
+<h2 class="sec"><span class="n">09</span>Pendências e devolutivas ao negócio</h2>
+<h3>Devolutivas (inconsistências da especificação)</h3>
+<table>
+<thead><tr><th class="k">#</th><th>Questão</th><th>Impacto</th></tr></thead>
+<tbody>
+<tr><td class="k">D1</td><td>"Produto a Serviço" declarado booleano, mas operado em três estados (Não/Interno/Teste). Documento assume três estados.</td><td class="k">UC-06</td></tr>
+<tr><td class="k">D2</td><td>Regra de fidelização referencia atributo "Fidelização BL Conv. Especial (Sim/Não)" inexistente na árvore.</td><td class="k">UC-03</td></tr>
+<tr><td class="k">D3</td><td>Coluna "Migrar p/ Asset" vazia nas 24 linhas — o que persiste para o pós-venda? Proposta default: atributos técnicos/contratuais + SVAs como itens do ativo.</td><td class="k">pós-venda</td></tr>
+<tr><td class="k">D4</td><td>Duas taxonomias de segmento no mesmo documento (PME/Atacado × Empresarial/Operadoras). Qual é a canônica na Conta?</td><td class="k">UC-01/05/07</td></tr>
+<tr><td class="k">D5</td><td>Perfis citados são nomes do sistema legado — exigem mapeamento para perfis/permissões do CRM.</td><td class="k">UC-01/06</td></tr>
+</tbody>
+</table>
+
+
+<!-- 7 -->
+<h2 class="sec"><span class="n">10</span>Critérios de aceitação</h2>
+<ol>
+<li><b>CA-1 · UC-01:</b> usuário de cada perfil vê exatamente os planos da sua alçada (teste positivo e negativo por perfil e por segmento).</li>
+<li><b>CA-2 · UC-02:</b> nenhuma configuração conclui sem viabilidade aprovada; os três atributos de acesso chegam preenchidos e bloqueados.</li>
+<li><b>CA-3 · UC-03:</b> velocidades e períodos exibidos conforme listas; fidelização registrada na condição comercial.</li>
+<li><b>CA-4 · UC-04:</b> os 4 passos do regime aplicados e os 3 bloqueios (X1–X3) comprovados com teste negativo.</li>
+<li><b>CA-5 · UC-05:</b> CGNAT e Modem valorados corretamente nos 5 cenários (Algar; Franqueado híbrida/não híbrida; Corporativo com/sem IP Fixo).</li>
+<li><b>CA-6 · UC-06:</b> exclusividade do perfil comprovada; irreversibilidade comprovada; LDI/LDN incluídos no cenário Teste.</li>
+<li><b>CA-7 · UC-07:</b> cada SVA aparece somente no contexto elegível; capturas obrigatórias bloqueiam a conclusão quando ausentes; exclusões mútuas impossíveis de violar.</li>
+<li><b>CA-8 · UC-08:</b> número inválido bloqueia; válido conclui.</li>
+<li><b>CA-9 · UC-09:</b> alteração de lista reflete em nova venda imediatamente; alterações versionadas.</li>
+<li><b>CA-10 · Transversal:</b> suíte de combinação perfil × segmento × localidade × tecnologia × temporário executada sem aceitar venda inválida; catálogo único (nenhum registro na trilha paralela).</li>
+</ol>
+
+<!-- 8 -->
+<h2 class="sec"><span class="n">11</span>Anexo A — Rastreabilidade funcional → modelo de catálogo</h2>
+<p class="small">Resumo técnico para o handoff à especificação técnica (trilha de referência RLM/PCM). A mecânica completa vive na spec técnica; aqui, apenas o mapa de destino. <span class="tag mid">INFERIDO</span> sobre mecânica <span class="tag dark">VERIFICADO: doc oficial</span></p>
+<table>
+<thead><tr><th>Elemento funcional</th><th>Destino no catálogo</th></tr></thead>
+<tbody>
+<tr><td>Plano, Velocidade, Tecnologia, Propriedade, Parceiro, Temporário (+datas), Produto a Serviço (+3 campos), CGNAT, Modem</td><td>Atributos do produto-pai (definidos uma vez, herdados por classificação "Banda Larga")</td></tr>
+<tr><td>Exa (3 níveis) · Skeelo (5 variantes)</td><td>Produtos-filho em grupos de escolha única (máx. 1) — exclusão mútua estrutural, sem regra</td></tr>
+<tr><td>Fast Support · UpLoad 50% · IP Fixo · Proteção WEB · Monitora Rede · Recarga</td><td>Produtos-filho opcionais do pacote (1 por circuito)</td></tr>
+<tr><td>Fidelização (12–60 meses)</td><td>Condição de venda (termo definido) — não é atributo</td></tr>
+<tr><td>Assinatura mensal · Taxa de Instalação · Taxa de Mudança de Endereço</td><td>Condições de venda: recorrente e avulsas (dois itens de cobrança próprios)</td></tr>
+<tr><td>RN-01/02/26/35/36/39/41 (quem vê o quê)</td><td>Regras de elegibilidade por contexto (decision tables)</td></tr>
+<tr><td>RN-08/09/24/25/27–29/37 (comportamento entre campos)</td><td>Regras de configurador (modelo de constraints)</td></tr>
+<tr><td>RN-22/23/31/38/42 (validação e inclusão na venda)</td><td>Regras de configuração da transação</td></tr>
+<tr><td>Listas de localidade (377 · 113 · 28)</td><td>Dados de referência versionados consumidos pelas regras</td></tr>
+</tbody>
+</table>
+
+<!-- 9 -->
+<h2 class="sec"><span class="n">12</span>Fronteira do documento</h2>
+<h4>Fora de escopo</h4>
+<p class="small">Valores e cálculo de preço · fluxo de cotação/pedido · orquestração e provisionamento (regime de execução do temporário descrito apenas como requisito) · faturamento (vencimento dia 27 repassado como requisito) · migração da base existente · experiência visual das telas.</p>
+<h4>Suposições que, se falsas, alteram o documento</h4>
+<ul class="small">
+<li>Trilha de plataforma RLM/PCM confirmada (Anexo A muda de destino se Communications Cloud; casos de uso permanecem).</li>
+<li>Viabilidade retorna os três atributos por endereço (UC-02 inteiro depende disso).</li>
+<li>Taxonomia de segmento única disponível na Conta (D4).</li>
+</ul>
+<h4>Exige validação humana</h4>
+<p class="small">Devolutivas D1–D5 · fluxos dos UC-04 e UC-06 (itens marcados Pendente/Em validação na origem) · condições regulatórias do temporário (RN-11).</p>
+<h4>Não verificado nesta versão</h4>
+<p class="small">Comportamento dos motores de regra em volume de produção · limites das listas de referência · disponibilidade dos recursos na org-alvo definitiva da Fase 2 (verificação feita na org de arquitetura).</p>
+
+<div class="foot"><span>EF-BL-001 · Especificação Funcional — Banda Larga · Kit Funcional · v6.1</span><span>Confidencial — Uso Interno</span></div>
+</div>
+</body>
+</html>
