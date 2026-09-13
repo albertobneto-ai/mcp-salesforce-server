@@ -2258,14 +2258,28 @@ registerTranscricoesRoutes(app);
   app.use(buddieRouter);
   console.log('[buddie] Mounted at /api/buddie');
 
-// --- Protótipo navegável (mora no app i9-mcp; aqui só o endereço amigável) ---
+// --- Protótipo navegável: servido por aqui para o endereço amigável ficar na barra.
+// A página mora no app i9-mcp; buscamos o HTML e reescrevemos os caminhos relativos
+// (imagens e API de sessões) para o host de origem, já que o conteúdo é servido de outro domínio.
 const POC_BASE = 'https://i9-mcp-da48589780b2.herokuapp.com';
-app.get(['/poc', '/poc/mobile', '/poc/lightning'], (req, res) => {
-  const destino = req.path === '/poc/mobile' ? '/poc/mobile' : '/poc';
-  const qs = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
-  res.redirect(302, POC_BASE + destino + qs);
-});
-app.get('/hub', (req, res) => res.redirect(302, POC_BASE + '/uc-hub.html'));
+async function servirDoI9(caminho, res) {
+  try {
+    const r = await fetch(POC_BASE + caminho);
+    if (!r.ok) return res.status(502).send('Protótipo indisponível (HTTP ' + r.status + ').');
+    let html = await r.text();
+    html = html
+      .replace(/const POC_API = '\/api\/poc\/sessoes';/, "const POC_API = '" + POC_BASE + "/api/poc/sessoes';")
+      .replace(/src="img\//g, 'src="' + POC_BASE + '/img/')
+      .replace(/href="\/uc-hub\.html"/g, 'href="/hub"');
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.set('Cache-Control', 'no-store');
+    res.send(html);
+  } catch (e) { res.status(502).send('Não consegui carregar o protótipo: ' + e.message); }
+}
+app.get('/poc', (req, res) => servirDoI9('/poc', res));
+app.get('/poc/mobile', (req, res) => servirDoI9('/poc/mobile', res));
+app.get('/poc/lightning', (req, res) => res.redirect(302, '/poc'));
+app.get('/hub', (req, res) => servirDoI9('/uc-hub.html', res));
 
 // --- Everi9 Chat App ---
 mountChatApp(app);
