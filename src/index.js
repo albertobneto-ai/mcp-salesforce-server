@@ -2258,6 +2258,15 @@ registerTranscricoesRoutes(app);
   app.use(buddieRouter);
   console.log('[buddie] Mounted at /api/buddie');
 
+// --- Protótipo navegável (mora no app i9-mcp; aqui só o endereço amigável) ---
+const POC_BASE = 'https://i9-mcp-da48589780b2.herokuapp.com';
+app.get(['/poc', '/poc/mobile', '/poc/lightning'], (req, res) => {
+  const destino = req.path === '/poc/mobile' ? '/poc/mobile' : '/poc';
+  const qs = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
+  res.redirect(302, POC_BASE + destino + qs);
+});
+app.get('/hub', (req, res) => res.redirect(302, POC_BASE + '/uc-hub.html'));
+
 // --- Everi9 Chat App ---
 mountChatApp(app);
 
