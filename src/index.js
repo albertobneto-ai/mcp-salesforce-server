@@ -2270,7 +2270,10 @@ async function servirDoI9(caminho, res) {
     html = html
       .replace(/const POC_API = '\/api\/poc\/sessoes';/, "const POC_API = '" + POC_BASE + "/api/poc/sessoes';")
       .replace(/src="img\//g, 'src="' + POC_BASE + '/img/')
-      .replace(/href="\/uc-hub\.html"/g, 'href="/hub"');
+      .replace(/href="\/uc-hub\.html"/g, 'href="/hub"')
+      // o hub busca o registro de produtos e as páginas dos UCs por caminho relativo;
+      // servido daqui, esses caminhos precisam apontar para o host de origem
+      .replace(/var BASE=[^;]+;/, "var BASE='" + POC_BASE + "/';");
     res.set('Content-Type', 'text/html; charset=utf-8');
     res.set('Cache-Control', 'no-store');
     res.send(html);
